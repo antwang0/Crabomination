@@ -600,3 +600,73 @@ pub fn ramunap_ruins() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Back to Nature — {1}{G} Instant. Destroy all enchantments.
+pub fn back_to_nature() -> CardDefinition {
+    CardDefinition {
+        name: "Back to Nature",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::Enchantment),
+        },
+        ..Default::default()
+    }
+}
+
+/// Whirlwind — {2}{G}{G} Sorcery. Destroy all creatures with flying.
+pub fn whirlwind() -> CardDefinition {
+    CardDefinition {
+        name: "Whirlwind",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fault Line — {X}{R}{R} Instant. Deal X to each creature without flying and each player.
+pub fn fault_line() -> CardDefinition {
+    CardDefinition {
+        name: "Fault Line",
+        cost: cost(&[crate::mana::x(), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+                ),
+                amount: Value::XFromCost,
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::XFromCost,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Serenity — {1}{W} Enchantment. At the beginning of your upkeep, destroy all
+/// artifacts and enchantments (they can't be regenerated) — itself included.
+pub fn serenity() -> CardDefinition {
+    CardDefinition {
+        name: "Serenity",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::DestroyNoRegen {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}

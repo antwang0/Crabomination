@@ -494,3 +494,69 @@ fn ramunap_ruins_desert_sac_burn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "opponent took 2");
 }
+
+/// Back to Nature destroys all enchantments.
+#[test]
+fn back_to_nature_destroys_enchantments() {
+    let mut g = two_player_game();
+    let e1 = g.add_card_to_battlefield(0, catalog::arcane_laboratory());
+    let e2 = g.add_card_to_battlefield(1, catalog::choke());
+    let cast = g.add_card_to_hand(0, catalog::back_to_nature());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Back to Nature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(e1).is_none() && g.battlefield_find(e2).is_none(), "all enchantments gone");
+}
+
+/// Whirlwind destroys only fliers.
+#[test]
+fn whirlwind_destroys_fliers() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cast = g.add_card_to_hand(0, catalog::whirlwind());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Whirlwind");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "flyer destroyed");
+    assert!(g.battlefield_find(ground).is_some(), "non-flyer survives");
+}
+
+/// Fault Line hits ground creatures and players, sparing fliers.
+#[test]
+fn fault_line_spares_fliers() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let cast = g.add_card_to_hand(0, catalog::fault_line());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3); // X = 3
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Fault Line");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_some(), "flyer spared");
+    assert!(g.battlefield_find(ground).is_none(), "ground creature took 3 and died");
+    assert_eq!(g.players[1].life, 17, "opponent took 3");
+}
+
+/// Serenity wipes artifacts and enchantments (including itself) on upkeep.
+#[test]
+fn serenity_wipes_on_upkeep() {
+    let mut g = two_player_game();
+    let serenity = g.add_card_to_battlefield(0, catalog::serenity());
+    let art = g.add_card_to_battlefield(1, catalog::manalith());
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(serenity).is_none(), "Serenity destroys itself too");
+}
