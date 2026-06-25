@@ -408,3 +408,127 @@ fn return_of_the_wildspeaker_draw_mode() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand - 1 + 6, "drew 6 (greatest power)");
 }
+
+/// Overrun pumps the whole team +3/+3 and grants trample.
+#[test]
+fn overrun_team_pump_and_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::overrun());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Overrun");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (5, 5));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// Larger Than Life pumps a single creature +4/+4 with trample.
+#[test]
+fn larger_than_life_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::larger_than_life());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Larger Than Life");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (6, 6));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// Prey's Vengeance ships +2/+2 and the Rebound keyword.
+#[test]
+fn preys_vengeance_pumps_with_rebound() {
+    assert!(catalog::preys_vengeance().keywords.contains(&Keyword::Rebound), "has Rebound");
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::preys_vengeance());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Prey's Vengeance");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 4));
+}
+
+/// Savage Smash pumps your creature then fights an opponent's.
+#[test]
+fn savage_smash_pumps_then_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 -> 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::savage_smash());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Savage Smash");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "4-power fights kill the 2/2");
+    assert!(g.battlefield_find(mine).is_some(), "the 4/4 survives 2 damage");
+}
+
+/// Bite Down deals a creature's power to an opposing creature.
+#[test]
+fn bite_down_deals_power() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grave_titan()); // power 6
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::bite_down());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Bite Down");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "6 damage kills the 2/2");
+}
+
+/// Crushing Vines (mode 1) destroys a target artifact.
+#[test]
+fn crushing_vines_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::crushing_vines());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(art)), additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Crushing Vines mode 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Inspiring Call draws per +1/+1-countered creature and grants indestructible.
+#[test]
+fn inspiring_call_draws_and_protects() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(b).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // no counter — not counted
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::inspiring_call());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inspiring Call");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew 2 (the countered creatures)");
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Indestructible));
+}

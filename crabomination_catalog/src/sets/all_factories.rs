@@ -3575,6 +3575,13 @@ static DECKS: &[Factory] = &[
     super::decks::momentous_fall,
     super::decks::lifes_legacy,
     super::decks::return_of_the_wildspeaker,
+    super::decks::overrun,
+    super::decks::larger_than_life,
+    super::decks::preys_vengeance,
+    super::decks::savage_smash,
+    super::decks::bite_down,
+    super::decks::crushing_vines,
+    super::decks::inspiring_call,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

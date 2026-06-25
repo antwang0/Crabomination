@@ -516,3 +516,175 @@ pub fn return_of_the_wildspeaker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Overrun — {2}{G}{G}{G} Sorcery. Creatures you control get +3/+3 and gain
+/// trample until end of turn.
+pub fn overrun() -> CardDefinition {
+    let mine = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Overrun",
+        cost: cost(&[generic(2), g(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: mine(),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: mine(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Larger Than Life — {1}{G} Sorcery. Target creature gets +4/+4 and gains
+/// trample until end of turn.
+pub fn larger_than_life() -> CardDefinition {
+    CardDefinition {
+        name: "Larger Than Life",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Prey's Vengeance — {G} Instant. Target creature gets +2/+2 until end of
+/// turn. Rebound.
+pub fn preys_vengeance() -> CardDefinition {
+    CardDefinition {
+        name: "Prey's Vengeance",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Savage Smash — {1}{R}{G} Sorcery. Target creature you control gets +2/+2,
+/// then fights target creature you don't control.
+pub fn savage_smash() -> CardDefinition {
+    use crate::mana::r;
+    CardDefinition {
+        name: "Savage Smash",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bite Down — {1}{G} Instant. Target creature you control deals damage equal
+/// to its power to target creature or planeswalker you don't control. (Modeled
+/// as the spell dealing the damage.)
+pub fn bite_down() -> CardDefinition {
+    CardDefinition {
+        name: "Bite Down",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            })),
+        },
+        ..Default::default()
+    }
+}
+
+/// Crushing Vines — {2}{G} Instant. Choose one — destroy target creature with
+/// flying; or destroy target artifact.
+pub fn crushing_vines() -> CardDefinition {
+    CardDefinition {
+        name: "Crushing Vines",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Inspiring Call — {2}{G} Instant. Draw a card for each creature you control
+/// with a +1/+1 counter on it; those creatures gain indestructible until end
+/// of turn.
+pub fn inspiring_call() -> CardDefinition {
+    use crate::card::CounterType;
+    let countered = || {
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne))
+    };
+    CardDefinition {
+        name: "Inspiring Call",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(countered())),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(countered()),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
