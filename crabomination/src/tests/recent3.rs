@@ -163,3 +163,96 @@ fn arcane_laboratory_one_spell_per_turn() {
     });
     assert!(err.is_err(), "second spell blocked by Arcane Laboratory");
 }
+
+/// Flashfires destroys all Plains and leaves other lands.
+#[test]
+fn flashfires_destroys_plains() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(1, catalog::plains());
+    let f = g.add_card_to_battlefield(1, catalog::forest());
+    let cast = g.add_card_to_hand(0, catalog::flashfires());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Flashfires");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(p).is_none(), "Plains destroyed");
+    assert!(g.battlefield_find(f).is_some(), "Forest survives");
+}
+
+/// Anarchy destroys all white permanents.
+#[test]
+fn anarchy_destroys_white() {
+    let mut g = two_player_game();
+    let white = g.add_card_to_battlefield(1, catalog::grand_abolisher()); // {W}{W} white
+    let red = g.add_card_to_battlefield(1, catalog::solphim_mayhem_dominus()); // red
+    let cast = g.add_card_to_hand(0, catalog::anarchy());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Anarchy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(white).is_none(), "white permanent destroyed");
+    assert!(g.battlefield_find(red).is_some(), "red permanent survives");
+}
+
+/// Creeping Mold destroys a target enchantment.
+#[test]
+fn creeping_mold_destroys_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::arcane_laboratory());
+    let cast = g.add_card_to_hand(0, catalog::creeping_mold());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: Some(Target::Permanent(ench)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Creeping Mold");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+/// Liliana's Caress drains an opponent when they discard.
+#[test]
+fn lilianas_caress_punishes_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lilianas_caress());
+    let card = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let mut events = Vec::new();
+    g.discard_card(1, card, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent lost 2 to Caress on discard");
+}
+
+/// Shatterstorm wipes all artifacts.
+#[test]
+fn shatterstorm_destroys_artifacts() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sundering_titan()); // artifact creature
+    let cast = g.add_card_to_hand(0, catalog::shatterstorm());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Shatterstorm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Tsunami / Boiling Seas destroy all Islands (shared landtype-wipe path).
+#[test]
+fn tsunami_destroys_islands() {
+    let mut g = two_player_game();
+    let isl = g.add_card_to_battlefield(1, catalog::island());
+    let cast = g.add_card_to_hand(0, catalog::tsunami());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tsunami");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(isl).is_none(), "Island destroyed");
+}

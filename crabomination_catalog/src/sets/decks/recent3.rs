@@ -205,3 +205,95 @@ pub fn arcane_laboratory() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flashfires — {3}{R} Sorcery. Destroy all Plains.
+pub fn flashfires() -> CardDefinition {
+    destroy_all_landtype("Flashfires", cost(&[generic(3), r()]), crate::card::LandType::Plains)
+}
+
+/// Tsunami — {3}{G} Sorcery. Destroy all Islands.
+pub fn tsunami() -> CardDefinition {
+    destroy_all_landtype("Tsunami", cost(&[generic(3), g()]), crate::card::LandType::Island)
+}
+
+/// Boiling Seas — {3}{R} Sorcery. Destroy all Islands.
+pub fn boiling_seas() -> CardDefinition {
+    destroy_all_landtype("Boiling Seas", cost(&[generic(3), r()]), crate::card::LandType::Island)
+}
+
+fn destroy_all_landtype(
+    name: &'static str,
+    cost: crate::mana::ManaCost,
+    land_type: crate::card::LandType,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost,
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::HasLandType(land_type)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Shatterstorm — {2}{R}{R} Sorcery. Destroy all artifacts; they can't be regenerated.
+pub fn shatterstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Shatterstorm",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(SelectionRequirement::Artifact),
+        },
+        ..Default::default()
+    }
+}
+
+/// Anarchy — {2}{R}{R} Sorcery. Destroy all white permanents.
+pub fn anarchy() -> CardDefinition {
+    CardDefinition {
+        name: "Anarchy",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::HasColor(Color::White)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Creeping Mold — {2}{G}{G} Sorcery. Destroy target artifact, enchantment, or land.
+pub fn creeping_mold() -> CardDefinition {
+    CardDefinition {
+        name: "Creeping Mold",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: crate::effect::shortcut::target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Land),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Liliana's Caress — {1}{B} Enchantment. Whenever an opponent discards a card,
+/// they lose 2 life.
+pub fn lilianas_caress() -> CardDefinition {
+    CardDefinition {
+        name: "Liliana's Caress",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
