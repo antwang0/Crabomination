@@ -814,3 +814,37 @@ fn pit_scorpion_poisonous_adds_poison() {
     assert_eq!(g.players[1].life, 19, "1 combat damage");
     assert_eq!(g.players[1].poison_counters, 1, "Poisonous 1 adds a poison counter");
 }
+
+/// Splatter Goblin shrinks an opponent's creature when it dies.
+#[test]
+fn splatter_goblin_death_shrinks_opponent() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::splatter_goblin());
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.battlefield_find_mut(gob).unwrap().damage = 1; // lethal on the 2/1
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "-1/-1 on the opponent's creature");
+}
+
+/// Hightide Hermit nets four energy and can pay {E}{E} to attack despite defender.
+#[test]
+fn hightide_hermit_energy_then_attacks() {
+    let mut g = two_player_game();
+    let crab = g.add_card_to_battlefield(0, catalog::hightide_hermit());
+    g.move_card_to_battlefield_for_test(0, catalog::hightide_hermit());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 4, "ETB gave four energy");
+    g.clear_sickness(crab);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crab, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pay energy to attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: crab, target: AttackTarget::Player(1),
+    }])).expect("defender can attack this turn");
+}

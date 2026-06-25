@@ -1495,3 +1495,59 @@ pub fn pit_scorpion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Splatter Goblin — {1}{B} 2/1 Phyrexian Goblin. When it dies, target creature
+/// an opponent controls gets -1/-1 until end of turn.
+pub fn splatter_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Splatter Goblin",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hightide Hermit — {4}{U} 4/4 Crab with Defender. When it enters, you get
+/// {E}{E}{E}{E}. Pay {E}{E}: it can attack this turn as though it didn't have
+/// defender.
+pub fn hightide_hermit() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Hightide Hermit",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crab],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(4)))],
+        activated_abilities: vec![ActivatedAbility {
+            energy_cost: 2,
+            effect: Effect::AttackDespiteDefenderThisTurn { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

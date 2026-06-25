@@ -3337,6 +3337,8 @@ static DECKS: &[Factory] = &[
     super::decks::tender_wildguide,
     super::decks::sinister_monolith,
     super::decks::pit_scorpion,
+    super::decks::splatter_goblin,
+    super::decks::hightide_hermit,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,
