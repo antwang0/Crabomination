@@ -2362,6 +2362,15 @@ pub enum Effect {
     /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
     /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).
     ExileChosenFromHandOrGraveyard { who: PlayerRef, filter: SelectionRequirement },
+    /// CR 701.31 — "Will of the council." Starting with the controller, each
+    /// player votes for one permanent matching `filter` (evaluated relative to
+    /// the controller, so Council's Judgment's "a nonland permanent you don't
+    /// control" reads `Nonland.and(ControlledByOpponent)`). Every permanent
+    /// with the most votes (or tied for most) is exiled. Resolved inline via
+    /// the per-seat decider; AutoDecider's first-legal pick makes the vote
+    /// deterministic for bots/tests. No targeting (CR 701.31c), so it ignores
+    /// hexproof/shroud.
+    WillOfTheCouncilExile { filter: SelectionRequirement },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the

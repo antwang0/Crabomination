@@ -117,6 +117,20 @@ fn wing_shards_sacrifices_attacker() {
     assert!(g.battlefield_find(bystander).is_some(), "non-attacker untouched");
 }
 
+/// Council's Judgment exiles an opponent's hexproof permanent (no targeting).
+#[test]
+fn councils_judgment_votes_out_hexproof() {
+    let mut g = two_player_game();
+    // Single legal candidate → unanimous vote → exiled, even with hexproof.
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::councils_judgment());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(foe).is_none(), "voted-out permanent exiled");
+    assert!(g.exile.iter().any(|c| c.id == foe), "in exile (not graveyard)");
+}
+
 // ── Blue ─────────────────────────────────────────────────────────────────
 
 /// Talrand makes a Drake when you cast an instant or sorcery.

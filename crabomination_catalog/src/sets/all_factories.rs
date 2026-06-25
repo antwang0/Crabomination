@@ -3583,6 +3583,7 @@ static DECKS: &[Factory] = &[
     super::decks::crushing_vines,
     super::decks::inspiring_call,
     super::decks::karmic_guide,
+    super::decks::councils_judgment,
     super::decks::elspeth_suns_champion,
     super::decks::faiths_fetters,
     super::decks::increasing_devotion,

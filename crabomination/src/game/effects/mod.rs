@@ -3716,6 +3716,56 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WillOfTheCouncilExile { filter } => {
+                // CR 701.31 — gather the candidate permanents (relative to the
+                // controller), then collect one vote per player.
+                let candidates: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // Vote order: controller first, then their opponents.
+                let mut seats = vec![ctx.controller];
+                seats.extend(self.opponents_of(ctx.controller));
+                let legal: Vec<Target> =
+                    candidates.iter().map(|id| Target::Permanent(*id)).collect();
+                let mut tally: std::collections::HashMap<CardId, u32> =
+                    std::collections::HashMap::new();
+                for seat in seats {
+                    let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        legal: legal.clone(),
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: format!("P{seat}: vote for a permanent"),
+                    });
+                    let voted = match answer {
+                        DecisionAnswer::Target(Target::Permanent(id))
+                            if candidates.contains(&id) =>
+                        {
+                            id
+                        }
+                        _ => candidates[0],
+                    };
+                    *tally.entry(voted).or_insert(0) += 1;
+                }
+                let max_votes = tally.values().copied().max().unwrap_or(0);
+                let losers: Vec<CardId> = candidates
+                    .iter()
+                    .copied()
+                    .filter(|id| tally.get(id).copied().unwrap_or(0) == max_votes && max_votes > 0)
+                    .collect();
+                for id in losers {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileChosenFromHandOrGraveyard { who, filter } => {
                 for p in self.resolve_players(who, ctx) {
                     // Candidates across both zones; auto-pick the highest MV.

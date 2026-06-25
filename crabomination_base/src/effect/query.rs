@@ -161,6 +161,8 @@ impl Effect {
             Effect::TapUpToValue { .. } => false,
             // CR 702.55 — the haunted creature is auto-picked at resolution.
             Effect::HauntCreature { .. } => false,
+            // CR 701.31 — voting is untargeted; choices happen at resolution.
+            Effect::WillOfTheCouncilExile { .. } => false,
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,
