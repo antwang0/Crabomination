@@ -160,6 +160,9 @@ Each unblocks a large swath of cards.
   doubling (`OpponentLifeLossDoubledDuringYourTurn` — Bloodletter) and scoped
   unpreventable combat damage (`ControllerCreaturesCombatDamageCantBePrevented`
   — Questing Beast) now ride the `adjust_life` / prevention chokepoints.
+  Noncombat-only damage doubling (`DoubleNoncombatDamageToOpponents` — Solphim,
+  Mayhem Dominus) rides the `deal_damage_to_from` funnel and stacks with the
+  global Furnace-of-Rath doubler (combat damage stays exempt).
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
 - 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
   CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power

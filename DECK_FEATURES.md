@@ -69,6 +69,27 @@ reuses the Toxic combat-poison path), an `all_players` flag on
 auto-target coverage for `CreateTokenAttachedTo` / graveyard-targeting
 `GrantFlashbackThisTurn`.
 
+`catalog::sets::decks::recent3` adds a third wave (tests in `tests/recent3.rs`):
+Solphim, Atraxa, Deathrite Shaman, Grand Abolisher, Sundering Titan, Arcane
+Laboratory, the color-hoser destroy-alls (Flashfires/Tsunami/Boiling Seas/
+Shatterstorm/Anarchy), Creeping Mold, Liliana's Caress, Winter Orb, Choke, the
+any-color mana rocks (Manalith/Darksteel Ingot/Cultivator's Caravan/Spinning
+Wheel), Hurricane // Squall Line, Staff of Nin, Ivory Tower, Viridian Shaman,
+Caustic Caterpillar, Noxious Revival, Bane of Progress, Ramunap Ruins. New engine
+primitives: `StaticEffect::DoubleNoncombatDamageToOpponents` (Solphim — a
+noncombat-only damage doubler in the `deal_damage_to_from` funnel),
+`StaticEffect::OpponentsCantActDuringYourTurn` (Grand Abolisher — cast + A/C/E
+ability lock), and `Effect::DestroyLandOfEachBasicType` (Sundering Titan). The
+bot's `pick_reach_burn` now recognises each-opponent drain nested in
+`Seq`/`ChooseMode` activations.
+
+`catalog::sets::fin` is a new Final Fantasy (FIN) set module (tests in
+`tests/fin.rs`): Iron Giant, Sazh's Chocobo, Sephiroth's Intervention, Cactuar,
+Magitek Armor, Chocobo Racetrack, Malboro, Sephiroth Planet's Heir, Aerith
+Gainsborough, Phoenix Down. All ride existing primitives (landfall, ETB,
+end-step self-bounce, Vehicle/Crew, Landcycling, mass −X/−X, lifegain/death
+counter-distribution, modal reanimate).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

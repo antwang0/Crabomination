@@ -8,6 +8,31 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — `decks::recent3` / `sets::fin` batch
+
+Deliberately deferred this run (cards/features that need engine work beyond
+existing primitives):
+- **Modal activated abilities — mode selection via `GameAction::ActivateAbility`.**
+  `pick_trigger_mode` picks the mode at push time (deferred to UI players for
+  `wants_ui`), but `ActivateAbility` carries no `mode` field, so scripted/test
+  callers can't force a specific mode — they get the decider's pick (mode 0).
+  Phoenix Down's second mode (exile a Skeleton/Spirit/Zombie) is therefore only
+  reachable interactively. Add a `mode: Option<usize>` to `ActivateAbility`.
+- **Ethersworn Canonist** — "one *nonartifact* spell per turn" needs a
+  per-player nonartifact-spell counter (the existing `OneSpellPerTurn` static
+  counts every spell). Add a filtered variant + tracker.
+- **Steel Hellkite** — `{X}: destroy each nonland permanent with MV X whose
+  controller was dealt combat damage by this creature this turn` needs a
+  combat-damage-by-source player set + an X-filtered mass destroy.
+- **Minas Tirith** — "enters tapped unless you control a legendary creature"
+  needs a conditional `EntersTapped` (no predicate-gated enters-tapped yet).
+- **Fabled Passage** — search a basic tapped, then untap it if you control 4+
+  lands; needs a conditional untap of the just-fetched land.
+- **Den Protector / Prismatic Strands** — megamorph turn-face-up gy-return; and
+  prevent-all-damage-of-a-chosen-color with white-creature-tap flashback.
+- **The Ring tempts you (LTR)** — level 2's defender-chosen forced block and the
+  interactive Ring-bearer choice are UI-bound; deferred until those are modeled.
+
 ## Discovered follow-ups — `decks::recent` batch
 
 Card riders deliberately approximated/omitted this batch (each card otherwise
