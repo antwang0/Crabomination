@@ -1975,6 +1975,16 @@ fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
             | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. } => {
                 Some(*n)
             }
+            // Compound abilities (e.g. "do X; each opponent loses N") still
+            // count their each-opponent reach: sum a Seq's components, take the
+            // best mode of a modal. `would_accept` still gates legality, so a
+            // wrapped component that demands a target this call can't supply
+            // keeps the whole activation from firing.
+            Effect::Seq(parts) => {
+                let total: i32 = parts.iter().filter_map(reach_amount).sum();
+                (total > 0).then_some(total)
+            }
+            Effect::ChooseMode(modes) => modes.iter().filter_map(reach_amount).max(),
             _ => None,
         }
     }

@@ -977,6 +977,9 @@ impl Effect {
                 }
             }
             Effect::Destroy { .. } => format!("destroy {}", self.target_phrase()),
+            Effect::DestroyLandOfEachBasicType => {
+                "choose a land of each basic land type, then destroy those lands".into()
+            }
             Effect::DestroyNoRegen { .. } => {
                 format!("destroy {} (can't be regenerated)", self.target_phrase())
             }

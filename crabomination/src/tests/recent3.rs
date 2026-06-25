@@ -285,3 +285,39 @@ fn choke_locks_islands_only() {
     assert!(g.battlefield_find(island).unwrap().tapped, "Island stays tapped");
     assert!(!g.battlefield_find(forest).unwrap().tapped, "Forest untaps");
 }
+
+/// The bot fires a compound (Seq-wrapped) "each opponent loses N" ability for
+/// lethal reach, not just a bare drain.
+#[test]
+fn bot_fires_seq_wrapped_reach_drain_for_lethal() {
+    use crate::card::{ActivatedAbility, CardDefinition, CardType, Effect, Selector, Value};
+    use crate::effect::PlayerRef;
+    use crate::server::bot::{Bot, RandomBot};
+    let drainer = CardDefinition {
+        name: "Test Drainer",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            // No mana/target cost; effect wraps the reach in a Seq.
+            effect: Effect::Seq(vec![
+                Effect::Noop,
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, drainer);
+    g.players[1].life = 3; // exactly lethal
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let action = RandomBot::new().next_action(&g, 0);
+    assert!(
+        matches!(action, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
+        "bot activates the Seq-wrapped drain for lethal: {action:?}"
+    );
+}
