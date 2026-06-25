@@ -1449,6 +1449,10 @@ impl GameState {
                         card.definition.cost.cmc()
                             == self.sacrificed_mana_value.unwrap_or(0) + *off
                     }
+                    R::ManaValueAtMostSacrificedPlus(off) => {
+                        card.definition.cost.cmc()
+                            <= self.sacrificed_mana_value.unwrap_or(0) + *off
+                    }
                     R::ManaValueLessThanEventAmount => {
                         card.definition.cost.cmc() < self.trigger_event_amount_scratch
                     }
@@ -1668,6 +1672,9 @@ impl GameState {
             R::ManaValueEqualsSourceCounters(_) => false,
             R::ManaValueEqualsSacrificedPlus(off) => {
                 card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off
+            }
+            R::ManaValueAtMostSacrificedPlus(off) => {
+                card.definition.cost.cmc() <= self.sacrificed_mana_value.unwrap_or(0) + *off
             }
             R::ManaValueLessThanEventAmount => {
                 card.definition.cost.cmc() < self.trigger_event_amount_scratch

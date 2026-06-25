@@ -1525,11 +1525,15 @@ impl Effect {
                 | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
-                Effect::Draw { who, .. }
-                | Effect::Mill { who, .. }
-                | Effect::MillUntilLands { who, .. }
-                | Effect::MillTwoRepeatSharedColor { who }
-                | Effect::ExileTopOfLibrary { who, .. } => sel_find(who, slot),
+                // `amount` may read a target's power/toughness (Soul's Majesty
+                // draws equal to target creature's power).
+                Effect::Draw { who, amount }
+                | Effect::Mill { who, amount }
+                | Effect::ExileTopOfLibrary { who, amount, .. } => {
+                    sel_find(who, slot).or_else(|| val_find(amount, slot))
+                }
+                Effect::MillUntilLands { who, .. }
+                | Effect::MillTwoRepeatSharedColor { who } => sel_find(who, slot),
                 Effect::ExileTopMintPerChosenColor { who, .. } => sel_find(who, slot)
                     .or_else(|| implicit_player_for_bare_player_slot(who, slot)),
                 Effect::DestroyTargets { filter } => Some(filter),

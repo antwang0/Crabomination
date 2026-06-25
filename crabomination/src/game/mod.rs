@@ -46,6 +46,9 @@ mod tests_recent3;
 #[path = "../tests/recent4.rs"]
 mod tests_recent4;
 #[cfg(test)]
+#[path = "../tests/recent5.rs"]
+mod tests_recent5;
+#[cfg(test)]
 #[path = "../tests/fin.rs"]
 mod tests_fin;
 #[cfg(test)]
