@@ -55,6 +55,9 @@ mod tests_recent6;
 #[path = "../tests/recent7.rs"]
 mod tests_recent7;
 #[cfg(test)]
+#[path = "../tests/ltr.rs"]
+mod tests_ltr;
+#[cfg(test)]
 #[path = "../tests/fin.rs"]
 mod tests_fin;
 #[cfg(test)]
@@ -1292,6 +1295,48 @@ impl GameState {
         }
         self.monarch = Some(player);
         events.push(GameEvent::MonarchChanged { player });
+    }
+
+    /// CR 701.54 — the Ring tempts `player`. Bumps their temptation level
+    /// (capped at 4) and lets them designate a creature they control as
+    /// Ring-bearer. Choice is auto-resolved to their best creature (highest
+    /// power, then toughness) — per-player UI selection is a follow-up
+    /// (TODO.md). If they control no creature the bearer is unchanged.
+    pub(crate) fn ring_tempts(&mut self, player: usize, events: &mut Vec<GameEvent>) {
+        self.players[player].ring_temptations =
+            (self.players[player].ring_temptations + 1).min(4);
+        let computed = self.compute_battlefield();
+        let pick = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player && c.definition.is_creature())
+            .filter_map(|c| {
+                computed
+                    .iter()
+                    .find(|cp| cp.id == c.id)
+                    .map(|cp| (c.id, cp.power, cp.toughness))
+            })
+            .max_by_key(|(_, p, t)| (*p, *t))
+            .map(|(id, ..)| id);
+        if let Some(id) = pick {
+            self.players[player].ring_bearer = Some(id);
+        }
+        events.push(GameEvent::RingTempted {
+            player,
+            level: self.players[player].ring_temptations,
+            bearer: self.players[player].ring_bearer,
+        });
+    }
+
+    /// CR 701.54a/b — `player`'s current Ring-bearer, validated: the stored
+    /// designation only counts while that creature is on the battlefield and
+    /// still controlled by `player` (a control change clears the designation).
+    pub fn effective_ring_bearer(&self, player: usize) -> Option<CardId> {
+        let id = self.players[player].ring_bearer?;
+        self.battlefield
+            .iter()
+            .find(|c| c.id == id && c.controller == player && c.definition.is_creature())
+            .map(|c| c.id)
     }
 
     /// CR 731 — set the game's day/night designation, emitting
@@ -5209,6 +5254,15 @@ impl GameState {
         let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
         let atk_power = atk_cp.map(|c| c.power).unwrap_or_else(|| attacker.power());
+        // CR 701.54c (level 1+) — "Your Ring-bearer … can't be blocked by
+        // creatures with greater power." Same shape as Skulk, but keyed on the
+        // attacker being its controller's Ring-bearer.
+        if self.effective_ring_bearer(attacker.controller) == Some(attacker_id)
+            && self.players[attacker.controller].ring_temptations >= 1
+            && blocker_cp.power > atk_power
+        {
+            return false;
+        }
         can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)
     }
 
@@ -7149,6 +7203,69 @@ impl GameState {
                         });
                     }
                 }
+            }
+        }
+
+        // CR 701.54c — The Ring's bearer-keyed emblem abilities, injected as
+        // triggers off the Ring-bearer (the emblem text is applied directly
+        // from each player's `ring_temptations` level rather than synthesized
+        // as a literal emblem). Level 2+: "Whenever your Ring-bearer attacks,
+        // draw a card, then discard a card." Level 3+: "Whenever your
+        // Ring-bearer becomes blocked by a creature, the blocking creature's
+        // controller sacrifices it at end of combat." Level-4 combat-damage
+        // drain rides the dedicated combat-damage path in `combat.rs`.
+        let mut ring_blocked_done = vec![false; self.players.len()];
+        for ev in events {
+            match ev {
+                GameEvent::AttackerDeclared(attacker) => {
+                    for seat in 0..self.players.len() {
+                        if self.players[seat].ring_temptations >= 2
+                            && self.effective_ring_bearer(seat) == Some(*attacker)
+                        {
+                            candidates.push(TriggerCandidate {
+                                source: *attacker,
+                                effect: Effect::Seq(vec![
+                                    Effect::Draw {
+                                        who: crate::effect::Selector::You,
+                                        amount: crate::effect::Value::Const(1),
+                                    },
+                                    Effect::Discard {
+                                        who: crate::effect::Selector::You,
+                                        amount: crate::effect::Value::Const(1),
+                                        random: false,
+                                    },
+                                ]),
+                                controller: seat,
+                                filter: None,
+                                subject: None,
+                                event_amount: 0,
+                                triggered_by_etb: false,
+                            });
+                        }
+                    }
+                }
+                GameEvent::BlockerDeclared { attacker, .. } => {
+                    for (seat, done) in ring_blocked_done.iter_mut().enumerate() {
+                        if !*done
+                            && self.players[seat].ring_temptations >= 3
+                            && self.effective_ring_bearer(seat) == Some(*attacker)
+                        {
+                            *done = true;
+                            candidates.push(TriggerCandidate {
+                                source: *attacker,
+                                effect: Effect::SacrificeAtEndOfCombat {
+                                    what: crate::effect::Selector::BlockingCreatures,
+                                },
+                                controller: seat,
+                                filter: None,
+                                subject: None,
+                                event_amount: 0,
+                                triggered_by_etb: false,
+                            });
+                        }
+                    }
+                }
+                _ => {}
             }
         }
 

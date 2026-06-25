@@ -69,6 +69,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Spell-cast lock (Rule of Law / Deafening Silence / Ethersworn
         // Canonist) — a stern slate so a barred extra cast reads as "stop".
         StatChipKind::SpellLock => (Color::srgba(0.30, 0.14, 0.18, 1.0), theme::TEXT_PRIMARY),
+        // The Ring tempts you (CR 701.54) — a One-Ring gold that deepens with
+        // each temptation level.
+        StatChipKind::Ring => (Color::srgba(0.36, 0.28, 0.06, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -94,6 +97,7 @@ pub(super) enum StatChipKind {
     Speed,
     Coven,
     SpellLock,
+    Ring,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -618,6 +622,16 @@ pub fn update_player_stats_chips(
         // different powers, so coven-gated payoffs are online.
         if p.coven_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
+        }
+        // CR 701.54 The Ring — show the temptation level once the Ring has
+        // tempted this player at least once.
+        if p.ring_temptations > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Ring,
+                format!("\u{27E1} the Ring ×{}", p.ring_temptations),
+            );
         }
         // CR 119.7 — warn when this player can't gain life (Sunspine Lynx, Erebos).
         if p.cannot_gain_life {

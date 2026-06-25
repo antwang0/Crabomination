@@ -1438,6 +1438,9 @@ pub enum GameEvent {
     MonarchChanged { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },
+    /// CR 701.54 — the Ring tempted `player`; `level` is their new
+    /// temptation count (1–4), `bearer` the creature they chose (if any).
+    RingTempted { player: usize, level: u32, bearer: Option<CardId> },
     /// CR 731 — the game became day or night. `was_transition` is true only
     /// when flipping between day and night (CR 502.2 "day becomes night or
     /// night becomes day"), false when establishing day/night from neither —

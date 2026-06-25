@@ -43,6 +43,7 @@ pub(crate) fn event_matches_spec(
         // match `DamageDealt` events that hit a card (not a player).
         (EventKind::DealtDamage, GameEvent::DamageDealt { to_card: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
+        (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
         (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
@@ -385,6 +386,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::RingTempted { player, .. }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
         // For BecameTarget the "actor" is the caster of the spell or
         // ability that picked the target. This drives YourControl /
@@ -467,6 +469,11 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::ColorlessManaAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // CR 701.54 — the Ring-bearer chosen this temptation is the subject,
+        // so "whenever you choose a Ring-bearer" payoffs can reference it.
+        GameEvent::RingTempted { bearer, player, .. } => bearer
+            .map(EntityRef::Permanent)
+            .or(Some(EntityRef::Player(*player))),
         // The "subject" of a BecameTarget event is the permanent that
         // became the target — what `Selector::TriggerSource` should bind
         // to for any filter predicate.

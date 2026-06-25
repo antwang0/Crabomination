@@ -1236,6 +1236,11 @@ pub enum EventKind {
     DealtDamage,
     /// A player gained life.
     LifeGained,
+    /// CR 701.54 — the Ring tempted a player (and they chose a Ring-bearer).
+    /// Matched to `GameEvent::RingTempted`; the chosen bearer rides in as the
+    /// trigger subject. Powers "whenever you choose a creature as your
+    /// Ring-bearer" payoffs (Call of the Ring).
+    RingTempted,
     /// CR 700.14 — "Whenever you expend N." Matched to
     /// `GameEvent::Expended`; the threshold N rides the trigger's
     /// `EventSpec.filter` as `Predicate::ExpendReached(n)` so the trigger
@@ -3659,6 +3664,18 @@ pub enum Effect {
     SkipTurns { who: PlayerRef, count: Value },
     /// CR 724 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
+    /// CR 701.54 — "the Ring tempts you." Increments `who`'s ring-temptation
+    /// count (capped at 4) and lets them designate a creature they control as
+    /// their Ring-bearer. The bearer-specific abilities (can't-be-blocked-by-
+    /// greater-power at 1+, attack loot at 2+, blocked-creature sacrifice at
+    /// 3+, combat-damage drain at 4+) are applied directly off the player's
+    /// temptation level rather than synthesized as a literal emblem.
+    RingTempts { who: PlayerRef },
+    /// CR 701.54c (level 3+) — register every creature in `what` to be
+    /// sacrificed by its controller at end of combat (reuses the
+    /// `attacking_token_cleanup` funnel). Used for The Ring-bearer's
+    /// "blocking creature's controller sacrifices it at end of combat."
+    SacrificeAtEndOfCombat { what: Selector },
     /// CR 702.131 — Ascend. If `who` controls ten or more permanents, they
     /// get the city's blessing (a permanent player designation). A no-op
     /// otherwise. "Ascend" on a sorcery/instant resolves once; the

@@ -264,9 +264,14 @@ Each a small targeted feature; sweep batch by batch.
     per-object UI choice is a follow-up),
     ✅ Villainous Choice (CR 701.55 — `Effect::VillainousChoice`: each chooser
     in APNAP order takes the lesser-self-harm option; impossible options dodge),
-    ⏳ **The Ring tempts you / Ring-bearer** (LTR — per-player ring level 1–4 +
-    designated Ring-bearer with cumulative level abilities; needs new state, an
-    evasion keyword, and attack/blocked/combat-damage granted triggers).
+    ✅ **The Ring tempts you / Ring-bearer** (CR 701.54 — `Effect::RingTempts`
+    + `Player.{ring_temptations,ring_bearer}`; the four cumulative emblem
+    abilities applied off the level: can't-be-blocked-by-greater-power (1+),
+    attack-loot (2+), blocked-creature-sacrifice (3+, via
+    `Effect::SacrificeAtEndOfCombat`), combat-damage drain (4+). `decks::ltr`
+    LTR batch + `EventKind::RingTempted` for "choose a Ring-bearer" payoffs.
+    Bearer auto-picked (highest power); per-player UI choice is a TODO.md
+    follow-up).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
   Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,
   Amass — all via `shortcut::*` builders.
@@ -295,7 +300,8 @@ Each a small targeted feature; sweep batch by batch.
   with different powers; HUD "✸ coven" chip);
   ✅ **Speed / "Start your engines!"** (CR 702.179 — `Player.speed` 0–4,
   `Keyword::StartYourEngines`, life-loss increment, `Predicate::SpeedAtLeast`
-  for "Max speed —"; DFT batch in `decks::recent`); ⏳ Ring-bearer.
+  for "Max speed —"; DFT batch in `decks::recent`); ✅ Ring-bearer (CR 701.54,
+  `decks::ltr`).
 - **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
   Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,

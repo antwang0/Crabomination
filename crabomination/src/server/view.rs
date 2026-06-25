@@ -510,6 +510,8 @@ fn project_player(
         commander_damage_taken,
         team,
         coven_active,
+        ring_temptations: player.ring_temptations,
+        ring_bearer: state.effective_ring_bearer(player_seat),
     }
 }
 

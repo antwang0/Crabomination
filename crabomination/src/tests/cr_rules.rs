@@ -4796,3 +4796,65 @@ fn cr_702_16e_protection_prevents_colored_token_damage() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(cav).is_some(), "pro-white blocker took no damage from the white token");
 }
+
+// ── CR 701.54 — The Ring tempts you / Ring-bearer ───────────────────────────
+
+/// CR 701.54a — temptation designates a creature the player controls as their
+/// Ring-bearer (the engine auto-picks the strongest).
+#[test]
+fn cr_701_54a_ring_tempts_designates_a_bearer() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.ring_tempts(0, &mut ev);
+    assert_eq!(g.players[0].ring_temptations, 1);
+    assert_eq!(g.effective_ring_bearer(0), Some(bear));
+}
+
+/// CR 701.54c — at one+ temptation the Ring-bearer can't be blocked by a
+/// creature with greater power; at four+ it drains each opponent 3 on combat
+/// damage to a player.
+#[test]
+fn cr_701_54c_ring_bearer_evasion_and_drain() {
+    let mut g = two_player_game();
+    let bearer = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bearer);
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    // Cover the level-2 attack loot so the bearer doesn't deck out.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_hand(0, catalog::forest());
+    let mut ev = vec![];
+    for _ in 0..4 { g.ring_tempts(0, &mut ev); } // level 4
+    assert!(!g.blocker_can_block_attacker(big, bearer), "greater-power blocker barred");
+    let before = g.players[1].life;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bearer, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[1].life, before - 2 - 3, "2 combat + 3 Ring drain");
+}
+
+// ── CR 701.47 — Amass ───────────────────────────────────────────────────────
+
+/// CR 701.47a — amass with no Army first mints a 0/0 Army token, then loads it
+/// with N +1/+1 counters (Easterling Vanguard's death trigger amasses Orcs 1).
+#[test]
+fn cr_701_47a_amass_mints_and_grows_an_army() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::easterling_vanguard());
+    let ev = g.remove_to_graveyard_with_triggers(v);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Army))
+        .expect("Army token minted");
+    let cp = g.compute_battlefield();
+    let acp = cp.iter().find(|c| c.id == army.id).unwrap();
+    assert_eq!((acp.power, acp.toughness), (1, 1), "0/0 Army + one +1/+1 counter");
+}

@@ -308,6 +308,18 @@ pub struct Player {
     pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// CR 701.54 — how many times the Ring has tempted this player (0–4; the
+    /// printed abilities are "two/three/four or more", so we cap the stored
+    /// value at 4). Each step up activates another of The Ring's emblem
+    /// abilities. Default 0 for snapshot back-compat.
+    #[serde(default)]
+    pub ring_temptations: u32,
+    /// CR 701.54a/b — this player's designated Ring-bearer, if any. A
+    /// non-copiable permanent designation; cleared lazily (the
+    /// `effective_ring_bearer` helper re-checks battlefield presence and
+    /// control). Default `None`.
+    #[serde(default)]
+    pub ring_bearer: Option<crate::card::CardId>,
     /// CR 702.179 — this player's speed (0–4). Starts at 0; a "Start your
     /// engines!" object sets it to 1, and it increases by 1 (once per the
     /// player's own turn, capped at 4) the first time an opponent loses life
@@ -527,6 +539,8 @@ impl Player {
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            ring_temptations: 0,
+            ring_bearer: None,
             speed: 0,
             speed_increased_this_turn: false,
             energy: 0,

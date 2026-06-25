@@ -8015,6 +8015,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RingTempts { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.ring_tempts(p, events);
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeAtEndOfCombat { what } => {
+                use crate::effect::AttackingTokenCleanup;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(id) = ent
+                        && !self.attacking_token_cleanup.iter().any(|(cid, _)| *cid == id)
+                    {
+                        self.attacking_token_cleanup
+                            .push((id, AttackingTokenCleanup::SacrificeAtEndOfCombat));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeDay => {
                 self.set_day_night(crate::game::types::DayNight::Day, events);
                 Ok(())

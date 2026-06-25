@@ -660,6 +660,15 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // CR 701.54c (level 1+) — a Ring-bearer can't be blocked by
+            // creatures with greater power.
+            if self.effective_ring_bearer(attacker.controller) == Some(attacker_id)
+                && self.players[attacker.controller].ring_temptations >= 1
+                && blocker_cp.power > atk_power
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // Landwalk (CR 702.15): the attacker can't be blocked while the
             // defending player controls a land of the named type. Needs
             // game state (the defender's lands), so it lives here rather
@@ -2283,6 +2292,20 @@ impl GameState {
                 if enc.encoded_on == Some(source) {
                     triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl));
                 }
+            }
+            // CR 701.54c (level 4+) — "Whenever your Ring-bearer deals combat
+            // damage to a player, each opponent loses 3 life."
+            if self.players[atk_ctrl].ring_temptations >= 4
+                && self.effective_ring_bearer(atk_ctrl) == Some(source)
+            {
+                triggers.push((
+                    source,
+                    Effect::LoseLife {
+                        who: crate::effect::Selector::Player(crate::effect::PlayerRef::EachOpponent),
+                        amount: crate::effect::Value::Const(3),
+                    },
+                    atk_ctrl,
+                ));
             }
         }
 

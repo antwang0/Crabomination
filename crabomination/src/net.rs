@@ -651,6 +651,16 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub coven_active: bool,
+    /// CR 701.54 — how many times the Ring has tempted this player (0–4).
+    /// `0` means The Ring is dormant; the client shows a "The Ring ×N" chip
+    /// otherwise. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub ring_temptations: u32,
+    /// CR 701.54a — this seat's current Ring-bearer (validated; `None` when
+    /// the designated creature has left or changed control). Lets the client
+    /// flag the bearer. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub ring_bearer: Option<CardId>,
 }
 
 /// One source-commander's combat-damage tally against a player (CR 903.10a).
@@ -1746,6 +1756,7 @@ pub enum GameEventWire {
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
     CityBlessingGained { player: usize },
+    RingTempted { player: usize, level: u32, bearer: Option<CardId> },
     DayNightChanged { is_day: bool },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
@@ -1970,6 +1981,11 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
             GameEvent::CityBlessingGained { player } => GameEventWire::CityBlessingGained { player: *player },
+            GameEvent::RingTempted { player, level, bearer } => GameEventWire::RingTempted {
+                player: *player,
+                level: *level,
+                bearer: *bearer,
+            },
             GameEvent::DayNightChanged { day_night, .. } => GameEventWire::DayNightChanged {
                 is_day: matches!(day_night, crate::game::types::DayNight::Day),
             },
@@ -2160,6 +2176,9 @@ impl GameEventWire {
             E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
             E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),
             E::CityBlessingGained { player } => format!("{} gets the city's blessing", pn(*player)),
+            E::RingTempted { player, level, .. } => {
+                format!("the Ring tempts {} (×{level})", pn(*player))
+            }
             E::DayNightChanged { is_day } => {
                 format!("it becomes {}", if *is_day { "day" } else { "night" })
             }

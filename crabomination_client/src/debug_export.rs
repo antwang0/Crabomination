@@ -200,6 +200,8 @@ mod tests {
                 commander_damage_taken: vec![],
                 team: 0,
                 coven_active: false,
+                ring_temptations: 0,
+                ring_bearer: None,
                 speed: 0,
             }],
             battlefield: vec![],

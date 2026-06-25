@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — `decks::ltr` / The Ring batch
+
+- **Ring-bearer choice for UI players.** `GameState::ring_tempts` auto-picks the
+  controller's highest-power creature as Ring-bearer. A `wants_ui` player should
+  be prompted (a `Decision::ChooseTarget`-style pick among their creatures);
+  wire it through the suspend/rerun path like other resolution-time choices.
+- **Ring-bearer "is legendary" rider (CR 701.54c).** The level-1 emblem also
+  makes the bearer legendary; only the can't-be-blocked-by-greater-power half is
+  modeled. Add the dynamic legendary supertype grant (matters for the legend
+  rule in the rare bearer-vs-copy case).
+- **Client HUD: surface `PlayerView.{ring_temptations,ring_bearer}`** as a
+  "The Ring ×N" chip + a bearer marker on the creature (fields are on the view;
+  the client chip render is the remaining piece).
+- **More LTR cards** beyond the 20 in `decks::ltr` (Sauron cycle, Frodo/Sam
+  partner, Orcish Bowmasters' opponent-extra-draw trigger, …).
+
 ## Discovered follow-ups — `decks::recent3` / `sets::fin` batch
 
 Deliberately deferred this run (cards/features that need engine work beyond
