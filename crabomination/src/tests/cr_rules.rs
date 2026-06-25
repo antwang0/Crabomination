@@ -4739,3 +4739,60 @@ fn cr_105_2c_token_color_from_indicator() {
     assert!(!g.evaluate_requirement_static(&R::HasColor(Color::Red), &Target::Permanent(spirit), 0, None),
         "colorless Spirit token has no color");
 }
+
+// ── CR 700.5 — devotion counts mana pips, not token color ───────────────────
+/// A colored token *is* its color (CR 105.2c) but contributes nothing to
+/// devotion, which counts colored mana symbols in mana costs (CR 700.5). The
+/// color-indicator change must not leak into the devotion tally.
+#[test]
+fn cr_700_5_devotion_ignores_colored_tokens() {
+    use crate::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: alarm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise the Alarm");
+    drain_stack(&mut g);
+    let soldier = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0).expect("soldier").id;
+    assert!(g.evaluate_requirement_static(&R::HasColor(Color::White), &Target::Permanent(soldier), 0, None),
+        "the token is white");
+    assert_eq!(g.devotion_to(0, &[Color::White]), 0, "tokens add no devotion (no mana pips)");
+}
+
+// ── CR 702.16e — protection prevents a colored token's combat damage ─────────
+/// A creature with protection from white takes no combat damage from a white
+/// token it blocks (CR 702.16e), so the protection reads the token's color.
+#[test]
+fn cr_702_16e_protection_prevents_colored_token_damage() {
+    let mut g = two_player_game();
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: alarm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise the Alarm");
+    drain_stack(&mut g);
+    let soldier = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0).expect("soldier").id;
+    g.clear_sickness(soldier);
+    // P1's 2/1 has protection from white; it survives blocking the white token.
+    let cav = g.add_card_to_battlefield(1, catalog::stillmoon_cavalier());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: soldier, target: AttackTarget::Player(1),
+    }])).expect("attack with the token");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass to blockers");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(cav, soldier)])).expect("block");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cav).is_some(), "pro-white blocker took no damage from the white token");
+}
