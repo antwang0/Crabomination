@@ -462,3 +462,88 @@ fn harvester_of_souls_draws_on_creature_death() {
     assert!(g.battlefield_find(victim).is_none(), "bear died");
     assert_eq!(g.players[0].hand.len(), h + 1, "Harvester drew a card on the death");
 }
+
+/// Snap returns a creature to hand and untaps up to two lands.
+#[test]
+fn snap_bounces_creature_and_untaps_lands() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let l1 = g.add_card_to_battlefield(0, catalog::island());
+    let l2 = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield_find_mut(l1).unwrap().tapped = true;
+    g.battlefield_find_mut(l2).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::snap());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Snap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature bounced");
+    assert!(!g.battlefield_find(l1).unwrap().tapped && !g.battlefield_find(l2).unwrap().tapped,
+        "two lands untapped");
+}
+
+/// Throttle gives -4/-4, killing a small creature.
+#[test]
+fn throttle_shrinks_and_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::throttle());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Throttle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to -4/-4");
+}
+
+/// Trophy Mage tutors an artifact with mana value 3.
+#[test]
+fn trophy_mage_tutors_mv3_artifact() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_library(0, catalog::darksteel_ingot()); // MV 3 artifact
+    g.add_card_to_library(0, catalog::sol_ring()); // MV 1 — should be ineligible
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(rock)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::trophy_mage());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == rock), "MV3 artifact tutored to hand");
+}
+
+/// Thirst for Knowledge draws three then discards two.
+#[test]
+fn thirst_for_knowledge_draws_three_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::thirst_for_knowledge());
+    let h = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Thirst for Knowledge");
+    drain_stack(&mut g);
+    // -1 (the spell) +3 drawn -2 discarded = net 0.
+    assert_eq!(g.players[0].hand.len(), h - 1 + 3 - 2, "drew three, discarded two");
+}
+
+/// Kavu Predator grows when an opponent gains life.
+#[test]
+fn kavu_predator_grows_on_opponent_lifegain() {
+    let mut g = two_player_game();
+    let kavu = g.add_card_to_battlefield(0, catalog::kavu_predator());
+    // The opponent gains 3 life — Kavu's controller's opponent.
+    g.adjust_life(1, 3);
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 1, amount: 3 }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(kavu).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        3, "Kavu Predator gained three +1/+1 counters");
+}

@@ -482,3 +482,121 @@ pub fn harvester_of_souls() -> CardDefinition {
     }
 }
 
+
+/// Snap — {1}{U} Instant. Return target creature to its owner's hand. Untap up
+/// to two lands.
+pub fn snap() -> CardDefinition {
+    CardDefinition {
+        name: "Snap",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Tapped),
+                ),
+                up_to: Some(Value::Const(2)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Throttle — {4}{B} Instant. Target creature gets -4/-4 until end of turn.
+pub fn throttle() -> CardDefinition {
+    CardDefinition {
+        name: "Throttle",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-4),
+            toughness: Value::Const(-4),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Trophy Mage — {2}{U} 2/2 Human Wizard. ETB: you may search your library for
+/// an artifact card with mana value 3 and put it into your hand.
+pub fn trophy_mage() -> CardDefinition {
+    artifact_tutor_mage("Trophy Mage", 3)
+}
+
+/// Tribute Mage — {2}{U} 2/2 Human Wizard. ETB: you may search your library for
+/// an artifact card with mana value 2 and put it into your hand.
+pub fn tribute_mage() -> CardDefinition {
+    artifact_tutor_mage("Tribute Mage", 2)
+}
+
+/// Shared body for the {2}{U} 2/2 "ETB: tutor an artifact with mana value N"
+/// Wizards (Trophy / Tribute Mage).
+fn artifact_tutor_mage(name: &'static str, mv: u32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Artifact
+                    .and(SelectionRequirement::ManaValueExactly(mv)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thirst for Knowledge — {2}{U} Instant. Draw three cards, then discard two.
+/// (The "unless you discard an artifact" reduction is approximated as a flat
+/// discard two.)
+pub fn thirst_for_knowledge() -> CardDefinition {
+    CardDefinition {
+        name: "Thirst for Knowledge",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kavu Predator — {1}{G} 2/2 Kavu with trample. Whenever an opponent gains
+/// life, put that many +1/+1 counters on it.
+pub fn kavu_predator() -> CardDefinition {
+    CardDefinition {
+        name: "Kavu Predator",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kavu], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::OpponentControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..Default::default()
+    }
+}
