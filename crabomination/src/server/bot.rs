@@ -130,6 +130,14 @@ impl Bot for RandomBot {
                     {
                         decide_self_discard(state, seat, hand, *count)
                     }
+                    // AutoDecider blindly picks the first legal target. For
+                    // votes (Council's Judgment), edicts, and removal the bot
+                    // should instead hit the opponent's *most* valuable
+                    // permanent — or, when forced to choose among its own
+                    // permanents, give up the *least* valuable.
+                    crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
+                        decide_choose_target(state, seat, legal)
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -862,6 +870,67 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
 /// tutor (Fauna Shaman, Imperial Recruiter, Spellseeker) should fetch its
 /// most impactful hit, not the first one, and certainly not fizzle like the
 /// stock `AutoDecider`.
+/// Rough board value of a permanent for target selection: mana value + size,
+/// plus a loyalty term for planeswalkers and a small legendary premium.
+fn permanent_value(state: &GameState, id: crate::card::CardId) -> i32 {
+    use crate::card::{CardType, CounterType, Supertype};
+    let Some(c) = state.computed_permanent(id) else { return 0 };
+    let inst = state.battlefield_find(id);
+    let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0);
+    if c.card_types.contains(&CardType::Creature) {
+        v += c.power.max(0) + c.toughness.max(0);
+    }
+    if c.card_types.contains(&CardType::Planeswalker) {
+        v += inst.map(|c| c.counter_count(CounterType::Loyalty) as i32).unwrap_or(0);
+    }
+    if c.supertypes.contains(&Supertype::Legendary) {
+        v += 2;
+    }
+    v
+}
+
+/// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
+/// removal). Prefer destroying/exiling an opponent's **most** valuable
+/// permanent; if every legal permanent is our own (a "sacrifice/vote your own"
+/// choice), give up the **least** valuable. Player targets fall back to an
+/// opponent, then to the first legal option.
+fn decide_choose_target(
+    state: &GameState,
+    seat: usize,
+    legal: &[crate::game::types::Target],
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    use crate::game::types::Target;
+    let owner = |id: crate::card::CardId| state.battlefield_find(id).map(|c| c.controller);
+    // Opponent permanents — hit the biggest.
+    let best_opp = legal
+        .iter()
+        .filter_map(|t| match t {
+            Target::Permanent(id) if owner(*id).is_some_and(|o| o != seat) => Some(*id),
+            _ => None,
+        })
+        .max_by_key(|id| permanent_value(state, *id));
+    if let Some(id) = best_opp {
+        return DecisionAnswer::Target(Target::Permanent(id));
+    }
+    // Only our own permanents are legal — give up the smallest.
+    let worst_own = legal
+        .iter()
+        .filter_map(|t| match t {
+            Target::Permanent(id) if owner(*id) == Some(seat) => Some(*id),
+            _ => None,
+        })
+        .min_by_key(|id| permanent_value(state, *id));
+    if let Some(id) = worst_own {
+        return DecisionAnswer::Target(Target::Permanent(id));
+    }
+    // Player targets: prefer an opponent.
+    if let Some(t) = legal.iter().find(|t| matches!(t, Target::Player(p) if *p != seat)) {
+        return DecisionAnswer::Target(t.clone());
+    }
+    DecisionAnswer::Target(legal[0].clone())
+}
+
 fn decide_library_search(
     state: &GameState,
     seat: usize,
@@ -5096,6 +5165,45 @@ mod tests {
         let ans = decide_library_search(&g, 0, &candidates);
         assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == island),
             "bot fetches the Island (Blue uncovered) over a third Forest");
+    }
+
+    /// The bot's ChooseTarget heuristic votes/targets the opponent's biggest
+    /// permanent, not the first legal one.
+    #[test]
+    fn bot_choose_target_hits_opponents_biggest() {
+        use crate::decision::DecisionAnswer;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        let mut dino = catalog::grizzly_bears();
+        dino.name = "Dino"; dino.power = 6; dino.toughness = 6;
+        let big = g.add_card_to_battlefield(1, dino);
+        let legal = vec![Target::Permanent(small), Target::Permanent(big)];
+        match decide_choose_target(&g, 0, &legal) {
+            DecisionAnswer::Target(Target::Permanent(id)) => {
+                assert_eq!(id, big, "bot targets the 6/6 over the 2/2");
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+    }
+
+    /// Forced to choose among its own permanents, the bot gives up the smallest.
+    #[test]
+    fn bot_choose_target_sacrifices_own_smallest() {
+        use crate::decision::DecisionAnswer;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let mut dino = catalog::grizzly_bears();
+        dino.name = "Dino"; dino.power = 6; dino.toughness = 6;
+        let big = g.add_card_to_battlefield(0, dino);
+        let legal = vec![Target::Permanent(big), Target::Permanent(small)];
+        match decide_choose_target(&g, 0, &legal) {
+            DecisionAnswer::Target(Target::Permanent(id)) => {
+                assert_eq!(id, small, "bot gives up its 2/2, keeps the 6/6");
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
     }
 
     /// With no basic land among the candidates the bot still fetches the
