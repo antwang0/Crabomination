@@ -426,6 +426,29 @@ fn cr_702_6e_equip_trigger_resolves_on_the_equipment() {
         "the equipped creature got no counters");
 }
 
+/// CR 702.6e — an Equipment's granted triggered ability with
+/// `triggers_on_equipment == false` fires as though printed on the equipped
+/// creature, even for a non-combat observer event. Tarrian's Soulcleaver
+/// ("whenever another artifact or creature is put into a graveyard, put a
+/// +1/+1 counter on equipped creature") grows the host when an unrelated
+/// permanent dies.
+#[test]
+fn cr_702_6e_equip_observer_trigger_fires_off_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cleaver = g.add_card_to_battlefield(0, catalog::tarrians_soulcleaver());
+    g.battlefield_find_mut(cleaver).unwrap().attached_to = Some(host);
+    // An unrelated creature dies → the observer trigger grows the host.
+    let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(fodder).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(host).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "equip-granted observer trigger put a +1/+1 counter on the equipped creature");
+}
+
 // ── CR 510.2 — combat damage to a creature fires triggers ─────────────────────
 
 /// `DealsCombatDamageToCreature` triggers (CR 510.2) are now dispatched from
