@@ -154,8 +154,10 @@ Each unblocks a large swath of cards.
   Serpent), and combat damage (CR 702.16e — `damage_prevented_by_protection`
   on both attacker→blocker and blocker→attacker). Remaining: "target each".
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
-  land-type statics ✅ (Blood Moon, Urborg). Remaining: CDA corners, full
-  text-box swaps, "becomes a copy of" layer interaction.
+  land-type statics ✅ (Blood Moon, Urborg); layer-4 granted supertype ✅
+  (`Modification::AddSupertype` — the Ring-bearer's Legendary rider, CR 701.54c).
+  Remaining: CDA corners, full text-box swaps, "becomes a copy of" layer
+  interaction.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions, anthem stacking incl. disjunctive multi-type lords (Blex);
   devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion
@@ -352,8 +354,9 @@ Each a small targeted feature; sweep batch by batch.
   fixed-threshold `CantBeBlockedByPowerAtMost(n)` — Questing Beast);
   turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq
   Nestguard); count-gated attack+block (`CantAttackOrBlockUnlessYouControlCount`
-  — Topiary Stomper's "unless you control seven or more lands", honored in
-  combat, affordances, bot, and the legal-blocker gate); hand-size-gated
+  — Topiary Stomper's "unless you control seven or more lands", with `attack_only` / `block_only` facets
+  (Lambholt Pacifist / Olog-hai Crusher), honored in combat, affordances, bot,
+  and the legal-blocker gate); hand-size-gated
   (`CantAttackOrBlockUnlessHandSizeAtMost` — Hazoret) and delirium-gated
   (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie). Open: granted
   must-attack with future-turn duration, multiplayer goad-target clause,

@@ -1122,3 +1122,656 @@ pub fn knights_of_dol_amroth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Quickbeam, Upstart Ent — {4}{G}{G} 5/6 legendary Treefolk. Whenever
+/// Quickbeam or another Treefolk you control enters, up to two target
+/// creatures each get +2/+2 and gain trample until end of turn.
+pub fn quickbeam_upstart_ent() -> CardDefinition {
+    CardDefinition {
+        name: "Quickbeam, Upstart Ent",
+        cost: cost(&[generic(4), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Treefolk),
+                }),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::Target(0),
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Now for Wrath, Now for Ruin! — {3}{W} Sorcery. Put a +1/+1 counter on each
+/// creature you control; they gain vigilance until end of turn. The Ring
+/// tempts you.
+pub fn now_for_wrath_now_for_ruin() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Now for Wrath, Now for Ruin!",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::RingTempts { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Shower of Arrows — {2}{G} Instant. Destroy target artifact, enchantment, or
+/// creature with flying. Scry 1.
+pub fn shower_of_arrows() -> CardDefinition {
+    CardDefinition {
+        name: "Shower of Arrows",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment)
+                        .or(SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasKeyword(Keyword::Flying))),
+                ),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rising of the Day — {2}{R} Enchantment. Creatures you control have haste;
+/// legendary creatures you control get +1/+0.
+pub fn rising_of_the_day() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Rising of the Day",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+            },
+            StaticAbility {
+                description: "Legendary creatures you control get +1/+0.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                    ),
+                    power: 1,
+                    toughness: 0,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Frodo Baggins — {G}{W} 1/3 legendary Halfling Scout. Whenever Frodo or
+/// another legendary creature you control enters, the Ring tempts you.
+/// (Must-be-blocked-while-Ring-bearer rider approximated.)
+pub fn frodo_baggins() -> CardDefinition {
+    CardDefinition {
+        name: "Frodo Baggins",
+        cost: cost(&[g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Halfling, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                }),
+            effect: Effect::RingTempts { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Samwise Gamgee — {G}{W} 2/2 legendary Halfling Peasant. Whenever another
+/// nontoken creature you control enters, create a Food token. Sacrifice three
+/// Foods: return a creature card from your graveyard to your hand.
+/// (Historic narrowed to creature.)
+pub fn samwise_gamgee() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Samwise Gamgee",
+        cost: cost(&[g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Halfling, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                3,
+            )),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mirror of Galadriel — {2} legendary Artifact. {5}, {T}: Scry 1, then draw a
+/// card. This costs {1} less to activate for each legendary creature you
+/// control.
+pub fn mirror_of_galadriel() -> CardDefinition {
+    CardDefinition {
+        name: "Mirror of Galadriel",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(5)]),
+            cost_reduction_per: Some(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Olog-hai Crusher — {3}{R} 4/4 Troll Soldier. Trample. Can't block unless you
+/// control a Goblin or Orc.
+pub fn olog_hai_crusher() -> CardDefinition {
+    CardDefinition {
+        name: "Olog-hai Crusher",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::CantAttackOrBlockUnlessYouControlCount {
+                filter: Box::new(
+                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Orc)),
+                ),
+                min: 1,
+                attack_only: false,
+                block_only: true,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Stew the Coneys — {2}{G} Instant. Target creature you control deals damage
+/// equal to its power to target creature you don't control. Create a Food.
+pub fn stew_the_coneys() -> CardDefinition {
+    CardDefinition {
+        name: "Stew the Coneys",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamageEqualToPower {
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Glóin, Dwarf Emissary — {2}{R} 3/3 legendary Dwarf Advisor. Whenever you cast
+/// a historic spell, create a Treasure (once per turn). {T}, Sacrifice a
+/// Treasure: Goad target creature.
+pub fn gloin_dwarf_emissary() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Glóin, Dwarf Emissary",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                ))
+                .once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Treasure),
+                1,
+            )),
+            effect: Effect::Goad { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Improvised Club — {1}{R} Instant. Additional cost: sacrifice an artifact or
+/// creature. Deals 4 damage to any target.
+pub fn improvised_club() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Improvised Club",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Cast into the Fire — {1}{R} Instant. Choose one — deal 1 damage to each of up
+/// to two target creatures; or exile target artifact.
+pub fn cast_into_the_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Cast into the Fire",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(1),
+                }),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Artifact),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dunland Crebain — {2}{B} 1/1 Bird Horror. Flying. When it enters, amass Orcs 2.
+pub fn dunland_crebain() -> CardDefinition {
+    CardDefinition {
+        name: "Dunland Crebain",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Amass {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            extra_type: Some(CreatureType::Orc),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Saruman's Trickery — {1}{U}{U} Instant. Counter target spell. Amass Orcs 1.
+pub fn sarumans_trickery() -> CardDefinition {
+    CardDefinition {
+        name: "Saruman's Trickery",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(1), extra_type: Some(CreatureType::Orc) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Voracious Fell Beast — {4}{B}{B} 4/4 Drake. Flying. ETB: each opponent
+/// sacrifices a creature; create a Food. (Food-per-sacrificed approximated to one.)
+pub fn voracious_fell_beast() -> CardDefinition {
+    CardDefinition {
+        name: "Voracious Fell Beast",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Meriadoc Brandybuck — {1}{G} 2/2 legendary Halfling Citizen. Whenever one or
+/// more Halflings you control attack, create a Food token.
+pub fn meriadoc_brandybuck() -> CardDefinition {
+    CardDefinition {
+        name: "Meriadoc Brandybuck",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Halfling, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Halfling),
+                })
+                .once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hobbit's Sting — {1}{W} Instant. Deal X damage to target creature, where X is
+/// the number of creatures plus Foods you control.
+pub fn hobbits_sting() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    let creatures = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    };
+    let foods = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food)
+            .and(SelectionRequirement::ControlledByYou),
+    };
+    CardDefinition {
+        name: "Hobbit's Sting",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Sum(vec![creatures, foods]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Nazgûl — {2}{B} 1/2 Wraith Knight. Deathtouch. ETB the Ring tempts you.
+/// Whenever the Ring tempts you, put a +1/+1 counter on each Wraith you control.
+pub fn nazgul() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Nazgûl",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wraith, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            etb(Effect::RingTempts { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::RingTempted, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Wraith)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Stern Marshal — {2}{W} 2/2 Human Soldier. {T}: target creature gets +2/+2
+/// until end of turn. Activate only during your turn (timing approximated).
+pub fn stern_marshal() -> CardDefinition {
+    CardDefinition {
+        name: "Stern Marshal",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quarrel's End — {2}{R} Sorcery. Additional cost: discard a card. Draw two
+/// cards and create a 1/1 white Human Soldier token.
+pub fn quarrels_end() -> CardDefinition {
+    use crate::card::{AdditionalCastCost, TokenDefinition};
+    use crate::mana::Color;
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Quarrel's End",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: soldier },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gandalf's Sanction — {1}{U}{R} Sorcery. Deal X damage to target creature,
+/// where X is the number of instant and sorcery cards in your graveyard; excess
+/// is dealt to that creature's controller.
+pub fn gandalfs_sanction() -> CardDefinition {
+    CardDefinition {
+        name: "Gandalf's Sanction",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageExcessToController {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::CardsInGraveyardMatching {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Shelob's Ambush — {B} Instant. Target creature gets +1/+2 and gains
+/// deathtouch until end of turn. Create a Food token.
+pub fn shelobs_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Shelob's Ambush",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Soothing of Sméagol — {1}{U} Instant. Return target nontoken creature to its
+/// owner's hand. The Ring tempts you.
+pub fn soothing_of_smeagol() -> CardDefinition {
+    CardDefinition {
+        name: "Soothing of Sméagol",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::RingTempts { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}

@@ -1761,6 +1761,12 @@ pub enum Effect {
     /// Chelonian Tackle, STX Decisive Denial mode 1, and similar
     /// fight-style green/quandrix removal.
     Fight { attacker: Selector, defender: Selector },
+    /// One-sided fight — `source` deals damage equal to its power to `target`
+    /// (no back-swing). Damage carries `source` so lifelink / deathtouch /
+    /// wither apply (CR 701.12-style but unidirectional). No-ops if either
+    /// selector resolves to no permanent. Stew the Coneys, Tail Swipe,
+    /// Pounce, Friendly Rivalry's per-fighter swing.
+    DealDamageEqualToPower { source: Selector, target: Selector },
     /// CR 701.12 — Exchange control of the two permanents the selectors
     /// resolve to (one each). A permanent control swap (Vedalken Plotter,
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent

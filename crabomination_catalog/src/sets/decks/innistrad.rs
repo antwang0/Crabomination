@@ -2823,6 +2823,7 @@ pub fn lambholt_pacifist() -> CardDefinition {
             filter: Box::new(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4))),
             min: 1,
             attack_only: true,
+            block_only: false,
         }],
         triggered_abilities: vec![werewolf_day_transform()],
         back_face: Some(Box::new(butcher)),

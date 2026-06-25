@@ -19,8 +19,11 @@
 //! (CR 702.149), Exploit payoffs (CR 702.110), and reflexive
 //! sacrifice costs (CR 701.16 — `Effect::MaySacrifice`), token-created
 //! triggers (CR 111.10 — `EventKind::TokenCreated`) including the
-//! token-doubling interaction (CR 614.13), and attack-only "can't attack
-//! unless you control N" restrictions (CR 508.1a).
+//! token-doubling interaction (CR 614.13), attack-only "can't attack
+//! unless you control N" restrictions (CR 508.1a), the Ring-bearer's
+//! granted Legendary supertype (CR 701.54c / 205.4b), block-only combat
+//! restrictions (CR 509.1c), and one-sided "deals damage equal to its
+//! power" effects (CR 701.12-style).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -4857,4 +4860,55 @@ fn cr_701_47a_amass_mints_and_grows_an_army() {
     let cp = g.compute_battlefield();
     let acp = cp.iter().find(|c| c.id == army.id).unwrap();
     assert_eq!((acp.power, acp.toughness), (1, 1), "0/0 Army + one +1/+1 counter");
+}
+
+// ── CR 701.54c — the Ring's level-1 emblem makes the Ring-bearer legendary ────
+
+/// CR 701.54c — at level 1+, your Ring-bearer is legendary. Modeled by a
+/// synthetic `Modification::AddSupertype(Legendary)` layer-4 effect (CR 205.4b).
+#[test]
+fn cr_701_54c_ring_bearer_is_legendary() {
+    use crate::card::Supertype;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // nonlegendary
+    g.ring_tempts(0, &mut vec![]);
+    assert_eq!(g.effective_ring_bearer(0), Some(bear));
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == bear).unwrap().supertypes.contains(&Supertype::Legendary),
+        "Ring-bearer gains the Legendary supertype");
+}
+
+// ── CR 509.1c — "can't block unless you control N+ [filter]" (block-only) ──────
+
+/// CR 509.1c — a block restriction that gates blocking only (Olog-hai Crusher:
+/// "can't block unless you control a Goblin or Orc"), leaving attacking free.
+#[test]
+fn cr_509_1c_block_only_restriction() {
+    let mut g = two_player_game();
+    let olog = g.add_card_to_battlefield(1, catalog::olog_hai_crusher());
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(olog, atk), "no Goblin/Orc → can't block");
+    g.add_card_to_battlefield(1, catalog::goblin_guide());
+    assert!(g.blocker_can_block_attacker(olog, atk), "with a Goblin → can block");
+}
+
+// ── CR 701.12-style one-sided power damage ────────────────────────────────────
+
+/// One-sided "deals damage equal to its power" (Stew the Coneys). The source
+/// takes no back-swing; deathtouch/lifelink ride the source via the funnel.
+#[test]
+fn one_sided_power_damage_no_backswing() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::stew_the_coneys());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == foe), "enemy took 3 and died");
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "our creature takes no back-swing");
 }

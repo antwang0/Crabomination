@@ -290,6 +290,9 @@ impl Effect {
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
+            Effect::DealDamageEqualToPower { source, target } => {
+                sel_has_target(source) || sel_has_target(target)
+            }
             Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::ExchangeControlChoosing { with, .. } => sel_has_target(with),
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
@@ -653,6 +656,7 @@ impl Effect {
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
+            Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
             Effect::ExchangeControl { a, .. } => sel_filter(a),
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
@@ -1045,6 +1049,7 @@ impl Effect {
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
             Effect::Fight { .. } => "fight".into(),
+            Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
             Effect::ExchangeControl { .. } | Effect::ExchangeControlChoosing { .. } => {
                 "exchange control".into()
             }
@@ -1290,6 +1295,7 @@ impl Effect {
             | Effect::Attach { .. }
             | Effect::ExchangeControl { .. }
             | Effect::ExchangeControlChoosing { .. }
+            | Effect::DealDamageEqualToPower { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -1518,6 +1524,9 @@ impl Effect {
                 | Effect::PreventAllCombatDamageInvolving { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
+                }
+                Effect::DealDamageEqualToPower { source, target } => {
+                    sel_find(source, slot).or_else(|| sel_find(target, slot))
                 }
                 Effect::ExchangeControl { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))

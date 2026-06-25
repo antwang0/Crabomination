@@ -301,15 +301,19 @@ impl GameState {
                         self.players[seat].hand.len() as u32 <= *n
                     }
                     Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
-                    Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min, .. } => {
-                        self.battlefield
-                            .iter()
-                            .filter(|p| {
-                                p.controller == seat
-                                    && self.evaluate_requirement_on_card(filter, p, seat)
-                            })
-                            .count() as u32
-                            >= *min
+                    Keyword::CantAttackOrBlockUnlessYouControlCount {
+                        filter, min, block_only, ..
+                    } => {
+                        *block_only
+                            || self
+                                .battlefield
+                                .iter()
+                                .filter(|p| {
+                                    p.controller == seat
+                                        && self.evaluate_requirement_on_card(filter, p, seat)
+                                })
+                                .count() as u32
+                                >= *min
                     }
                     _ => true,
                 })

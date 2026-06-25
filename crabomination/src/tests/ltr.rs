@@ -777,3 +777,396 @@ fn knights_of_dol_amroth_grows_on_second_draw() {
     let kc = cp.iter().find(|c| c.id == k).unwrap();
     assert_eq!((kc.power, kc.toughness), (4, 4), "got a +1/+1 counter on the second draw");
 }
+
+/// Generous Ent makes a Food on ETB.
+#[test]
+fn generous_ent_makes_food() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::generous_ent());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
+}
+
+/// Quickbeam pumps up to two creatures (and grants trample) when a Treefolk —
+/// itself — enters.
+#[test]
+fn quickbeam_pumps_on_treefolk_enter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quickbeam_upstart_ent());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast(&mut g, id);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "bear got +2/+2");
+    assert!(b.keywords.contains(&crate::card::Keyword::Trample), "and trample");
+}
+
+/// Now for Wrath puts a counter on each creature, grants vigilance, and tempts.
+#[test]
+fn now_for_wrath_counters_and_tempts() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::now_for_wrath_now_for_ruin());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3), "+1/+1 counter");
+    assert!(b.keywords.contains(&crate::card::Keyword::Vigilance), "vigilance granted");
+    assert_eq!(g.players[0].ring_temptations, 1, "tempted");
+}
+
+/// Shower of Arrows destroys a flying creature.
+#[test]
+fn shower_of_arrows_destroys_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flier
+    let id = g.add_card_to_hand(0, catalog::shower_of_arrows());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(flyer));
+    assert!(!g.battlefield.iter().any(|c| c.id == flyer), "flier destroyed");
+}
+
+/// Rising of the Day grants haste and pumps legendary creatures you control.
+#[test]
+fn rising_of_the_day_haste_and_legendary_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rising_of_the_day());
+    let legend = g.add_card_to_battlefield(0, catalog::bilbo_retired_burglar()); // 1/3 legendary
+    let cp = g.compute_battlefield();
+    let l = cp.iter().find(|c| c.id == legend).unwrap();
+    assert!(l.keywords.contains(&crate::card::Keyword::Haste), "haste granted");
+    assert_eq!((l.power, l.toughness), (2, 3), "legendary +1/+0");
+}
+
+/// Frodo tempts you when a legendary creature you control enters.
+#[test]
+fn frodo_tempts_on_legendary_enter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::frodo_baggins());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, id); // Frodo itself is legendary → tempts on its own ETB
+    assert_eq!(g.players[0].ring_temptations, 1, "tempted on legendary enter");
+}
+
+/// Samwise mints a Food when a nontoken creature enters and can sac three to
+/// recur a creature from the graveyard.
+#[test]
+fn samwise_food_and_recursion() {
+    let mut g = two_player_game();
+    let sam = g.add_card_to_battlefield(0, catalog::samwise_gamgee());
+    // Three Foods to pay the activated cost; a creature in the graveyard to recur.
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
+    }
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let food_count = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count();
+    assert_eq!(food_count, 3, "three Foods present");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sam, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Samwise");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear back in hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count(), 0, "Foods sacrificed");
+}
+
+/// Mirror of Galadriel's scry-draw ability costs {1} less per legendary creature.
+#[test]
+fn mirror_of_galadriel_cost_reduction() {
+    let mut g = two_player_game();
+    let mirror = g.add_card_to_battlefield(0, catalog::mirror_of_galadriel());
+    g.add_card_to_battlefield(0, catalog::bilbo_retired_burglar()); // 1 legendary creature
+    g.add_card_to_library(0, catalog::forest());
+    // {5} reduced by 1 = pay 4 generic.
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mirror, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate mirror at reduced cost");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
+}
+
+/// CR 701.54c — the level-1 Ring emblem makes the Ring-bearer legendary.
+#[test]
+fn ring_bearer_becomes_legendary() {
+    use crate::card::Supertype;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // nonlegendary 2/2
+    g.ring_tempts(0, &mut vec![]);
+    assert_eq!(g.effective_ring_bearer(0), Some(bear));
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.supertypes.contains(&Supertype::Legendary), "Ring-bearer is legendary");
+}
+
+/// Olog-hai Crusher can't block without a Goblin/Orc, but can always attack.
+#[test]
+fn olog_hai_crusher_block_gate() {
+    let mut g = two_player_game();
+    // Defender (seat 1) has Olog-hai; attacker (seat 0) has a bear.
+    let olog = g.add_card_to_battlefield(1, catalog::olog_hai_crusher());
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // No Goblin/Orc → can't block.
+    assert!(!g.blocker_can_block_attacker(olog, atk), "can't block without Goblin/Orc");
+    // Give seat 1 a Goblin → now allowed to block.
+    g.add_card_to_battlefield(1, catalog::goblin_guide());
+    assert!(g.blocker_can_block_attacker(olog, atk), "can block with a Goblin");
+
+    // The block-only gate never restricts attacking: the active player's own
+    // Olog (no Goblin/Orc) can still be declared as an attacker.
+    let attacker = g.add_card_to_battlefield(0, catalog::olog_hai_crusher());
+    g.clear_sickness(attacker);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("block-only gate doesn't stop attacks");
+}
+
+/// Stew the Coneys: your creature deals power-damage to an enemy and you get a Food.
+#[test]
+fn stew_the_coneys_one_sided_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::stew_the_coneys());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)], mode: None, x_value: None,
+    }).expect("cast Stew");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == foe), "2/2 took 3 and died");
+    assert!(g.battlefield.iter().any(|c| c.id == mine), "our creature is unharmed (one-sided)");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
+}
+
+/// Glóin makes a Treasure on a historic (legendary) cast, once per turn.
+#[test]
+fn gloin_treasure_on_historic_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gloin_dwarf_emissary());
+    // Cast a legendary creature (historic).
+    let bilbo = g.add_card_to_hand(0, catalog::bilbo_retired_burglar());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bilbo);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "Treasure made for the historic cast");
+}
+
+/// Improvised Club requires sacrificing an artifact/creature and deals 4.
+#[test]
+fn improvised_club_sac_and_burn() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::improvised_club());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Improvised Club");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 4, "4 damage to face");
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed to additional cost");
+}
+
+/// Cast into the Fire mode 1 pings up to two creatures.
+#[test]
+fn cast_into_the_fire_pings_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::cast_into_the_fire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Mode 0 (damage); target both bears.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: Some(0), x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().damage, 1, "bear a took 1");
+    assert_eq!(g.battlefield_find(b).unwrap().damage, 1, "bear b took 1");
+}
+
+/// Dunland Crebain amasses Orcs 2 on ETB.
+#[test]
+fn dunland_crebain_amasses() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dunland_crebain());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let army = g.compute_battlefield().into_iter()
+        .find(|c| c.controller == 0 && c.subtypes.creature_types.contains(&CreatureType::Army));
+    assert_eq!(army.map(|a| (a.power, a.toughness)), Some((2, 2)), "0/0 Army with two +1/+1");
+}
+
+/// Saruman's Trickery counters a spell and amasses.
+#[test]
+fn sarumans_trickery_counters_and_amasses() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    let id = g.add_card_to_hand(0, catalog::sarumans_trickery());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, id, Target::Permanent(bolt));
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"), "bolt countered");
+    assert!(g.compute_battlefield().iter().any(|c| c.controller == 0
+        && c.subtypes.creature_types.contains(&CreatureType::Army)), "Army amassed");
+}
+
+/// Voracious Fell Beast edicts each opponent and makes a Food.
+#[test]
+fn voracious_fell_beast_edict_and_food() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::voracious_fell_beast());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
+    assert!(!g.battlefield.iter().any(|c| c.id == foe), "opponent sacrificed its creature");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
+}
+
+/// Meriadoc makes a Food when a Halfling attacks.
+#[test]
+fn meriadoc_food_on_halfling_attack() {
+    let mut g = two_player_game();
+    let merry = g.add_card_to_battlefield(0, catalog::meriadoc_brandybuck());
+    g.clear_sickness(merry);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: merry, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food on Halfling attack");
+}
+
+/// Hobbit's Sting deals damage equal to creatures + Foods you control.
+#[test]
+fn hobbits_sting_scales_with_board() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 1 creature
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token()); // 1 Food
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let id = g.add_card_to_hand(0, catalog::hobbits_sting());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(foe));
+    // 1 creature + 1 Food = 2 damage; the 3/3 survives with 2 marked.
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 2, "X = creatures + Foods");
+}
+
+/// Nazgûl tempts on ETB and grows every Wraith when the Ring tempts.
+#[test]
+fn nazgul_grows_wraiths_on_temptation() {
+    let mut g = two_player_game();
+    let n1 = g.add_card_to_battlefield(0, catalog::nazgul());
+    let id = g.add_card_to_hand(0, catalog::nazgul());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id); // second Nazgûl ETB tempts → +1/+1 on each Wraith
+    let cp = g.compute_battlefield();
+    let first = cp.iter().find(|c| c.id == n1).unwrap();
+    assert!(first.power >= 2, "the existing Wraith grew from the temptation trigger");
+}
+
+/// Stern Marshal pumps a target +2/+2.
+#[test]
+fn stern_marshal_pumps() {
+    let mut g = two_player_game();
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let marshal = g.add_card_to_battlefield(0, catalog::stern_marshal());
+    g.clear_sickness(marshal);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: marshal, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == bear).map(|c| (c.power, c.toughness)), Some((4, 4)), "+2/+2");
+}
+
+/// Quarrel's End: discard a card, draw two, make a Soldier token.
+#[test]
+fn quarrels_end_discard_draw_token() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::forest()); // discard fodder
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::quarrels_end());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, id);
+    // -1 spell, -1 discard, +2 draw = net +0 vs before-cast hand (which counted the spell).
+    assert_eq!(g.players[0].hand.len(), hand_before - 2 + 2, "discard 1, draw 2");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Human Soldier"),
+        "Soldier token made");
+}
+
+/// Gandalf's Sanction scales with instants/sorceries in your graveyard.
+#[test]
+fn gandalfs_sanction_scales_with_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // instant
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // instant
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let id = g.add_card_to_hand(0, catalog::gandalfs_sanction());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(foe));
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 2, "2 I/S in gy → 2 damage");
+}
+
+/// Shelob's Ambush grants +1/+2 and deathtouch and makes a Food.
+#[test]
+fn shelobs_ambush_pumps_and_food() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::shelobs_ambush());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 4), "+1/+2");
+    assert!(b.keywords.contains(&crate::card::Keyword::Deathtouch), "deathtouch granted");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
+}
+
+/// Soothing of Sméagol bounces a creature and tempts.
+#[test]
+fn soothing_of_smeagol_bounces_and_tempts() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::soothing_of_smeagol());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(foe));
+    assert!(!g.battlefield.iter().any(|c| c.id == foe), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "to owner's hand");
+    assert_eq!(g.players[0].ring_temptations, 1, "tempted");
+}

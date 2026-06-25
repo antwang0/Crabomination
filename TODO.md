@@ -14,15 +14,21 @@ state-corrupting in ordinary play.
   controller's highest-power creature as Ring-bearer. A `wants_ui` player should
   be prompted (a `Decision::ChooseTarget`-style pick among their creatures);
   wire it through the suspend/rerun path like other resolution-time choices.
-- **Ring-bearer "is legendary" rider (CR 701.54c).** The level-1 emblem also
-  makes the bearer legendary; only the can't-be-blocked-by-greater-power half is
-  modeled. Add the dynamic legendary supertype grant (matters for the legend
-  rule in the rare bearer-vs-copy case).
 - **Client HUD: surface `PlayerView.{ring_temptations,ring_bearer}`** as a
   "The Ring ×N" chip + a bearer marker on the creature (fields are on the view;
   the client chip render is the remaining piece).
 - **More LTR cards** beyond the current `decks::ltr` set (Sauron cycle,
-  Frodo/Sam partner, Orcish Bowmasters' opponent-extra-draw trigger, …).
+  Frodo/Sam *Partner* mechanic, Orcish Bowmasters' opponent-extra-draw trigger,
+  Old Man Willow's sac-on-attack, Lost to Legend's "Nth from top" tuck, …).
+- **Frodo Baggins "must be blocked while Ring-bearer" rider.** Frodo's ETB
+  legendary-tempt half ships; the conditional `MustBeBlocked`-while-bearer
+  static is approximated away. Needs a Ring-bearer-gated keyword grant.
+- **"Assigns combat damage equal to toughness" keyword** (Doran / Bill the
+  Pony's Food-sac ability). No primitive yet; Bill is deferred on it.
+- **Choice additional cost "sacrifice a creature or pay {N}"** (Lash of the
+  Balrog). `AdditionalCastCost` has no OR-of-costs variant yet.
+- **Food-per-creature-sacrificed count** (Voracious Fell Beast): currently
+  mints one Food regardless of how many opponents sacrificed.
 - **"Whenever this or another creature you control dies" self-clause.** A
   `CreatureDied`/`YourControl` trigger on a creature does NOT fire for the
   creature's *own* death — the dispatch walks the battlefield and the dying

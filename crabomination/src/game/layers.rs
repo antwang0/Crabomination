@@ -98,6 +98,9 @@ pub enum Modification {
     SetCreatureTypes(Vec<CreatureType>),
     AddLandType(LandType),
     SetLandTypes(Vec<LandType>),
+    /// CR 205.4 — grant a supertype (Legendary, etc.). Used by the Ring's
+    /// level-1 emblem (CR 701.54c — "your Ring-bearer is legendary").
+    AddSupertype(Supertype),
 
     // ── Layer 5 ──────────────────────────────────────────────────────────────
     AddColor(Color),
@@ -315,7 +318,7 @@ fn compute_permanent_pass(
     // Start from the base card definition.
     let mut controller = card.controller;
     let mut card_types = card.definition.card_types.clone();
-    let supertypes = card.definition.supertypes.clone();
+    let mut supertypes = card.definition.supertypes.clone();
     let mut subtypes = card.definition.subtypes.clone();
     // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
     // not a creature. Strip the Creature type and add the Aura subtype so
@@ -433,6 +436,9 @@ fn compute_permanent_pass(
             }
             Modification::RemoveCardType(t) => card_types.retain(|x| x != t),
             Modification::SetCardTypes(ts) => card_types = ts.clone(),
+            Modification::AddSupertype(s) => {
+                if !supertypes.contains(s) { supertypes.push(*s); }
+            }
             Modification::AddCreatureType(ct) => {
                 if !subtypes.creature_types.contains(ct) {
                     subtypes.creature_types.push(*ct);

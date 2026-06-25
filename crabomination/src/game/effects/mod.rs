@@ -1698,6 +1698,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DealDamageEqualToPower { source, target } => {
+                let src_id = self.resolve_selector(source, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) => Some(c),
+                    _ => None,
+                });
+                let tgt_id = self.resolve_selector(target, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) => Some(c),
+                    _ => None,
+                });
+                let (Some(src_id), Some(tgt_id)) = (src_id, tgt_id) else {
+                    return Ok(());
+                };
+                let power = self.computed_permanent(src_id).map(|cp| cp.power).unwrap_or(0);
+                if power > 0 {
+                    self.deal_damage_to_from(
+                        EntityRef::Permanent(tgt_id),
+                        power as u32,
+                        Some(src_id),
+                        events,
+                    );
+                    let mut sba = self.check_state_based_actions();
+                    events.append(&mut sba);
+                }
+                Ok(())
+            }
+
             Effect::GainLife { who, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }

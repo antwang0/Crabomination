@@ -239,22 +239,27 @@ impl Bot for RandomBot {
                                                 Keyword::CantAttackOrBlockUnlessYouControlCount {
                                                     filter,
                                                     min,
+                                                    block_only,
                                                     ..
                                                 } => {
-                                                    state
-                                                        .battlefield
-                                                        .iter()
-                                                        .filter(|d| {
-                                                            d.controller == c.controller
-                                                                && state.evaluate_requirement_on_card(
-                                                                    filter,
-                                                                    d,
-                                                                    c.controller,
-                                                                )
-                                                        })
-                                                        .count()
-                                                        as u32
-                                                        >= *min
+                                                    // A block-only gate never
+                                                    // restricts attacking.
+                                                    *block_only
+                                                        || state
+                                                            .battlefield
+                                                            .iter()
+                                                            .filter(|d| {
+                                                                d.controller == c.controller
+                                                                    && state
+                                                                        .evaluate_requirement_on_card(
+                                                                            filter,
+                                                                            d,
+                                                                            c.controller,
+                                                                        )
+                                                            })
+                                                            .count()
+                                                            as u32
+                                                            >= *min
                                                 }
                                                 _ => true,
                                             })

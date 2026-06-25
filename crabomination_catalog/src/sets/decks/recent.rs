@@ -7695,6 +7695,7 @@ pub fn topiary_stomper() -> CardDefinition {
                 filter: Box::new(SelectionRequirement::Land),
                 min: 7,
                 attack_only: false,
+                block_only: false,
             },
         ],
         triggered_abilities: vec![etb(Effect::Search {

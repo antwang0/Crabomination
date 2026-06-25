@@ -4623,6 +4623,24 @@ impl GameState {
                 }
             }
         }
+        // CR 701.54c — the Ring's level-1 emblem makes its controller's
+        // Ring-bearer legendary (in addition to the can't-be-blocked rider,
+        // which is enforced directly in `blocker_can_block_attacker`).
+        for seat in 0..self.players.len() {
+            if self.players[seat].ring_temptations >= 1
+                && let Some(bearer) = self.effective_ring_bearer(seat)
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: 0,
+                    source: bearer,
+                    affected: AffectedPermanents::Specific(vec![bearer]),
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddSupertype(crate::card::Supertype::Legendary),
+                });
+            }
+        }
         all_effects
     }
 
@@ -5235,9 +5253,9 @@ impl GameState {
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).
         // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
         if let Some((req, min)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
-            Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min, attack_only: false } => {
-                Some((filter.clone(), *min))
-            }
+            Keyword::CantAttackOrBlockUnlessYouControlCount {
+                filter, min, attack_only: false, ..
+            } => Some((filter.clone(), *min)),
             _ => None,
         }) {
             let owner = blocker.controller;
