@@ -648,3 +648,59 @@ pub fn conclave_tribunal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fiery Cannonade — {2}{R} Instant. Deals 2 damage to each non-Pirate creature.
+pub fn fiery_cannonade() -> CardDefinition {
+    CardDefinition {
+        name: "Fiery Cannonade",
+        cost: cost(&[generic(2), crate::mana::r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Pirate).negate()),
+            ),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Star of Extinction — {5}{R}{R} Sorcery. Destroy target land. Deals 20 damage
+/// to each creature and each planeswalker.
+pub fn star_of_extinction() -> CardDefinition {
+    CardDefinition {
+        name: "Star of Extinction",
+        cost: cost(&[generic(5), crate::mana::r(), crate::mana::r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(20),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Magmaquake — {X}{R}{R} Instant. Deals X damage to each creature without
+/// flying and each planeswalker.
+pub fn magmaquake() -> CardDefinition {
+    CardDefinition {
+        name: "Magmaquake",
+        cost: cost(&[x(), crate::mana::r(), crate::mana::r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate())
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}

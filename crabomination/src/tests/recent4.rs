@@ -593,3 +593,53 @@ fn conclave_tribunal_exiles_nonland_permanent() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "opponent's creature exiled");
 }
+
+/// Fiery Cannonade deals 2 to each non-Pirate creature.
+#[test]
+fn fiery_cannonade_spares_pirates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, not a Pirate
+    let id = g.add_card_to_hand(0, catalog::fiery_cannonade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fiery Cannonade");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 non-Pirate dies to 2 damage");
+}
+
+/// Magmaquake deals X to each non-flying creature, sparing flyers.
+#[test]
+fn magmaquake_spares_flyers() {
+    let mut g = two_player_game();
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no flying
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let id = g.add_card_to_hand(0, catalog::magmaquake());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Magmaquake for X=3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ground).is_none(), "ground creature dies to 3");
+    assert!(g.battlefield_find(flyer).is_some(), "flyer untouched");
+}
+
+/// Star of Extinction destroys a land and wipes the board with 20 damage.
+#[test]
+fn star_of_extinction_destroys_land_and_wipes() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let titan = g.add_card_to_battlefield(1, catalog::grave_titan()); // 6/6
+    let id = g.add_card_to_hand(0, catalog::star_of_extinction());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Star of Extinction");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "target land destroyed");
+    assert!(g.battlefield_find(titan).is_none(), "6/6 wiped by 20 damage");
+}
