@@ -2026,6 +2026,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
+- ⏳ **Client build unverified in headless CI.** `crabomination_client` (Bevy)
+  can't build in the remote/headless environment — `wayland-sys`'s build script
+  panics with no Wayland libs present. The `Keyword::Poisonous` → "Psn" chip in
+  `systems/keyword_label.rs` is a trivial match arm (a `_ => return None`
+  catch-all backs it) but was not compile-checked this run; verify on a desktop
+  GUI build.
 - ⏳ **recent2 card approximations** (`decks::recent2`, all noted in doc
   comments): March of Otherworldly Light drops the "exile white cards to reduce
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
