@@ -256,3 +256,32 @@ fn tsunami_destroys_islands() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(isl).is_none(), "Island destroyed");
 }
+
+/// Winter Orb keeps lands from untapping (CR 502.3 via PreventUntap).
+#[test]
+fn winter_orb_locks_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winter_orb());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.battlefield_find_mut(creature).unwrap().tapped = true;
+    // Run the active player's untap step.
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "land stays tapped");
+    assert!(!g.battlefield_find(creature).unwrap().tapped, "creature untaps normally");
+}
+
+/// Choke keeps only Islands from untapping.
+#[test]
+fn choke_locks_islands_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::choke());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(island).unwrap().tapped = true;
+    g.battlefield_find_mut(forest).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(island).unwrap().tapped, "Island stays tapped");
+    assert!(!g.battlefield_find(forest).unwrap().tapped, "Forest untaps");
+}

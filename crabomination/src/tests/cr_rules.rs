@@ -4554,3 +4554,70 @@ fn cr_726_spell_becomes_night() {
     g.resolve_effect(&catalog::into_the_night().effect, &ctx).unwrap();
     assert_eq!(g.day_night, Some(DayNight::Night), "spell forced night");
 }
+
+/// CR 502.3 — Winter Orb prevents lands from untapping during their
+/// controllers' untap steps (the `PreventUntap` machinery, exercised through a
+/// real card). Non-land permanents are unaffected.
+#[test]
+fn cr_502_3_winter_orb_prevents_land_untap() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winter_orb());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "land stays tapped under Winter Orb");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "non-land untaps");
+}
+
+/// CR 614.5 — noncombat damage replacements stack: Solphim's noncombat-only
+/// doubler combines with Furnace of Rath's global doubler (3 → 12), while
+/// combat damage only sees Furnace (Solphim is noncombat-only).
+#[test]
+fn cr_614_5_solphim_stacks_with_furnace_on_noncombat_only() {
+    // Noncombat: 3-damage bolt → Furnace ×2 → Solphim ×2 = 12.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::solphim_mayhem_dominus());
+    g.add_card_to_battlefield(0, catalog::furnace_of_rath());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 8, "3 → ×2 (Furnace) → ×2 (Solphim) = 12 damage");
+
+    // Combat: a 5/4 Solphim attack only doubles via Furnace (5 → 10), not Solphim.
+    let mut g2 = two_player_game();
+    let solphim = g2.add_card_to_battlefield(0, catalog::solphim_mayhem_dominus());
+    g2.add_card_to_battlefield(0, catalog::furnace_of_rath());
+    g2.clear_sickness(solphim);
+    cr_advance_to(&mut g2, TurnStep::DeclareAttackers);
+    g2.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: solphim, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g2);
+    cr_advance_to(&mut g2, TurnStep::PostCombatMain);
+    assert_eq!(g2.players[1].life, 10, "5 combat → ×2 Furnace only = 10");
+}
+
+/// CR 122.1 / 702.12 — an indestructible counter (Solphim's activated ability)
+/// replaces destruction: the permanent survives a "destroy" effect.
+#[test]
+fn cr_122_1_indestructible_counter_survives_destroy() {
+    let mut g = two_player_game();
+    let solphim = g.add_card_to_battlefield(1, catalog::solphim_mayhem_dominus());
+    g.battlefield_find_mut(solphim).unwrap()
+        .add_counters(CounterType::Indestructible, 1);
+    let kill = g.add_card_to_hand(0, catalog::sephiroths_intervention()); // destroy target creature
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kill, target: Some(Target::Permanent(solphim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(solphim).is_some(), "indestructible counter saved it");
+}

@@ -297,3 +297,39 @@ pub fn lilianas_caress() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Winter Orb — {2} Artifact. Lands don't untap during their controllers'
+/// untap steps. (Reuses the `PreventUntap` static.)
+pub fn winter_orb() -> CardDefinition {
+    CardDefinition {
+        name: "Winter Orb",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Lands don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(SelectionRequirement::Land),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Choke — {2}{G} Enchantment. Islands don't untap during their controllers'
+/// untap steps.
+pub fn choke() -> CardDefinition {
+    CardDefinition {
+        name: "Choke",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Islands don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(SelectionRequirement::HasLandType(
+                    crate::card::LandType::Island,
+                )),
+            },
+        }],
+        ..Default::default()
+    }
+}
