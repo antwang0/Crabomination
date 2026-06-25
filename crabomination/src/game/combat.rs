@@ -359,6 +359,17 @@ impl GameState {
                 .find(|c| c.id == id)
                 .map(|c| self.statics_granted_triggers_for(c))
                 .unwrap_or_default();
+            // Equipment-granted Attacks triggers (CR 702.6e) — e.g. "whenever
+            // equipped creature attacks, …". These fire off the creature, so
+            // gather them here alongside the printed/static SelfSource set
+            // (the general dispatch hardcodes-skips SelfSource Attacks to avoid
+            // double-firing, so equip grants must be picked up on this path).
+            let equip_granted = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| self.equip_granted_triggers_for(c))
+                .unwrap_or_default();
             // Validated above — commit only. Filter by *controller*, not
             // *owner*: a stolen creature (Threaten / Mind Control) attacks
             // for its current controller.
@@ -410,6 +421,7 @@ impl GameState {
                 .iter()
                 .chain(granted)
                 .chain(static_granted.iter())
+                .chain(equip_granted.iter())
             {
                 // Only SelfSource Attacks triggers are hardcoded here.
                 // YourControl-scoped Attacks triggers (Exalted via

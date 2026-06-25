@@ -699,6 +699,7 @@ static DECKS: &[Factory] = &[
     super::decks::bitter_downfall,
     super::decks::uruk_hai_berserker,
     super::decks::rangers_firebrand,
+    super::decks::anduril_flame_of_the_west,
     super::decks::electros_bolt,
     super::decks::sadistic_slash,
     super::decks::raging_goblinoids,

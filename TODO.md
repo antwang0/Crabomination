@@ -29,11 +29,6 @@ state-corrupting in ordinary play.
   creature is already gone. The other-creature half works. Wire the dying
   card's own YourControl death triggers via death-LKI (held back Warbeast of
   Gorgoroth, which would otherwise amass on its own death).
-- **Equip-granted `Attacks` triggers** didn't mint tokens in a quick test
-  (Andúril's "whenever equipped creature attacks, create two Spirits") even
-  though `equip_granted_triggers_for` chains into the dispatch — investigate
-  whether attack-time equip triggers reach token creation (combat-damage
-  equip triggers like Goldvein Pick do work). Held back Andúril.
 
 ## Discovered follow-ups — `decks::recent3` / `sets::fin` batch
 

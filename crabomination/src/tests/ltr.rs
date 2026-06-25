@@ -658,3 +658,26 @@ fn rangers_firebrand_burns_and_tempts() {
 
 
 
+
+/// Andúril pumps and spawns two tapped flying Spirits on attack (CR 702.6e
+/// equip-granted Attacks trigger).
+#[test]
+fn anduril_equips_and_spawns_spirits() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::anduril_flame_of_the_west());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (5, 3), "bear got +3/+1");
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 2, "two Spirit tokens on attack");
+}

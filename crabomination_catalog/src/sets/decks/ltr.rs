@@ -915,3 +915,43 @@ pub fn rangers_firebrand() -> CardDefinition {
 
 
 
+
+/// Andúril, Flame of the West — {3} Legendary Equipment. Equipped creature gets
+/// +3/+1. Whenever it attacks, create two tapped 1/1 white Spirit tokens with
+/// flying. (The legendary-equipped vigilance upgrade is dropped — minor.)
+pub fn anduril_flame_of_the_west() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, TokenDefinition};
+    use crate::mana::Color;
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        tapped: true,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Andúril, Flame of the West",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: spirit },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
