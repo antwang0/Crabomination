@@ -1842,6 +1842,15 @@ picking an item up.
 One line per wired rule; implementation detail (code symbols, tests) elided —
 recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline.
 
+- ✅ CR 701.31 — Voting / "will of the council" (`Effect::WillOfTheCouncilExile`:
+  each player votes for one matching permanent, every permanent tied for most
+  votes is exiled; untargeted so it ignores hexproof/shroud — Council's Judgment)
+- ✅ CR 702.16 — Protection from instants (`Keyword::ProtectionFromInstants`,
+  cast-time targeting gate) + protection from everything
+  (`Keyword::ProtectionFromEverything`, every protection-check site) — Hexdrinker
+- ✅ CR 603.4 — once-per-turn / per-subject trigger budget is now charged only
+  *after* the intervening filter passes (Faerie Mastermind's "second card each
+  turn" via `Predicate::PlayerDrewAtLeastThisTurn` + `once_per_turn`)
 - ✅ CR 702.148 — Cleave
 - ✅ CR 702.47 — Splice
 - ✅ CR 704.5k — world rule
@@ -2096,12 +2105,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
-- ⏳ **Client build unverified in headless CI.** `crabomination_client` (Bevy)
-  can't build in the remote/headless environment — `wayland-sys`'s build script
-  panics with no Wayland libs present. The `Keyword::Poisonous` → "Psn" chip in
-  `systems/keyword_label.rs` is a trivial match arm (a `_ => return None`
-  catch-all backs it) but was not compile-checked this run; verify on a desktop
-  GUI build.
+- ℹ️ **Client builds headless once dev libs are installed.** `apt-get install -y
+  libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` lets
+  `crabomination_client` (Bevy) compile + clippy + `--no-run` its tests in the
+  remote/headless env (the wayland-sys/alsa-sys/libudev/xkbcommon build scripts
+  just need the `.pc` files). Runtime/GPU verification still needs the local
+  `verifier-client` skill. Keyword chips + tooltips for the new protection
+  keywords are compile-checked here.
 - ⏳ **recent2 card approximations** (`decks::recent2`, all noted in doc
   comments): March of Otherworldly Light drops the "exile white cards to reduce
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
@@ -2140,9 +2150,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   colors but not per-color counts; `mana_spent` is a bare `u32`. Thread a
   per-color breakdown from `PaymentReceipt` (`pool_before` − post-pay pool) onto
   the spell stack item + `EffectContext`, then add `Predicate::ManaSpentOfColorAtLeast`.
-- ⏳ **Missing keyword mechanics:** Ripple (CR 702.20 — reveal-top-N, cast
-  same-named free), Haunt (CR 702.55), Sunburst-on-noncreature charge counters
-  (the +1/+1 creature path ships via `Value::ConvergedValue`).
+- ⏳ **Missing keyword mechanics:** Haunt (CR 702.55), Sunburst-on-noncreature
+  charge counters (the +1/+1 creature path ships via `Value::ConvergedValue`).
+  (Ripple ✅ — `shortcut::ripple`/`Effect::Ripple`, the Coldsnap Surging cycle.)
 - ✅ **Auto-targeter maximizes "up to N" triggered abilities** (CR 115.1c) —
   `GameState::auto_extra_targets_for` fills slots 1.. with distinct legal picks
   for an `Effect::ApplyToTargets` on a triggered ability; wired into both the

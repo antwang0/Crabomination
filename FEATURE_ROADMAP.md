@@ -87,6 +87,9 @@ exercising each) was elided in a compaction pass; recover it from
   pile-split (`Effect::FactOrFiction` — Fact or Fiction, Atris); gy aura
   mass-reanimate + delayed exile (`Effect::ReanimateAurasExileEot` — Storm
   Herald); reveal-6 / opponent-exile / free may-play (`Effect::AllureOfTheUnknown`).
+  Protection from instants / from everything (`Keyword::ProtectionFrom{Instants,
+  Everything}` — Hexdrinker). Voting / "will of the council"
+  (`Effect::WillOfTheCouncilExile`, untargeted — Council's Judgment, CR 701.31).
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant; vs-bot,
   networked TCP multiplayer, draft + cube, Learn/Lessons sideboard, full-state
   serde snapshots (save/restore + replay foundation).

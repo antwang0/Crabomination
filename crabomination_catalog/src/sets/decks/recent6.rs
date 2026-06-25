@@ -308,7 +308,6 @@ pub fn tezzeret_the_seeker() -> CardDefinition {
                         .and(SelectionRequirement::ManaValueAtMostXFromCost),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
-                ..Default::default()
             },
         ],
         ..Default::default()
