@@ -115,6 +115,13 @@ cards) with `once_per_turn` — a multi-card draw (Divination) leaves the runnin
 draw count at N for *several* CardDrawn events at once, which used to fire those
 payoffs once per drawn card instead of once per turn (CR 603.3d).
 
+`catalog::sets::decks::recent10` is a tenth wave (tests in `tests/recent10.rs`)
+of simple Avatar/Lorwyn commons on existing primitives — ETB value (Glider
+Kids scry, Messenger Hawk Clue, Ostrich-Horse mill-then-grab-land, Rowdy
+Snowballers tap), token-makers (Treetop Freedom Fighters), prowess (Iguana
+Parrot), and sacrifice-/noncreature-cast counter payoffs (Pirate Peddlers,
+Boar-q-pine).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

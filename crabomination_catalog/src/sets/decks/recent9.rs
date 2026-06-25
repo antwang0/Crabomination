@@ -6,7 +6,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{dies_gain_life, etb, on_attack, target_filtered};
+use crate::effect::shortcut::{dies_gain_life, etb, on_attack, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
@@ -246,7 +246,7 @@ pub fn shadow_urchin() -> CardDefinition {
 // ── Card-advantage / counters / prowess ────────────────────────────────────
 
 /// Knowledge Seeker — {1}{U} 2/1, Vigilance. Whenever you draw your second
-/// card each turn, put a +1/+1 counter on it.
+/// card each turn, put a +1/+1 counter on it. When it dies, create a Clue.
 pub fn knowledge_seeker() -> CardDefinition {
     CardDefinition {
         name: "Knowledge Seeker",
@@ -259,14 +259,21 @@ pub fn knowledge_seeker() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![TriggeredAbility {
-            event: second_draw(),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: second_draw(),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
             },
-        }],
+            on_dies(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crabomination_base::tokens::clue_token(),
+            }),
+        ],
         ..Default::default()
     }
 }

@@ -36,6 +36,41 @@ state-corrupting in ordinary play.
   card's own YourControl death triggers via death-LKI (held back Warbeast of
   Gorgoroth, which would otherwise amass on its own death).
 
+## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
+
+- **Waterbend (CR 701.67).** Not implemented. "Waterbend [cost]" is a generic-
+  mana sub-cost where each generic may be paid by tapping an untapped artifact
+  or creature — Convoke restricted to the generic portion of a *sub*-cost, and
+  taking artifacts as well as creatures. Appears as an additional cast cost
+  (Crashing Wave: "waterbend {X}") and as an activated-ability cost (Flexible
+  Waterbender: "Waterbend {3}: …"). Needs a cost-path extension; the
+  `cast_spell_with_convoke` plumbing is the closest primitive to generalize.
+- **Firebend N.** Avatar keyword: "Whenever this attacks, add N {R}; that mana
+  lasts until end of combat." Needs combat-spanning mana (survives the step
+  transition through combat, CR 500.4) — the engine empties pools each step.
+  Fire Nation Cadets / Fire Sages / Zuko are deferred on it.
+- **Blight as an activated/additional cost.** `Effect::Blight` is a resolution
+  effect; cards that put it in a *cost* ("{T}, Blight 1: …" — Gristle Glutton,
+  Dawnhand Dissident; "As an additional cost, blight 1" — Cinder Strike) need
+  blight wired into the cost-payment path.
+- **"Each opponent blights N."** `Effect::Blight` uses `ctx.controller`; High
+  Perfect Morcant / Auntie Ool's `Ward—Blight` make an *opponent* blight. Needs
+  a per-player blight and a `WardCost`-with-blight variant.
+- **Multi-draw count-filter root cause.** "Draw your Nth card each turn" payoffs
+  evaluate `CardsDrawnThisTurn` at batch-dispatch time, so a multi-card draw
+  (Divination) leaves the count at N for *every* CardDrawn event in the batch.
+  Worked around with `once_per_turn` on the ==N payoffs (recent8/9 + Mischievous
+  Mystic + two Modern cards). The clean fix is to evaluate the filter against the
+  per-event draw ordinal (carry it on `EventKind::CardDrawn`), which also fixes
+  "draw your *first* card" payoffs that no-fire on a pure multi-draw turn.
+- **Client: render `ExileCardView.may_play_alt_cost`** on the in-hand /
+  battlefield castable affordances too (the exile-browser badge already shows
+  "May play (you) for {2}").
+- **Earthbend return on bounce.** The delayed return rides
+  `WhenCardLeavesBattlefield`, so an earthbent land bounced to hand is also
+  returned tapped (should only return on death/exile, CR 701.66a). Needs a
+  dies-or-exiled-only delayed-trigger kind, or a zone guard on the return body.
+
 ## Discovered follow-ups — `decks::recent3` / `sets::fin` batch
 
 Deliberately deferred this run (cards/features that need engine work beyond
