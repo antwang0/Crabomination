@@ -49,7 +49,11 @@ exercising each) was elided in a compaction pass; recover it from
 - **Statics (misc):** no-max-hand-size, play-lands-from-graveyard,
   artifact/creature non-mana-ability locks, spell-tax, two-player coin-flip-off
   (Mana Clash), reveal-top-land-else-hand, opponents'-turn cost reduction
-  (`CostReductionDuringOpponentsTurn` — Naiad of Hidden Coves).
+  (`CostReductionDuringOpponentsTurn` — Naiad of Hidden Coves); per-turn
+  spell-cast locks by type (`OneSpellPerTurn` / `OneNoncreatureSpellPerTurn` /
+  `OneNonartifactSpellPerTurn` — Rule of Law / Deafening Silence / Ethersworn
+  Canonist, surfaced via `PlayerView.spell_cast_lock`); off-turn spell tax
+  (`SpellsCostMoreExceptOnControllerTurn` — Defense Grid).
 - **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
   the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
   (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),

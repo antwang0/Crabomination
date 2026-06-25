@@ -4621,3 +4621,84 @@ fn cr_122_1_indestructible_counter_survives_destroy() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(solphim).is_some(), "indestructible counter saved it");
 }
+
+// ── CR 502.3 — untap-step land lock (Bontu's Last Reckoning) ────────────────
+/// CR 502.3 — Bontu's Last Reckoning keeps the caster's lands from untapping
+/// for one untap step, then the lock lifts.
+#[test]
+fn cr_502_3_bontus_lands_skip_one_untap_step() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::bontus_last_reckoning());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bontu's Last Reckoning");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "land stays tapped this untap step");
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped, "lock is one-shot — untaps next step");
+}
+
+// ── CR 611.2 — per-turn spell-cast locks by type ───────────────────────────
+/// CR 611.2 — Deafening Silence allows only one noncreature spell per turn but
+/// leaves creature spells untouched.
+#[test]
+fn cr_611_2_deafening_silence_locks_only_noncreature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::deafening_silence());
+    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: b1, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first noncreature spell ok");
+    drain_stack(&mut g);
+    assert!(matches!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: b2, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        }),
+        Err(GameError::SpellLimitReached)
+    ), "second noncreature spell barred");
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature spell unaffected by Deafening Silence");
+}
+
+// ── CR 701.16 — targeted sacrifice fires sacrifice + death triggers ─────────
+/// CR 701.16 — Effect::SacrificePermanent is a genuine sacrifice: a creature
+/// sacrificed this way fires CreatureDied, so a death payoff (Harvester of
+/// Souls) sees it. Footsteps of the Goryo sacrifices its reanimated creature
+/// at the end step.
+#[test]
+fn cr_701_16_targeted_sacrifice_fires_death_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::harvester_of_souls());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::footsteps_of_the_goryo());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::island());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Footsteps of the Goryo");
+    drain_stack(&mut g);
+    let h = g.players[0].hand.len();
+    // Accept Harvester's "may draw" when the reanimated creature is sacrificed.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    while g.step != crate::game::types::TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_none(), "reanimated creature sacrificed at end step");
+    assert_eq!(g.players[0].hand.len(), h + 1, "the sacrifice fired Harvester's death draw");
+}
