@@ -416,3 +416,81 @@ fn ivory_tower_gains_for_excess_hand() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 22, "gained hand(6) - 4 = 2 life");
 }
+
+/// Viridian Shaman destroys an artifact on ETB.
+#[test]
+fn viridian_shaman_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::manalith());
+    g.move_card_to_battlefield_for_test(0, catalog::viridian_shaman());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed by ETB");
+}
+
+/// Caustic Caterpillar sacrifices itself to destroy an enchantment.
+#[test]
+fn caustic_caterpillar_sacs_to_destroy() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::caustic_caterpillar());
+    let ench = g.add_card_to_battlefield(1, catalog::arcane_laboratory());
+    g.clear_sickness(cat);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cat, ability_index: 0, target: Some(Target::Permanent(ench)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+    assert!(g.battlefield_find(cat).is_none(), "caterpillar sacrificed");
+}
+
+/// Noxious Revival puts a graveyard card on top of its owner's library.
+#[test]
+fn noxious_revival_returns_to_library_top() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::noxious_revival());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(card)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Noxious Revival");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(card), "card on top of library");
+}
+
+/// Bane of Progress wipes artifacts/enchantments and grows per permanent destroyed.
+#[test]
+fn bane_of_progress_wipes_and_grows() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::manalith());     // artifact
+    g.add_card_to_battlefield(1, catalog::arcane_laboratory()); // enchantment
+    let bane = g.move_card_to_battlefield_for_test(0, catalog::bane_of_progress());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bane).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "two permanents destroyed → two counters"
+    );
+}
+
+/// Ramunap Ruins sacrifices a Desert to deal 2 to each opponent.
+#[test]
+fn ramunap_ruins_desert_sac_burn() {
+    let mut g = two_player_game();
+    let ruins = g.add_card_to_battlefield(0, catalog::ramunap_ruins());
+    let desert = g.add_card_to_battlefield(0, catalog::ramunap_ruins()); // another Desert to sac
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let _ = desert;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ruins, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac a Desert for burn");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent took 2");
+}

@@ -474,3 +474,129 @@ pub fn ivory_tower() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Viridian Shaman — {2}{G} 2/2 Elf Shaman. ETB: destroy target artifact.
+pub fn viridian_shaman() -> CardDefinition {
+    CardDefinition {
+        name: "Viridian Shaman",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Destroy {
+            what: crate::effect::shortcut::target_filtered(SelectionRequirement::Artifact),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Caustic Caterpillar — {G} 1/1 Insect. {1}{G}, Sacrifice this: destroy target
+/// artifact or enchantment.
+pub fn caustic_caterpillar() -> CardDefinition {
+    CardDefinition {
+        name: "Caustic Caterpillar",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Noxious Revival — {G/P} Instant. Put target card from a graveyard on top of
+/// its owner's library.
+pub fn noxious_revival() -> CardDefinition {
+    CardDefinition {
+        name: "Noxious Revival",
+        cost: cost(&[phyrexian(Color::Green)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: crate::effect::LibraryPosition::Top,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Bane of Progress — {4}{G}{G} 2/2 Elemental. ETB: destroy all artifacts and
+/// enchantments; grow by one +1/+1 counter per permanent destroyed.
+pub fn bane_of_progress() -> CardDefinition {
+    CardDefinition {
+        name: "Bane of Progress",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PermanentsDestroyedThisResolution,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Ramunap Ruins — Desert land. {T}: Add {C}. {T}, pay 1 life: Add {R}.
+/// {2}{R}{R}, {T}, Sacrifice a Desert: deal 2 to each opponent.
+pub fn ramunap_ruins() -> CardDefinition {
+    CardDefinition {
+        name: "Ramunap Ruins",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Desert],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Red]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), r(), r()]),
+                sac_other_filter: Some((
+                    SelectionRequirement::HasLandType(crate::card::LandType::Desert),
+                    1,
+                )),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
