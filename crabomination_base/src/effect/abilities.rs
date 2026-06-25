@@ -223,7 +223,14 @@ pub enum StaticEffect {
     /// this turn" (Search Party Captain). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.creatures_attacked_this_turn`.
     /// Generic-only; clamped by `ManaCost::reduce_generic`. No layer effect.
-    SelfCostReducedPerCreatureAttackedThisTurn { per: u32 },
+    /// When `all_players` is true the count spans every player's attackers
+    /// ("for each creature that attacked this turn" — Witchstalker Frenzy),
+    /// otherwise just the caster's.
+    SelfCostReducedPerCreatureAttackedThisTurn {
+        per: u32,
+        #[serde(default)]
+        all_players: bool,
+    },
     /// Card-intrinsic "This spell costs `amount` less to cast if you control a
     /// permanent matching each of `filters`" (Of One Mind — a Human creature
     /// *and* a non-Human creature). Read by `cost_reduction_for_spell` off the

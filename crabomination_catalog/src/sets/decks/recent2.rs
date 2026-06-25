@@ -858,3 +858,269 @@ pub fn lord_skitter_sewer_king() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: MOM / WOE / DSK / BLB / OTJ wave ──────────────────────
+
+/// Stickytongue Sentinel — {2}{G} 3/3 Frog Warrior with Reach. When it enters,
+/// return up to one other target permanent you control to its owner's hand.
+pub fn stickytongue_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Stickytongue Sentinel",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Permanent
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            },
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ossification — {1}{W} Enchantment — Aura. When it enters, exile target
+/// creature or planeswalker an opponent controls until it leaves the
+/// battlefield. (Models as an O-Ring; the "enchant a basic land you control"
+/// flavor is dropped — it functions as a standalone removal enchantment.)
+pub fn ossification() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Ossification",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Or(
+                        Box::new(SelectionRequirement::Creature),
+                        Box::new(SelectionRequirement::Planeswalker),
+                    )
+                    .and(SelectionRequirement::ControlledByOpponent),
+                },
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sunfall — {3}{W}{W} Sorcery. Exile all creatures. (The Incubate-X rider is
+/// dropped — no Incubator-token primitive yet.)
+pub fn sunfall() -> CardDefinition {
+    CardDefinition {
+        name: "Sunfall",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Exile { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Witchstalker Frenzy — {3}{R} Instant. Costs {1} less for each creature that
+/// attacked this turn. Deals 5 damage to target creature.
+pub fn witchstalker_frenzy() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Witchstalker Frenzy",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {1} less for each creature that attacked this turn.",
+            effect: StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn {
+                per: 1,
+                all_players: true,
+            },
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}
+
+/// Warden of the Inner Sky — {W} 1/2 Human Soldier. Has flying and vigilance
+/// while it has three or more counters. {T}, tap three untapped artifacts
+/// and/or creatures you control: Put a +1/+1 counter on it. Scry 1. Sorcery
+/// speed.
+pub fn warden_of_the_inner_sky() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Warden of the Inner Sky",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Has flying and vigilance while it has three or more counters.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(3),
+                ),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying, Keyword::Vigilance],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            tap_n_filter: Some((
+                SelectionRequirement::Or(
+                    Box::new(SelectionRequirement::Artifact),
+                    Box::new(SelectionRequirement::Creature),
+                )
+                .and(SelectionRequirement::ControlledByYou),
+                3,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gathering Throng — {2}{W} 3/1 Human Citizen. When it enters, you may search
+/// your library for any number of cards named Gathering Throng, reveal them,
+/// put them into your hand, then shuffle. (Modeled as "up to three".)
+pub fn gathering_throng() -> CardDefinition {
+    CardDefinition {
+        name: "Gathering Throng",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasName("Gathering Throng".into()),
+            to: ZoneDest::Hand(PlayerRef::You),
+            count: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Charming Scoundrel — {1}{R} 1/1 Human Rogue with Haste. When it enters,
+/// choose one — loot (discard then draw); create a Treasure; or create a Wicked
+/// Role token attached to target creature you control.
+pub fn charming_scoundrel() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    let wicked_role = TokenDefinition {
+        name: "Wicked".into(),
+        card_types: vec![CardType::Enchantment],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Charming Scoundrel",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::treasure_token(),
+            },
+            Effect::CreateTokenAttachedTo {
+                target: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                definition: wicked_role,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Fear of Missing Out — {1}{R} 2/3 Enchantment Creature — Nightmare. ETB: loot
+/// (discard then draw). Delirium — whenever it attacks for the first time each
+/// turn, if four or more card types are in your graveyard, untap target
+/// creature, then take an additional combat phase after this one.
+pub fn fear_of_missing_out() -> CardDefinition {
+    CardDefinition {
+        name: "Fear of Missing Out",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                    .once_per_turn()
+                    .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+                effect: Effect::Seq(vec![
+                    Effect::Untap {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        up_to: None,
+                    },
+                    Effect::AdditionalCombatPhase { count: Value::Const(1) },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}

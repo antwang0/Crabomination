@@ -518,3 +518,110 @@ fn lord_skitter_makes_a_rat_in_combat() {
         .count();
     assert_eq!(rats, 1, "one Rat token created at combat");
 }
+
+/// Stickytongue Sentinel bounces another permanent you control on entry.
+#[test]
+fn stickytongue_sentinel_bounces_own_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::stickytongue_sentinel());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear left the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear returned to hand");
+}
+
+/// Ossification exiles an opponent's creature until it leaves.
+#[test]
+fn ossification_exiles_until_it_leaves() {
+    let foe_def = catalog::grizzly_bears();
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, foe_def);
+    g.move_card_to_battlefield_for_test(0, catalog::ossification());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == foe), "opponent creature exiled");
+    assert!(g.battlefield_find(foe).is_none());
+}
+
+/// Sunfall exiles all creatures.
+#[test]
+fn sunfall_exiles_all_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let s = g.add_card_to_hand(0, catalog::sunfall());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sunfall");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "all creatures gone");
+    assert_eq!(g.exile.iter().filter(|c| c.id == a || c.id == b).count(), 2, "both exiled");
+}
+
+/// Witchstalker Frenzy's discount counts every player's attackers this turn.
+#[test]
+fn witchstalker_frenzy_counts_all_attackers() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::witchstalker_frenzy(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no attacks → full price");
+    g.players[1].creatures_attacked_this_turn = 2; // the OPPONENT attacked
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "all-players count includes opp");
+}
+
+/// Warden of the Inner Sky gains flying and vigilance at three counters.
+#[test]
+fn warden_of_the_inner_sky_unlocks_at_three_counters() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::warden_of_the_inner_sky());
+    assert!(!g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Flying), "no flying yet");
+    g.battlefield_find_mut(w).unwrap().counters.insert(CounterType::PlusOnePlusOne, 3);
+    let cp = g.computed_permanent(w).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "flying at 3 counters");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "vigilance at 3 counters");
+}
+
+/// Gathering Throng tutors its same-named copies to hand on entry.
+#[test]
+fn gathering_throng_gathers_copies() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_library(0, catalog::gathering_throng());
+    let c2 = g.add_card_to_library(0, catalog::gathering_throng());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(c1)),
+        DecisionAnswer::Search(Some(c2)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::gathering_throng());
+    drain_stack(&mut g);
+    let in_hand = g.players[0].hand.iter()
+        .filter(|c| c.definition.name == "Gathering Throng").count();
+    assert_eq!(in_hand, 2, "both library copies found");
+}
+
+/// Charming Scoundrel's Treasure mode mints a Treasure.
+#[test]
+fn charming_scoundrel_treasure_mode() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.move_card_to_battlefield_for_test(0, catalog::charming_scoundrel());
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "Treasure token created"
+    );
+}
+
+/// Fear of Missing Out loots on entry (discard then draw).
+#[test]
+fn fear_of_missing_out_loots_on_etb() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    g.move_card_to_battlefield_for_test(0, catalog::fear_of_missing_out());
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "discarded the Island");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "drew the Forest");
+}

@@ -929,7 +929,10 @@ pub fn search_party_captain() -> CardDefinition {
         toughness: 2,
         static_abilities: vec![StaticAbility {
             description: "Costs {1} less for each creature you attacked with this turn.",
-            effect: StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per: 1 },
+            effect: StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn {
+                per: 1,
+                all_players: false,
+            },
         }],
         triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
         ..Default::default()

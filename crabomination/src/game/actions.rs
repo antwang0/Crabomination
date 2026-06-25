@@ -475,9 +475,15 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     // Card-intrinsic "costs {N} less per creature you attacked with this turn"
     // (Search Party Captain). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per } = &sa.effect {
-            reduction = reduction
-                .saturating_add(per * state.players[caster].creatures_attacked_this_turn);
+        if let StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per, all_players } =
+            &sa.effect
+        {
+            let count: u32 = if *all_players {
+                state.players.iter().map(|p| p.creatures_attacked_this_turn).sum()
+            } else {
+                state.players[caster].creatures_attacked_this_turn
+            };
+            reduction = reduction.saturating_add(per * count);
         }
     }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
