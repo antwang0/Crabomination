@@ -3607,6 +3607,16 @@ static DECKS: &[Factory] = &[
     super::decks::mwonvuli_acid_moss,
     super::decks::fabled_passage,
     super::decks::mystic_sanctuary,
+    super::decks::mardu_woe_reaper,
+    super::decks::peek,
+    super::decks::pieces_of_the_puzzle,
+    super::decks::ransack_the_lab,
+    super::decks::leaf_gilder,
+    super::decks::quirion_elves,
+    super::decks::skyshroud_elf,
+    super::decks::briar_shield,
+    super::decks::krosan_tusker,
+    super::decks::phyrexian_tower,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

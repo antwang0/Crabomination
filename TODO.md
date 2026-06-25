@@ -2150,6 +2150,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   colors but not per-color counts; `mana_spent` is a bare `u32`. Thread a
   per-color breakdown from `PaymentReceipt` (`pool_before` − post-pay pool) onto
   the spell stack item + `EffectContext`, then add `Predicate::ManaSpentOfColorAtLeast`.
+- ⏳ **Multi-slot targets on triggered abilities.** A trigger whose effect needs
+  two distinct target slots (e.g. Kor Outfitter's ETB "attach target Equipment
+  to target creature") isn't auto-targeted — only slot 0 binds, so the effect
+  fizzles. Activated abilities handle two slots (Autumn-Tail). Generalize the
+  trigger auto-targeter to fill `Selector::TargetFiltered { slot: 1.. }` before
+  Kor Outfitter / Splicer-style ETB attach can ship.
 - ⏳ **Missing keyword mechanics:** Haunt (CR 702.55), Sunburst-on-noncreature
   charge counters (the +1/+1 creature path ships via `Value::ConvergedValue`).
   (Ripple ✅ — `shortcut::ripple`/`Effect::Ripple`, the Coldsnap Surging cycle.)
