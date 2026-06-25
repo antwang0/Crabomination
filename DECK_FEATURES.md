@@ -105,6 +105,16 @@ Plus rideable commons (Corrupt Court Official, Jeong Jeong's Deserters,
 Forecasting Fortune Teller, Pretending Poxbearers, Merchant of Many Hats, Yuyan
 Archers, Platypus-Bear, Compassionate Healer, Fire Nation Soldier).
 
+`catalog::sets::decks::recent9` is a ninth wave (tests in `tests/recent9.rs`)
+reusing those three bending/blight primitives on more Avatar/Lorwyn cards (Haru,
+Avatar Enthusiasts, Aang Airbending Master, Sinister Gnarlbark, Dream Seizer,
+Sourbread Auntie, Shadow Urchin) plus Ally-tribal, prowess, and second-draw
+payoffs (Knowledge Seeker, Otter-Penguin). It also hardened the existing
+"draw your Nth card each turn" triggers (Mischievous Mystic + two Modern-set
+cards) with `once_per_turn` — a multi-card draw (Divination) leaves the running
+draw count at N for *several* CardDrawn events at once, which used to fire those
+payoffs once per drawn card instead of once per turn (CR 603.3d).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

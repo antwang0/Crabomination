@@ -41074,12 +41074,13 @@ pub fn faerie_vandal() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
-                Predicate::ValueEquals(
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::ValueEquals(
                     Value::CardsDrawnThisTurn(PlayerRef::You),
                     Value::Const(2),
-                ),
-            ),
+                ))
+                // CR 603.3d — fire once even on a multi-card draw.
+                .once_per_turn(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -41105,12 +41106,13 @@ pub fn mad_ratter() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
-                Predicate::ValueEquals(
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::ValueEquals(
                     Value::CardsDrawnThisTurn(PlayerRef::You),
                     Value::Const(2),
-                ),
-            ),
+                ))
+                // CR 603.3d — fire once even on a multi-card draw.
+                .once_per_turn(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -47578,12 +47580,13 @@ pub fn tamiyo_inquisitive_student() -> CardDefinition {
                 effect: investigate(1),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
-                    Predicate::ValueEquals(
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                    .with_filter(Predicate::ValueEquals(
                         Value::CardsDrawnThisTurn(PlayerRef::You),
                         Value::Const(3),
-                    ),
-                ),
+                    ))
+                    // CR 603.3d — fire once even on a multi-card draw.
+                    .once_per_turn(),
                 effect: Effect::ExileSelfReturnTransformed,
             },
         ],

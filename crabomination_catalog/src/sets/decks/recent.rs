@@ -8154,12 +8154,14 @@ pub fn mischievous_mystic() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
-                Predicate::ValueEquals(
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::ValueEquals(
                     Value::CardsDrawnThisTurn(PlayerRef::You),
                     Value::Const(2),
-                ),
-            ),
+                ))
+                // CR 603.3d — fire once even when a multi-card draw leaves the
+                // running count at 2 for several CardDrawn events at once.
+                .once_per_turn(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
