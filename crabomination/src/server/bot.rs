@@ -850,6 +850,10 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::PayManaOrElse { otherwise, .. } | Effect::PayEnergyOrElse { otherwise, .. } => {
             effect_imposes_self_cost(otherwise)
         }
+        // Blight (CR 701.68) puts -1/-1 counters on a creature you control —
+        // a clear self-cost, so the bot declines "may blight N" upside riders
+        // rather than shrinking (or killing) its own board.
+        Effect::Blight { .. } => true,
         // "You may sacrifice/exile this" riders are a clear self-cost.
         Effect::SacrificeSource => true,
         Effect::Exile { what } => hits_self(what),
@@ -3534,6 +3538,20 @@ mod tests {
         );
         assert!(!optional_trigger_beneficial(&g, mill, "you may"),
             "a 'you may mill yourself 3' optional trigger is declined");
+    }
+
+    /// Blight (CR 701.68) shrinks the bot's own board, so a "may blight N for
+    /// upside" optional trigger is declined.
+    #[test]
+    fn bot_declines_blight_optional_trigger() {
+        use crate::effect::Value;
+        let mut g = two_player_game();
+        let blighter = g.add_card_to_battlefield(
+            0,
+            body_card("Blighter", Effect::Blight { n: Value::Const(2) }),
+        );
+        assert!(!optional_trigger_beneficial(&g, blighter, "you may"),
+            "a 'you may blight 2' optional trigger is declined");
     }
 
     /// `MayPay` shares the `OptionalTrigger` decision shape with `MayDo`, so
