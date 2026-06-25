@@ -36,7 +36,8 @@ exercising each) was elided in a compaction pass; recover it from
   energy-gated mana abilities; X-cost activated abilities.
 - **Resource systems:** Energy {E}, Poison/Toxic, Devotion, Ascend/city's
   blessing, Monarch, Day/Night, coin-flip + die-roll randomization.
-- **Objects:** tokens (Treasure/Clue/Blood/Food/Map/Army/Germ), counters
+- **Objects:** tokens (Treasure/Clue/Blood/Food/Map/Army/Germ; colored via the
+  CR 105.2c color indicator), counters
   (incl. keyword/shield/stun/finality/rad), planeswalkers + loyalty + emblems,
   MDFC, split // fuse // aftermath, adventure, command zone + Commander,
   manlands, living weapon, clones/token-copies/spell-copies.
@@ -449,7 +450,9 @@ Each a small targeted feature; sweep batch by batch.
 ## Tier 13 — AI
 
 - 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
-  first-strike/deathtouch/trample awareness, gang-block-to-survive, **and
+  first-strike/deathtouch/trample/**indestructible** awareness — an
+  indestructible body walls the biggest attacker for free and an indestructible
+  attacker can't be cleanly traded — gang-block-to-survive, **and
   chump-blocking to save a planeswalker we control when its attackers are
   lethal to its loyalty — the life-threat calc counts only player-bound
   damage**); attacking has a suicide filter + evasion awareness + planeswalker

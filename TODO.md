@@ -478,6 +478,31 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     +1/+1 counter count; a counter-doubler would shift the threshold vs. printed
     X. A permanent-remembers-cast-X field would make it exact.
 
+- ⏳ **Noticed this run (recent5 staples batch):** approximations left for a
+  follow-up, each needing a small primitive:
+  - **Plaguecrafter** drops the "each player who can't sacrifice, discards"
+    rider (no sacrifice-or-discard fallback primitive).
+  - **Misdirection** drops the printed "spell with a *single* target"
+    restriction; **Venser** / **Hullbreaker Horror** model "target spell or
+    permanent" as permanent-only (no bounce-a-spell-off-the-stack effect), and
+    Hullbreaker drops its "up to one" mode choice.
+  - **Skrelv, Defector Mite**'s grant is simplified to hexproof (no
+    toxic-grant + unblockable-by-chosen-color + color choice).
+  - **Flawless Maneuver** drops the free-if-you-control-a-commander alt cost
+    (no `IsCommander` selector for `AlternativeCost.condition`).
+  - **Neoform** counters every creature that entered this turn (no `Selector`
+    for the just-searched permanent); exact only on a clean cast.
+  - **Guardian Project** drops the same-name exclusion (no unique-name
+    predicate).
+  - **Deferred (not implemented):** Carpet of Flowers (once-per-turn main-phase
+    "add X mana of one color = opp Islands"), Cultivator Colossus (etb
+    put-land/draw loop), Plague Engineer (chosen-type opponents'-creatures
+    -1/-1 static), Mystic Sanctuary (enters-tapped-unless-N-Islands +
+    entered-untapped trigger), Wrenn and Seven, Reidane, Malevolent Hermit,
+    Old-Growth Troll, Tarmogoyf Nest, Agadeem's Awakening, Joraga Treespeaker
+    (LevelBand can't grant the `{T}: add {G}{G}` / Elf-lord ability — needs
+    ability-granting level bands).
+
 - ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
   - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
     bot heuristic that takes the first eligible candidate would make
