@@ -439,3 +439,88 @@ fn fog_on_the_barrow_downs_locks_down() {
     let b = cp.iter().find(|c| c.id == foe).unwrap();
     assert!(b.keywords.contains(&crate::card::Keyword::CantAttack), "enchanted creature can't attack");
 }
+
+/// Soldier of the Grey Host pumps a creature on ETB.
+#[test]
+fn soldier_of_the_grey_host_pumps_on_etb() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::soldier_of_the_grey_host());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 2), "bear got +2/+0");
+}
+
+/// Westfold Rider sacrifices itself to destroy an enchantment.
+#[test]
+fn westfold_rider_destroys_enchantment() {
+    let mut g = two_player_game();
+    let rider = g.add_card_to_battlefield(0, catalog::westfold_rider());
+    let ench = g.add_card_to_battlefield(1, catalog::pacifism());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rider, ability_index: 0, target: Some(Target::Permanent(ench)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rider).is_none(), "Rider sacrificed");
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+/// Bombadil's Song pumps a creature, grants hexproof, and tempts.
+#[test]
+fn bombadils_song_pumps_hexproof_and_tempts() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bombadils_song());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3), "bear got +1/+1");
+    assert!(b.keywords.contains(&crate::card::Keyword::Hexproof), "and hexproof");
+    assert_eq!(g.players[0].ring_temptations, 1, "and tempted");
+}
+
+/// Mordor Muster draws, loses 1 life, and amasses.
+#[test]
+fn mordor_muster_draws_loses_amasses() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::mordor_muster());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    cast(&mut g, id);
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Army)), "amassed an Army");
+}
+
+/// Bag End Porter grows by the number of legendary creatures you control.
+#[test]
+fn bag_end_porter_scales_with_legends() {
+    let mut g = two_player_game();
+    let porter = g.add_card_to_battlefield(0, catalog::bag_end_porter());
+    g.clear_sickness(porter);
+    g.add_card_to_battlefield(0, catalog::prince_imrahil_the_fair()); // legendary
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: porter, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let p = cp.iter().find(|c| c.id == porter).unwrap();
+    assert_eq!((p.power, p.toughness), (5, 5), "4/4 +1/+1 for the one legend");
+}

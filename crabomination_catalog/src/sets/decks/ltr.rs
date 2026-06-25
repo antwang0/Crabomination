@@ -562,3 +562,122 @@ pub fn wose_pathfinder() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Soldier of the Grey Host — {3}{W} 2/2 Spirit Soldier. Flash, flying. When it
+/// enters, target creature gets +2/+0 until end of turn.
+pub fn soldier_of_the_grey_host() -> CardDefinition {
+    CardDefinition {
+        name: "Soldier of the Grey Host",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Westfold Rider — {1}{W} 3/1 Human Knight. Sacrifice this creature: destroy
+/// target artifact or enchantment. Activate only as a sorcery.
+pub fn westfold_rider() -> CardDefinition {
+    CardDefinition {
+        name: "Westfold Rider",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bombadil's Song — {1}{G} Instant. Target creature you control gets +1/+1 and
+/// gains hexproof until end of turn. The Ring tempts you.
+pub fn bombadils_song() -> CardDefinition {
+    CardDefinition {
+        name: "Bombadil's Song",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::RingTempts { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mordor Muster — {1}{B} Sorcery. You draw a card and lose 1 life. Amass Orcs 1.
+pub fn mordor_muster() -> CardDefinition {
+    CardDefinition {
+        name: "Mordor Muster",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(1), extra_type: Some(CreatureType::Orc) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bag End Porter — {3}{G} 4/4 Dwarf. Whenever it attacks, it gets +X/+X until
+/// end of turn, where X is the number of legendary creatures you control.
+pub fn bag_end_porter() -> CardDefinition {
+    let x = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::HasSupertype(Supertype::Legendary))
+            .and(SelectionRequirement::ControlledByYou),
+    };
+    CardDefinition {
+        name: "Bag End Porter",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: x.clone(),
+            toughness: x,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
