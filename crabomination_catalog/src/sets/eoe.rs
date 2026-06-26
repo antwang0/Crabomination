@@ -8,7 +8,7 @@ use crate::card::{
     StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, WardCost,
 };
 use crate::effect::shortcut::{
-    etb, on_attack, on_dies, station, target, target_any, target_filtered, warp,
+    etb, flurry, on_attack, on_dies, station, target, target_any, target_filtered, warp,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
@@ -4080,6 +4080,187 @@ pub fn orbital_plunge() -> CardDefinition {
             ])),
             else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }),
         },
+        ..Default::default()
+    }
+}
+
+/// Anticausal Vestige — {6} Creature — Eldrazi 7/5. When it leaves the
+/// battlefield, draw a card, then you may put a permanent card with mana value
+/// ≤ the number of lands you control from your hand onto the battlefield tapped.
+/// Warp {4}.
+pub fn anticausal_vestige() -> CardDefinition {
+    CardDefinition {
+        name: "Anticausal Vestige",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Permanent.and(
+                        SelectionRequirement::ManaValueAtMostYourCount(Box::new(
+                            SelectionRequirement::Land,
+                        )),
+                    ),
+                    count: Value::Const(1),
+                    tapped: true,
+                    haste: false,
+                    sacrifice_eot: false,
+                },
+            ]),
+        }],
+        alternative_cost: Some(warp(cost(&[generic(4)]))),
+        ..Default::default()
+    }
+}
+
+/// Faller's Faithful — {2}{B} Creature — Human Wizard 3/1. ETB: destroy up to
+/// one other target creature; if it wasn't dealt damage this turn, its
+/// controller draws two cards.
+pub fn fallers_faithful() -> CardDefinition {
+    CardDefinition {
+        name: "Faller's Faithful",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            // Check the damage state before the creature is destroyed.
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::DealtDamageThisTurn,
+                })),
+                then: Box::new(Effect::Draw {
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Selfcraft Mechan — {3}{U} Artifact Creature — Robot Artificer 3/4. ETB: you
+/// may sacrifice an artifact; if you do, put a +1/+1 counter on target creature
+/// and draw a card.
+pub fn selfcraft_mechan() -> CardDefinition {
+    CardDefinition {
+        name: "Selfcraft Mechan",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice an artifact?".into(),
+            filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+            count: Value::Const(1),
+            then: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cosmogrand Zenith — {2}{W} Creature — Human Soldier 2/4. Whenever you cast
+/// your second spell each turn, choose one — create two 1/1 white Soldiers; or
+/// put a +1/+1 counter on each creature you control.
+pub fn cosmogrand_zenith() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![crate::mana::Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cosmogrand Zenith",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![flurry(Effect::ChooseMode(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: soldier },
+            Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Seedship Broodtender — {B}{G} Creature — Insect Citizen 2/3. ETB: mill three.
+/// {3}{B}{G}, Sacrifice this: return target creature or Spacecraft card from
+/// your graveyard to the battlefield. Sorcery speed.
+pub fn seedship_broodtender() -> CardDefinition {
+    CardDefinition {
+        name: "Seedship Broodtender",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b(), g()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InYourGraveyard.and(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                    ),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

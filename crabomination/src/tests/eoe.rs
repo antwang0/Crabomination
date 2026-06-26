@@ -1412,3 +1412,76 @@ fn orbital_plunge_lander_on_excess() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Lander").count(), 0,
         "no excess → no Lander");
 }
+
+/// Anticausal Vestige's leave trigger draws and cheats a low-MV permanent into
+/// play tapped (MV ≤ lands you control).
+#[test]
+fn anticausal_vestige_ltb_cheats_permanent() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest()); // a card to draw
+    let vestige = g.add_card_to_battlefield(0, catalog::anticausal_vestige());
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); } // MV ≤ 3 allowed
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bears])])); // opt to cheat it in
+    kill(&mut g, vestige);
+    drain_stack(&mut g);
+    let in_play = g.battlefield_find(bears);
+    assert!(in_play.is_some(), "cheated the bears into play");
+    assert!(in_play.unwrap().tapped, "entered tapped");
+}
+
+/// Faller's Faithful destroys a creature; an undamaged one lets its controller
+/// draw two.
+#[test]
+fn fallers_faithful_destroy_undamaged_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(1, catalog::forest()); } // cards to draw
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3, undamaged
+    let before = g.players[1].hand.len();
+    resolve_targeted(&mut g, 0, catalog::fallers_faithful().triggered_abilities[0].effect.clone(), &[foe]);
+    assert!(g.battlefield_find(foe).is_none(), "destroyed");
+    assert_eq!(g.players[1].hand.len(), before + 2, "undamaged → controller drew two");
+}
+
+/// Selfcraft Mechan sacrifices an artifact to grow a creature and draw.
+#[test]
+fn selfcraft_mechan_sacs_artifact_for_value() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest()); // a card to draw
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // pay the optional sac
+    let fodder = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let grow = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    resolve_targeted(&mut g, 0, catalog::selfcraft_mechan().triggered_abilities[0].effect.clone(), &[grow]);
+    assert!(g.battlefield_find(fodder).is_none(), "artifact sacrificed");
+    assert_eq!(g.computed_permanent(grow).unwrap().toughness, 3, "+1/+1 counter");
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
+}
+
+/// Cosmogrand Zenith's flurry trigger (mode 0) makes two Soldier tokens.
+#[test]
+fn cosmogrand_zenith_flurry_makes_soldiers() {
+    let mut g = two_player_game();
+    resolve_targeted(&mut g, 0, catalog::cosmogrand_zenith().triggered_abilities[0].effect.clone(), &[]);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Human Soldier").count(), 2);
+}
+
+/// Seedship Broodtender mills three on ETB and can reanimate a creature from the
+/// graveyard.
+#[test]
+fn seedship_broodtender_mills_and_reanimates() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); } // cards to mill
+    let gy_before = g.players[0].graveyard.len();
+    g.move_card_to_battlefield_for_test(0, catalog::seedship_broodtender());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3, "milled three");
+    // Reanimate path: a creature card in the graveyard returns to the battlefield.
+    let dead = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    let dead_id = dead.id;
+    g.players[0].graveyard.push(dead);
+    resolve_targeted(&mut g, 0, catalog::seedship_broodtender().activated_abilities[0].effect.clone(), &[dead_id]);
+    assert!(g.battlefield_find(dead_id).is_some(), "reanimated from graveyard");
+}
