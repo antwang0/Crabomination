@@ -3792,6 +3792,18 @@ static DECKS: &[Factory] = &[
     super::decks::honest_rutstein,
     super::decks::stoic_sphinx,
     super::decks::bovine_intervention,
+    // recent21 — simple OTJ/recent staples on existing primitives
+    super::decks::skyknight_vanguard,
+    super::decks::aerial_boost,
+    super::decks::boots_of_speed,
+    super::decks::ankle_biter,
+    super::decks::trick_shot,
+    super::decks::patient_naturalist,
+    super::decks::plan_the_heist,
+    super::decks::wanted_griffin,
+    super::decks::sterling_hound,
+    super::decks::hardbristle_bandit,
+    super::decks::rumbling_rockslide,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

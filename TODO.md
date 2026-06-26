@@ -2189,6 +2189,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   opponent's stuff as it's put on the stack, nor targeting a spell/ability an
   opponent controls beyond stack *spells* (abilities on the stack aren't
   checked). **Spree** (Lively Dirge) still ⏳ — multi-chosen additional costs.
+- ⏳ **recent21 approximations:** Trick Shot drops the "2 to another target
+  creature token" rider (just 6 to a creature); Patient Naturalist drops the
+  "else create a Treasure" when no land is milled. Stingerback Terror / Canyon
+  Crab / Bedrock Tortoise deferred (card-in-hand-scaled CDA P/T, a "didn't cast
+  from hand this turn" flag, and assigns-damage-by-toughness, respectively).
 - ⏳ **recent17–18 (Foundations) approximations to revisit:** Kitsa, Otterball
   Elite drops the "{2},{T}: copy target instant/sorcery you control" ability
   (needs a copy-spell activated ability gated on power ≥ 3); Run Away Together
