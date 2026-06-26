@@ -1074,7 +1074,7 @@ static DECKS: &[Factory] = &[
     super::decks::aether_figment,
     super::decks::think_twice,
     super::decks::forbidden_alchemy,
-    super::decks::pilgrims_eye,
+    super::decks::phyrexian_vault,
     super::decks::goblin_king,
     super::decks::goblin_chieftain,
     super::decks::krenko_mob_boss,
@@ -3721,6 +3721,9 @@ static DECKS: &[Factory] = &[
     super::decks::su_chi,
     super::decks::secluded_courtyard,
     super::decks::icon_of_ancestry,
+    super::decks::aeolipile,
+    super::decks::phyrexian_vault,
+    super::decks::vanquishers_banner,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

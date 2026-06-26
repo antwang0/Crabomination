@@ -91,6 +91,64 @@ pub fn secluded_courtyard() -> CardDefinition {
     }
 }
 
+/// Aeolipile — {2} Artifact. {1}, {T}, Sacrifice this artifact: it deals 2
+/// damage to any target.
+pub fn aeolipile() -> CardDefinition {
+    CardDefinition {
+        name: "Aeolipile",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Vault — {3} Artifact. {2}, {T}, Sacrifice a creature: Draw a card.
+pub fn phyrexian_vault() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Vault",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vanquisher's Banner — {5} Artifact. As it enters, choose a creature type.
+/// Creatures you control of the chosen type get +1/+1. (The "whenever you cast a
+/// creature spell of the chosen type, draw a card" rider is dropped — no
+/// chosen-type cast-trigger primitive yet.)
+pub fn vanquishers_banner() -> CardDefinition {
+    CardDefinition {
+        name: "Vanquisher's Banner",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control of the chosen type get +1/+1.",
+            effect: StaticEffect::AnthemForChosenType {
+                power: 1,
+                toughness: 1,
+                exclude_source: false,
+                opponents: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Icon of Ancestry — {3} Artifact. As it enters, choose a creature type.
 /// Creatures you control of the chosen type get +1/+1. (The {3}, {T} dig for a
 /// creature of the chosen type is dropped.)

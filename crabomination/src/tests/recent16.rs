@@ -42,6 +42,51 @@ fn icon_of_ancestry_buffs_chosen_type() {
     assert_eq!((cp.power, cp.toughness), (2, 2), "+1/+1 for the chosen type");
 }
 
+/// Aeolipile sacrifices itself to deal 2 damage to any target.
+#[test]
+fn aeolipile_pings_for_two() {
+    let mut g = two_player_game();
+    let pile = g.add_card_to_battlefield(0, catalog::aeolipile());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pile, ability_index: 0,
+        target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("activate Aeolipile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.battlefield_find(pile).is_none(), "sacrificed as a cost");
+}
+
+/// Phyrexian Vault sacrifices a creature to draw a card.
+#[test]
+fn phyrexian_vault_sacs_for_a_card() {
+    let mut g = two_player_game();
+    let vault = g.add_card_to_battlefield(0, catalog::phyrexian_vault());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Vault");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+/// Vanquisher's Banner buffs creatures of the chosen type.
+#[test]
+fn vanquishers_banner_buffs_chosen_type() {
+    let mut g = two_player_game();
+    let banner = g.add_card_to_battlefield(0, catalog::vanquishers_banner());
+    g.battlefield_find_mut(banner).unwrap().chosen_creature_type = Some(CreatureType::Elf);
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 2, "+1/+1 for the chosen type");
+}
+
 /// Secluded Courtyard is a chosen-type mana land with two mana abilities.
 #[test]
 fn secluded_courtyard_is_a_chosen_type_land() {
