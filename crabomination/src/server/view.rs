@@ -525,6 +525,8 @@ fn project_player(
         committed_crime_this_turn: state.players[player_seat].committed_crime_this_turn,
         ring_temptations: player.ring_temptations,
         ring_bearer: state.effective_ring_bearer(player_seat),
+        void_active: state.nonland_permanent_left_bf_this_turn
+            || state.players[player_seat].warped_spell_this_turn,
     }
 }
 
@@ -1698,6 +1700,17 @@ mod tests {
         g.remove_from_battlefield_to_graveyard_raw(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
+    }
+
+    #[test]
+    fn project_surfaces_void_active() {
+        // EOE Void — the view flags a seat whose Void condition is met so the
+        // client can show a "✦ Void" chip.
+        let mut g = two_player_game();
+        assert!(!project(&g, 0).players[0].void_active, "dormant by default");
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.remove_from_battlefield_to_graveyard_raw(bear); // a nonland permanent left
+        assert!(project(&g, 0).players[0].void_active, "nonland leaving the battlefield → Void");
     }
 
     #[test]

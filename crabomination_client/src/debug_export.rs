@@ -203,6 +203,7 @@ mod tests {
                 committed_crime_this_turn: false,
                 ring_temptations: 0,
                 ring_bearer: None,
+                void_active: false,
                 speed: 0,
             }],
             battlefield: vec![],

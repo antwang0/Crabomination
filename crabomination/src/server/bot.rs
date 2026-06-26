@@ -1995,6 +1995,14 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Reanimate a creature from the graveyard via a battlefield permanent's
+    // activated ability (Seedship Broodtender's sac-to-return) when there's a
+    // worthwhile target. Dry-run-gated so cost / sorcery-speed timing bottom
+    // out in `would_accept`.
+    if let Some(action) = pick_battlefield_reanimate(state, seat) {
+        return action;
+    }
+
     // Fire a "{cost}: deal damage to any target" value ability (Frostwielder's
     // {T} ping, Kiku's tap-and-burn, Pain Kami-style sac burn) when it kills an
     // opposing creature outright. Dry-run-gated so cost / timing / target
@@ -2427,6 +2435,61 @@ fn effect_returns_self_to_battlefield(eff: &Effect) -> bool {
         Effect::Seq(v) => v.iter().any(effect_returns_self_to_battlefield),
         _ => false,
     }
+}
+
+/// True if a `SelectionRequirement` tree constrains its target to a card in a
+/// graveyard (`InYourGraveyard` / `InGraveyard`).
+fn filter_targets_graveyard(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::InYourGraveyard | R::InGraveyard => true,
+        R::And(a, b) | R::Or(a, b) => filter_targets_graveyard(a) || filter_targets_graveyard(b),
+        _ => false,
+    }
+}
+
+/// True if `eff` moves a graveyard-targeted card onto the battlefield (a
+/// reanimation effect — Seedship Broodtender's sac-to-return). Recurses `Seq`.
+fn effect_reanimates_from_graveyard(eff: &Effect) -> bool {
+    use crate::effect::ZoneDest;
+    match eff {
+        Effect::Move {
+            what: crate::card::Selector::TargetFiltered { filter, .. },
+            to: ZoneDest::Battlefield { .. },
+        } => filter_targets_graveyard(filter),
+        Effect::Seq(v) => v.iter().any(effect_reanimates_from_graveyard),
+        _ => false,
+    }
+}
+
+/// Activate a battlefield permanent's ability that reanimates a card from the
+/// graveyard (Seedship Broodtender's "{cost}, Sacrifice this: return target
+/// creature/Spacecraft from your graveyard to the battlefield"), aimed at the
+/// engine's auto-picked best graveyard target. Skips when nothing legal exists.
+/// Dry-run-gated so cost / sorcery-speed timing bottom out in `would_accept`.
+fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameAction> {
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !effect_reanimates_from_graveyard(&ab.effect) {
+                continue;
+            }
+            let target = state.auto_target_for_effect(&ab.effect, seat);
+            if target.is_none() {
+                continue; // no graveyard creature worth returning
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Find a beneficial energy-only activated ability the bot can pay for: an
@@ -3950,6 +4013,33 @@ mod tests {
         // With no mana it leaves the card alone.
         g.players[0].mana_pool.empty();
         assert!(pick_graveyard_recursion(&g, 0).is_none(), "won't Embalm without mana");
+    }
+
+    /// The bot reanimates a graveyard creature with a battlefield permanent's
+    /// sac-to-return ability (Seedship Broodtender), aimed at the dead creature.
+    #[test]
+    fn bot_reanimates_from_graveyard_via_battlefield_ability() {
+        use crate::TurnStep;
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let brood = g.add_card_to_battlefield(0, catalog::seedship_broodtender());
+        let dead = g.add_card_to_graveyard(0, catalog::colossal_dreadmaw()); // a worthy target
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_battlefield_reanimate(&g, 0).expect("bot reanimates from graveyard");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, brood);
+                assert_eq!(target, Some(Target::Permanent(dead)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // Empty graveyard → nothing to do.
+        g.players[0].graveyard.clear();
+        assert!(pick_battlefield_reanimate(&g, 0).is_none(), "no target → no activation");
     }
 
     /// The bot uses a *targeted* graveyard-activated ability (Scavenge),

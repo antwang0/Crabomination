@@ -671,6 +671,12 @@ pub struct PlayerView {
     /// flag the bearer. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub ring_bearer: Option<CardId>,
+    /// EOE Void — true when this seat's Void condition is met (a nonland
+    /// permanent left the battlefield this turn, or this seat warped a spell
+    /// this turn). Lets the client light up Void-matters payoffs with a "✦
+    /// Void" chip. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub void_active: bool,
 }
 
 /// One source-commander's combat-damage tally against a player (CR 903.10a).
