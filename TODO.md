@@ -2170,6 +2170,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **recent17–18 (Foundations) approximations to revisit:** Kitsa, Otterball
+  Elite drops the "{2},{T}: copy target instant/sorcery you control" ability
+  (needs a copy-spell activated ability gated on power ≥ 3); Run Away Together
+  is modeled as any-two-creatures bounce (the "controlled by different players"
+  restriction isn't enforced); Sky Crier / Dryad Greenseeker approximate
+  "put into hand" as a draw; Angel of Finality / Burglar Rat target each
+  opponent rather than a chosen player (1v1-faithful). Charmed Sleep deferred —
+  wants an Aura that taps + sets `untap_locked_by` on the host at ETB.
 - ⏳ **Cards noticed this run (recent12–15) but deferred — need new primitives:**
   Kutzil's Flanker (mode 1 wants a "creatures that left the battlefield under
   your control this turn" count); Caustic Bronco (attack-reveal life-loss/drain
