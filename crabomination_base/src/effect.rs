@@ -683,6 +683,10 @@ pub enum Predicate {
     /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
     /// Lacerator).
     PlayerLifeAtMost { who: PlayerRef, life: i32 },
+    /// True if any player matched by `who` has an effective life total at least
+    /// `life`. Powers "as long as you have N or more life" statics (Angel of
+    /// Vitality).
+    PlayerLifeAtLeast { who: PlayerRef, life: i32 },
     /// True if any player matched by `who` has the most life, or is tied for
     /// the most, among all (non-eliminated) players. Powers Dethrone (CR
     /// 702.105 — "attacks the player with the most life or tied for most

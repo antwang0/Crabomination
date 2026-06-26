@@ -638,6 +638,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.effective_life(p) <= *life),
+            Predicate::PlayerLifeAtLeast { who, life } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.effective_life(p) >= *life),
             Predicate::PlayerHasMostLife { who } => {
                 let max_life = (0..self.players.len())
                     .filter(|&p| !self.players[p].eliminated)
