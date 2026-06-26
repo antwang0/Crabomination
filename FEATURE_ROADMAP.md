@@ -30,7 +30,8 @@ exercising each) was elided in a compaction pass; recover it from
   Escalate/Buyback/Bestow/Foretell/Suspend/Flashback/Madness/Escape/Adventure/
   Cascade/Storm/Convoke/Delve); plus Fading/Vanishing, Cumulative Upkeep, Echo,
   Dredge, Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift,
-  Unleash, Devoid, Ingest, Absorb.
+  Unleash, Devoid, Ingest, Absorb, Warp, Station (CR 702.184/721 — charge-counter
+  `{N+}` Spacecraft striations: keyword + base-P/T + static bands).
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
   Convoke/Delve reduction; Commander tax; alternative (pitch) costs;
   energy-gated mana abilities; X-cost activated abilities.

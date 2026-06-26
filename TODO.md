@@ -18,18 +18,30 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   trigger primitive — defer those until then.
 - **More Spacecraft** remaining: Synthesizer Labship / Entropic Battlecruiser
   (see above), the legendaries (Dawnsire, The Seriema, Infinite Guideline
-  Station, The Eternity Elevator), Debris-less keyword bands. Most are keyword/
-  P-T bands the shipped `StationBand` already covers; just need ETB/attack
-  bodies wired. (16 Spacecraft shipped.)
-- **`set_gaps.py "set:eoe"` still lists ~215 cards.** Easy batches remaining:
+  Station, The Eternity Elevator). Most are keyword/P-T bands the shipped
+  `StationBand` already covers; just need ETB/attack bodies wired. (16 Spacecraft
+  shipped.)
+- **`set_gaps.py "set:eoe"` still lists ~180 cards.** Easy batches remaining:
   more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
   needs a `Value::ManaSpentToCast`), **Blade of the Swarm** (modal "put an exiled
   warp card on the bottom"), **Sothera, the Supervoid**, **Anticausal Vestige**
-  (LTB put-a-permanent), **Solar Blaze** (each creature self-damages = power).
-- Approximations in the shipped batch: All-Fates Stalker drops the "up to one
-  non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature, not as
-  a single batched event; Tidal Terror omits the tap-two-to-be-unblockable rider.
+  (LTB put-a-permanent), **Solar Blaze** (each creature self-damages = power),
+  **Fungal Colossus** (cost {X} less = differently-named lands — needs a
+  distinct-land-name count Value), **Frenzied Baloth** ("your creature spells
+  can't be countered" + "combat damage can't be prevented" statics),
+  **Gravblade Heavy** / **Skystinger** (a conditional self-keyword static —
+  deathtouch/anthem gated on a predicate; and a "blocks a creature with flying"
+  filtered trigger).
+- Approximations in the shipped batches: All-Fates Stalker drops the "up to one
+  non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature; Tidal
+  Terror omits tap-two-to-be-unblockable; Larval Scoutlander's sacrifice option
+  is land-only (the "or Lander" branch is dropped). Station's tap-a-creature
+  cost auto-picks the *lowest*-power creature (fewest charges) for non-UI seats —
+  fine for bots, but a Station-aware picker would tap the highest.
+- **Client tooltip "Station → N" line** (`PermanentView.station_next_threshold`)
+  ships but is un-exercised in headless CI (the Bevy client can't build without
+  wayland); verify it renders on a real desktop run.
 
 ## Discovered follow-ups — `decks::ltr` / The Ring batch
 
