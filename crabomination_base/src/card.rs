@@ -1562,6 +1562,11 @@ pub struct TokenDefinition {
     /// Defaults to `false` (enters untapped) via `#[serde(default)]`.
     #[serde(default)]
     pub tapped: bool,
+    /// CR 111.10i / 712 — back face for a double-faced token (the Incubator
+    /// token's transformable Phyrexian back). Lifted onto the resulting
+    /// `CardDefinition.back_face` so `Effect::Transform` can toggle it.
+    #[serde(default)]
+    pub back_face: Option<Box<TokenDefinition>>,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────

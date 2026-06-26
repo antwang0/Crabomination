@@ -916,17 +916,23 @@ pub fn ossification() -> CardDefinition {
     }
 }
 
-/// Sunfall — {3}{W}{W} Sorcery. Exile all creatures. (The Incubate-X rider is
-/// dropped — no Incubator-token primitive yet.)
+/// Sunfall — {3}{W}{W} Sorcery. Exile all creatures, then incubate X where X is
+/// the number of creatures exiled this way (counted pre-exile).
 pub fn sunfall() -> CardDefinition {
     CardDefinition {
         name: "Sunfall",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::Exile { what: Selector::TriggerSource }),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Incubate {
+                who: PlayerRef::You,
+                amount: Value::count(Selector::EachPermanent(SelectionRequirement::Creature)),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::Exile { what: Selector::TriggerSource }),
+            },
+        ]),
         ..Default::default()
     }
 }

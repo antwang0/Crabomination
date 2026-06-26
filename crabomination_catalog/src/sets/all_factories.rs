@@ -3930,6 +3930,13 @@ static EOE: &[Factory] = &[
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
 ];
+static ONE: &[Factory] = &[
+    super::one::eyes_of_gitaxias,
+    super::one::merciless_repurposing,
+    super::one::phyrexian_awakening,
+    super::one::tangled_skyline,
+    super::one::injector_crocodile,
+];
 static FIN: &[Factory] = &[
     super::fin::iron_giant,
     super::fin::sazhs_chocobo,
@@ -9711,6 +9718,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("mkm", MKM),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
+    ("one", ONE),
     ("pc2", PC2),
     ("por", POR),
     ("rav", RAV),

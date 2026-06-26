@@ -15,7 +15,8 @@ mod targeting;
 // Token factories now live in `crabomination_base`; re-exported here so the
 // engine's `game::effects::*_token` paths keep working.
 pub use crabomination_base::tokens::{
-    blood_token, clue_token, detective_token, food_token, token_to_card_definition, treasure_token,
+    blood_token, clue_token, detective_token, food_token, incubator_token,
+    token_to_card_definition, treasure_token,
 };
 pub(crate) use delayed::delayed_kind_from_effect;
 pub(crate) use events::{emblem_event_matches, event_matches_spec, event_subject};
@@ -5627,6 +5628,38 @@ impl GameState {
                         self.mint_token_onto_battlefield(def, p, definition.tapped, events);
                     }
                 }
+                Ok(())
+            }
+
+            Effect::Incubate { who, amount } => {
+                use crate::card::CounterType;
+                let players = self.resolve_players(who, ctx);
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                for p in players {
+                    // CR 614.13 — token doublers apply to the Incubator mint.
+                    let doublers = self.token_doublers_for(p);
+                    let copies = 1u32 << doublers.min(16);
+                    for _ in 0..copies {
+                        let def = token_to_card_definition(&incubator_token());
+                        let id = self.mint_token_onto_battlefield(def, p, false, events);
+                        if n > 0 && self.battlefield.iter().any(|c| c.id == id) {
+                            // CR 614.16 — counter replacements apply to the +1/+1s.
+                            let scaled =
+                                self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
+                            if let Some(c) = self.battlefield_find_mut(id) {
+                                c.add_counters(CounterType::PlusOnePlusOne, scaled);
+                            }
+                            events.push(GameEvent::CounterAdded {
+                                card_id: id,
+                                counter_type: CounterType::PlusOnePlusOne,
+                                count: scaled,
+                            });
+                            self.permanents_gained_counter_this_turn.insert(id);
+                        }
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
                 Ok(())
             }
 

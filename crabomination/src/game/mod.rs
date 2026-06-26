@@ -103,6 +103,9 @@ mod tests_mom;
 #[path = "../tests/eoe.rs"]
 mod tests_eoe;
 #[cfg(test)]
+#[path = "../tests/one.rs"]
+mod tests_one;
+#[cfg(test)]
 #[path = "../tests/ltr.rs"]
 mod tests_ltr;
 #[cfg(test)]

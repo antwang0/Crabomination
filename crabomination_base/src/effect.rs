@@ -2679,6 +2679,9 @@ pub enum Effect {
     GainControlWhileSourceRemains { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// Incubate N (CR 701.53): create an Incubator double-faced token under
+    /// `who`'s control with `amount` +1/+1 counters on it.
+    Incubate { who: PlayerRef, amount: Value },
     /// Amass N (CR 701.43): put `count` +1/+1 counters on an Army `who`
     /// controls, creating a 0/0 black Army creature token first if they
     /// control none. `extra_type` is added to the Army (Amass Zombies /

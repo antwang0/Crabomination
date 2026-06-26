@@ -60,6 +60,38 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         triggered_abilities: token.triggered_abilities.clone(),
         static_abilities: token.static_abilities.clone(),
         equipped_bonus: token.equipped_bonus.clone(),
+        back_face: token
+            .back_face
+            .as_ref()
+            .map(|b| Box::new(token_to_card_definition(b))),
+        ..Default::default()
+    }
+}
+
+/// CR 701.53b — the Incubator double-faced token. Front: a colorless Incubator
+/// artifact with "{2}: Transform this token." Back: a 0/0 colorless Phyrexian
+/// artifact creature ("Phyrexian Token"). `incubate N` mints this with N +1/+1
+/// counters, so transforming yields an N/N.
+pub fn incubator_token() -> TokenDefinition {
+    let back = TokenDefinition {
+        name: "Phyrexian Token".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        ..Default::default()
+    };
+    TokenDefinition {
+        name: "Incubator".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::new(vec![ManaSymbol::Generic(2)]),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(back)),
         ..Default::default()
     }
 }

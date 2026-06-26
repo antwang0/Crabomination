@@ -490,6 +490,9 @@ impl Effect {
             | Effect::Amass { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::Incubate { who, amount } => {
+                player_has_target(who) || value_has_target(amount)
+            }
             Effect::BecomeBasicLand { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
             Effect::BecomeCopyOf { what, source, .. }
