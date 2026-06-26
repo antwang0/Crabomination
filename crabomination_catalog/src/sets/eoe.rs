@@ -4885,3 +4885,69 @@ pub fn sami_ships_engineer() -> CardDefinition {
 }
 
 
+
+/// Starfighter Pilot — {1}{W} Creature — Human Pilot 2/2. Whenever it becomes
+/// tapped, surveil 1.
+pub fn starfighter_pilot() -> CardDefinition {
+    CardDefinition {
+        name: "Starfighter Pilot",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Starbreach Whale — {4}{U} Creature — Whale 3/5, flying. ETB: surveil 2.
+/// Warp {1}{U}.
+pub fn starbreach_whale() -> CardDefinition {
+    CardDefinition {
+        name: "Starbreach Whale",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        alternative_cost: Some(warp(cost(&[generic(1), u()]))),
+        ..Default::default()
+    }
+}
+
+/// Haliya, Ascendant Cadet — {2}{G}{W}{W} Legendary Creature — Human Soldier
+/// 3/3. Whenever Haliya enters or attacks, put a +1/+1 counter on target
+/// creature you control. (The counter-creatures-deal-damage card-draw rider is
+/// approximated away.)
+pub fn haliya_ascendant_cadet() -> CardDefinition {
+    let counter = || Effect::AddCounter {
+        what: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Haliya, Ascendant Cadet",
+        cost: cost(&[generic(2), g(), w(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(counter()), on_attack(counter())],
+        ..Default::default()
+    }
+}

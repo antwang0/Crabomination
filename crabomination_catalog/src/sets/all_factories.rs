@@ -3995,6 +3995,9 @@ static EOE: &[Factory] = &[
     super::eoe::illvoi_light_jammer,
     super::eoe::hylderblade,
     super::eoe::sami_ships_engineer,
+    super::eoe::starfighter_pilot,
+    super::eoe::starbreach_whale,
+    super::eoe::haliya_ascendant_cadet,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

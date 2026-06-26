@@ -1769,3 +1769,40 @@ fn sami_makes_tapped_robot() {
     let robot = g.battlefield.iter().find(|c| c.definition.name == "Robot" && c.controller == 0);
     assert!(robot.is_some_and(|c| c.tapped), "tapped 2/2 Robot");
 }
+
+/// Starfighter Pilot surveils when it becomes tapped.
+#[test]
+fn starfighter_pilot_surveils_on_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let pilot = g.add_card_to_battlefield(0, catalog::starfighter_pilot());
+    let ctx = crate::game::effects::EffectContext::for_ability(pilot, 0, None);
+    // The becomes-tapped body is a surveil; it resolves without panicking.
+    g.resolve_effect(&catalog::starfighter_pilot().triggered_abilities[0].effect, &ctx).unwrap();
+}
+
+/// Starbreach Whale's ETB surveils two.
+#[test]
+fn starbreach_whale_etb_surveils_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let lib = g.players[0].library.len();
+    g.move_card_to_battlefield_for_test(0, catalog::starbreach_whale());
+    drain_stack(&mut g);
+    // Surveil keeps cards on top by default (AutoDecider), so the library size
+    // is unchanged but the ETB resolved.
+    assert_eq!(g.players[0].library.len(), lib);
+    assert!(g.computed_permanent(g.battlefield.iter().find(|c| c.definition.name == "Starbreach Whale").unwrap().id)
+        .unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Haliya puts a +1/+1 counter on a creature when she enters and when she
+/// attacks.
+#[test]
+fn haliya_counters_on_enter_and_attack() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::haliya_ascendant_cadet().triggered_abilities[0].effect.clone(), &[target]);
+    resolve_targeted(&mut g, 0, catalog::haliya_ascendant_cadet().triggered_abilities[1].effect.clone(), &[target]);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
