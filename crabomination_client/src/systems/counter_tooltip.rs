@@ -704,6 +704,10 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackOrBlockUnlessYouControlCount { .. } => "Can't attack or block unless you control enough matching permanents.",
         K::CantBeCounteredIfXAtLeast(_) => "Can't be countered if X was paid at or above the named amount.",
         K::StartYourEngines => "When it enters, if you have no speed, your speed becomes 1. Your speed then increases by 1 the first time an opponent loses life on each of your turns (max 4).",
+        K::Poisonous(_) => "Whenever it deals combat damage to a player, that player gets that many poison counters.",
+        K::CanBlockOnlyFlying => "Can block only creatures with flying.",
+        K::CantAttackOrBlockUnlessHandSizeAtMost(_) => "Can't attack or block unless you have that many or fewer cards in hand.",
+        K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium (four or more card types among cards in your graveyard).",
         _ => return None,
     })
 }
@@ -1334,6 +1338,10 @@ mod tests {
             Keyword::CantBeCopied, Keyword::DealsNoCombatDamage,
             Keyword::Protection(Color::Red), Keyword::Bushido(2),
             Keyword::Rampage(1), Keyword::Crew(3), Keyword::Madness(ManaCost::default()),
+            // Restriction / poison keywords that previously fell through to None.
+            Keyword::Poisonous(1), Keyword::CanBlockOnlyFlying,
+            Keyword::CantAttackOrBlockUnlessHandSizeAtMost(1),
+            Keyword::CantAttackOrBlockUnlessDelirium,
         ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");

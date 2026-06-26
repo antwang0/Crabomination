@@ -1,6 +1,6 @@
 //! Functionality tests for the `catalog::sets::decks::recent17` Foundations batch.
 
-use crate::card::{ArtifactSubtype, CardType, CreatureType, Keyword};
+use crate::card::{ArtifactSubtype, Keyword};
 use crate::catalog;
 use crate::game::types::Target;
 use crate::game::*;

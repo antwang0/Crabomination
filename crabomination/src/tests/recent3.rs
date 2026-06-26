@@ -322,6 +322,31 @@ fn bot_fires_seq_wrapped_reach_drain_for_lethal() {
     );
 }
 
+/// The bot equips its Equipment onto an attacker rather than a Defender wall.
+#[test]
+fn bot_equips_attacker_not_defender_wall() {
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    // A big 0/4 Wall (Defender) and a smaller real attacker.
+    let wall = g.add_card_to_battlefield(0, catalog::wall_of_omens()); // Defender, 0/4
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, can attack
+    let eq = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1); // equip {1}
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // The bot should equip the attacker, not the higher-toughness Wall.
+    let mut found = None;
+    for _ in 0..40 {
+        if let Some(GameAction::Equip { equipment, target }) = RandomBot::new().next_action(&g, 0) {
+            found = Some((equipment, target));
+            break;
+        }
+    }
+    assert_eq!(found, Some((eq, attacker)), "equips the attacker, skipping the Wall");
+    assert_ne!(found.unwrap().1, wall);
+}
+
 /// Manalith taps for one mana of any color.
 #[test]
 fn manalith_taps_for_mana() {

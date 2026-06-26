@@ -1666,6 +1666,17 @@ impl GameState {
         self.players[seat].life
     }
 
+    /// Number of Equipment currently attached to permanent `id` (CR 301.5).
+    /// The single source of truth for equipped-state checks — `IsEquipped`,
+    /// `EquippedByAtLeast`, `SourceIsEquipped`, and the per-Equipment CDA all
+    /// route through here.
+    pub(crate) fn attached_equipment_count(&self, id: CardId) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.attached_to == Some(id) && c.definition.is_equipment())
+            .count()
+    }
+
     /// Apply a life delta to `seat` — gain for `delta > 0`, loss for
     /// `delta < 0`. Routes through the team's shared pool when set
     /// (Phase F — 2HG), else mutates `players[seat].life` directly.
@@ -4531,9 +4542,7 @@ impl GameState {
                     (base_p + n * per, base_t + n * per)
                 }
                 crate::card::DynamicPt::BasePlusPerAttachedEquipment { base_p, base_t, per } => {
-                    let n = self.battlefield.iter().filter(|c| {
-                        c.attached_to == Some(card.id) && c.definition.is_equipment()
-                    }).count() as i32;
+                    let n = self.attached_equipment_count(card.id) as i32;
                     (base_p + n * per, base_t + n * per)
                 }
                 crate::card::DynamicPt::BaseMinusHighestLife { base_p, base_t } => {

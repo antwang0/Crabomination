@@ -684,11 +684,9 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.monstrous)
                 .unwrap_or(false),
-            Predicate::SourceIsEquipped => ctx.source.is_some_and(|cid| {
-                self.battlefield
-                    .iter()
-                    .any(|o| o.attached_to == Some(cid) && o.definition.is_equipment())
-            }),
+            Predicate::SourceIsEquipped => {
+                ctx.source.is_some_and(|cid| self.attached_equipment_count(cid) > 0)
+            }
             Predicate::SourceIsSuspected => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
@@ -1409,18 +1407,10 @@ impl GameState {
                         o.attached_to == Some(*cid) && o.definition.is_enchantment()
                     }),
                     // CR 301.5 — "equipped" = an Equipment is attached.
-                    R::IsEquipped => self.battlefield.iter().any(|o| {
-                        o.attached_to == Some(*cid) && o.definition.is_equipment()
-                    }),
+                    R::IsEquipped => self.attached_equipment_count(*cid) > 0,
                     // CR 301.5 — equipped by at least `n` Equipment (Balan).
                     R::EquippedByAtLeast(n) => {
-                        self.battlefield
-                            .iter()
-                            .filter(|o| {
-                                o.attached_to == Some(*cid) && o.definition.is_equipment()
-                            })
-                            .count() as u32
-                            >= *n
+                        self.attached_equipment_count(*cid) as u32 >= *n
                     }
                     // CR 700.9 — counters, equipped, or enchanted by an Aura
                     // the permanent's own controller controls.
