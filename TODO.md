@@ -31,8 +31,9 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature; Tidal
   Terror omits tap-two-to-be-unblockable; Larval Scoutlander's sacrifice option
   is land-only (the "or Lander" branch is dropped). Station's tap-a-creature
-  cost auto-picks the *lowest*-power creature (fewest charges) for non-UI seats —
-  fine for bots, but a Station-aware picker would tap the highest.
+  cost now auto-picks the *highest*-power creature for non-UI seats (charges
+  scale with the tapped power, CR 702.184a; `auto_pick_highest_power` gated on
+  `TappedForCostPower`); other tap-another costs still tap the lowest.
 - **Client tooltip "Station → N" line** (`PermanentView.station_next_threshold`)
   ships but is un-exercised in headless CI (the Bevy client can't build without
   wayland); verify it renders on a real desktop run.

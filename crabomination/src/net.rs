@@ -1102,6 +1102,11 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub suspected: bool,
+    /// True when this creature is renowned (CR 702.93) — a UI hint so the client
+    /// can badge it (its Renown trigger has already fired). Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub renowned: bool,
     /// True when this permanent is detained (CR 701.35) — a UI hint so the
     /// client can badge it as "can't attack/block/activate." Populated by
     /// `project_permanent`.

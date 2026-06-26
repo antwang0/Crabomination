@@ -4041,6 +4041,19 @@ impl GameState {
         ranked.into_iter().take(count).map(|(id, _)| id).collect()
     }
 
+    /// Pick the `count` highest-power permanents from `candidates` (by id) —
+    /// the AutoDecider heuristic for a "Tap another creature: …" cost whose
+    /// payoff *scales* with the tapped creature's power (Station's charge add,
+    /// CR 702.184a). Ties keep battlefield order via a stable sort.
+    pub(crate) fn auto_pick_highest_power(&self, candidates: &[CardId], count: usize) -> Vec<CardId> {
+        let mut ranked: Vec<(CardId, i32)> = candidates
+            .iter()
+            .filter_map(|id| self.battlefield_find(*id).map(|c| (*id, c.power())))
+            .collect();
+        ranked.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+        ranked.into_iter().take(count).map(|(id, _)| id).collect()
+    }
+
     /// Pick the `count` lowest-mana-value cards (by id) from `player`'s
     /// graveyard among `candidates` — the AutoDecider heuristic for an
     /// "Exile N cards from your graveyard" cost, keeping higher-value cards.
@@ -8247,7 +8260,20 @@ impl GameState {
         // cost's filter. A `wants_ui` activator with more than one candidate
         // chooses which to tap (suspend + replay, like the sacrifice cost);
         // bots and the no-real-choice case tap the lowest-power match so
-        // higher-value creatures stay open. Tapped after payment succeeds.
+        // higher-value creatures stay open — *unless* the payoff scales with the
+        // tapped creature's power (Station's charge add, CR 702.184a), in which
+        // case tapping the highest-power creature is strictly better.
+        // Tapped after payment succeeds.
+        let prefer_highest_tap = serde_json::to_string(&ability.effect)
+            .map(|s| s.contains("TappedForCostPower"))
+            .unwrap_or(false);
+        let auto_tap_pick = |g: &Self, candidates: &[CardId]| -> Option<CardId> {
+            if prefer_highest_tap {
+                g.auto_pick_highest_power(candidates, 1).first().copied()
+            } else {
+                g.auto_pick_lowest_power(candidates, 1).first().copied()
+            }
+        };
         let tap_other_pick: Option<CardId> = if let Some(filter) =
             ability.tap_other_filter.as_ref()
         {
@@ -8266,7 +8292,7 @@ impl GameState {
                 if candidates.contains(&chosen) {
                     Some(chosen)
                 } else {
-                    self.auto_pick_lowest_power(&candidates, 1).first().copied()
+                    auto_tap_pick(self, &candidates)
                 }
             } else if candidates.len() > 1 && self.players[p].wants_ui {
                 let source_name = self
@@ -8292,7 +8318,7 @@ impl GameState {
                 });
                 return Ok(vec![]);
             } else {
-                self.auto_pick_lowest_power(&candidates, 1).first().copied()
+                auto_tap_pick(self, &candidates)
             }
         } else {
             None

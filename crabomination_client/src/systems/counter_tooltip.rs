@@ -487,6 +487,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.monstrous {
         lines.push(String::from("(monstrous)"));
     }
+    // CR 702.93 Renown — its renown trigger has already fired (it became
+    // renowned), so it won't add more counters on later combat hits.
+    if p.renowned {
+        lines.push(String::from("(renowned)"));
+    }
     // CR 701.35 Detain — can't attack/block and its abilities can't be
     // activated until the detaining player's next turn.
     if p.detained {
@@ -1005,6 +1010,7 @@ mod tests {
             goaded: false,
             monstrous: false,
             suspected: false,
+            renowned: false,
             detained: false,
             untap_locked: false,
             pt_modified: false,

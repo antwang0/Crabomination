@@ -528,6 +528,21 @@ fn view_surfaces_station_next_threshold() {
     assert_eq!(pv2.station_next_threshold, None, "all bands active");
 }
 
+/// The server view surfaces the renowned flag (CR 702.93) so the client can
+/// badge a creature whose Renown trigger has fired.
+#[test]
+fn view_surfaces_renowned_flag() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_the_pilgrims_road());
+    let pv = crate::server::view::project(&g, 0)
+        .battlefield.iter().find(|p| p.id == knight).cloned().expect("knight in view");
+    assert!(!pv.renowned, "not renowned yet");
+    g.battlefield_find_mut(knight).unwrap().renowned = true;
+    let pv2 = crate::server::view::project(&g, 0)
+        .battlefield.iter().find(|p| p.id == knight).cloned().unwrap();
+    assert!(pv2.renowned, "view reflects the renowned flag");
+}
+
 /// Harmonious Grovestrider's power/toughness equal the lands you control.
 #[test]
 fn harmonious_grovestrider_pt_tracks_lands() {
@@ -1162,4 +1177,26 @@ fn chrome_companion_gains_on_tap() {
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0 + 1);
+}
+
+/// The Station tap-cost auto-picker (non-UI seat) taps the *highest*-power
+/// creature, since charges scale with its power (CR 702.184a).
+#[test]
+fn station_autopick_taps_highest_power_creature() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper());
+    let weak = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let strong = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    g.clear_sickness(weak);
+    g.clear_sickness(strong);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("station");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 4,
+        "tapped the 4/4, not the 2/2");
+    assert!(g.battlefield_find(strong).unwrap().tapped, "the strong creature was tapped");
+    assert!(!g.battlefield_find(weak).unwrap().tapped, "the weak creature stayed up");
 }

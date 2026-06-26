@@ -853,6 +853,7 @@ fn project_permanent(
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
         suspected: card.suspected,
+        renowned: card.renowned,
         detained: card.detained_by.is_some(),
         untap_locked: card.untap_locked_by.is_some(),
         impending_counters: {
