@@ -3702,6 +3702,9 @@ static DECKS: &[Factory] = &[
     super::decks::bladed_pinions,
     super::decks::magnetic_theft,
     super::decks::srams_expertise,
+    super::decks::sublime_exhalation,
+    super::decks::curtains_call,
+    super::decks::coastal_breach,
     super::decks::nahiri_the_harbinger,
 ];
 static DIS: &[Factory] = &[

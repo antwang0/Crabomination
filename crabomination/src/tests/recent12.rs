@@ -203,6 +203,48 @@ fn nahiri_minus2_exiles_tapped_creature() {
     assert!(g.players[1].graveyard.iter().all(|c| c.id != victim), "to exile, not graveyard");
 }
 
+/// Undaunted makes Sublime Exhalation ({6}{W}) cost {1} less per opponent — in
+/// 1v1, {5}{W} — and it wraths the board.
+#[test]
+fn sublime_exhalation_undaunted_and_wraths() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sublime_exhalation());
+    // One opponent → {1} off, so {5}{W} pays the {6}{W} spell.
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.priority.player_with_priority = 0;
+    cast(&mut g, id);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.is_creature()).count(),
+        0,
+        "all creatures destroyed"
+    );
+}
+
+/// Curtains' Call destroys two target creatures.
+#[test]
+fn curtains_call_destroys_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::curtains_call());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4); // {5}{B} - {1} undaunted = {4}{B}
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Curtains' Call");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
 /// Valduk mints an Elemental token per attachment at the start of combat.
 #[test]
 fn valduk_makes_token_per_attachment() {

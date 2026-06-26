@@ -424,6 +424,68 @@ pub fn srams_expertise() -> CardDefinition {
     }
 }
 
+// ── Undaunted (CR 702.125) — costs {1} less per opponent ─────────────────────
+
+/// `Undaunted` static — "this spell costs {1} less to cast for each opponent."
+fn undaunted() -> StaticAbility {
+    StaticAbility {
+        description: "This spell costs {1} less to cast for each opponent.",
+        effect: StaticEffect::SelfCostReducedPerOpponent { per: 1 },
+    }
+}
+
+/// Sublime Exhalation — {6}{W} Sorcery with Undaunted. Destroy all creatures.
+pub fn sublime_exhalation() -> CardDefinition {
+    CardDefinition {
+        name: "Sublime Exhalation",
+        cost: cost(&[generic(6), w()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![undaunted()],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Curtains' Call — {5}{B} Instant with Undaunted. Destroy two target creatures.
+pub fn curtains_call() -> CardDefinition {
+    use crate::mana::b;
+    CardDefinition {
+        name: "Curtains' Call",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![undaunted()],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Coastal Breach — {6}{U} Sorcery with Undaunted. Return all nonland
+/// permanents to their owners' hands.
+pub fn coastal_breach() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        name: "Coastal Breach",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![undaunted()],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+            body: Box::new(Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Nahiri, the Harbinger — {2}{R}{W} Legendary Planeswalker — Nahiri, 3 loyalty.
 /// +2: you may discard a card; if you do, draw a card.
 /// −2: exile target enchantment, tapped artifact, or tapped creature.

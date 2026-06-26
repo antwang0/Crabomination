@@ -10368,6 +10368,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
             | StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { .. }
+            | StaticEffect::SelfCostReducedPerOpponent { .. }
             // SelfCostReducedIfControlEach (Of One Mind) — read off the spell.
             | StaticEffect::SelfCostReducedIfControlEach { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty

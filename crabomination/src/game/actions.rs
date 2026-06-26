@@ -479,6 +479,14 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 .saturating_add(per * state.players[caster].cards_discarded_this_turn);
         }
     }
+    // CR 702.125 — Undaunted: "costs {N} less to cast for each opponent."
+    // Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerOpponent { per } = &sa.effect {
+            let opponents = state.opponents_of(caster).len() as u32;
+            reduction = reduction.saturating_add(per * opponents);
+        }
+    }
     // Card-intrinsic "costs {N} less per creature you attacked with this turn"
     // (Search Party Captain). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

@@ -237,6 +237,10 @@ pub enum StaticEffect {
         #[serde(default)]
         all_players: bool,
     },
+    /// CR 702.125 — Undaunted: "This spell costs `per` less to cast for each
+    /// opponent." Read off the spell being cast in `cost_reduction_for_spell`.
+    /// Generic-only.
+    SelfCostReducedPerOpponent { per: u32 },
     /// Card-intrinsic "This spell costs `amount` less to cast if you control a
     /// permanent matching each of `filters`" (Of One Mind — a Human creature
     /// *and* a non-Human creature). Read by `cost_reduction_for_spell` off the
