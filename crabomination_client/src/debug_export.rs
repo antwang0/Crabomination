@@ -229,6 +229,7 @@ mod tests {
             multikickable_hand: vec![],
             dashable_hand: vec![],
             blitzable_hand: vec![],
+            warpable_hand: vec![],
             suspendable_hand: vec![],
             foretellable_hand: vec![],
             plottable_hand: vec![],

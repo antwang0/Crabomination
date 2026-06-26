@@ -309,6 +309,8 @@ pub struct HandAffordances {
     pub bestowable: Vec<CardId>,
     pub dashable: Vec<CardId>,
     pub blitzable: Vec<CardId>,
+    /// EOE — hand cards castable for their Warp cost right now.
+    pub warpable: Vec<CardId>,
     pub suspendable: Vec<CardId>,
     pub foretellable: Vec<CardId>,
     pub plottable: Vec<CardId>,

@@ -127,6 +127,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         multikickable_hand: affordances.multikickable,
         dashable_hand: affordances.dashable,
         blitzable_hand: affordances.blitzable,
+        warpable_hand: affordances.warpable,
         suspendable_hand: affordances.suspendable,
         foretellable_hand: affordances.foretellable,
         plottable_hand: affordances.plottable,

@@ -789,6 +789,39 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand they could cast for their Warp cost right now
+    /// (EOE). Surfaced in `PlayerView.warpable_hand` so the client can offer a
+    /// "Warp" affordance alongside Dash/Blitz.
+    pub fn warpable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.warpable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`warpable_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`warpable_hand_cards`]: Self::warpable_hand_cards
+    fn warpable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(|a| a.warp))
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(template, GameAction::CastSpellAlternative {
+                    card_id: id,
+                    pitch_card: None,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .collect()
+    }
+
     /// Cards in `caster`'s hand they could suspend right now (CR 702.62):
     /// the card has `Keyword::Suspend` and the suspend action would be
     /// accepted (cost affordable + timing legal). Surfaced in
@@ -1007,6 +1040,7 @@ impl GameState {
             bestowable: self.bestowable_hand_cards_on(&template, seat),
             dashable: self.dashable_hand_cards_on(&template, seat),
             blitzable: self.blitzable_hand_cards_on(&template, seat),
+            warpable: self.warpable_hand_cards_on(&template, seat),
             suspendable: self.suspendable_hand_cards_on(&template, seat),
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             plottable: self.plottable_hand_cards_on(&template, seat),
