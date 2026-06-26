@@ -1485,3 +1485,116 @@ fn seedship_broodtender_mills_and_reanimates() {
     resolve_targeted(&mut g, 0, catalog::seedship_broodtender().activated_abilities[0].effect.clone(), &[dead_id]);
     assert!(g.battlefield_find(dead_id).is_some(), "reanimated from graveyard");
 }
+
+/// Virus Beetle's ETB makes each opponent discard.
+#[test]
+fn virus_beetle_etb_each_opponent_discards() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::virus_beetle());
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty(), "opponent discarded");
+}
+
+/// Tragic Trajectory is -2/-2 normally, -10/-10 with Void active.
+#[test]
+fn tragic_trajectory_void_upgrade() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::bygone_colossus()); // 9/9
+    resolve_targeted(&mut g, 0, catalog::tragic_trajectory().effect, &[foe]);
+    assert_eq!(g.computed_permanent(foe).unwrap().toughness, 7, "−2/−2 without Void");
+    // With Void active, the same spell is -10/-10 instead.
+    g.nonland_permanent_left_bf_this_turn = true;
+    let foe2 = g.add_card_to_battlefield(1, catalog::bygone_colossus());
+    resolve_targeted(&mut g, 0, catalog::tragic_trajectory().effect, &[foe2]);
+    // -10/-10 on a 9/9 → -1 toughness (dies on the next SBA pass).
+    assert_eq!(g.computed_permanent(foe2).map(|c| c.toughness), Some(-1),
+        "−10/−10 applied with Void");
+}
+
+/// Sunstar Expansionist makes a Lander only when an opponent out-lands you.
+#[test]
+fn sunstar_expansionist_lander_when_behind() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.move_card_to_battlefield_for_test(0, catalog::sunstar_expansionist());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Lander").count(), 1,
+        "opponent ahead on lands → Lander");
+}
+
+/// Sunstar Lightsmith's flurry grows it and draws.
+#[test]
+fn sunstar_lightsmith_flurry_value() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let smith = g.add_card_to_battlefield(0, catalog::sunstar_lightsmith());
+    let before = g.players[0].hand.len();
+    // Resolve the flurry body with the Lightsmith as source (refs Selector::This).
+    let ctx = crate::game::effects::EffectContext::for_ability(smith, 0, None);
+    g.resolve_effect(&catalog::sunstar_lightsmith().triggered_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(smith).unwrap().power, 4, "+1/+1 counter");
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew");
+}
+
+/// Uthros Psionicist discounts the second spell each turn by {2}.
+#[test]
+fn uthros_psionicist_second_spell_discount() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::uthros_psionicist());
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "first spell: no discount");
+    g.players[0].spells_cast_this_turn = 1; // now casting the second
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "second spell: {{2}} off");
+}
+
+/// Zealous Display pumps your team and untaps it off-turn.
+#[test]
+fn zealous_display_untaps_off_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 1; // not our turn
+    resolve_targeted(&mut g, 0, catalog::zealous_display().effect, &[]);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped off-turn");
+}
+
+/// Thawbringer surveils on both entry and death.
+#[test]
+fn thawbringer_surveils_on_etb_and_death() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let thaw = g.move_card_to_battlefield_for_test(0, catalog::thawbringer());
+    drain_stack(&mut g);
+    // ETB surveil ran (no panic); now kill it to fire the death surveil.
+    g.add_card_to_library(0, catalog::forest());
+    kill(&mut g, thaw);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thaw).is_none(), "died");
+}
+
+/// Susurian Voidborn drains when a creature you control dies.
+#[test]
+fn susurian_voidborn_drains_on_friendly_death() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::susurian_voidborn());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    // Sacrifice the fodder and dispatch the death events so other
+    // death-watchers (Susurian) trigger, mirroring the real game loop.
+    let ctx = crate::game::effects::EffectContext::for_ability(fodder, 0, Some(Target::Permanent(fodder)));
+    let events = g.resolve_effect(
+        &crate::effect::Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &ctx,
+    ).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, my_life + 1, "you gained 1");
+}

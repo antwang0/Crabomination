@@ -4265,3 +4265,216 @@ pub fn seedship_broodtender() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Virus Beetle — {1}{B} Artifact Creature — Insect 1/1. ETB: each opponent
+/// discards a card.
+pub fn virus_beetle() -> CardDefinition {
+    CardDefinition {
+        name: "Virus Beetle",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tragic Trajectory — {B} Sorcery. Target creature gets -2/-2; Void — -10/-10
+/// instead if a nonland permanent left or a spell was warped this turn.
+pub fn tragic_trajectory() -> CardDefinition {
+    CardDefinition {
+        name: "Tragic Trajectory",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::VoidActive { who: PlayerRef::You },
+            then: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-10),
+                toughness: Value::Const(-10),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sunstar Expansionist — {1}{W} Creature — Human Knight 2/3. ETB: if an opponent
+/// controls more lands than you, create a Lander. Landfall: +1/+0 until EOT.
+pub fn sunstar_expansionist() -> CardDefinition {
+    CardDefinition {
+        name: "Sunstar Expansionist",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::OpponentControlsMoreLandsThanYou,
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lander_token(),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Land,
+                    }),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sunstar Lightsmith — {3}{W} Creature — Human Artificer 3/3. Whenever you cast
+/// your second spell each turn, put a +1/+1 counter on this and draw a card.
+pub fn sunstar_lightsmith() -> CardDefinition {
+    CardDefinition {
+        name: "Sunstar Lightsmith",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![flurry(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Uthros Psionicist — {2}{U} Creature — Jellyfish Scientist 2/4. The second
+/// spell you cast each turn costs {2} less.
+pub fn uthros_psionicist() -> CardDefinition {
+    CardDefinition {
+        name: "Uthros Psionicist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Scientist],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "The second spell you cast each turn costs {2} less to cast.",
+            effect: StaticEffect::CostReductionNthSpell {
+                filter: SelectionRequirement::Any,
+                nth: 2,
+                amount: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zealous Display — {2}{W} Instant. Creatures you control get +2/+0 until end of
+/// turn. If it's not your turn, untap those creatures.
+pub fn zealous_display() -> CardDefinition {
+    let my_creatures = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Zealous Display",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: my_creatures(),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                then: Box::new(Effect::Untap { what: my_creatures(), up_to: None }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Thawbringer — {2}{G} Creature — Insect Scout 4/2. When it enters or dies,
+/// surveil 1.
+pub fn thawbringer() -> CardDefinition {
+    let surveil = || Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) };
+    CardDefinition {
+        name: "Thawbringer",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![etb(surveil()), on_dies(surveil())],
+        ..Default::default()
+    }
+}
+
+/// Susurian Voidborn — {2}{B} Creature — Vampire Soldier 2/2. Whenever this or
+/// another creature you control dies, target opponent loses 1 life and you gain
+/// 1. Warp {B}. (The printed "or artifact" branch is approximated to creatures.)
+pub fn susurian_voidborn() -> CardDefinition {
+    CardDefinition {
+        name: "Susurian Voidborn",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        alternative_cost: Some(warp(cost(&[b()]))),
+        ..Default::default()
+    }
+}

@@ -3975,6 +3975,14 @@ static EOE: &[Factory] = &[
     super::eoe::selfcraft_mechan,
     super::eoe::cosmogrand_zenith,
     super::eoe::seedship_broodtender,
+    super::eoe::virus_beetle,
+    super::eoe::tragic_trajectory,
+    super::eoe::sunstar_expansionist,
+    super::eoe::sunstar_lightsmith,
+    super::eoe::uthros_psionicist,
+    super::eoe::zealous_display,
+    super::eoe::thawbringer,
+    super::eoe::susurian_voidborn,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
