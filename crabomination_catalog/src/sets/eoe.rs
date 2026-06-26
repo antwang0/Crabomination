@@ -2285,3 +2285,204 @@ pub fn gene_pollinator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 7 — creatures + a Food ─────────────────────────────────────────
+
+/// Hullcarver — {B} 1/1 Artifact Creature — Robot Assassin. Deathtouch.
+pub fn hullcarver() -> CardDefinition {
+    CardDefinition {
+        name: "Hullcarver",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Kavaron Turbodrone — {2}{R} 2/3 Artifact Creature — Robot Scout. {T}: Target
+/// creature you control gets +1/+1 and gains haste until end of turn. Sorcery
+/// speed.
+pub fn kavaron_turbodrone() -> CardDefinition {
+    CardDefinition {
+        name: "Kavaron Turbodrone",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Illvoi Operative — {1}{U} 2/1 Jellyfish Rogue. Whenever you cast your second
+/// spell each turn, put a +1/+1 counter on this.
+pub fn illvoi_operative() -> CardDefinition {
+    CardDefinition {
+        name: "Illvoi Operative",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Comet Crawler — {2}{B} 2/3 Insect Horror. Lifelink. Whenever this attacks,
+/// you may sacrifice another creature or artifact; if you do, it gets +2/+0
+/// until end of turn.
+pub fn comet_crawler() -> CardDefinition {
+    CardDefinition {
+        name: "Comet Crawler",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice another creature or artifact".into(),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::OtherThanSource),
+                count: Value::Const(1),
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kavaron Harrier — {R} 2/1 Artifact Creature — Robot Soldier. Whenever this
+/// attacks, you may pay {2}. If you do, create a 2/2 colorless Robot artifact
+/// creature token that's tapped and attacking; sacrifice it at end of combat.
+pub fn kavaron_harrier() -> CardDefinition {
+    let robot = TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kavaron Harrier",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {2} to make a Robot".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: robot,
+                    cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dubious Delicacy — {2}{B} Artifact — Food. Flash. ETB: up to one target
+/// creature gets -3/-3 until end of turn. {2},{T},Sacrifice: gain 3 life. Or
+/// {2},{T},Sacrifice: target opponent loses 3 life.
+pub fn dubious_delicacy() -> CardDefinition {
+    let sac_ability = |effect: Effect| ActivatedAbility {
+        tap_cost: true,
+        sac_cost: true,
+        mana_cost: cost(&[generic(2)]),
+        effect,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dubious Delicacy",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        activated_abilities: vec![
+            sac_ability(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            sac_ability(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(3),
+            }),
+        ],
+        ..Default::default()
+    }
+}

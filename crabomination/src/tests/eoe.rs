@@ -630,3 +630,52 @@ fn gravpack_monoist_dies_into_robot() {
         .expect("died into a Robot");
     assert!(robot.tapped, "the Robot enters tapped");
 }
+
+/// Illvoi Operative grows when you cast your second spell of the turn.
+#[test]
+fn illvoi_operative_second_spell_counter() {
+    let mut g = two_player_game();
+    let op = g.add_card_to_battlefield(0, catalog::illvoi_operative());
+    let s1 = g.add_card_to_hand(0, catalog::bombard());
+    let s2 = g.add_card_to_hand(0, catalog::bombard());
+    let d1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    // First spell — no counter.
+    g.perform_action(GameAction::CastSpell {
+        card_id: s1, target: Some(Target::Permanent(d1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(op).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // Second spell — counter.
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: s2, target: Some(Target::Permanent(d2)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("second spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(op).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "second spell each turn adds a +1/+1 counter");
+}
+
+/// Kavaron Turbodrone pumps and hastes a creature you control.
+#[test]
+fn kavaron_turbodrone_pumps_and_hastes() {
+    let mut g = two_player_game();
+    let drone = g.add_card_to_battlefield(0, catalog::kavaron_turbodrone());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drone, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Turbodrone");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Haste));
+}

@@ -3907,6 +3907,12 @@ static EOE: &[Factory] = &[
     super::eoe::invasive_maneuvers,
     super::eoe::gravpack_monoist,
     super::eoe::gene_pollinator,
+    super::eoe::hullcarver,
+    super::eoe::kavaron_turbodrone,
+    super::eoe::illvoi_operative,
+    super::eoe::comet_crawler,
+    super::eoe::kavaron_harrier,
+    super::eoe::dubious_delicacy,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
