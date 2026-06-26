@@ -112,6 +112,17 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         MustAttack => "Atk!",
         // Crew N on a Vehicle — a glanceable reminder it can be animated.
         Crew(_) => "Crew",
+        // Resilience keywords — "this dies but comes back" reads at a glance and
+        // changes how an opponent should attack/block into it.
+        Persist => "Per",
+        Undying => "Und",
+        // Eldrazi annihilator — a combat threat worth surfacing on the board.
+        Annihilator(_) => "Ann",
+        // Status keywords that change what a creature can be targeted/blocked by
+        // or how it reads in combat.
+        Phasing => "Phs",
+        Changeling => "Chg",
+        Reconfigure(_) => "Rcfg",
         _ => return None,
     })
 }
@@ -259,6 +270,14 @@ mod tests {
     fn strip_skips_non_displayable_keywords() {
         // Flash isn't a board-glance combat status → no badge.
         assert_eq!(keyword_strip(&[Keyword::Flash]), "");
+    }
+
+    #[test]
+    fn strip_surfaces_resilience_and_status_keywords() {
+        assert_eq!(keyword_strip(&[Keyword::Persist]), "Per");
+        assert_eq!(keyword_strip(&[Keyword::Undying]), "Und");
+        assert_eq!(keyword_strip(&[Keyword::Annihilator(2)]), "Ann");
+        assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
     }
 
     #[test]

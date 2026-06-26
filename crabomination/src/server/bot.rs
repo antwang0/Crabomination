@@ -1970,6 +1970,14 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Activated two-slot attach (Brass Squire's "{T}: attach target Equipment
+    // you control to target creature you control"). The native-equip pass
+    // above only covers `Keyword::Equip`; this drives the Equipment-mover
+    // creatures so the AI plays them.
+    if let Some(action) = pick_attach_ability(state, seat) {
+        return action;
+    }
+
     // Spend surplus energy on beneficial energy-payoff abilities (Bristling
     // Hydra's grow, Longtusk Cub's +1/+1, Aetherstream Leopard's
     // unblockable, …). Only pure "Pay {E}: do X" abilities with no other
@@ -2546,6 +2554,51 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         let action = GameAction::Equip { equipment: eq.id, target };
         if state.would_accept(action.clone()) {
             return Some(action);
+        }
+    }
+    None
+}
+
+/// Drive a "{cost}: attach target Equipment you control to target creature you
+/// control" activated ability (Brass Squire). Picks an Equipment not already on
+/// the chosen wearer for slot 0 and the highest-power creature for slot 1. The
+/// dry-run gate enforces the activation cost / target legality.
+fn pick_attach_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::Selector;
+    use crate::effect::Effect;
+    let wearer = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_creature())
+        .max_by_key(|c| c.power())
+        .map(|c| c.id)?;
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            // Two distinct target slots: `what` (slot 0) and `to` (slot 1).
+            let Effect::Attach {
+                what: Selector::TargetFiltered { slot: 0, .. },
+                to: Selector::TargetFiltered { slot: 1, .. },
+            } = &ab.effect
+            else {
+                continue;
+            };
+            let Some(equip) = state.battlefield.iter().find(|e| {
+                e.controller == seat
+                    && e.definition.is_equipment()
+                    && e.attached_to != Some(wearer)
+            }) else {
+                continue;
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: Some(crate::game::Target::Permanent(equip.id)),
+                additional_targets: vec![crate::game::Target::Permanent(wearer)],
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
         }
     }
     None
@@ -5614,5 +5667,25 @@ mod stack_response_tests {
         assert!(matches!(pick_graveyard_recursion(&g, 0),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
             "bot activates the graveyard self-return");
+    }
+
+    /// The bot drives Brass Squire's two-slot attach ability: an Equipment onto
+    /// the biggest creature.
+    #[test]
+    fn bot_activates_brass_squire_attach() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let squire = g.add_card_to_battlefield(0, catalog::brass_squire());
+        g.add_card_to_battlefield(0, catalog::bonesplitter());
+        g.clear_sickness(squire);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let action = pick_attach_ability(&g, 0).expect("bot drives the attach ability");
+        // Slot 1 (the wearer) is the highest-power creature — the bear, not the
+        // 1/3 Squire.
+        assert!(matches!(action,
+            GameAction::ActivateAbility { card_id, ref additional_targets, .. }
+                if card_id == squire && additional_targets == &vec![crate::game::Target::Permanent(bear)]));
     }
 }

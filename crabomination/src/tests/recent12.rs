@@ -1,6 +1,6 @@
 //! Functionality tests for the `catalog::sets::decks::recent12` Equipment batch.
 
-use crate::card::{ArtifactSubtype, Keyword};
+use crate::card::Keyword;
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget, Target};
 use crate::game::*;

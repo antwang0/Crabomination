@@ -1952,6 +1952,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 707.2 — continuous copies
 - ✅ CR 702.43 — Domain
 - ✅ CR 702.6e — Equipment-granted triggered abilities
+- ✅ CR 702.6 — Equip ability fidelity: sorcery-speed gate, equip-at-instant
+  (`ControllerEquipAtInstantSpeed` — Leonin Shikari), equip-cost reduction
+  (`EquipCostReduction` — Auriok Steelshaper), protection-gated attach
+  (702.16f). Tests in `tests/recent12.rs`.
 - ✅ CR 510.2 — combat damage to a creature dispatch
 - ✅ CR 509.1d — block tax
 - ✅ CR 702.46 — Cipher
