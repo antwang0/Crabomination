@@ -1017,3 +1017,87 @@ fn nanoform_sentinel_untaps_on_tap() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(land).unwrap().tapped, "the land was untapped");
 }
+
+/// Resolve `effect` for `player`, picking modal index `mode` with `targets`.
+fn resolve_modal(g: &mut GameState, player: usize, effect: crate::effect::Effect, mode: usize, targets: &[CardId]) {
+    use crate::game::types::Target;
+    let src = g.add_card_to_battlefield(player, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(src, player, None);
+    ctx.mode = mode;
+    ctx.targets = targets.iter().map(|id| Target::Permanent(*id)).collect();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(g);
+}
+
+/// Mechan Assembler mints a Robot when another artifact enters under your control.
+#[test]
+fn mechan_assembler_makes_robot_on_artifact_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mechan_assembler());
+    let before = g.battlefield.iter().filter(|c| c.definition.name == "Robot").count();
+    let art = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // an artifact
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.definition.name == "Robot").count();
+    assert_eq!(after, before + 1, "another artifact entering mints a Robot");
+}
+
+/// Mm'menon puts a +1/+1 counter on a creature when an artifact enters.
+#[test]
+fn mmmenon_counters_on_artifact_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mmmenon_uthros_exile());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let art = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Embrace Oblivion destroys a Spacecraft.
+#[test]
+fn embrace_oblivion_destroys_spacecraft() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(1, catalog::wurmwall_sweeper()); // a Spacecraft
+    resolve_targeted(&mut g, 0, catalog::embrace_oblivion().effect, &[ship]);
+    assert!(g.battlefield_find(ship).is_none(), "Spacecraft destroyed");
+}
+
+/// Scrounge for Eternity reanimates a creature from your graveyard and makes a
+/// Lander.
+#[test]
+fn scrounge_reanimates_and_makes_lander() {
+    let mut g = two_player_game();
+    let id = g.next_id();
+    g.players[0].graveyard.push(crate::card::CardInstance::new(id, catalog::grizzly_bears(), 0));
+    resolve_targeted(&mut g, 0, catalog::scrounge_for_eternity().effect, &[id]);
+    assert!(g.battlefield.iter().any(|c| c.id == id && c.controller == 0), "creature reanimated");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Lander"));
+}
+
+/// Ruinous Rampage's first mode deals 3 to each opponent.
+#[test]
+fn ruinous_rampage_burns_each_opponent() {
+    let mut g = two_player_game();
+    resolve_modal(&mut g, 0, catalog::ruinous_rampage().effect, 0, &[]);
+    assert_eq!(g.players[1].life, 17, "each opponent took 3");
+}
+
+/// Drill Too Deep's second mode destroys a target artifact.
+#[test]
+fn drill_too_deep_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::wurmwall_sweeper());
+    resolve_modal(&mut g, 0, catalog::drill_too_deep().effect, 1, &[art]);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Reroute Systems' second mode deals 2 to a tapped creature.
+#[test]
+fn reroute_systems_zaps_tapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    resolve_modal(&mut g, 0, catalog::reroute_systems().effect, 1, &[bear]);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage kills the 2/2");
+}

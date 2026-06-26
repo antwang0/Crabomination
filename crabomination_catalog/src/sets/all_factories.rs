@@ -3945,6 +3945,13 @@ static EOE: &[Factory] = &[
     super::eoe::lithobraking,
     super::eoe::rust_harvester,
     super::eoe::nanoform_sentinel,
+    super::eoe::mechan_assembler,
+    super::eoe::mmmenon_uthros_exile,
+    super::eoe::embrace_oblivion,
+    super::eoe::scrounge_for_eternity,
+    super::eoe::ruinous_rampage,
+    super::eoe::drill_too_deep,
+    super::eoe::reroute_systems,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

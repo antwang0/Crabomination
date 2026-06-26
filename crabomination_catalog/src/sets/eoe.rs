@@ -3383,3 +3383,204 @@ pub fn nanoform_sentinel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 12 — artifact-matters, modal, and sacrifice-cost cards ──────────
+
+/// 2/2 colorless Robot artifact creature token.
+fn robot_2_2() -> TokenDefinition {
+    TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Mechan Assembler — {4}{U} Artifact Creature — Robot Artificer 4/4. Whenever
+/// another artifact you control enters, create a 2/2 Robot. Once each turn.
+pub fn mechan_assembler() -> CardDefinition {
+    CardDefinition {
+        name: "Mechan Assembler",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                })
+                .once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: robot_2_2(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mm'menon, Uthros Exile — {1}{U}{R} Legendary Creature — Jellyfish Advisor
+/// 1/3, flying. Whenever an artifact you control enters, put a +1/+1 counter on
+/// target creature.
+pub fn mmmenon_uthros_exile() -> CardDefinition {
+    CardDefinition {
+        name: "Mm'menon, Uthros Exile",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Embrace Oblivion — {B} Sorcery. Additional cost: sacrifice an artifact or
+/// creature. Destroy target creature or Spacecraft.
+pub fn embrace_oblivion() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Embrace Oblivion",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Scrounge for Eternity — {2}{B} Sorcery. Additional cost: sacrifice an artifact
+/// or creature. Return target creature or Spacecraft card with mana value 5 or
+/// less from your graveyard to the battlefield. Then create a Lander token.
+pub fn scrounge_for_eternity() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Scrounge for Eternity",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InYourGraveyard
+                        .and(
+                            SelectionRequirement::Creature.or(SelectionRequirement::HasArtifactSubtype(
+                                ArtifactSubtype::Spacecraft,
+                            )),
+                        )
+                        .and(SelectionRequirement::ManaValueAtMost(5)),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ruinous Rampage — {1}{R}{R} Sorcery. Choose one — deal 3 damage to each
+/// opponent; or exile all artifacts with mana value 3 or less.
+pub fn ruinous_rampage() -> CardDefinition {
+    CardDefinition {
+        name: "Ruinous Rampage",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+            Effect::Move {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Drill Too Deep — {1}{R} Instant. Choose one — put five charge counters on
+/// target Spacecraft you control; or destroy target artifact.
+pub fn drill_too_deep() -> CardDefinition {
+    CardDefinition {
+        name: "Drill Too Deep",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::Charge,
+                amount: Value::Const(5),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reroute Systems — {W} Instant. Choose one — target artifact or creature gains
+/// indestructible until end of turn; or deal 2 damage to target tapped creature.
+pub fn reroute_systems() -> CardDefinition {
+    CardDefinition {
+        name: "Reroute Systems",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+                ),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
