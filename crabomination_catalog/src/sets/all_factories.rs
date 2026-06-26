@@ -3706,6 +3706,12 @@ static DECKS: &[Factory] = &[
     super::decks::curtains_call,
     super::decks::coastal_breach,
     super::decks::nahiri_the_harbinger,
+    super::decks::miserys_shadow,
+    super::decks::glarb_calamitys_augur,
+    super::decks::archfiend_of_the_dross,
+    super::decks::seeds_of_renewal,
+    super::decks::sparas_headquarters,
+    super::decks::mishras_foundry,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

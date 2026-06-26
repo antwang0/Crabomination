@@ -833,7 +833,7 @@ pub fn needle_spires() -> CardDefinition {
 /// mana-cost ability that animates it into a creature until end of turn. The
 /// "artifact creature" half of Mishra's/Inkmoth/Blinkmoth is approximated as a
 /// plain creature (no artifact-type add yet).
-fn colorless_manland(
+pub(crate) fn colorless_manland(
     name: &'static str,
     animate_cost: ManaCost,
     power: i32,

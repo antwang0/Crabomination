@@ -55389,7 +55389,7 @@ pub fn pollywog_symbiote() -> CardDefinition {
 // ── Ikoria batch 6: Apex legendaries, Triomes, misc ──────────────────────────
 
 /// A Triome land — taps for three colors, enters tapped, Cycling {3}.
-fn triome(name: &'static str, types: [LandType; 3], colors: [Color; 3]) -> CardDefinition {
+pub(crate) fn triome(name: &'static str, types: [LandType; 3], colors: [Color; 3]) -> CardDefinition {
     let tap = |c: Color| ActivatedAbility {
         tap_cost: true,
         effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
