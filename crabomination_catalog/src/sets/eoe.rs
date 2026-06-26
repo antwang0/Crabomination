@@ -3837,24 +3837,6 @@ pub fn emissary_escort() -> CardDefinition {
     }
 }
 
-/// Solar Blaze — {2}{R}{W} Sorcery. Each creature deals damage to itself equal
-/// to its power.
-pub fn solar_blaze() -> CardDefinition {
-    CardDefinition {
-        name: "Solar Blaze",
-        cost: cost(&[generic(2), r(), w()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::DealDamageEqualToPower {
-                source: Selector::TriggerSource,
-                target: Selector::TriggerSource,
-            }),
-        },
-        ..Default::default()
-    }
-}
-
 /// Fungal Colossus — {6}{G} Creature — Fungus Beast 5/5. Costs {X} less to
 /// cast, where X is the number of differently named lands you control.
 pub fn fungal_colossus() -> CardDefinition {

@@ -3960,7 +3960,6 @@ static EOE: &[Factory] = &[
     super::eoe::genemorph_imago,
     super::eoe::full_bore,
     super::eoe::emissary_escort,
-    super::eoe::solar_blaze,
     super::eoe::fungal_colossus,
     super::eoe::dark_endurance,
     super::eoe::shattered_wings,
