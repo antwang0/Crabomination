@@ -91,3 +91,35 @@ fn phyrexian_awakening_anthem_grants_vigilance() {
     let croc = g.add_card_to_battlefield(0, catalog::injector_crocodile()); // a Phyrexian
     assert!(g.computed_permanent(croc).unwrap().keywords.contains(&Keyword::Vigilance));
 }
+
+/// Essence of Orthodoxy incubates 2 when a Phyrexian you control enters.
+#[test]
+fn essence_of_orthodoxy_incubates_on_phyrexian_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::essence_of_orthodoxy());
+    let before = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
+    let croc = g.add_card_to_battlefield(0, catalog::injector_crocodile()); // a Phyrexian
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentEntered { card_id: croc }]);
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
+    assert_eq!(after, before + 1, "a Phyrexian entering incubated");
+}
+
+/// Compleated Huntmaster sacrifices another permanent to incubate 3.
+#[test]
+fn compleated_huntmaster_sac_incubates() {
+    let mut g = two_player_game();
+    let hunt = g.add_card_to_battlefield(0, catalog::compleated_huntmaster());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(hunt);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hunt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Compleated Huntmaster");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    let inc = g.battlefield.iter().find(|c| c.definition.name == "Incubator").expect("incubated");
+    assert_eq!(inc.counter_count(CounterType::PlusOnePlusOne), 3);
+}

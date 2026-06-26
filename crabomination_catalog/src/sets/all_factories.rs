@@ -3969,6 +3969,8 @@ static ONE: &[Factory] = &[
     super::one::phyrexian_awakening,
     super::one::tangled_skyline,
     super::one::injector_crocodile,
+    super::one::essence_of_orthodoxy,
+    super::one::compleated_huntmaster,
 ];
 static FIN: &[Factory] = &[
     super::fin::iron_giant,

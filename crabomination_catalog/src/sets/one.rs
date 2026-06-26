@@ -3,8 +3,9 @@
 //! it to a 0/0 Phyrexian artifact creature (so it becomes N/N).
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement, StaticAbility,
-    StaticEffect, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, Predicate, SelectionRequirement, StaticAbility, StaticEffect, Subtypes,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, gain_life, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
@@ -103,6 +104,56 @@ pub fn injector_crocodile() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), crate::card::LandType::Swamp)],
         triggered_abilities: vec![on_dies(incubate(3))],
+        ..Default::default()
+    }
+}
+
+/// Essence of Orthodoxy — {3}{W}{W} Creature — Phyrexian 3/3, flying. Whenever
+/// this or another Phyrexian you control enters, incubate 2.
+pub fn essence_of_orthodoxy() -> CardDefinition {
+    CardDefinition {
+        name: "Essence of Orthodoxy",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Phyrexian),
+                }),
+            effect: incubate(2),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Compleated Huntmaster — {2}{B} Creature — Phyrexian Elf Warrior 2/3.
+/// {1}, {T}, Sacrifice another creature or artifact: Incubate 3.
+pub fn compleated_huntmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Compleated Huntmaster",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                1,
+            )),
+            effect: incubate(3),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
