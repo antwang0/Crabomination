@@ -1712,3 +1712,60 @@ fn zookeeper_mechan_taps_for_red() {
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 1);
 }
+
+/// Meltstrider's Gear attaches on ETB and grants +2/+1 and reach.
+#[test]
+fn meltstriders_gear_etb_attaches_and_buffs() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let gear = g.add_card_to_battlefield(0, catalog::meltstriders_gear());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(gear, 0, Some(Target::Permanent(bear)));
+    g.resolve_effect(&catalog::meltstriders_gear().triggered_abilities[0].effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1");
+    assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
+}
+
+/// Illvoi Light Jammer attaches and grants hexproof until end of turn.
+#[test]
+fn illvoi_light_jammer_attach_and_hexproof() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let jam = g.add_card_to_battlefield(0, catalog::illvoi_light_jammer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(jam, 0, Some(Target::Permanent(bear)));
+    g.resolve_effect(&catalog::illvoi_light_jammer().triggered_abilities[0].effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+2");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "gains hexproof EOT");
+}
+
+/// Hylderblade grants +3/+1 to the creature it's attached to.
+#[test]
+fn hylderblade_buffs_equipped() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::hylderblade());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(blade, 0, Some(Target::Permanent(bear)));
+    // Drive the Void end-step attach with Void active.
+    g.nonland_permanent_left_bf_this_turn = true;
+    g.resolve_effect(&catalog::hylderblade().triggered_abilities[0].effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "+3/+1");
+}
+
+/// Sami, Ship's Engineer makes a tapped Robot at end step with two tapped
+/// creatures.
+#[test]
+fn sami_makes_tapped_robot() {
+    let mut g = two_player_game();
+    let sami = g.add_card_to_battlefield(0, catalog::sami_ships_engineer());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(sami).unwrap().tapped = true;
+    g.battlefield_find_mut(other).unwrap().tapped = true;
+    resolve_targeted(&mut g, 0, catalog::sami_ships_engineer().triggered_abilities[0].effect.clone(), &[]);
+    let robot = g.battlefield.iter().find(|c| c.definition.name == "Robot" && c.controller == 0);
+    assert!(robot.is_some_and(|c| c.tapped), "tapped 2/2 Robot");
+}

@@ -3991,6 +3991,10 @@ static EOE: &[Factory] = &[
     super::eoe::vaultguard_trooper,
     super::eoe::terrapact_intimidator,
     super::eoe::voidforged_titan,
+    super::eoe::meltstriders_gear,
+    super::eoe::illvoi_light_jammer,
+    super::eoe::hylderblade,
+    super::eoe::sami_ships_engineer,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

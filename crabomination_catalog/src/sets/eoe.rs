@@ -4756,3 +4756,132 @@ pub fn voidforged_titan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Meltstrider's Gear — {G} Artifact — Equipment. ETB: attach to target creature
+/// you control. Equipped creature gets +2/+1 and has reach. Equip {5}.
+pub fn meltstriders_gear() -> CardDefinition {
+    CardDefinition {
+        name: "Meltstrider's Gear",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 1,
+            keywords: vec![Keyword::Reach],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Illvoi Light Jammer — {1}{U} Artifact — Equipment. Flash. ETB: attach to
+/// target creature you control; it gains hexproof until end of turn. Equipped
+/// creature gets +1/+2. Equip {3}.
+pub fn illvoi_light_jammer() -> CardDefinition {
+    CardDefinition {
+        name: "Illvoi Light Jammer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Hylderblade — {B} Artifact — Equipment. Equipped creature gets +3/+1. Void —
+/// at your end step, if Void is active, attach this to target creature you
+/// control. Equip {4}.
+pub fn hylderblade() -> CardDefinition {
+    CardDefinition {
+        name: "Hylderblade",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::VoidActive { who: PlayerRef::You },
+                then: Box::new(Effect::Attach {
+                    what: Selector::This,
+                    to: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sami, Ship's Engineer — {2}{R}{W} Legendary Creature — Human Artificer 2/4.
+/// At your end step, if you control two or more tapped creatures, create a
+/// tapped 2/2 colorless Robot artifact creature token.
+pub fn sami_ships_engineer() -> CardDefinition {
+    let robot = TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        tapped: true,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Sami, Ship's Engineer",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: two_tapped_creatures(),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: robot,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+
