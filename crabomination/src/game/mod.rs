@@ -4730,6 +4730,10 @@ impl GameState {
                         modification: Modification::SetPowerToughness(power, toughness),
                     });
                 }
+                // CR 721.2a — static abilities granted by the band.
+                for se in &band.statics {
+                    all_effects.extend(static_effect_to_effects(se, card, card.object_timestamp()));
+                }
             }
         }
         for card in &self.battlefield {
@@ -10070,13 +10074,26 @@ fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
 /// Takes the full `CardInstance` so Equipment/Aura abilities can use `attached_to`.
 fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<ContinuousEffect> {
-    use crate::effect::StaticEffect;
-    let source = card.id;
-
     card.definition
         .static_abilities
         .iter()
-        .flat_map(|sa| match &sa.effect {
+        .flat_map(|sa| static_effect_to_effects(&sa.effect, card, timestamp))
+        .collect()
+}
+
+/// Convert a single `StaticEffect` from `card` into layer continuous effects.
+/// Split out of `static_ability_to_effects` so charge-gated Station bands
+/// (CR 721.2a) can reuse the same conversion.
+fn static_effect_to_effects(
+    effect: &crate::effect::StaticEffect,
+    card: &CardInstance,
+    timestamp: u64,
+) -> Vec<ContinuousEffect> {
+    use crate::effect::StaticEffect;
+    let source = card.id;
+
+    {
+        match effect {
             StaticEffect::PumpPT { applies_to, power, toughness } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {
@@ -10538,8 +10555,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::OpponentsCantCastFromAnywhereButHand
             // Lier — read by the flashback-cast path / graveyard view.
             | StaticEffect::GraveyardInstantsSorceriesHaveFlashback => vec![],
-        })
-        .collect()
+        }
+    }
 }
 
 /// Translate a selector into a `layers::AffectedPermanents` description for

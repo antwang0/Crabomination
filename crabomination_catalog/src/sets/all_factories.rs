@@ -3893,6 +3893,7 @@ static EOE: &[Factory] = &[
     super::eoe::extinguisher_battleship,
     super::eoe::specimen_freighter,
     super::eoe::rescue_skiff,
+    super::eoe::lumen_class_frigate,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

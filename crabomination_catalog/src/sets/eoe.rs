@@ -1502,7 +1502,7 @@ pub fn wurmwall_sweeper() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
         triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 4, keywords: vec![Keyword::Flying], pt: Some((2, 2)) }],
+        station: vec![StationBand { min: 4, keywords: vec![Keyword::Flying], pt: Some((2, 2)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1520,7 +1520,7 @@ pub fn uthros_scanship() -> CardDefinition {
             Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
         ]))],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((4, 4)) }],
+        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((4, 4)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1546,6 +1546,7 @@ pub fn atmospheric_greenhouse() -> CardDefinition {
             min: 8,
             keywords: vec![Keyword::Flying, Keyword::Trample],
             pt: Some((5, 4)),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -1578,6 +1579,7 @@ pub fn wedgelight_rammer() -> CardDefinition {
             min: 9,
             keywords: vec![Keyword::Flying, Keyword::FirstStrike],
             pt: Some((3, 4)),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -1605,6 +1607,7 @@ pub fn fell_gravship() -> CardDefinition {
             min: 8,
             keywords: vec![Keyword::Flying, Keyword::Lifelink],
             pt: Some((3, 2)),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -1628,7 +1631,7 @@ pub fn warmaker_gunship() -> CardDefinition {
             ),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 6, keywords: vec![Keyword::Flying], pt: Some((4, 3)) }],
+        station: vec![StationBand { min: 6, keywords: vec![Keyword::Flying], pt: Some((4, 3)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1643,7 +1646,7 @@ pub fn sledge_class_seedship() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 5)) }],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 5)), ..Default::default() }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::MayDo {
@@ -1685,7 +1688,7 @@ pub fn larval_scoutlander() -> CardDefinition {
             else_: None,
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((3, 3)) }],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((3, 3)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1703,6 +1706,7 @@ pub fn galvanizing_sawship() -> CardDefinition {
             min: 3,
             keywords: vec![Keyword::Flying, Keyword::Haste],
             pt: Some((6, 5)),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -1724,7 +1728,7 @@ pub fn susurian_dirgecraft() -> CardDefinition {
                 .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 3)) }],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 3)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1746,7 +1750,7 @@ pub fn pinnacle_kill_ship() -> CardDefinition {
             }),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((7, 7)) }],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((7, 7)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1777,7 +1781,7 @@ pub fn debris_field_crusher() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((1, 5)) }],
+        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((1, 5)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1807,6 +1811,7 @@ pub fn extinguisher_battleship() -> CardDefinition {
             min: 5,
             keywords: vec![Keyword::Flying, Keyword::Trample],
             pt: Some((10, 10)),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -1842,7 +1847,7 @@ pub fn specimen_freighter() -> CardDefinition {
             },
         ],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 9, keywords: vec![Keyword::Flying], pt: Some((4, 7)) }],
+        station: vec![StationBand { min: 9, keywords: vec![Keyword::Flying], pt: Some((4, 7)), ..Default::default() }],
         ..Default::default()
     }
 }
@@ -1865,7 +1870,38 @@ pub fn rescue_skiff() -> CardDefinition {
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 10, keywords: vec![Keyword::Flying], pt: Some((5, 6)) }],
+        station: vec![StationBand { min: 10, keywords: vec![Keyword::Flying], pt: Some((5, 6)), ..Default::default() }],
+        ..Default::default()
+    }
+}
+
+/// Lumen-Class Frigate — {1}{W} Artifact — Spacecraft. Station; {2+}: other
+/// creatures you control get +1/+1. {12+}: 3/5 with flying, lifelink.
+pub fn lumen_class_frigate() -> CardDefinition {
+    let others = Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Lumen-Class Frigate",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![station()],
+        station: vec![
+            StationBand {
+                min: 2,
+                statics: vec![StaticEffect::PumpPT { applies_to: others, power: 1, toughness: 1 }],
+                ..Default::default()
+            },
+            StationBand {
+                min: 12,
+                keywords: vec![Keyword::Flying, Keyword::Lifelink],
+                pt: Some((3, 5)),
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

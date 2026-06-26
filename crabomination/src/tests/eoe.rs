@@ -486,3 +486,28 @@ fn pinnacle_kill_ship_etb_deals_ten() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "the 2/2 took 10 and died");
 }
+
+/// Lumen-Class Frigate's {2+} band is a charge-gated anthem (other creatures
+/// you control get +1/+1); the {12+} band makes it a 3/5 flier.
+#[test]
+fn lumen_frigate_charge_gated_anthem_band() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::lumen_class_frigate());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // No charges yet → no anthem.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
+    // Two stationings off the 2/2 → 2 charges → {2+} anthem turns on... but the
+    // bear is now tapped; drop 2 charges directly to isolate the band layer.
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 2);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "{{2+}} anthem grants +1/+1");
+    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature),
+        "still a noncreature below the {{12+}} band");
+    // Reach the {12+} band.
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 12);
+    let post = g.computed_permanent(ship).unwrap();
+    assert!(post.card_types.contains(&CardType::Creature));
+    assert_eq!((post.power, post.toughness), (3, 5));
+    assert!(post.keywords.contains(&Keyword::Lifelink));
+}

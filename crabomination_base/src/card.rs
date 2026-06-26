@@ -1014,13 +1014,18 @@ pub struct LevelBand {
 /// `keywords` (layer 6); if `pt` is `Some`, it also becomes a creature with
 /// that base power/toughness in addition to its other types (CR 721.2b,
 /// layers 4 + 7a).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StationBand {
     pub min: u32,
     #[serde(default)]
     pub keywords: Vec<Keyword>,
     #[serde(default)]
     pub pt: Option<(i32, i32)>,
+    /// CR 721.2a — static abilities active only while the threshold is met
+    /// (e.g. Lumen-Class Frigate's `{2+}: other creatures you control get
+    /// +1/+1`). Converted to layer effects in `gather_continuous_effects`.
+    #[serde(default)]
+    pub statics: Vec<crate::effect::StaticEffect>,
 }
 
 /// Composable filter for valid targets of a spell or ability.
