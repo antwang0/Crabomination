@@ -341,6 +341,11 @@ pub enum Value {
     /// "equal to the number of Arcane cards in your graveyard" (Ire of
     /// Kaminari) and similar graveyard-count payoffs.
     CardsInGraveyardMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// Number of cards in `who`'s hand matching `filter`. Powers Amplify
+    /// (CR 702.38 — "+N/+N counters for each [type] card you reveal in your
+    /// hand"; all matching cards are auto-revealed) and other reveal-from-hand
+    /// counts.
+    CardsInHandMatching { who: PlayerRef, filter: SelectionRequirement },
     /// Maximum graveyard size across **every alive player** in the game.
     /// Reads `players[*].graveyard.len()` and returns the max. Backs
     /// "if a graveyard has 20 or more cards" payoffs (Visions of Beyond,

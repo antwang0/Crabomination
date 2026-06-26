@@ -3746,6 +3746,9 @@ static DECKS: &[Factory] = &[
     super::decks::dwarven_forge_chanter,
     super::decks::staunch_shieldmate,
     super::decks::scrabbling_claws,
+    super::decks::canopy_crawler,
+    super::decks::feral_throwback,
+    super::decks::kilnmouth_dragon,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

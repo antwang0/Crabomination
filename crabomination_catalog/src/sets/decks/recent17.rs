@@ -3,9 +3,9 @@
 //! `crabomination/src/tests/recent17.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement,
-    Selector, StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    DynamicPt, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
+    SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{cast_is_noncreature, etb, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, PlayerStaticTarget, Predicate, ZoneDest};
@@ -450,6 +450,66 @@ pub fn staunch_shieldmate() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Amplify N (CR 702.38): "As this creature enters, put N +1/+1 counters on it
+/// for each [type] card you reveal in your hand." Modeled by entering with
+/// `n × (matching hand cards)` counters — all matching cards are auto-revealed.
+fn amplify(n: i32, ct: CreatureType) -> Option<(CounterType, Value)> {
+    Some((
+        CounterType::PlusOnePlusOne,
+        Value::Times(
+            Box::new(Value::Const(n)),
+            Box::new(Value::CardsInHandMatching {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(ct),
+            }),
+        ),
+    ))
+}
+
+/// Canopy Crawler — {3}{G} Beast 2/2 with Amplify 1 (Beast).
+pub fn canopy_crawler() -> CardDefinition {
+    CardDefinition {
+        name: "Canopy Crawler",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: amplify(1, CreatureType::Beast),
+        ..Default::default()
+    }
+}
+
+/// Feral Throwback — {4}{G}{G} Beast 3/3 with trample and Amplify 2 (Beast).
+pub fn feral_throwback() -> CardDefinition {
+    CardDefinition {
+        name: "Feral Throwback",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: amplify(2, CreatureType::Beast),
+        ..Default::default()
+    }
+}
+
+/// Kilnmouth Dragon — {5}{R}{R} Dragon 5/5 with flying and Amplify 3 (Dragon).
+pub fn kilnmouth_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Kilnmouth Dragon",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: amplify(3, CreatureType::Dragon),
         ..Default::default()
     }
 }

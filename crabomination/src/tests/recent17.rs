@@ -278,3 +278,56 @@ fn corsair_anthem_is_pirate_typed() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // not a Pirate
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "non-Pirate unbuffed");
 }
+
+/// CR 702.38 — Amplify N: the creature enters with N +1/+1 counters for each
+/// matching card revealed in hand. Feral Throwback (Amplify 2, Beast) with two
+/// Beasts in hand enters as a 3/3 + 4 counters = 7/7.
+#[test]
+fn cr_702_38_amplify_counts_revealed_hand_cards() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::canopy_crawler()); // a Beast
+    g.add_card_to_hand(0, catalog::feral_throwback()); // also a Beast
+    g.add_card_to_hand(0, catalog::lightning_bolt()); // not a Beast — ignored
+    let id = g.move_card_to_battlefield_for_test(0, catalog::feral_throwback());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "3/3 base + 2×2 Beast counters");
+}
+
+/// CR 702.38 — Amplify with no matching cards in hand leaves the base body.
+#[test]
+fn cr_702_38_amplify_no_reveals_stays_base() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::kilnmouth_dragon());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "no Dragons in hand → base 5/5");
+}
+
+/// CR 301.5 — "equipped by N": Balan's double strike keys on the attached
+/// Equipment count, dropping when an Equipment is removed.
+#[test]
+fn cr_301_5_equipped_by_count_gates_keyword() {
+    let mut g = two_player_game();
+    let balan = g.add_card_to_battlefield(0, catalog::balan_wandering_knight());
+    let e1 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let e2 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(e1).unwrap().attached_to = Some(balan);
+    g.battlefield_find_mut(e2).unwrap().attached_to = Some(balan);
+    assert!(g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    // Detach one → only one Equipment left → no double strike.
+    g.battlefield_find_mut(e2).unwrap().attached_to = None;
+    assert!(!g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// CR 119 — a life-total threshold static (Angel of Vitality's +2/+2 at 25+
+/// life) turns on and off as life crosses the boundary.
+#[test]
+fn cr_119_life_threshold_static_toggles() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::angel_of_vitality());
+    g.players[0].life = 24;
+    assert_eq!(g.computed_permanent(angel).unwrap().power, 2, "below 25");
+    g.players[0].life = 25;
+    assert_eq!(g.computed_permanent(angel).unwrap().power, 4, "at 25");
+    g.players[0].life = 24;
+    assert_eq!(g.computed_permanent(angel).unwrap().power, 2, "back below 25");
+}
