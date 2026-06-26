@@ -7650,7 +7650,11 @@ impl GameState {
     ) -> Vec<Target> {
         let max = match eff {
             Effect::ApplyToTargets { max_targets, .. } => *max_targets as usize,
-            _ => return vec![],
+            // Effects whose slots carry *distinct* per-slot filters (Kor
+            // Outfitter's ETB `Attach { what: target Equipment, to: target
+            // creature }`) can't be filled by the same-filter loop below —
+            // they walk each slot's own filter instead.
+            _ => return self.auto_extra_distinct_slot_targets(eff, source, controller, primary),
         };
         if max <= 1 || primary.is_none() {
             return vec![];
@@ -7670,6 +7674,79 @@ impl GameState {
                 }
                 _ => break,
             }
+        }
+        chosen
+    }
+
+    /// Fill slots 1.. of a triggered ability whose effect surfaces a *distinct*
+    /// target filter per slot (Kor Outfitter's `Attach`, where slot 0 = the
+    /// Equipment and slot 1 = the creature). Each slot is matched against its
+    /// own `target_filter_for_slot` filter, preferring the controller's own
+    /// permanents and avoiding anything an earlier slot already claimed. Empty
+    /// for single-slot effects (the common case).
+    pub(crate) fn auto_extra_distinct_slot_targets(
+        &self,
+        eff: &Effect,
+        source: CardId,
+        controller: usize,
+        primary: Option<Target>,
+    ) -> Vec<Target> {
+        let slot1 = match eff.target_filter_for_slot_in_mode_kicked(1, None, false) {
+            Some(f) => f,
+            None => return vec![],
+        };
+        // Only fill here when slot 1 carries a *distinct* filter from slot 0
+        // (Kor Outfitter's Equipment→creature Attach). Same-filter "up to N"
+        // effects (DealDamageDivided, DistributeCounters, ApplyToTargets) keep
+        // their dedicated single-target auto behavior / resolution-time divide
+        // pickers — fanning them out here would wrongly split the effect.
+        if eff.target_filter_for_slot_in_mode_kicked(0, None, false) == Some(slot1) {
+            return vec![];
+        }
+        let opp = self
+            .opponents_of(controller)
+            .first()
+            .copied()
+            .unwrap_or((controller + 1) % self.players.len());
+        let mut avoid: Vec<CardId> = vec![source];
+        if let Some(Target::Permanent(c)) = primary {
+            avoid.push(c);
+        }
+        let mut chosen: Vec<Target> = Vec::new();
+        let mut slot: u8 = 1;
+        while slot < 16 {
+            let req = match eff.target_filter_for_slot_in_mode_kicked(slot, None, false) {
+                Some(r) => r.clone(),
+                None => break,
+            };
+            let is_legal = |t: &Target| -> bool {
+                self.evaluate_requirement_static(&req, t, controller, Some(source))
+                    && self.check_target_legality(t, controller).is_ok()
+            };
+            // Player slots: controller first (your-side bias), then opponent.
+            let mut pick = [Target::Player(controller), Target::Player(opp)]
+                .into_iter()
+                .find(|t| is_legal(t));
+            // Then a not-yet-claimed permanent, your own preferred.
+            if pick.is_none() {
+                pick = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| !avoid.contains(&c.id) && c.controller == controller)
+                    .chain(self.battlefield.iter().filter(|c| !avoid.contains(&c.id)))
+                    .map(|c| Target::Permanent(c.id))
+                    .find(|t| is_legal(t));
+            }
+            match pick {
+                Some(t) => {
+                    if let Target::Permanent(cid) = t {
+                        avoid.push(cid);
+                    }
+                    chosen.push(t);
+                }
+                None => break,
+            }
+            slot += 1;
         }
         chosen
     }

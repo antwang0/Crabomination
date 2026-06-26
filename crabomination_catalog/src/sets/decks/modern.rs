@@ -59292,3 +59292,65 @@ pub fn temur_charm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks-21: two-target Attach (ETB + activated) ─────────────────────
+
+/// Equipment-you-control / creature-you-control target slots for the Brass
+/// Squire-style "attach target Equipment you control to target creature you
+/// control" effect.
+fn attach_equipment_to_creature() -> Effect {
+    Effect::Attach {
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                .and(SelectionRequirement::ControlledByYou),
+        },
+        to: Selector::TargetFiltered {
+            slot: 1,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        },
+    }
+}
+
+/// Kor Outfitter — {W}{W} Kor Soldier 2/2. ETB: you may attach target
+/// Equipment you control to target creature you control.
+pub fn kor_outfitter() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Outfitter",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Attach target Equipment you control to target creature you control?".into(),
+            body: Box::new(attach_equipment_to_creature()),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Brass Squire — {3} Myr Artifact Creature 1/3. {T}: attach target Equipment
+/// you control to target creature you control.
+pub fn brass_squire() -> CardDefinition {
+    CardDefinition {
+        name: "Brass Squire",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: attach_equipment_to_creature(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

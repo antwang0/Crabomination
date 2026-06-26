@@ -3684,6 +3684,8 @@ static DECKS: &[Factory] = &[
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,
     super::decks::spider_man_india,
+    super::decks::kor_outfitter,
+    super::decks::brass_squire,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

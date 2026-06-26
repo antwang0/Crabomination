@@ -23756,6 +23756,47 @@ fn equip_bonus_falls_off_when_creature_dies() {
     assert_eq!(eq.attached_to, None, "stale link cleared by SBA");
 }
 
+/// Kor Outfitter's ETB attaches a target Equipment you control to a target
+/// creature you control — the two-slot trigger auto-targeter fills slot 1
+/// (the creature) after slot 0 (the Equipment).
+#[test]
+fn kor_outfitter_etb_attaches_equipment_to_creature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // ETB self-source trigger fires only through the real movement funnel.
+    g.move_card_to_battlefield_for_test(0, catalog::kor_outfitter());
+    drain_stack(&mut g);
+    let eq = g.battlefield.iter().find(|c| c.id == boner).unwrap();
+    assert_eq!(eq.attached_to, Some(bear), "Bonesplitter attached to the bear, not the Outfitter");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+2/+0 from the attached Bonesplitter");
+}
+
+/// Brass Squire's {T} ability attaches a chosen Equipment you control to a
+/// chosen creature you control (the activated two-slot path).
+#[test]
+fn brass_squire_taps_to_attach_equipment() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let squire = g.add_card_to_battlefield(0, catalog::brass_squire());
+    g.clear_sickness(squire);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: squire,
+        ability_index: 0,
+        target: Some(Target::Permanent(boner)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    })
+    .expect("Brass Squire activates");
+    drain_stack(&mut g);
+    let eq = g.battlefield.iter().find(|c| c.id == boner).unwrap();
+    assert_eq!(eq.attached_to, Some(bear));
+    assert!(g.battlefield.iter().find(|c| c.id == squire).unwrap().tapped, "Squire tapped for the cost");
+}
+
 /// Equip is sorcery-speed only — rejected when it isn't the controller's
 /// main phase.
 #[test]

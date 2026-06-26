@@ -706,6 +706,9 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what } => sel_filter(what),
+            // Slot 0 is the moved object (`what`: the Equipment/Aura); slot 1
+            // is the host (`to`), filled by the multi-slot trigger auto-targeter.
+            Effect::Attach { what, .. } => sel_filter(what),
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
             Effect::PhaseOut { what }
