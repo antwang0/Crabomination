@@ -3867,6 +3867,14 @@ static EOE: &[Factory] = &[
     super::eoe::kavaron_skywarden,
     super::eoe::mechanozoa,
     super::eoe::exalted_sunborn,
+    super::eoe::bombard,
+    super::eoe::cloudsculpt_technician,
+    super::eoe::brightspear_zealot,
+    super::eoe::eumidian_terrabotanist,
+    super::eoe::dockworker_drone,
+    super::eoe::dual_sun_adepts,
+    super::eoe::dual_sun_technique,
+    super::eoe::exosuit_savior,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

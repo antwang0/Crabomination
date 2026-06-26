@@ -303,3 +303,46 @@ fn edge_rover_each_player_gets_a_lander() {
         );
     }
 }
+
+/// Cloudsculpt Technician gets +1/+0 only while you control an artifact.
+#[test]
+fn cloudsculpt_technician_pumps_with_an_artifact() {
+    let mut g = two_player_game();
+    let tech = g.add_card_to_battlefield(0, catalog::cloudsculpt_technician());
+    assert_eq!(g.computed_permanent(tech).unwrap().power, 2, "no artifact → base power");
+    g.add_card_to_battlefield(0, catalog::memory_guardian()); // an artifact
+    assert_eq!(g.computed_permanent(tech).unwrap().power, 3, "controlling an artifact → +1/+0");
+}
+
+/// Brightspear Zealot grows after you've cast two spells this turn.
+#[test]
+fn brightspear_zealot_grows_after_two_spells() {
+    let mut g = two_player_game();
+    let zealot = g.add_card_to_battlefield(0, catalog::brightspear_zealot());
+    assert_eq!(g.computed_permanent(zealot).unwrap().power, 2);
+    g.players[0].spells_cast_this_turn = 2;
+    assert_eq!(g.computed_permanent(zealot).unwrap().power, 4, "+2/+0 with two spells cast");
+}
+
+/// Dual-Sun Technique draws only when the buffed creature has a +1/+1 counter.
+#[test]
+fn dual_sun_technique_draws_with_a_counter() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    let tech = g.add_card_to_hand(0, catalog::dual_sun_technique());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: tech, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dual-Sun Technique");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew because the target had a counter");
+}

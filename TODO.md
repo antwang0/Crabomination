@@ -11,11 +11,12 @@ state-corrupting in ordinary play.
 ## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
 
 Warp / Void / Lander shipped (see the rules-audit rows). Still open:
-- **Station / Spacecraft** (CR — EOE): "Station (tap another creature: add charge
-  counters = its power); STATION N grants abilities / makes it a creature." A
-  leveler-like threshold mechanic on artifact Spacecraft. Needs `station`
-  thresholds + a sorcery-speed tap-a-creature activation. ~30 cards blocked
-  (Atmospheric Greenhouse, …).
+- **Station / Spacecraft** (CR 702.184 + CR 721 Station Cards): "Station (tap
+  another untapped creature you control: put charge counters = its power on this;
+  sorcery-speed only); STATION N station symbols grant abilities / make it a
+  creature." A leveler-like threshold mechanic on artifact Spacecraft. Needs
+  `station` thresholds + a sorcery-speed tap-a-creature activation. ~30 cards
+  blocked (Atmospheric Greenhouse, …).
 - **`set_gaps.py "set:eoe"` still lists ~225 cards.** Easy batches remaining:
   more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
@@ -2046,19 +2047,22 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   state-flip, `DamagedBySourceThisTurn` death-watch, two-target aura-move)
 - ✅ CR 601.2c — two-target activated abilities (`ActivateAbility.additional_targets`
   threaded to `StackItem::Trigger`; Autumn-Tail, Kitsune Sage)
-- ✅ EOE Warp — `AlternativeCost.warp` + `CardInstance.warped`; cast for the
-  warp cost, then a `NextEndStep` delayed trigger exiles the permanent and grants
-  a `WhileExiled` may-play (recast from exile, full cost). Sets
-  `Player.warped_spell_this_turn`. `shortcut::warp`; `decks`/`eoe` batch; tests in
-  `tests/eoe.rs`.
-- ✅ EOE Void — `Predicate::VoidActive { who }` = a nonland permanent left the
-  battlefield this turn (`GameState.nonland_permanent_left_bf_this_turn`, set at
-  every battlefield-leave funnel) OR `who` warped a spell this turn. Decode
-  Transmissions (`Effect::If`), Elegy Acolyte (end-step intervening-if). Tests in
-  `tests/eoe.rs`.
-- ✅ EOE Lander token — `tokens::lander_token` ({2},{T},Sac: fetch a basic land
-  tapped). Biomechan Engineer, Biotech Specialist, Beamsaw Prospector,
-  Bioengineered Future.
+- ✅ CR 702.185 — Warp. `AlternativeCost.warp` + `CardInstance.warped`; cast for
+  the warp cost, then a `NextEndStep` delayed trigger exiles the permanent and
+  grants a `WhileExiled` may-play (recast from exile, full cost — matches
+  702.185a). Sets `Player.warped_spell_this_turn` (702.185c). `shortcut::warp`;
+  `eoe` batch; tests in `tests/eoe.rs`.
+- ✅ CR 207.2c — Void (ability word). `Predicate::VoidActive { who }` = a nonland
+  permanent left the battlefield this turn (`GameState.nonland_permanent_left_bf_
+  this_turn`, set at every battlefield-leave funnel) OR `who` warped a spell this
+  turn. Decode Transmissions (`Effect::If`), Elegy Acolyte / Kavaron Skywarden
+  (end-step intervening-if). Tests in `tests/eoe.rs`.
+- ✅ CR 111.10u — Lander token. `tokens::lander_token` ({2},{T},Sac: fetch a
+  basic land tapped). Biomechan/Biotech/Galactic/Glacier/Kav makers, Edge Rover
+  (each player), Dauntless Scrapbot, Emergency Eject (target's controller).
+- ✅ CR 111 / 614.13 — `Effect::CreateToken` now mints for **every** matched
+  player (EachPlayer / EachOpponent), with each player's own token-doublers
+  applied; fixes a latent single-player bug (gift cycle, Edge Rover).
 - ✅ CR 310 — Battle / Siege. `CardType::Battle` + `BattleSubtype::Siege`, defense
   counters (310.7), protector choice (310.6), attack-your-own-Siege
   (`AttackTarget::Battle`), combat damage strips defense counters (310.10),

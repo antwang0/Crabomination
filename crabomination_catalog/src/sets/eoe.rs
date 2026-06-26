@@ -8,7 +8,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, on_dies, target, target_filtered, warp};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 use crabomination_base::tokens::lander_token;
 
@@ -1170,6 +1170,219 @@ pub fn exalted_sunborn() -> CardDefinition {
             effect: StaticEffect::DoubleTokens,
         }],
         alternative_cost: Some(warp(cost(&[generic(1), w()]))),
+        ..Default::default()
+    }
+}
+
+// ── EOE batch 3 — simple commons ─────────────────────────────────────────────
+
+/// Bombard — {2}{R} Instant. Deal 4 damage to target creature.
+pub fn bombard() -> CardDefinition {
+    CardDefinition {
+        name: "Bombard",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            amount: Value::Const(4),
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cloudsculpt Technician — {2}{U} Creature — Jellyfish Artificer 2/2, flying. As
+/// long as you control an artifact, this creature gets +1/+0.
+pub fn cloudsculpt_technician() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Cloudsculpt Technician",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control an artifact, this creature gets +1/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brightspear Zealot — {2}{W} Creature — Human Soldier 2/2, vigilance. Gets
+/// +2/+0 as long as you've cast two or more spells this turn.
+pub fn brightspear_zealot() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Brightspear Zealot",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +2/+0 as long as you've cast two or more spells this turn.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpellsCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(2),
+                },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eumidian Terrabotanist — {1}{G} Creature — Insect Druid 2/1. Landfall —
+/// whenever a land you control enters, you gain 1 life.
+pub fn eumidian_terrabotanist() -> CardDefinition {
+    use crate::effect::shortcut::gain_life;
+    CardDefinition {
+        name: "Eumidian Terrabotanist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: gain_life(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dockworker Drone — {1}{W} Artifact Creature — Robot 1/1. Enters with a +1/+1
+/// counter. When it dies, put its counters on target creature you control.
+pub fn dockworker_drone() -> CardDefinition {
+    CardDefinition {
+        name: "Dockworker Drone",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        triggered_abilities: vec![on_dies(Effect::MoveAllCounters {
+            from: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dual-Sun Adepts — {2}{W} Creature — Human Soldier 2/2, double strike. {5}:
+/// Creatures you control get +1/+1 until end of turn.
+pub fn dual_sun_adepts() -> CardDefinition {
+    CardDefinition {
+        name: "Dual-Sun Adepts",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dual-Sun Technique — {1}{W} Instant. Target creature you control gains double
+/// strike until end of turn. If it has a +1/+1 counter on it, draw a card.
+pub fn dual_sun_technique() -> CardDefinition {
+    use crate::effect::shortcut::draw;
+    CardDefinition {
+        name: "Dual-Sun Technique",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                },
+                then: Box::new(draw(1)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Exosuit Savior — {2}{W} Creature — Human Soldier 2/3, flying. ETB: return
+/// another target permanent you control to its owner's hand. (The "up to one"
+/// optional rider is modeled as a plain target.)
+pub fn exosuit_savior() -> CardDefinition {
+    CardDefinition {
+        name: "Exosuit Savior",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        })],
         ..Default::default()
     }
 }
