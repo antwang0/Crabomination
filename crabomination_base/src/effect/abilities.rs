@@ -124,6 +124,12 @@ pub enum StaticEffect {
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// CR 613 — the source has `keyword` as long as it itself matches
+    /// `condition` ("As long as this creature is equipped, it has double
+    /// strike" — Kor Duelist). Recomputed live against the source via
+    /// `evaluate_requirement_static`, so board-state conditions (IsEquipped,
+    /// IsEnchanted, IsModified) track correctly.
+    SelfHasKeywordWhile { keyword: Keyword, condition: SelectionRequirement },
     /// "All [filter] have protection from the chosen color" — the color is
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.
@@ -592,6 +598,14 @@ pub enum StaticEffect {
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
     ActivationCostReduction { amount: u32 },
+    /// CR 702.6 — "You may activate equip abilities any time you could cast an
+    /// instant" (Leonin Shikari). Lifts the sorcery-speed gate on the
+    /// controller's `GameAction::Equip`.
+    ControllerEquipAtInstantSpeed,
+    /// CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper,
+    /// Brass Squire-style discounts). Reduces the controller's equip-cost
+    /// generic by `amount`, never below the colored portion.
+    EquipCostReduction { amount: u32 },
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).

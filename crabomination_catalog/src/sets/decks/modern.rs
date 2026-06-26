@@ -24920,7 +24920,7 @@ pub fn batterskull() -> CardDefinition {
 
 /// Build a plain Equipment whose only effect is a static `equipped_bonus`
 /// (P/T + keywords) and an equip cost. No ETB / triggered riders.
-fn simple_equipment(
+pub(crate) fn simple_equipment(
     name: &'static str,
     mana: crate::mana::ManaCost,
     equip: crate::mana::ManaCost,

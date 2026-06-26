@@ -2265,6 +2265,9 @@ pub enum DynamicPt {
     /// P/T = base + `per` for each Aura attached to this permanent.
     /// Kor Spiritdancer (0/2, +2/+2 per Aura).
     BasePlusPerAttachedAura { base_p: i32, base_t: i32, per: i32 },
+    /// P/T = base + `per` for each Equipment attached to this permanent.
+    /// Goblin Gaveleer (1/1, +2/+0 per Equipment).
+    BasePlusPerAttachedEquipment { base_p: i32, base_t: i32, per: i32 },
     /// P/T = base − the highest life total among players (Scourge of the
     /// Skyclaves: 20 − highest life).
     BaseMinusHighestLife { base_p: i32, base_t: i32 },

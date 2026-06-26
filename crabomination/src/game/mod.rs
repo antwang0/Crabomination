@@ -67,6 +67,9 @@ mod tests_recent10;
 #[path = "../tests/recent11.rs"]
 mod tests_recent11;
 #[cfg(test)]
+#[path = "../tests/recent12.rs"]
+mod tests_recent12;
+#[cfg(test)]
 #[path = "../tests/ltr.rs"]
 mod tests_ltr;
 #[cfg(test)]
@@ -3917,6 +3920,36 @@ impl GameState {
                 });
             }
         }
+        // CR 613 — "this creature has <keyword> as long as it matches
+        // <condition>" (Kor Duelist's "double strike while equipped"). The
+        // condition reads live board state, so it resolves here per recompute
+        // into a layer-6 self keyword.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfHasKeywordWhile { keyword, condition } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                if !self.evaluate_requirement_static(
+                    condition,
+                    &Target::Permanent(card.id),
+                    card.controller,
+                    Some(card.id),
+                ) {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(keyword.clone()),
+                });
+            }
+        }
         // CR 700.5 / Theros gods — "isn't a creature unless your devotion
         // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
         // self-effect while the gate is unmet; reading devotion needs the
@@ -4479,6 +4512,12 @@ impl GameState {
                 crate::card::DynamicPt::BasePlusPerAttachedAura { base_p, base_t, per } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.attached_to == Some(card.id) && c.definition.is_aura()
+                    }).count() as i32;
+                    (base_p + n * per, base_t + n * per)
+                }
+                crate::card::DynamicPt::BasePlusPerAttachedEquipment { base_p, base_t, per } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.attached_to == Some(card.id) && c.definition.is_equipment()
                     }).count() as i32;
                     (base_p + n * per, base_t + n * per)
                 }
@@ -6265,14 +6304,42 @@ impl GameState {
     /// system (see `compute_battlefield`). Re-equipping a creature that's
     /// already wearing the Equipment is legal (it just re-pays the cost);
     /// moving from one creature to another silently detaches the old link.
+    /// CR 702.6 — true if `player` controls a permanent granting "you may
+    /// activate equip abilities any time you could cast an instant" (Leonin
+    /// Shikari), lifting the equip sorcery-speed gate.
+    fn controller_equips_at_instant_speed(&self, player: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::ControllerEquipAtInstantSpeed)
+                })
+        })
+    }
+
+    /// CR 702.6 — summed "equip costs you pay cost {N} less" reduction across
+    /// the player's permanents (Auriok Steelshaper).
+    fn equip_cost_reduction_for(&self, player: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::EquipCostReduction { amount } => Some(amount),
+                _ => None,
+            })
+            .sum()
+    }
+
     fn equip(
         &mut self,
         equipment: crate::card::CardId,
         target: crate::card::CardId,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // Sorcery-speed gate (CR 702.6e).
-        if !self.can_cast_sorcery_speed(p) {
+        // Sorcery-speed gate (CR 702.6e) — unless the controller has a
+        // "may activate equip abilities any time you could cast an instant"
+        // static (Leonin Shikari).
+        if !self.can_cast_sorcery_speed(p) && !self.controller_equips_at_instant_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
         // Locate the Equipment; it must be on the battlefield, controlled by
@@ -6289,11 +6356,16 @@ impl GameState {
         if !self.battlefield[equip_pos].definition.is_equipment() {
             return Err(GameError::NotEquipment(equipment));
         }
-        let equip_cost = self.battlefield[equip_pos]
+        let mut equip_cost = self.battlefield[equip_pos]
             .definition
             .has_equip()
             .cloned()
             .ok_or(GameError::NotEquipment(equipment))?;
+        // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper).
+        let reduction = self.equip_cost_reduction_for(p);
+        if reduction > 0 {
+            equip_cost.reduce_generic(reduction);
+        }
         // The target must be a creature the activating player controls
         // (CR 702.6c). Use the computed view so animated/becomes-a-creature
         // permanents are honored.
@@ -10155,6 +10227,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }
+            // Consulted directly in `equip()`, not a layer effect.
+            | StaticEffect::ControllerEquipAtInstantSpeed
+            | StaticEffect::EquipCostReduction { .. }
+            // Recomputed live in `compute_battlefield`, not here.
+            | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::GraveyardLibraryLockdown
             | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown

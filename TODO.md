@@ -2136,7 +2136,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.
 - 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked`. The foretell / plot / adventure-creature exile-cast paths now gate on it too (`cast_foretold`/`cast_plotted`/`cast_adventure_creature`; test `drannith_magistrate_blocks_foretold_cast`). Remaining ⏳: suspend's eventual cast.
-- 🟡 **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
+- ✅ **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
   (702.29e) ✅ via `Keyword::Landcycling(cost, LandType)` and the general
   `Keyword::Typecycling(cost, filter)` ("Basic landcycling" — Ash Barrens),
   both through `GameAction::Landcycle` (pay + discard → fetch a matching
@@ -2162,6 +2162,19 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   ability-text color words beyond keywords.
 
 ## Suggested next-up tasks
+
+- ⏳ **Equipment-matters follow-ups** (`decks::recent12` batch shipped these as
+  documented approximations): a **while-equipped anthem** primitive (Auriok
+  Steelshaper's "Soldiers/Knights you control +1/+1 while equipped" — drop the
+  note when wired); **conditional keyword by attached-count** (Balan, Wandering
+  Knight's "double strike while 2+ Equipment", plus its "{1}{W}: attach all
+  Equipment you control to Balan" — `Attach { what: EachPermanent(Equipment ∧
+  ControlledByYou), to: This }` already resolves, only the conditional keyword
+  is missing); a **token-exile-at-next-end-step** delayed trigger (Valduk's
+  Elementals currently persist); Nahiri's −8 currently drops the deployed
+  permanent's haste + return-to-hand rider (search-to-battlefield only).
+  Bruenor Battlehammer needs a per-creature "+2/+0 per Equipment attached to
+  *it*" anthem + a free-first-equip-each-turn allowance.
 
 > **Reprioritized 2026-06-11:** the correctness-audit section at the top of
 > this file outranks everything below. New-card/primitive work should wait
