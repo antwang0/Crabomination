@@ -845,3 +845,87 @@ fn skystinger_pumps_blocking_flier() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(sky).unwrap().power, 8, "blocked a flier → +5/+0");
 }
+
+/// Resolve `effect` for `player` with the given target permanents bound to
+/// slots 0,1,… (a lightweight stand-in for casting a targeted spell).
+fn resolve_targeted(g: &mut GameState, player: usize, effect: crate::effect::Effect, targets: &[CardId]) {
+    use crate::game::types::Target;
+    let src = g.add_card_to_battlefield(player, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(src, player, None);
+    ctx.targets = targets.iter().map(|id| Target::Permanent(*id)).collect();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(g);
+}
+
+/// Honor puts a +1/+1 counter on a creature and draws.
+#[test]
+fn honor_counters_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand0 = g.players[0].hand.len();
+    resolve_targeted(&mut g, 0, catalog::honor().effect, &[bear]);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
+/// Radiant Strike destroys a tapped creature (untapped non-artifact is an
+/// illegal target) and gains 3 life.
+#[test]
+fn radiant_strike_destroys_tapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let life0 = g.players[0].life;
+    resolve_targeted(&mut g, 0, catalog::radiant_strike().effect, &[bear]);
+    assert!(g.battlefield_find(bear).is_none(), "tapped creature destroyed");
+    assert_eq!(g.players[0].life, life0 + 3);
+}
+
+/// Luxknight Breacher enters with a +1/+1 counter per other creature/artifact.
+#[test]
+fn luxknight_breacher_scales_on_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // artifact
+    let lux = g.move_card_to_battlefield_for_test(0, catalog::luxknight_breacher());
+    assert_eq!(g.battlefield_find(lux).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "one counter per other creature + artifact");
+}
+
+/// Diplomatic Relations pumps your creature and makes it deal its power to an
+/// opponent's creature.
+#[test]
+fn diplomatic_relations_pump_and_zap() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/2
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 3
+    resolve_targeted(&mut g, 0, catalog::diplomatic_relations().effect, &[mine, theirs]);
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert_eq!(g.battlefield_find(theirs).unwrap().damage, 3, "took damage = pumped power");
+}
+
+/// Cut Propulsion: a flier takes twice its power in self-damage.
+#[test]
+fn cut_propulsion_doubles_on_flier() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    resolve_targeted(&mut g, 0, catalog::cut_propulsion().effect, &[angel]);
+    assert!(g.battlefield_find(angel).is_none(), "8 damage to a 4/4 flier is lethal");
+}
+
+/// Mechan Navigator loots when it becomes tapped.
+#[test]
+fn mechan_navigator_loots_on_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let nav = g.add_card_to_battlefield(0, catalog::mechan_navigator());
+    g.add_card_to_hand(0, catalog::forest()); // something to discard
+    let hand0 = g.players[0].hand.len();
+    g.battlefield_find_mut(nav).unwrap().tapped = false;
+    let evs = vec![GameEvent::PermanentTapped { card_id: nav }];
+    g.battlefield_find_mut(nav).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0, "drew one, discarded one (net zero)");
+}

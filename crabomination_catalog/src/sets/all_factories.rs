@@ -3926,6 +3926,18 @@ static EOE: &[Factory] = &[
     super::eoe::frenzied_baloth,
     super::eoe::gravblade_heavy,
     super::eoe::skystinger,
+    super::eoe::honor,
+    super::eoe::radiant_strike,
+    super::eoe::rig_for_war,
+    super::eoe::mechan_navigator,
+    super::eoe::monoist_sentry,
+    super::eoe::red_tiger_mechan,
+    super::eoe::flight_deck_coordinator,
+    super::eoe::luxknight_breacher,
+    super::eoe::molecular_modifier,
+    super::eoe::diplomatic_relations,
+    super::eoe::cut_propulsion,
+    super::eoe::mechan_shieldmate,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

@@ -2917,3 +2917,302 @@ pub fn skystinger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 10 — commons/uncommons on existing primitives ──────────────────
+
+/// Honor — {W} Sorcery. Put a +1/+1 counter on target creature. Draw a card.
+pub fn honor() -> CardDefinition {
+    CardDefinition {
+        name: "Honor",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Radiant Strike — {3}{W} Instant. Destroy target artifact or tapped creature.
+/// You gain 3 life.
+pub fn radiant_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Radiant Strike",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
+                ),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rig for War — {1}{R} Instant. Target creature gets +3/+0 and gains first
+/// strike and reach until end of turn.
+pub fn rig_for_war() -> CardDefinition {
+    CardDefinition {
+        name: "Rig for War",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mechan Navigator — {1}{U} Artifact Creature — Robot Pilot 2/1. Whenever it
+/// becomes tapped, draw a card, then discard a card.
+pub fn mechan_navigator() -> CardDefinition {
+    CardDefinition {
+        name: "Mechan Navigator",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Monoist Sentry — {B} Artifact Creature — Robot 4/1. Defender.
+pub fn monoist_sentry() -> CardDefinition {
+    CardDefinition {
+        name: "Monoist Sentry",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Defender],
+        ..Default::default()
+    }
+}
+
+/// Red Tiger Mechan — {3}{R} Artifact Creature — Robot Cat 3/3, haste.
+/// Warp {1}{R}.
+pub fn red_tiger_mechan() -> CardDefinition {
+    CardDefinition {
+        name: "Red Tiger Mechan",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        alternative_cost: Some(warp(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Flight-Deck Coordinator — {2}{W} Creature — Human Soldier 3/3. At your end
+/// step, if you control two or more tapped creatures, you gain 2 life.
+pub fn flight_deck_coordinator() -> CardDefinition {
+    CardDefinition {
+        name: "Flight-Deck Coordinator",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: two_tapped_creatures(),
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Luxknight Breacher — {3}{W} Creature — Human Knight 2/2. Enters with a +1/+1
+/// counter for each other creature and/or artifact you control.
+pub fn luxknight_breacher() -> CardDefinition {
+    CardDefinition {
+        name: "Luxknight Breacher",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::count(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            )),
+        )),
+        ..Default::default()
+    }
+}
+
+/// Molecular Modifier — {2}{R} Creature — Kavu Artificer 2/2. At the beginning
+/// of combat on your turn, target creature you control gets +1/+0 and gains
+/// first strike until end of turn.
+pub fn molecular_modifier() -> CardDefinition {
+    CardDefinition {
+        name: "Molecular Modifier",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Diplomatic Relations — {2}{G} Instant. Target creature you control gets
+/// +1/+0 and gains vigilance until end of turn. It deals damage equal to its
+/// power to target creature an opponent controls.
+pub fn diplomatic_relations() -> CardDefinition {
+    CardDefinition {
+        name: "Diplomatic Relations",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cut Propulsion — {2}{R} Instant. Target creature deals damage to itself equal
+/// to its power; twice that much instead if it has flying.
+pub fn cut_propulsion() -> CardDefinition {
+    CardDefinition {
+        name: "Cut Propulsion",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mechan Shieldmate — {1}{U} Artifact Creature — Robot Soldier 3/2, defender.
+pub fn mechan_shieldmate() -> CardDefinition {
+    CardDefinition {
+        name: "Mechan Shieldmate",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Defender],
+        ..Default::default()
+    }
+}
