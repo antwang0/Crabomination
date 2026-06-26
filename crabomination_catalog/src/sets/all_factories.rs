@@ -3715,6 +3715,8 @@ static DECKS: &[Factory] = &[
     super::decks::quirion_beastcaller,
     super::decks::yotian_frontliner,
     super::decks::heaped_harvest,
+    super::decks::shaman_of_the_pack,
+    super::decks::elvish_warmaster,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
