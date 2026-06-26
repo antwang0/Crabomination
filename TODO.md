@@ -17,10 +17,17 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (18 Spacecraft shipped — `StationBand.triggers` now grants counter-gated
   *triggered* bands too, so Synthesizer Labship `{2+}` animate + Entropic
   Battlecruiser `{1+}` discard-punisher both ship.)
-- **`set_gaps.py "set:eoe"` still lists ~180 cards.** Easy batches remaining:
+- **`set_gaps.py "set:eoe"` still lists ~150 cards.** Easy batches remaining:
   more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
+  Newly-noticed deferrals: Emissary Escort / "greatest MV among other artifacts
+  you control" needs a `DynamicPt`/`Value` for that; Dark Endurance needs a
+  *target-aware* cost reduction ("costs {1} less if it targets a blocking
+  creature"); Pulsar Squadron Ace / Possibility Technician need filtered
+  impulse-reveal (top-5 → Spacecraft to hand) and impulse-from-gy-while-Kavu;
+  Genemorph Imago's 6+-lands 5/5 upgrade is approximated to the 3/3 set.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
-  needs a `Value::ManaSpentToCast`), **Blade of the Swarm** (modal "put an exiled
+  `Value::CastSpellManaSpent` exists but isn't propagated onto ETB triggers, and
+  a MV-≤-Value target filter is needed), **Blade of the Swarm** (modal "put an exiled
   warp card on the bottom"), **Sothera, the Supervoid**, **Anticausal Vestige**
   (LTB put-a-permanent), **Solar Blaze** (each creature self-damages = power),
   **Fungal Colossus** (cost {X} less = differently-named lands — needs a
