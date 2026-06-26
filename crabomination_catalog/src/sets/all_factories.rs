@@ -3717,6 +3717,10 @@ static DECKS: &[Factory] = &[
     super::decks::heaped_harvest,
     super::decks::shaman_of_the_pack,
     super::decks::elvish_warmaster,
+    super::decks::throne_of_the_god_pharaoh,
+    super::decks::su_chi,
+    super::decks::secluded_courtyard,
+    super::decks::icon_of_ancestry,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
