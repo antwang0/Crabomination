@@ -1432,6 +1432,8 @@ impl GameState {
                     R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
                     R::IsToken => card.is_token,
                     R::NotToken => !card.is_token,
+
+                    R::Warped => card.warped,
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
@@ -1715,6 +1717,8 @@ impl GameState {
             R::HasSpellSubtype(s) => card.definition.subtypes.spell_subtypes.contains(s),
             R::IsToken => card.is_token,
             R::NotToken => !card.is_token,
+
+            R::Warped => card.warped,
             // CR 603.4 — entered this turn (hidden-zone cards are never
             // stamped, so this is false off the battlefield).
             R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),

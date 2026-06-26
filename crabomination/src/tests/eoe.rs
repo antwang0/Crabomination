@@ -1200,3 +1200,45 @@ fn station_autopick_taps_highest_power_creature() {
     assert!(g.battlefield_find(strong).unwrap().tapped, "the strong creature was tapped");
     assert!(!g.battlefield_find(weak).unwrap().tapped, "the weak creature stayed up");
 }
+
+/// Hemosymbic Mite pumps another creature by its own power when it taps.
+#[test]
+fn hemosymbic_mite_pumps_by_power_on_tap() {
+    let mut g = two_player_game();
+    let mite = g.add_card_to_battlefield(0, catalog::hemosymbic_mite());
+    g.battlefield_find_mut(mite).unwrap().add_counters(CounterType::PlusOnePlusOne, 2); // now 3/3
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mite).unwrap().tapped = false;
+    let evs = vec![GameEvent::PermanentTapped { card_id: mite }];
+    g.battlefield_find_mut(mite).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "+3/+3 from a 3-power Mite");
+}
+
+/// Genemorph Imago's landfall sets a creature's base P/T to 3/3.
+#[test]
+fn genemorph_imago_landfall_sets_base_pt() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::genemorph_imago());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: land }]);
+    drain_stack(&mut g);
+    assert_eq!((g.computed_permanent(bear).unwrap().power, g.computed_permanent(bear).unwrap().toughness), (3, 3));
+}
+
+/// Full Bore grants trample+haste only to a creature cast for its warp cost.
+#[test]
+fn full_bore_warp_rider() {
+    let mut g = two_player_game();
+    let normal = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let warped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(warped).unwrap().warped = true;
+    resolve_targeted(&mut g, 0, catalog::full_bore().effect, &[normal]);
+    assert!(!g.computed_permanent(normal).unwrap().keywords.contains(&Keyword::Trample),
+        "non-warped: no trample");
+    resolve_targeted(&mut g, 0, catalog::full_bore().effect, &[warped]);
+    assert!(g.computed_permanent(warped).unwrap().keywords.contains(&Keyword::Haste),
+        "warped: gains haste");
+}

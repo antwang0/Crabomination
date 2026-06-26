@@ -60,6 +60,8 @@ pub enum CreatureType {
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
+    // Phyrexia: All Will Be One.
+    Mite,
     Orc, Warlock, Bard, Sorcerer, Pilot,
     // Misc. subtypes used by SOS body-only cards.
     Dwarf, Badger, Salamander, Giraffe, Antelope, Pangolin,
@@ -1134,6 +1136,9 @@ pub enum SelectionRequirement {
     GreaterPowerOrToughnessThanSource,
     IsToken,
     NotToken,
+    /// CR 702.185 — the permanent was cast for its warp cost (its `warped` flag
+    /// is set). Backs Full Bore's "if it was cast for its warp cost" rider.
+    Warped,
     IsBasicLand,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
     /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's

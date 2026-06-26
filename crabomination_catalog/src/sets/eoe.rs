@@ -3699,3 +3699,106 @@ pub fn cryogen_relic() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 14 — pump / landfall / warp riders ─────────────────────────────
+
+/// Hemosymbic Mite — {G} Creature — Mite 1/1. Whenever it becomes tapped,
+/// another target creature you control gets +X/+X until end of turn, where X is
+/// this creature's power.
+pub fn hemosymbic_mite() -> CardDefinition {
+    CardDefinition {
+        name: "Hemosymbic Mite",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mite], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::PowerOf(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Genemorph Imago — {G}{U} Creature — Insect Druid 1/3, flying. Landfall —
+/// whenever a land you control enters, target creature has base power and
+/// toughness 3/3 until end of turn. (The 6+-lands 5/5 upgrade is approximated to
+/// the 3/3 set.)
+pub fn genemorph_imago() -> CardDefinition {
+    CardDefinition {
+        name: "Genemorph Imago",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::SetBasePT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Full Bore — {R} Instant. Target creature you control gets +3/+2 until end of
+/// turn; if it was cast for its warp cost, it also gains trample and haste.
+pub fn full_bore() -> CardDefinition {
+    CardDefinition {
+        name: "Full Bore",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(3),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Warped,
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
