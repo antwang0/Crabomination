@@ -214,6 +214,11 @@ pub enum StaticEffect {
     /// among the caster's lands (0–5). Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByDomain { per: u32 },
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is the number
+    /// of differently named lands you control" (Fungal Colossus). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast*. Generic-only;
+    /// clamped by `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByDistinctLandNames,
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// devotion to `colors`" (Theros — Daybreak Chimera, etc.). Read by
     /// `cost_reduction_for_spell` off the *spell being cast*; the count is the

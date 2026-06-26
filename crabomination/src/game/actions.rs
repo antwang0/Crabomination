@@ -424,6 +424,25 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
         }
     }
+    // Card-intrinsic "costs {X} less, where X is the number of differently
+    // named lands you control" (Fungal Colossus). Generic-only, clamped by the
+    // caller via `ManaCost::reduce_generic`.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByDistinctLandNames))
+    {
+        let mut names: Vec<&str> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == caster && c.definition.is_land())
+            .map(|c| c.definition.name)
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        reduction = reduction.saturating_add(names.len() as u32);
+    }
     // Card-intrinsic "costs {X} less, where X is your devotion to [colors]"
     // (Theros — Daybreak Chimera). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

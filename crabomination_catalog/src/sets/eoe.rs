@@ -3734,6 +3734,21 @@ pub fn hemosymbic_mite() -> CardDefinition {
 /// whenever a land you control enters, target creature has base power and
 /// toughness 3/3 until end of turn. (The 6+-lands 5/5 upgrade is approximated to
 /// the 3/3 set.)
+/// 5 if you control six or more lands, else 3 — Genemorph Imago's landfall
+/// base-P/T set.
+fn six_lands_5_else_3() -> Value {
+    Value::IfPred {
+        pred: Box::new(Predicate::SelectorCountAtLeast {
+            sel: Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ),
+            n: Value::Const(6),
+        }),
+        then: Box::new(Value::Const(5)),
+        else_: Box::new(Value::Const(3)),
+    }
+}
+
 pub fn genemorph_imago() -> CardDefinition {
     CardDefinition {
         name: "Genemorph Imago",
@@ -3752,10 +3767,11 @@ pub fn genemorph_imago() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Land,
                 }),
+            // Base 3/3, or 5/5 instead if you control six or more lands.
             effect: Effect::SetBasePT {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(3),
-                toughness: Value::Const(3),
+                power: six_lands_5_else_3(),
+                toughness: six_lands_5_else_3(),
                 duration: Duration::EndOfTurn,
             },
         }],
@@ -3797,6 +3813,89 @@ pub fn full_bore() -> CardDefinition {
                     },
                 ])),
                 else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Emissary Escort — {1}{U} Artifact Creature — Robot Soldier 0/4. Gets +X/+0,
+/// where X is the greatest mana value among other artifacts you control.
+pub fn emissary_escort() -> CardDefinition {
+    CardDefinition {
+        name: "Emissary Escort",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        dynamic_pt: Some(DynamicPt::BasePlusGreatestOtherArtifactMv { base_p: 0, base_t: 4 }),
+        ..Default::default()
+    }
+}
+
+/// Solar Blaze — {2}{R}{W} Sorcery. Each creature deals damage to itself equal
+/// to its power.
+pub fn solar_blaze() -> CardDefinition {
+    CardDefinition {
+        name: "Solar Blaze",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::DealDamageEqualToPower {
+                source: Selector::TriggerSource,
+                target: Selector::TriggerSource,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fungal Colossus — {6}{G} Creature — Fungus Beast 5/5. Costs {X} less to
+/// cast, where X is the number of differently named lands you control.
+pub fn fungal_colossus() -> CardDefinition {
+    CardDefinition {
+        name: "Fungal Colossus",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fungus, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the number of differently named lands you control.",
+            effect: StaticEffect::SelfCostReducedByDistinctLandNames,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dark Endurance — {1}{B} Instant. Costs {1} less if it targets a blocking
+/// creature. Target creature gets +2/+0 and gains indestructible until end of
+/// turn.
+pub fn dark_endurance() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Endurance",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((SelectionRequirement::IsBlocking, 1)),
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()

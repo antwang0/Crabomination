@@ -3959,6 +3959,10 @@ static EOE: &[Factory] = &[
     super::eoe::hemosymbic_mite,
     super::eoe::genemorph_imago,
     super::eoe::full_bore,
+    super::eoe::emissary_escort,
+    super::eoe::solar_blaze,
+    super::eoe::fungal_colossus,
+    super::eoe::dark_endurance,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

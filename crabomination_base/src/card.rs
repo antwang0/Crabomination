@@ -2346,6 +2346,11 @@ pub enum DynamicPt {
     /// P/T = base + 1/+1 for each land of `land_type` the controller controls.
     /// Outcaster Greenblade (1/2, +1/+1 per Desert).
     BasePlusLandsOfTypeControlled { land_type: LandType, base_p: i32, base_t: i32 },
+    /// Power = `base_p` + the greatest mana value among *other* artifacts the
+    /// controller controls; toughness = the fixed `base_t`. Models "gets +X/+0,
+    /// where X is the greatest mana value among other artifacts you control"
+    /// (Emissary Escort, base 0/4).
+    BasePlusGreatestOtherArtifactMv { base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

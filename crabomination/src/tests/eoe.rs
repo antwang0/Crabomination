@@ -1242,3 +1242,80 @@ fn full_bore_warp_rider() {
     assert!(g.computed_permanent(warped).unwrap().keywords.contains(&Keyword::Haste),
         "warped: gains haste");
 }
+
+/// Emissary Escort's power = greatest mana value among OTHER artifacts you
+/// control (0 with none, excludes itself).
+#[test]
+fn emissary_escort_power_tracks_greatest_other_artifact_mv() {
+    let mut g = two_player_game();
+    let escort = g.add_card_to_battlefield(0, catalog::emissary_escort());
+    assert_eq!(g.computed_permanent(escort).unwrap().power, 0, "no other artifacts → +0");
+    assert_eq!(g.computed_permanent(escort).unwrap().toughness, 4);
+    g.add_card_to_battlefield(0, catalog::mind_stone()); // MV 2 artifact
+    assert_eq!(g.computed_permanent(escort).unwrap().power, 2, "greatest other artifact MV = 2");
+}
+
+/// Solar Blaze: each creature deals damage to itself equal to its power. A 3/3
+/// dies; a 0/4 (power 0) is untouched.
+#[test]
+fn solar_blaze_each_creature_self_damages() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let escort = g.add_card_to_battlefield(1, catalog::emissary_escort()); // 0/4, power 0
+    resolve_targeted(&mut g, 0, catalog::solar_blaze().effect, &[]);
+    assert!(g.battlefield_find(giant).is_none(), "3/3 took 3, died");
+    assert!(g.battlefield_find(escort).is_some(), "0-power creature took 0, survived");
+}
+
+/// Fungal Colossus costs {X} less, X = differently named lands you control.
+#[test]
+fn fungal_colossus_distinct_land_name_discount() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::fungal_colossus(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::mountain());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 3, "3 distinct land names");
+    g.add_card_to_battlefield(0, catalog::forest()); // duplicate name, no extra
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 3, "duplicate name doesn't count");
+}
+
+/// Dark Endurance: {1} cheaper only when it targets a blocking creature; the
+/// effect grants +2/+0 and indestructible.
+#[test]
+fn dark_endurance_blocking_discount_and_pump() {
+    use crate::game::actions::cost_reduction_for_spell;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let blocker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let attacker = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let idle = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::dark_endurance(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, Some(&Target::Permanent(idle))), 0);
+    g.block_map.insert(blocker, attacker);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, Some(&Target::Permanent(blocker))), 1,
+        "{{1}} off vs a blocking creature");
+    resolve_targeted(&mut g, 0, catalog::dark_endurance().effect, &[blocker]);
+    let cp = g.computed_permanent(blocker).unwrap();
+    assert_eq!(cp.power, 4, "2/2 +2/+0");
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Genemorph Imago's landfall sets a creature to base 3/3, or 5/5 once you
+/// control six or more lands. Drives the card's real landfall effect.
+#[test]
+fn genemorph_imago_landfall_scales_with_lands() {
+    let landfall = || catalog::genemorph_imago().triggered_abilities[0].effect.clone();
+    // Five lands: landfall sets base 3/3.
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    for _ in 0..5 { g.add_card_to_battlefield(0, catalog::forest()); }
+    resolve_targeted(&mut g, 0, landfall(), &[target]);
+    assert_eq!(g.computed_permanent(target).unwrap().power, 3, "five lands → base 3/3");
+    // Sixth land flips it to 5/5.
+    g.add_card_to_battlefield(0, catalog::forest());
+    resolve_targeted(&mut g, 0, landfall(), &[target]);
+    assert_eq!(g.computed_permanent(target).unwrap().power, 5, "six lands → base 5/5");
+}

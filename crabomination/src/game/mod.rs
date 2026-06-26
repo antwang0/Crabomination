@@ -4563,6 +4563,14 @@ impl GameState {
                     }).count() as i32;
                     (base_p + n, base_t + n)
                 }
+                crate::card::DynamicPt::BasePlusGreatestOtherArtifactMv { base_p, base_t } => {
+                    let greatest = self.battlefield.iter().filter(|c| {
+                        c.id != card.id
+                            && c.controller == card.controller
+                            && c.definition.is_artifact()
+                    }).map(|c| c.definition.cost.cmc() as i32).max().unwrap_or(0);
+                    (base_p + greatest, base_t)
+                }
                 crate::card::DynamicPt::ControllerHandSize => {
                     let n = self.players[card.controller].hand.len() as i32;
                     (n, n)
@@ -10520,6 +10528,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByGreatestPower
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
             | StaticEffect::SelfCostReducedByDomain { .. }
+            // SelfCostReducedByDistinctLandNames (Fungal Colossus) — same.
+            | StaticEffect::SelfCostReducedByDistinctLandNames
             // SelfCostReducedByDevotion (Daybreak Chimera) — same, off the spell.
             | StaticEffect::SelfCostReducedByDevotion { .. }
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
