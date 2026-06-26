@@ -471,6 +471,16 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             }
         }
     }
+    // Card-intrinsic "costs {N} less if [predicate]" (Gigastorm Titan, Lashwhip
+    // Predator). Predicate evaluated with the caster as controller. Generic-only.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIf { condition, amount } = &sa.effect {
+            let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+            if state.evaluate_predicate(condition, &ctx) {
+                reduction = reduction.saturating_add(*amount);
+            }
+        }
+    }
     // Card-intrinsic "costs {N} less per card you've discarded this turn"
     // (Hollow One). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

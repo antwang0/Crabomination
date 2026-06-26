@@ -3938,6 +3938,13 @@ static EOE: &[Factory] = &[
     super::eoe::diplomatic_relations,
     super::eoe::cut_propulsion,
     super::eoe::mechan_shieldmate,
+    super::eoe::gigastorm_titan,
+    super::eoe::lashwhip_predator,
+    super::eoe::cerebral_download,
+    super::eoe::samis_curiosity,
+    super::eoe::lithobraking,
+    super::eoe::rust_harvester,
+    super::eoe::nanoform_sentinel,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

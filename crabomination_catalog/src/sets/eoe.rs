@@ -3216,3 +3216,170 @@ pub fn mechan_shieldmate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 11 — cost-reduction, Lander, and utility cards ──────────────────
+
+/// Gigastorm Titan — {4}{U} Creature — Elemental 4/4. Costs {3} less if you've
+/// cast another spell this turn.
+pub fn gigastorm_titan() -> CardDefinition {
+    CardDefinition {
+        name: "Gigastorm Titan",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Costs {3} less if you've cast another spell this turn.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::SpellsCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(1) },
+                amount: 3,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lashwhip Predator — {4}{G}{G} Creature — Plant Beast 5/7, reach. Costs {2}
+/// less if your opponents control three or more creatures.
+pub fn lashwhip_predator() -> CardDefinition {
+    CardDefinition {
+        name: "Lashwhip Predator",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant, CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 7,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {2} less if your opponents control three or more creatures.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    n: Value::Const(3),
+                },
+                amount: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cerebral Download — {4}{U} Instant. Surveil X (X = artifacts you control),
+/// then draw three cards.
+pub fn cerebral_download() -> CardDefinition {
+    CardDefinition {
+        name: "Cerebral Download",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sami's Curiosity — {G} Sorcery. You gain 2 life. Create a Lander token.
+pub fn samis_curiosity() -> CardDefinition {
+    CardDefinition {
+        name: "Sami's Curiosity",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lithobraking — {2}{R} Instant. Create a Lander token. Then you may sacrifice
+/// an artifact; if you do, Lithobraking deals 2 damage to each creature.
+pub fn lithobraking() -> CardDefinition {
+    CardDefinition {
+        name: "Lithobraking",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            Effect::MaySacrifice {
+                description: "Sacrifice an artifact".into(),
+                filter: SelectionRequirement::Artifact,
+                count: Value::Const(1),
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::EachPermanent(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                }),
+                else_: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rust Harvester — {R} Artifact Creature — Robot 1/1, menace. {2}, {T}, Exile
+/// an artifact card from your graveyard: Put a +1/+1 counter on this, then it
+/// deals damage equal to its power to any target.
+pub fn rust_harvester() -> CardDefinition {
+    CardDefinition {
+        name: "Rust Harvester",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            exile_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nanoform Sentinel — {2}{U} Artifact Creature — Robot 3/2. Whenever it becomes
+/// tapped, untap another target permanent. Triggers only once each turn.
+pub fn nanoform_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Nanoform Sentinel",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource).once_per_turn(),
+            effect: Effect::Untap {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Permanent
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                up_to: None,
+            },
+        }],
+        ..Default::default()
+    }
+}

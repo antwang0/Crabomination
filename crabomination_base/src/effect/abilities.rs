@@ -247,6 +247,11 @@ pub enum StaticEffect {
     /// *spell being cast*; the discount applies only when every filter has at
     /// least one match among the caster's permanents. Generic-only.
     SelfCostReducedIfControlEach { filters: Vec<SelectionRequirement>, amount: u32 },
+    /// Card-intrinsic "This spell costs `amount` less to cast if `condition`"
+    /// (Gigastorm Titan — you've cast another spell this turn; Lashwhip Predator
+    /// — your opponents control 3+ creatures). The predicate is evaluated at
+    /// cost time with the caster as controller. Generic-only, clamped.
+    SelfCostReducedIf { condition: Predicate, amount: u32 },
     /// "Each player can't cast more than one spell each turn" (Rule of Law,
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_turn`.

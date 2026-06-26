@@ -929,3 +929,91 @@ fn mechan_navigator_loots_on_tap() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0, "drew one, discarded one (net zero)");
 }
+
+/// Gigastorm Titan costs {3} less once you've cast another spell this turn.
+#[test]
+fn gigastorm_titan_cost_reduction() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::gigastorm_titan(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no spell cast yet → full price");
+    g.players[0].spells_cast_this_turn = 1;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 3, "after a spell → {{3}} off");
+}
+
+/// Lashwhip Predator costs {2} less while opponents control 3+ creatures.
+#[test]
+fn lashwhip_predator_cost_reduction() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::lashwhip_predator(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "<3 opp creatures → full price");
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "3 opp creatures → {{2}} off");
+}
+
+/// Sami's Curiosity gains 2 life and mints a Lander.
+#[test]
+fn samis_curiosity_gains_and_makes_lander() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    resolve_targeted(&mut g, 0, catalog::samis_curiosity().effect, &[]);
+    assert_eq!(g.players[0].life, life0 + 2);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Lander"));
+}
+
+/// Lithobraking makes a Lander, then sacrificing an artifact deals 2 to each
+/// creature.
+#[test]
+fn lithobraking_sac_pings_all_creatures() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // an artifact to sacrifice
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives the ping
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::lithobraking().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    // An artifact was sacrificed (one of the Wurmwall / the new Lander), and the
+    // reflexive trigger dealt 2 to each creature.
+    assert_eq!(g.battlefield_find(victim).map(|c| c.damage), Some(2), "each creature took 2");
+}
+
+/// Rust Harvester grows and pings equal to its (post-counter) power.
+#[test]
+fn rust_harvester_grows_and_pings() {
+    let mut g = two_player_game();
+    let rh = g.add_card_to_battlefield(0, catalog::rust_harvester());
+    g.clear_sickness(rh);
+    // Seed an artifact card in the graveyard to exile as the cost.
+    let gy_id = g.next_id();
+    g.players[0].graveyard.push(crate::card::CardInstance::new(
+        gy_id, catalog::wurmwall_sweeper(), 0));
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rh, ability_index: 0,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Rust Harvester");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rh).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[1].life, 18, "2/2-power ping (1 base + 1 counter)");
+}
+
+/// Nanoform Sentinel untaps another permanent when it becomes tapped.
+#[test]
+fn nanoform_sentinel_untaps_on_tap() {
+    let mut g = two_player_game();
+    let nano = g.add_card_to_battlefield(0, catalog::nanoform_sentinel());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.battlefield_find_mut(nano).unwrap().tapped = false;
+    let evs = vec![GameEvent::PermanentTapped { card_id: nano }];
+    g.battlefield_find_mut(nano).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&evs);
+    // Bind the untap target to the tapped land.
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "the land was untapped");
+}
