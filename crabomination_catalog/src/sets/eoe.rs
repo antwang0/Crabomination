@@ -1386,3 +1386,102 @@ pub fn exosuit_savior() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 4 — more Void ──────────────────────────────────────────────────
+
+/// Hymn of the Faller — {1}{B} Sorcery. Surveil 1, then draw a card and lose 1
+/// life. Void — if a nonland permanent left the battlefield this turn or a spell
+/// was warped this turn, draw another card.
+pub fn hymn_of_the_faller() -> CardDefinition {
+    use crate::effect::shortcut::{draw, lose_life};
+    CardDefinition {
+        name: "Hymn of the Faller",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            draw(1),
+            lose_life(1, Selector::You),
+            Effect::If {
+                cond: Predicate::VoidActive { who: PlayerRef::You },
+                then: Box::new(draw(1)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Interceptor Mechan — {2}{B}{R} Artifact Creature — Robot 2/2, flying. ETB:
+/// return target artifact or creature card from your graveyard to your hand.
+/// Void — at the beginning of your end step, if Void is active, put a +1/+1
+/// counter on this creature.
+pub fn interceptor_mechan() -> CardDefinition {
+    CardDefinition {
+        name: "Interceptor Mechan",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::VoidActive { who: PlayerRef::You },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Insatiable Skittermaw — {2}{B} Creature — Insect Horror 2/2, menace. Void —
+/// at the beginning of your end step, if Void is active, put a +1/+1 counter on
+/// this creature.
+pub fn insatiable_skittermaw() -> CardDefinition {
+    CardDefinition {
+        name: "Insatiable Skittermaw",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::VoidActive { who: PlayerRef::You },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}

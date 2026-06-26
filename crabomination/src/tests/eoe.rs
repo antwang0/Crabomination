@@ -346,3 +346,25 @@ fn dual_sun_technique_draws_with_a_counter() {
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
     assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew because the target had a counter");
 }
+
+/// Hymn of the Faller draws an extra card when Void is active.
+#[test]
+fn hymn_of_the_faller_void_draws_extra() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, fodder); // Void on
+    let hymn = g.add_card_to_hand(0, catalog::hymn_of_the_faller());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Default AutoDecider keeps the surveilled card on top.
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: hymn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hymn of the Faller");
+    drain_stack(&mut g);
+    // -1 (spell) + 2 drawn (base + Void).
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "Void granted the extra draw");
+}

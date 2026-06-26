@@ -3875,6 +3875,9 @@ static EOE: &[Factory] = &[
     super::eoe::dual_sun_adepts,
     super::eoe::dual_sun_technique,
     super::eoe::exosuit_savior,
+    super::eoe::hymn_of_the_faller,
+    super::eoe::interceptor_mechan,
+    super::eoe::insatiable_skittermaw,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
