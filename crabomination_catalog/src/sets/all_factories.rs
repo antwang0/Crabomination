@@ -3894,6 +3894,8 @@ static EOE: &[Factory] = &[
     super::eoe::specimen_freighter,
     super::eoe::rescue_skiff,
     super::eoe::lumen_class_frigate,
+    super::eoe::synthesizer_labship,
+    super::eoe::entropic_battlecruiser,
     super::eoe::frontline_war_rager,
     super::eoe::dawnstrike_vanguard,
     super::eoe::icecave_crasher,

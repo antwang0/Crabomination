@@ -1545,6 +1545,14 @@ impl GameState {
                 }
             }
         }
+        // CR 721.2a — a station card's own `{N+}` triggered-ability striations,
+        // active only while it has at least `min` charge counters.
+        if !card.definition.station.is_empty() {
+            let charges = card.counter_count(crate::card::CounterType::Charge);
+            for band in card.definition.station.iter().filter(|b| charges >= b.min) {
+                out.extend(band.triggers.iter().cloned());
+            }
+        }
         out
     }
 

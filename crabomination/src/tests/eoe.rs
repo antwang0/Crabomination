@@ -719,6 +719,43 @@ fn seedship_agrarian_taps_for_lander_and_grows() {
         "becoming tapped created a Lander");
 }
 
+/// Entropic Battlecruiser's {1+} band grants a counter-gated trigger: while it
+/// has ≥1 charge, an opponent's discard costs them 3 life. Below the band the
+/// trigger is inert.
+#[test]
+fn entropic_battlecruiser_charge_gated_discard_punisher() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::entropic_battlecruiser());
+    let card = g.add_card_to_hand(1, catalog::forest());
+    // No charges → the {1+} trigger isn't granted.
+    g.dispatch_triggers_for_events(&[GameEvent::CardDiscarded { player: 1, card_id: card }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "no band, no life loss");
+    // One charge turns on the band's trigger.
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 1);
+    g.dispatch_triggers_for_events(&[GameEvent::CardDiscarded { player: 1, card_id: card }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "{{1+}} band: opponent loses 3 on discard");
+}
+
+/// Synthesizer Labship's {2+} band fires a begin-combat trigger that animates
+/// another artifact you control into a 2/2 flier; below the band nothing fires.
+#[test]
+fn synthesizer_labship_charge_gated_animate_band() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::synthesizer_labship());
+    let relic = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // an artifact
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(relic).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature), "artifact animated");
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
 /// Nutrient Block draws a card when it's sacrificed (left for the graveyard).
 #[test]
 fn nutrient_block_draws_on_leave() {

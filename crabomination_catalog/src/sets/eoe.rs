@@ -7,7 +7,9 @@ use crate::card::{
     DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
     StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, WardCost,
 };
-use crate::effect::shortcut::{etb, on_dies, station, target, target_any, target_filtered, warp};
+use crate::effect::shortcut::{
+    etb, on_attack, on_dies, station, target, target_any, target_filtered, warp,
+};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 use crabomination_base::tokens::lander_token;
@@ -1899,6 +1901,92 @@ pub fn lumen_class_frigate() -> CardDefinition {
                 min: 12,
                 keywords: vec![Keyword::Flying, Keyword::Lifelink],
                 pt: Some((3, 5)),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Synthesizer Labship — {U} Artifact — Spacecraft. Station; {2+}: at the
+/// beginning of combat on your turn, up to one other target artifact you
+/// control becomes a 2/2 artifact creature with flying until end of turn.
+/// {9+}: 4/4 with flying, vigilance.
+pub fn synthesizer_labship() -> CardDefinition {
+    CardDefinition {
+        name: "Synthesizer Labship",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![station()],
+        station: vec![
+            StationBand {
+                min: 2,
+                triggers: vec![TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                        EventScope::YourControl,
+                    ),
+                    effect: Effect::ApplyToTargets {
+                        max_targets: 1,
+                        filter: SelectionRequirement::Artifact
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                        effect: Box::new(Effect::BecomeCreature {
+                            what: Selector::Target(0),
+                            power: Value::Const(2),
+                            toughness: Value::Const(2),
+                            creature_types: vec![],
+                            keywords: vec![Keyword::Flying],
+                            duration: Duration::EndOfTurn,
+                        }),
+                    },
+                }],
+                ..Default::default()
+            },
+            StationBand {
+                min: 9,
+                keywords: vec![Keyword::Flying, Keyword::Vigilance],
+                pt: Some((4, 4)),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Entropic Battlecruiser — {3}{B} Artifact — Spacecraft. Whenever it attacks,
+/// each opponent discards a card. ({1+}: whenever an opponent discards a card,
+/// they lose 3 life. {8+}: 3/10 with flying, deathtouch.) The attack rider's
+/// "each opponent who can't loses 3 life" empty-hand branch is approximated.
+pub fn entropic_battlecruiser() -> CardDefinition {
+    CardDefinition {
+        name: "Entropic Battlecruiser",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![on_attack(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
+        activated_abilities: vec![station()],
+        station: vec![
+            StationBand {
+                min: 1,
+                triggers: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl),
+                    effect: Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::Const(3),
+                    },
+                }],
+                ..Default::default()
+            },
+            StationBand {
+                min: 8,
+                keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+                pt: Some((3, 10)),
                 ..Default::default()
             },
         ],

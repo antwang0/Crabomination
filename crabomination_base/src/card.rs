@@ -1026,6 +1026,11 @@ pub struct StationBand {
     /// +1/+1`). Converted to layer effects in `gather_continuous_effects`.
     #[serde(default)]
     pub statics: Vec<crate::effect::StaticEffect>,
+    /// CR 721.2a — triggered abilities active only while the threshold is met
+    /// (e.g. Synthesizer Labship's `{2+}` combat-damage trigger). Surfaced
+    /// off the source via `statics_granted_triggers_for` when charges ≥ `min`.
+    #[serde(default)]
+    pub triggers: Vec<TriggeredAbility>,
 }
 
 /// Composable filter for valid targets of a spell or ability.
