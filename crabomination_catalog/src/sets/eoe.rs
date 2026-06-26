@@ -865,3 +865,311 @@ pub fn tidal_terror() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 2 — more Warp / Void / Lander ──────────────────────────────────
+
+/// Germinating Wurm — {4}{G} Creature — Plant Wurm 5/5. ETB: gain 2 life. Warp
+/// {1}{G}.
+pub fn germinating_wurm() -> CardDefinition {
+    use crate::effect::shortcut::gain_life;
+    CardDefinition {
+        name: "Germinating Wurm",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(gain_life(2))],
+        alternative_cost: Some(warp(cost(&[generic(1), g()]))),
+        ..Default::default()
+    }
+}
+
+/// Knight Luminary — {3}{W} Creature — Human Knight 3/2. ETB: make a 1/1 white
+/// Human Soldier. Warp {1}{W}.
+pub fn knight_luminary() -> CardDefinition {
+    use crate::mana::Color;
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Knight Luminary",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: soldier,
+        })],
+        alternative_cost: Some(warp(cost(&[generic(1), w()]))),
+        ..Default::default()
+    }
+}
+
+/// Memorial Team Leader — {3}{R} Creature — Kavu Soldier 4/3. During your turn,
+/// other creatures you control get +1/+0. Warp {1}{R}.
+pub fn memorial_team_leader() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Memorial Team Leader",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, other creatures you control get +1/+0.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        alternative_cost: Some(warp(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Dauntless Scrapbot — {3} Artifact Creature — Robot 3/1. ETB: exile each
+/// opponent's graveyard, then create a Lander token.
+pub fn dauntless_scrapbot() -> CardDefinition {
+    CardDefinition {
+        name: "Dauntless Scrapbot",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExileAllGraveyards { filter: None, opponents_only: true },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Edge Rover — {G} Artifact Creature — Robot Scout 2/2, reach. When it dies,
+/// each player creates a Lander token.
+pub fn edge_rover() -> CardDefinition {
+    CardDefinition {
+        name: "Edge Rover",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::EachPlayer,
+            count: Value::Const(1),
+            definition: lander_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Galactic Wayfarer — {2}{G} Creature — Human Scout 3/3. ETB: create a Lander.
+pub fn galactic_wayfarer() -> CardDefinition {
+    CardDefinition {
+        name: "Galactic Wayfarer",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: lander_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Glacier Godmaw — {5}{G}{G} Creature — Leviathan 6/6, trample. ETB: create a
+/// Lander.
+pub fn glacier_godmaw() -> CardDefinition {
+    CardDefinition {
+        name: "Glacier Godmaw",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: lander_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kav Landseeker — {3}{R} Creature — Kavu Soldier 4/3, menace. ETB: create a
+/// Lander. (The "sacrifice it next end step" rider is dropped.)
+pub fn kav_landseeker() -> CardDefinition {
+    CardDefinition {
+        name: "Kav Landseeker",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: lander_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Emergency Eject — {2}{W} Instant. Destroy target nonland permanent; its
+/// controller creates a Lander token.
+pub fn emergency_eject() -> CardDefinition {
+    CardDefinition {
+        name: "Emergency Eject",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: lander_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kavaron Skywarden — {4}{R} Creature — Kavu Soldier 4/5, reach. Void — at the
+/// beginning of your end step, if Void is active, put a +1/+1 counter on this.
+pub fn kavaron_skywarden() -> CardDefinition {
+    CardDefinition {
+        name: "Kavaron Skywarden",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::VoidActive { who: PlayerRef::You },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mechanozoa — {4}{U}{U} Artifact Creature — Robot Jellyfish 5/5. ETB: tap
+/// target artifact or creature an opponent controls and put a stun counter on it.
+pub fn mechanozoa() -> CardDefinition {
+    CardDefinition {
+        name: "Mechanozoa",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Jellyfish],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Exalted Sunborn — {3}{W}{W} Creature — Angel Wizard 4/5, flying, lifelink. If
+/// one or more tokens would be created under your control, twice that many are
+/// created instead. Warp {1}{W}.
+pub fn exalted_sunborn() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Exalted Sunborn",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more tokens would be created under your control, twice that many are created instead.",
+            effect: StaticEffect::DoubleTokens,
+        }],
+        alternative_cost: Some(warp(cost(&[generic(1), w()]))),
+        ..Default::default()
+    }
+}

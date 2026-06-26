@@ -219,3 +219,87 @@ fn perimeter_patrol_pumps_on_artifact_etb() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(patrol).unwrap().power, 4, "+1/+0 from an artifact entering");
 }
+
+/// Exalted Sunborn doubles tokens you create.
+#[test]
+fn exalted_sunborn_doubles_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::exalted_sunborn());
+    // Knight Luminary's ETB normally makes one Human Soldier → doubled to two.
+    let lum = g.add_card_to_hand(0, catalog::knight_luminary());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lum, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Knight Luminary");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Human Soldier").count();
+    assert_eq!(soldiers, 2, "token doubler made two Human Soldiers");
+}
+
+/// Memorial Team Leader pumps your other creatures only on your turn.
+#[test]
+fn memorial_team_leader_anthem_only_on_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::memorial_team_leader());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+0 on your turn");
+    g.active_player_idx = 1;
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "no bonus on the opponent's turn");
+}
+
+/// Kavaron Skywarden grows at your end step while Void is active.
+#[test]
+fn kavaron_skywarden_grows_on_void_end_step() {
+    let mut g = two_player_game();
+    let skywarden = g.add_card_to_battlefield(0, catalog::kavaron_skywarden());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, fodder); // Void on
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(skywarden).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Void end step added a +1/+1 counter"
+    );
+}
+
+/// Emergency Eject destroys a nonland permanent and gives its controller a Lander.
+#[test]
+fn emergency_eject_gives_controller_a_lander() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eject = g.add_card_to_hand(0, catalog::emergency_eject());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eject, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Emergency Eject");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim destroyed");
+    let landers = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Lander" && c.controller == 1).count();
+    assert_eq!(landers, 1, "the victim's controller got the Lander");
+}
+
+/// Edge Rover gives every player a Lander when it dies.
+#[test]
+fn edge_rover_each_player_gets_a_lander() {
+    let mut g = two_player_game();
+    let rover = g.add_card_to_battlefield(0, catalog::edge_rover());
+    kill(&mut g, rover);
+    drain_stack(&mut g);
+    for p in 0..2 {
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.definition.name == "Lander" && c.controller == p).count(),
+            1, "player {p} got a Lander"
+        );
+    }
+}

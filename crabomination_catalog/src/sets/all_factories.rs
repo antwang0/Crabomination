@@ -3855,6 +3855,18 @@ static EOE: &[Factory] = &[
     super::eoe::perimeter_patrol,
     super::eoe::hulldrifter,
     super::eoe::tidal_terror,
+    super::eoe::germinating_wurm,
+    super::eoe::knight_luminary,
+    super::eoe::memorial_team_leader,
+    super::eoe::dauntless_scrapbot,
+    super::eoe::edge_rover,
+    super::eoe::galactic_wayfarer,
+    super::eoe::glacier_godmaw,
+    super::eoe::kav_landseeker,
+    super::eoe::emergency_eject,
+    super::eoe::kavaron_skywarden,
+    super::eoe::mechanozoa,
+    super::eoe::exalted_sunborn,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

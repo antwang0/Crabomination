@@ -5595,30 +5595,36 @@ impl GameState {
 
 
             Effect::CreateToken { who, count, definition } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
-                // CR 614.13 token-doubling replacement: each
-                // `StaticEffect::DoubleTokens` permanent the controller has on
-                // the battlefield (Adrix and Nev, Twincasters; Doubling Season
-                // for the token half) doubles the count. Stacking doublers
-                // multiply (2^k where k is the number of active doublers).
-                let doublers = self.token_doublers_for(p);
-                for _ in 0..doublers {
-                    n = n.saturating_mul(2);
-                }
+                // Resolve every matched player so multi-player refs (EachPlayer
+                // / EachOpponent — "each player creates a Lander") each mint
+                // their own tokens, not just the controller.
+                let players = self.resolve_players(who, ctx);
+                let base = self.evaluate_value(count, ctx).max(0) as u32;
                 // Mint-time dynamic P/T (Shark Typhoon's X/X): resolved once
                 // against this resolution's context, stamped as the token's
                 // printed P/T (a mint-time rider, CR 707.2-stable).
                 let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
                     (self.evaluate_value(pv, ctx), self.evaluate_value(tv, ctx))
                 });
-                for _ in 0..n {
-                    let mut def = token_to_card_definition(definition);
-                    if let Some((pw, tn)) = dyn_pt {
-                        def.power = pw;
-                        def.toughness = tn;
+                for p in players {
+                    let mut n = base;
+                    // CR 614.13 token-doubling replacement: each
+                    // `StaticEffect::DoubleTokens` permanent that player has on
+                    // the battlefield (Adrix and Nev, Twincasters; Doubling
+                    // Season for the token half) doubles the count. Stacking
+                    // doublers multiply (2^k for k active doublers).
+                    let doublers = self.token_doublers_for(p);
+                    for _ in 0..doublers {
+                        n = n.saturating_mul(2);
                     }
-                    self.mint_token_onto_battlefield(def, p, definition.tapped, events);
+                    for _ in 0..n {
+                        let mut def = token_to_card_definition(definition);
+                        if let Some((pw, tn)) = dyn_pt {
+                            def.power = pw;
+                            def.toughness = tn;
+                        }
+                        self.mint_token_onto_battlefield(def, p, definition.tapped, events);
+                    }
                 }
                 Ok(())
             }
