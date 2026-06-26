@@ -1123,6 +1123,10 @@ pub enum SelectionRequirement {
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
+    /// True when the candidate permanent has at least `n` Equipment attached
+    /// (CR 301.5). Battlefield-only. Balan's "double strike as long as two or
+    /// more Equipment are attached to it".
+    EquippedByAtLeast(u32),
     /// CR 700.9 — "modified": the permanent has one or more counters, is
     /// equipped, or is enchanted by an Aura its own controller controls.
     /// Battlefield-only. Kodama of the West Tree.

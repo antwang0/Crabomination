@@ -666,6 +666,11 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.monstrous)
                 .unwrap_or(false),
+            Predicate::SourceIsEquipped => ctx.source.is_some_and(|cid| {
+                self.battlefield
+                    .iter()
+                    .any(|o| o.attached_to == Some(cid) && o.definition.is_equipment())
+            }),
             Predicate::SourceIsSuspected => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
@@ -1389,6 +1394,16 @@ impl GameState {
                     R::IsEquipped => self.battlefield.iter().any(|o| {
                         o.attached_to == Some(*cid) && o.definition.is_equipment()
                     }),
+                    // CR 301.5 — equipped by at least `n` Equipment (Balan).
+                    R::EquippedByAtLeast(n) => {
+                        self.battlefield
+                            .iter()
+                            .filter(|o| {
+                                o.attached_to == Some(*cid) && o.definition.is_equipment()
+                            })
+                            .count() as u32
+                            >= *n
+                    }
                     // CR 700.9 — counters, equipped, or enchanted by an Aura
                     // the permanent's own controller controls.
                     R::IsModified => {
@@ -1771,7 +1786,7 @@ impl GameState {
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted
-            | R::IsEquipped | R::IsModified | R::DealtDamageThisTurn
+            | R::IsEquipped | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,
         }
     }

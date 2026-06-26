@@ -2182,18 +2182,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   + gain control of all lands); Divergent Transformations / Seeds-cycle's last
   Undaunted card (polymorph-reveal-until-creature).
 
-- ⏳ **Equipment-matters follow-ups** (`decks::recent12` batch shipped these as
-  documented approximations): a **while-equipped anthem** primitive (Auriok
-  Steelshaper's "Soldiers/Knights you control +1/+1 while equipped" — drop the
-  note when wired); **conditional keyword by attached-count** (Balan, Wandering
-  Knight's "double strike while 2+ Equipment", plus its "{1}{W}: attach all
-  Equipment you control to Balan" — `Attach { what: EachPermanent(Equipment ∧
-  ControlledByYou), to: This }` already resolves, only the conditional keyword
-  is missing); a **token-exile-at-next-end-step** delayed trigger (Valduk's
-  Elementals currently persist); Nahiri's −8 currently drops the deployed
-  permanent's haste + return-to-hand rider (search-to-battlefield only).
-  Bruenor Battlehammer needs a per-creature "+2/+0 per Equipment attached to
-  *it*" anthem + a free-first-equip-each-turn allowance.
+- ⏳ **Equipment-matters follow-ups** (`decks::recent12`): a
+  **token-exile-at-next-end-step** delayed trigger (Valduk's Elementals
+  currently persist); Nahiri's −8 currently drops the deployed permanent's
+  haste + return-to-hand rider (search-to-battlefield only). Bruenor
+  Battlehammer needs a per-creature "+2/+0 per Equipment attached to *it*"
+  anthem + a free-first-equip-each-turn allowance. (While-equipped team anthems
+  + conditional keyword-by-attached-count ✅ — Auriok Steelshaper, Balan.)
 
 > **Reprioritized 2026-06-11:** the correctness-audit section at the top of
 > this file outranks everything below. New-card/primitive work should wait

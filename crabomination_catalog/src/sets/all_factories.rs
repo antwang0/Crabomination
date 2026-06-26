@@ -3690,6 +3690,7 @@ static DECKS: &[Factory] = &[
     super::decks::kemba_kha_regent,
     super::decks::danitha_capashen,
     super::decks::auriok_steelshaper,
+    super::decks::balan_wandering_knight,
     super::decks::goblin_gaveleer,
     super::decks::valduk_keeper_of_the_flame,
     super::decks::maul_of_the_skyclaves,

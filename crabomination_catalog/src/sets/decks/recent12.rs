@@ -102,8 +102,8 @@ pub fn danitha_capashen() -> CardDefinition {
 }
 
 /// Auriok Steelshaper — {1}{W} Human Soldier 1/1. Equip costs you pay cost {1}
-/// less. (The "while equipped, your Soldiers/Knights get +1/+1" anthem is
-/// dropped — the headline equip discount is the modeled half.)
+/// less. As long as it's equipped, each Soldier or Knight you control gets
+/// +1/+1.
 pub fn auriok_steelshaper() -> CardDefinition {
     CardDefinition {
         name: "Auriok Steelshaper",
@@ -115,9 +115,65 @@ pub fn auriok_steelshaper() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Equip costs you pay cost {1} less.",
+                effect: StaticEffect::EquipCostReduction { amount: 1 },
+            },
+            StaticAbility {
+                description: "While equipped, Soldiers and Knights you control get +1/+1.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: crate::effect::Predicate::SourceIsEquipped,
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::ControlledByYou.and(SelectionRequirement::Creature).and(
+                            SelectionRequirement::HasCreatureType(CreatureType::Soldier)
+                                .or(SelectionRequirement::HasCreatureType(CreatureType::Knight)),
+                        ),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Balan, Wandering Knight — {2}{W}{W} Legendary Cat Knight 3/3 with first
+/// strike; has double strike while two or more Equipment are attached to it.
+/// {1}{W}: Attach all Equipment you control to Balan.
+pub fn balan_wandering_knight() -> CardDefinition {
+    CardDefinition {
+        name: "Balan, Wandering Knight",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
         static_abilities: vec![StaticAbility {
-            description: "Equip costs you pay cost {1} less.",
-            effect: StaticEffect::EquipCostReduction { amount: 1 },
+            description: "Double strike while two or more Equipment are attached to it.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::DoubleStrike,
+                condition: SelectionRequirement::EquippedByAtLeast(2),
+            },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Attach {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                to: Selector::This,
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

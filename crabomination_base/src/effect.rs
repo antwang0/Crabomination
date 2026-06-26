@@ -699,6 +699,10 @@ pub enum Predicate {
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
     SourceIsMonstrous,
+    /// CR 301.5 — the source permanent is equipped (an Equipment is attached).
+    /// Powers "as long as this creature is equipped, …" team statics (Auriok
+    /// Steelshaper's Soldier/Knight anthem).
+    SourceIsEquipped,
     /// The source permanent is currently a creature, reading the *computed*
     /// (layer-aware) types — true for an animated manland. Gates abilities
     /// granted by animation (Wandering Fumarole's `{0}` switch, Lavaclaw

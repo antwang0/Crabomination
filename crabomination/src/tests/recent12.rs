@@ -245,6 +245,47 @@ fn curtains_call_destroys_two() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
 }
 
+/// Auriok Steelshaper's Soldier/Knight anthem switches on only while it's
+/// equipped.
+#[test]
+fn auriok_steelshaper_anthem_only_while_equipped() {
+    let mut g = two_player_game();
+    let auriok = g.add_card_to_battlefield(0, catalog::auriok_steelshaper()); // 1/1 Soldier
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    // Unequipped: no anthem, Auriok is a base 1/1 Soldier.
+    let cp = g.computed_permanent(auriok).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "no anthem before equip");
+    attach(&mut g, boner, auriok);
+    // Equipped: +2/+0 from Bonesplitter plus +1/+1 from its own Soldier anthem.
+    let cp = g.computed_permanent(auriok).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2), "equip bonus + Soldier anthem");
+}
+
+/// Balan gains double strike only with two or more Equipment attached, and his
+/// ability rounds up every Equipment.
+#[test]
+fn balan_double_strike_with_two_equipment() {
+    let mut g = two_player_game();
+    let balan = g.add_card_to_battlefield(0, catalog::balan_wandering_knight());
+    let e1 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let e2 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    assert!(g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "no double strike unequipped");
+    // Activate "attach all Equipment you control" — both pile onto Balan.
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: balan, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("attach all Equipment");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(e1).unwrap().attached_to, Some(balan));
+    assert_eq!(g.battlefield_find(e2).unwrap().attached_to, Some(balan));
+    assert!(g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "double strike with two Equipment");
+}
+
 /// Valduk mints an Elemental token per attachment at the start of combat.
 #[test]
 fn valduk_makes_token_per_attachment() {
