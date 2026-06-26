@@ -1001,6 +1001,21 @@ pub enum Predicate {
     /// `GameState.attacking.len() >= n`; `false` outside a combat with
     /// declared attackers.
     AttackingWithAtLeast(u32),
+    /// **Pack tactics** (OTJ ability word) — `who` attacked this combat with
+    /// creatures whose total power is at least `at_least`. Summed from the
+    /// computed power of every attacking creature controlled by `who`
+    /// (`GameState.attacking`); `false` outside a combat with declared
+    /// attackers. Battle Cry Goblin's "if you attacked with creatures with
+    /// total power 6 or greater this combat".
+    AttackedWithTotalPowerAtLeast { who: PlayerRef, at_least: u32 },
+    /// CR 700.13 — `who` has committed a crime this turn. Backed by
+    /// `Player.committed_crime_this_turn`. Powers "as long as / if you've
+    /// committed a crime this turn" riders (Nimble Brigand's evasion).
+    CommittedCrimeThisTurn { who: PlayerRef },
+    /// CR 700.12 — `who` controls an **outlaw**: a creature that is an
+    /// Assassin, Mercenary, Pirate, Rogue, or Warlock. Powers "as long as you
+    /// control an outlaw" / "if you control an outlaw" riders (Take the Fall).
+    ControlsOutlaw { who: PlayerRef },
     /// CR 700.4-ish — **Delirium**: `who`'s graveyard holds cards of at
     /// least 4 distinct card types (the count of *types*, not cards). Backed
     /// by scanning the graveyard's `definition.card_types`. Used by Unholy
@@ -1389,6 +1404,14 @@ pub enum EventKind {
     /// `EventScope::AnyPlayer`. Matched to `GameEvent::DayNightChanged`.
     /// Brimstone Vandal listens here.
     DayNightChanged,
+    /// CR 700.13 — `who` **committed a crime**: they cast a spell or activated
+    /// an ability whose chosen targets include an opponent, anything an
+    /// opponent controls or owns, or a spell/ability an opponent controls.
+    /// Fires once per such spell/ability (not once per qualifying target). The
+    /// committer is the event subject; pair with `EventScope::YourControl`
+    /// ("whenever you commit a crime" — Kaervek, Gisa). Matched to
+    /// `GameEvent::CommittedCrime`.
+    CommittedCrime,
 }
 
 /// Whose events does this trigger listen for?

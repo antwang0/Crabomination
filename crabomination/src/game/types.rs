@@ -1353,6 +1353,10 @@ pub enum GameEvent {
     Expended { player: usize, total: u32 },
     /// CR 122 — a player got `amount` energy counters ({E}).
     EnergyGained { player: usize, amount: u32 },
+    /// CR 700.13 — `player` committed a crime (cast a spell / activated an
+    /// ability targeting an opponent, something they control or own, or a
+    /// spell/ability they control). Fires once per qualifying spell or ability.
+    CommittedCrime { player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
     /// CR 705.1 — `player` lost a coin flip (Karplusan Minotaur,

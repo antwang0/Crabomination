@@ -225,6 +225,12 @@ pub struct Player {
     /// `fire_combat_damage_to_player_triggers`, reset at the turn boundary.
     #[serde(default)]
     pub dealt_combat_damage_to_player_this_turn: bool,
+    /// CR 700.13 — this player has committed a crime this turn (cast a spell or
+    /// activated an ability targeting an opponent / their stuff). Set when a
+    /// `CommittedCrime` event fires, reset at the turn boundary. Powers
+    /// "if you've committed a crime this turn" gates (Nimble Brigand).
+    #[serde(default)]
+    pub committed_crime_this_turn: bool,
     /// Revel in Silence: this player can't cast spells or activate loyalty
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
@@ -518,6 +524,7 @@ impl Player {
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
             dealt_combat_damage_to_player_this_turn: false,
+            committed_crime_this_turn: false,
             silenced_this_turn: false,
             searched_library_this_turn: false,
             protected_from_everything: false,

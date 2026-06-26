@@ -67,6 +67,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::TokenCreated, GameEvent::TokenCreated { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
+        (EventKind::CommittedCrime, GameEvent::CommittedCrime { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
@@ -387,6 +388,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::RingTempted { player, .. }
+        | GameEvent::CommittedCrime { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
         // For BecameTarget the "actor" is the caster of the spell or
         // ability that picked the target. This drives YourControl /
@@ -466,6 +468,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::CommittedCrime { player }
         | GameEvent::ColorlessManaAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),

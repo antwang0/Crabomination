@@ -11,6 +11,17 @@ use crate::effect::{Predicate, Value};
 use crate::mana::ManaSymbol;
 use crate::game::{GameState, StackItem, Target};
 
+/// OTJ — a card is an outlaw if it is a creature that's an Assassin, Mercenary,
+/// Pirate, Rogue, or Warlock (Changeling satisfies any type).
+pub(crate) fn card_is_outlaw(card: &CardInstance) -> bool {
+    use crate::card::CreatureType::*;
+    card.definition.is_creature()
+        && (card.has_keyword(&crate::card::Keyword::Changeling)
+            || [Assassin, Mercenary, Pirate, Rogue, Warlock]
+                .iter()
+                .any(|t| card.definition.subtypes.creature_types.contains(t)))
+}
+
 impl GameState {
     /// CR 700.5 — `player`'s devotion to `colors`: the number of mana
     /// symbols matching any listed color among the mana costs of
@@ -1153,6 +1164,24 @@ impl GameState {
             }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
+            Predicate::AttackedWithTotalPowerAtLeast { who, at_least } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let total: i32 = self
+                    .attacking
+                    .iter()
+                    .filter_map(|a| self.battlefield_find(a.attacker).map(|c| (a.attacker, c.controller)))
+                    .filter(|(_, ctrl)| *ctrl == p)
+                    .filter_map(|(id, _)| self.computed_permanent(id).map(|cp| cp.power.max(0)))
+                    .sum();
+                total as u32 >= *at_least
+            }
+            Predicate::CommittedCrimeThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].committed_crime_this_turn),
+            Predicate::ControlsOutlaw { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.battlefield.iter().any(|c| c.controller == p && card_is_outlaw(c))
+            }
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
@@ -1384,6 +1413,7 @@ impl GameState {
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
                     R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
+                    R::IsOutlaw => card_is_outlaw(card),
                     R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
                     R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
                     R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
@@ -1665,6 +1695,7 @@ impl GameState {
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
+            R::IsOutlaw => card_is_outlaw(card),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
             R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
             R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),

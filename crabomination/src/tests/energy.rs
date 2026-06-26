@@ -45,6 +45,21 @@ fn rogue_refiner_etb_draws_and_gives_two_energy() {
     assert_eq!(g.players[0].energy, 2);
 }
 
+/// CR 122 / 614.16 — Winding Constrictor's player half: a player who would get
+/// one or more {E} gets that many plus one.
+#[test]
+fn winding_constrictor_boosts_energy_gained() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winding_constrictor());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::rogue_refiner());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_creature(&mut g, id);
+    assert_eq!(g.players[0].energy, 3, "2 energy + 1 from Winding Constrictor");
+}
+
 #[test]
 fn longtusk_cub_pays_energy_for_counter() {
     let mut g = two_player_game();

@@ -200,6 +200,7 @@ mod tests {
                 commander_damage_taken: vec![],
                 team: 0,
                 coven_active: false,
+                committed_crime_this_turn: false,
                 ring_temptations: 0,
                 ring_bearer: None,
                 speed: 0,

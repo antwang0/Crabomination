@@ -72,6 +72,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // The Ring tempts you (CR 701.54) — a One-Ring gold that deepens with
         // each temptation level.
         StatChipKind::Ring => (Color::srgba(0.36, 0.28, 0.06, 1.0), theme::TEXT_PRIMARY),
+        // Committed a crime this turn (CR 700.13, OTJ) — an outlaw red.
+        StatChipKind::Crime => (Color::srgba(0.34, 0.12, 0.10, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -98,6 +100,7 @@ pub(super) enum StatChipKind {
     Coven,
     SpellLock,
     Ring,
+    Crime,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -622,6 +625,10 @@ pub fn update_player_stats_chips(
         // different powers, so coven-gated payoffs are online.
         if p.coven_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
+        }
+        // CR 700.13 (OTJ) — lit once this player has committed a crime this turn.
+        if p.committed_crime_this_turn {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Crime, "🔫 crime".to_string());
         }
         // CR 701.54 The Ring — show the temptation level once the Ring has
         // tempted this player at least once.

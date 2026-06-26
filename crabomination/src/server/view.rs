@@ -517,6 +517,7 @@ fn project_player(
         commander_damage_taken,
         team,
         coven_active,
+        committed_crime_this_turn: state.players[player_seat].committed_crime_this_turn,
         ring_temptations: player.ring_temptations,
         ring_bearer: state.effective_ring_bearer(player_seat),
     }

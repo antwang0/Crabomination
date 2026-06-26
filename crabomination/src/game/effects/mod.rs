@@ -2051,9 +2051,12 @@ impl GameState {
             }
 
             Effect::AddEnergy(amount) => {
-                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
-                if amt == 0 { return Ok(()); }
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
+                if base == 0 { return Ok(()); }
                 let p = ctx.controller;
+                // CR 122 / 614.16 — Winding Constrictor's player half also boosts
+                // {E} a player gets ("that many plus one").
+                let amt = base.saturating_add(self.extra_any_kind_adders_for(p));
                 self.players[p].energy = self.players[p].energy.saturating_add(amt);
                 events.push(GameEvent::EnergyGained { player: p, amount: amt });
                 Ok(())
@@ -6777,9 +6780,17 @@ impl GameState {
             }
 
             Effect::AddPoison { who, amount } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        // CR 122 / 614.16 — Winding Constrictor's player half:
+                        // "if you would get one or more counters, you get that
+                        // many plus one."
+                        let n = if base > 0 {
+                            base.saturating_add(self.extra_any_kind_adders_for(p))
+                        } else {
+                            0
+                        };
                         self.players[p].poison_counters += n;
                         events.push(GameEvent::PoisonAdded { player: p, amount: n });
                     }

@@ -52,7 +52,7 @@ pub enum CreatureType {
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
-    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy,
+    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
@@ -1052,6 +1052,10 @@ pub enum SelectionRequirement {
     ControlledByOpponent,
     HasSupertype(Supertype),
     HasCreatureType(CreatureType),
+    /// CR 700.12 — the object is an **outlaw**: a creature that is an Assassin,
+    /// Mercenary, Pirate, Rogue, or Warlock. Convenience filter for the
+    /// five outlaw creature types (Vial Smasher, Rakish Crew, Hellspur Brute).
+    IsOutlaw,
     HasLandType(LandType),
     HasArtifactSubtype(ArtifactSubtype),
     HasEnchantmentSubtype(EnchantmentSubtype),

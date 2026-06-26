@@ -2119,6 +2119,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Targeted sacrifice of an already-chosen permanent ✅ via `Effect::SacrificePermanent { what }` (fires sacrifice + death triggers; Footsteps of the Goryo / Apprentice Necromancer sacrifice their reanimated creature at the next end step; `cr_701_16_targeted_sacrifice_fires_death_triggers`). Remaining ⏳: batched multi-permanent sacrifice-cost picker. (Audit follow-up closed — the P1 death-funnel bypass family is fixed; all arms route through the shared funnels.)
 - ✅ **CR 611.2 — Per-turn spell-cast locks by type** — `StaticEffect::OneNoncreatureSpellPerTurn` (Deafening Silence) and `OneNonartifactSpellPerTurn` (Ethersworn Canonist) join the existing `OneSpellPerTurn` (Rule of Law) lock at the central `perform_action` cast gate, counted via `Player.{noncreature,nonartifact}_spells_cast_this_game_turn` and read off the cast spell's types (`GameAction::cast_card_id`). Surfaced to clients via `PlayerView.spell_cast_lock`. Tests `cr_611_2_deafening_silence_locks_only_noncreature_spells`, `ethersworn_canonist_limits_nonartifact_spells`.
 - ✅ **CR — Defense Grid spell tax** — `StaticEffect::SpellsCostMoreExceptOnControllerTurn { amount }` folded into `extra_cost_for_spell`, skipped on the caster's own turn (`defense_grid_taxes_off_turn_spells`).
+- ✅ **CR 700.13 — Commit a crime** — `EventKind::CommittedCrime` /
+  `GameEvent::CommittedCrime` fires once per spell-cast or ability-activation
+  whose chosen targets include an opponent, a permanent/card an opponent
+  controls or owns, or a spell they control (detected at the cast / activate
+  choke points via `target_is_crime`). `Player.committed_crime_this_turn` +
+  `Predicate::CommittedCrimeThisTurn` back "if you've committed a crime this
+  turn" gates. Ships Gisa, Magda, Marchesa, Forsaken Miner, Nimble Brigand
+  (`decks::recent20`). ⏳: "commit a crime" by an ability targeting a spell/
+  ability an opponent controls (only spell targets are checked on the stack).
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
 - ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. (Loyalty activation now honors `detained_by`; Detain's target filter is enforced at cast time.)
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
@@ -2170,6 +2179,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **recent20 (OTJ) approximations / follow-ups:** Magda, the Hoardmaster
+  drops the "Sacrifice three Treasures: make a 4/4 Scorpion Dragon" ability
+  (needs a fixed-count sacrifice-cost picker); Gisa's "Ward—{2}, Pay 2 life" is
+  modeled as Ward—{2} (the life half is dropped — `WardCost` has no compound
+  variant); Bovine Intervention mints the Ox before the destroy so
+  `ControllerOf(Target)` still resolves. Also: CR 700.13 crime detection covers
+  cast + activated-ability targets but not a *triggered* ability that targets an
+  opponent's stuff as it's put on the stack, nor targeting a spell/ability an
+  opponent controls beyond stack *spells* (abilities on the stack aren't
+  checked). **Spree** (Lively Dirge) still ⏳ — multi-chosen additional costs.
 - ⏳ **recent17–18 (Foundations) approximations to revisit:** Kitsa, Otterball
   Elite drops the "{2},{T}: copy target instant/sorcery you control" ability
   (needs a copy-spell activated ability gated on power ≥ 3); Run Away Together

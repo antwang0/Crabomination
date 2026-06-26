@@ -303,7 +303,14 @@ Each a small targeted feature; sweep batch by batch.
   ✅ **Speed / "Start your engines!"** (CR 702.179 — `Player.speed` 0–4,
   `Keyword::StartYourEngines`, life-loss increment, `Predicate::SpeedAtLeast`
   for "Max speed —"; DFT batch in `decks::recent`); ✅ Ring-bearer (CR 701.54,
-  `decks::ltr`).
+  `decks::ltr`);
+  ✅ **Commit a crime** (CR 700.13 — `EventKind::CommittedCrime` fires when you
+  cast a spell / activate an ability targeting an opponent, their permanents/
+  cards, or a spell they control; `Player.committed_crime_this_turn` +
+  `Predicate::CommittedCrimeThisTurn`), ✅ **Pack tactics**
+  (`Predicate::AttackedWithTotalPowerAtLeast`), ✅ **Outlaws**
+  (`SelectionRequirement::IsOutlaw` + `Predicate::ControlsOutlaw`) — OTJ batch in
+  `decks::recent20`.
 - **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
   Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,

@@ -4525,7 +4525,54 @@ impl GameState {
         // honored. One event per permanent target on the just-pushed
         // spell. Used by SOS Tenured Concocter's "may draw" trigger.
         self.dispatch_became_target_events_for_cast(p, card_id);
+        // CR 700.13 — committing a crime by targeting an opponent / their
+        // permanents / cards with this spell (Kaervek, Gisa).
+        let crime_targets: Vec<Target> = self
+            .stack
+            .iter()
+            .rev()
+            .find_map(|si| match si {
+                StackItem::Spell { card, target, additional_targets, .. } if card.id == card_id => {
+                    Some(target.iter().cloned().chain(additional_targets.iter().cloned()).collect())
+                }
+                _ => None,
+            })
+            .unwrap_or_default();
+        self.dispatch_crime_for_targets(p, &crime_targets);
         self.give_priority_to_active();
+    }
+
+    /// CR 700.13 — does choosing `t` as a target for a spell/ability cast by
+    /// `caster` constitute a crime? True when `t` is an opponent, a permanent
+    /// an opponent controls, a spell an opponent controls, or any card an
+    /// opponent owns (graveyard / hand / library / exile).
+    pub(crate) fn target_is_crime(&self, caster: usize, t: &Target) -> bool {
+        match t {
+            Target::Player(p) => *p != caster && self.players.get(*p).is_some(),
+            Target::Permanent(id) => {
+                if let Some(c) = self.battlefield_find(*id) {
+                    return c.controller != caster;
+                }
+                for si in &self.stack {
+                    if let StackItem::Spell { card, caster: sc, .. } = si
+                        && card.id == *id
+                    {
+                        return *sc != caster;
+                    }
+                }
+                self.find_card_anywhere(*id).is_some_and(|c| c.owner != caster)
+            }
+        }
+    }
+
+    /// CR 700.13 — dispatch a single `CommittedCrime` event for `caster` if any
+    /// of `targets` qualifies as a crime. Fires once per spell/ability, not per
+    /// qualifying target.
+    pub(crate) fn dispatch_crime_for_targets(&mut self, caster: usize, targets: &[Target]) {
+        if targets.iter().any(|t| self.target_is_crime(caster, t)) {
+            self.players[caster].committed_crime_this_turn = true;
+            self.dispatch_triggers_for_events(&[GameEvent::CommittedCrime { player: caster }]);
+        }
     }
 
     /// Walk the just-pushed `StackItem::Spell` and emit one
@@ -8846,12 +8893,23 @@ impl GameState {
             // BecameTarget — fire per permanent target the activation
             // chose (CR 603.x). The unified dispatcher handles APNAP and
             // the trigger filter.
-            if let Some(Target::Permanent(target_id)) = ability_target {
+            if let Some(Target::Permanent(target_id)) = &ability_target {
                 let evs = vec![GameEvent::BecameTarget {
-                    target: target_id,
+                    target: *target_id,
                     caster: p,
                 }];
                 self.dispatch_triggers_for_events(&evs);
+            }
+            // CR 700.13 — activating a targeted ability against an opponent /
+            // their permanents is also a crime. Queue the event alongside the
+            // activation's other events (e.g. a sacrifice-cost death trigger)
+            // so `perform_action` dispatches them together, in order, rather
+            // than firing this out-of-band mid-activation.
+            if let Some(t) = &ability_target
+                && self.target_is_crime(p, t)
+            {
+                self.players[p].committed_crime_this_turn = true;
+                events.push(GameEvent::CommittedCrime { player: p });
             }
             self.give_priority_to_active();
         }

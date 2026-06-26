@@ -651,6 +651,11 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub coven_active: bool,
+    /// CR 700.13 — true if this player has committed a crime this turn, so the
+    /// client can light up crime-matters payoffs. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub committed_crime_this_turn: bool,
     /// CR 701.54 — how many times the Ring has tempted this player (0–4).
     /// `0` means The Ring is dormant; the client shows a "The Ring ×N" chip
     /// otherwise. `#[serde(default)]` for snapshot back-compat.
@@ -958,7 +963,7 @@ pub struct ExileCardView {
     #[serde(default)]
     pub may_play_recipient: Option<usize>,
     /// If the may-play grant carries an alternative cast cost (mana value) —
-    /// airbend's flat {2} (CR 701.65a), miracle-from-exile, Hostage Taker's
+    /// airbend's flat {2} (CR 700.13a), miracle-from-exile, Hostage Taker's
     /// pay-its-cost — the client renders "play for {N}" instead of implying
     /// the card's own cost. `None` when the grant is a free cast.
     #[serde(default)]
@@ -1712,6 +1717,8 @@ pub enum GameEventWire {
     LifeGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::CommittedCrime` (CR 700.13).
+    CommittedCrime { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
     CoinFlipWon { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipLost` (CR 705.1).
@@ -1860,6 +1867,9 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
+            GameEvent::CommittedCrime { player } => {
+                GameEventWire::CommittedCrime { player: *player }
+            }
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
             GameEvent::CoinFlipLost { player } => GameEventWire::CoinFlipLost { player: *player },
             GameEvent::DiceRolled { player, count, high } => {
@@ -2101,6 +2111,7 @@ impl GameEventWire {
             E::LifeLost { player, amount } => format!("{} loses {amount} life", pn(*player)),
             E::LifeGained { player, amount } => format!("{} gains {amount} life", pn(*player)),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
+            E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
             E::CoinFlipLost { player } => format!("{} lost a coin flip", pn(*player)),
             E::DiceRolled { player, count, high } => {
