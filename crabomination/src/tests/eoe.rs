@@ -1319,3 +1319,96 @@ fn genemorph_imago_landfall_scales_with_lands() {
     resolve_targeted(&mut g, 0, landfall(), &[target]);
     assert_eq!(g.computed_permanent(target).unwrap().power, 5, "six lands → base 5/5");
 }
+
+/// Shattered Wings destroys a flying creature (and would hit artifacts /
+/// enchantments too).
+#[test]
+fn shattered_wings_destroys_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    resolve_targeted(&mut g, 0, catalog::shattered_wings().effect, &[flyer]);
+    assert!(g.battlefield_find(flyer).is_none(), "flyer destroyed");
+}
+
+/// Seam Rip exiles a low-MV opposing permanent until it leaves; removing Seam
+/// Rip returns it.
+#[test]
+fn seam_rip_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let rip = g.move_card_to_battlefield_for_test(0, catalog::seam_rip());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "exiled by Seam Rip");
+    kill(&mut g, rip);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 1),
+        "victim returned when Seam Rip left");
+}
+
+/// Seedship Impact destroys an artifact and yields a Lander only when the
+/// target's mana value was 2 or less.
+#[test]
+fn seedship_impact_lander_on_low_mv() {
+    let mut g = two_player_game();
+    let cheap = g.add_card_to_battlefield(1, catalog::mind_stone()); // MV 2
+    resolve_targeted(&mut g, 0, catalog::seedship_impact().effect, &[cheap]);
+    assert!(g.battlefield_find(cheap).is_none(), "MV2 artifact destroyed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Lander").count(), 1);
+
+    let mut g = two_player_game();
+    let pricey = g.add_card_to_battlefield(1, catalog::darksteel_ingot()); // MV 3
+    resolve_targeted(&mut g, 0, catalog::seedship_impact().effect, &[pricey]);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Lander").count(), 0,
+        "MV3 → no Lander");
+}
+
+/// Desculpting Blast bounces a permanent and spawns a Drone only when the
+/// bounced creature was attacking.
+#[test]
+fn desculpting_blast_drone_when_attacking() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
+    resolve_targeted(&mut g, 0, catalog::desculpting_blast().effect, &[attacker]);
+    assert!(g.battlefield_find(attacker).is_none(), "bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "to owner's hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Drone").count(), 1,
+        "attacking → Drone token");
+}
+
+/// Lost in Space tucks an artifact/creature into its owner's library.
+#[test]
+fn lost_in_space_tucks_to_library() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let before = g.players[1].library.len();
+    resolve_targeted(&mut g, 0, catalog::lost_in_space().effect, &[creature]);
+    assert!(g.battlefield_find(creature).is_none(), "left the battlefield");
+    assert_eq!(g.players[1].library.len(), before + 1, "into owner's library");
+}
+
+/// Sinister Cryologist's ETB shrinks an opposing creature by 3 power.
+#[test]
+fn sinister_cryologist_etb_shrinks_opponent() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    resolve_targeted(&mut g, 0, catalog::sinister_cryologist().triggered_abilities[0].effect.clone(), &[foe]);
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 0, "−3/−0");
+}
+
+/// Orbital Plunge deals 6 and yields a Lander only on excess (low toughness).
+#[test]
+fn orbital_plunge_lander_on_excess() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    resolve_targeted(&mut g, 0, catalog::orbital_plunge().effect, &[small]);
+    assert!(g.battlefield_find(small).is_none(), "killed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Lander").count(), 1);
+
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::bygone_colossus()); // 9/9
+    resolve_targeted(&mut g, 0, catalog::orbital_plunge().effect, &[big]);
+    assert!(g.battlefield_find(big).is_some(), "9/9 survives 6");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Lander").count(), 0,
+        "no excess → no Lander");
+}

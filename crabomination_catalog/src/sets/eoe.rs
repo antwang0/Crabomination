@@ -3901,3 +3901,185 @@ pub fn dark_endurance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Shattered Wings — {2}{G} Sorcery. Destroy target artifact, enchantment, or
+/// creature with flying. Surveil 1.
+pub fn shattered_wings() -> CardDefinition {
+    CardDefinition {
+        name: "Shattered Wings",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment)
+                        .or(SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasKeyword(Keyword::Flying))),
+                ),
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Seam Rip — {W} Enchantment. ETB: exile target nonland permanent an opponent
+/// controls with mana value 2 or less until this enchantment leaves.
+pub fn seam_rip() -> CardDefinition {
+    CardDefinition {
+        name: "Seam Rip",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Seedship Impact — {1}{G} Instant. Destroy target artifact or enchantment. If
+/// its mana value was 2 or less, create a Lander token.
+pub fn seedship_impact() -> CardDefinition {
+    CardDefinition {
+        name: "Seedship Impact",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            // Evaluate the target's mana value before destroying it.
+            cond: Predicate::ValueAtMost(
+                Value::ManaValueOf(Box::new(Selector::Target(0))),
+                Value::Const(2),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            ])),
+            else_: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Desculpting Blast — {1}{U} Instant. Return target nonland permanent to its
+/// owner's hand. If it was attacking, create a 1/1 colorless Drone artifact
+/// creature token with flying.
+pub fn desculpting_blast() -> CardDefinition {
+    let drone = TokenDefinition {
+        name: "Drone".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Desculpting Blast",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        // Check "was attacking" before the bounce removes it from combat.
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::IsAttacking,
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: drone,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Nonland),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lost in Space — {3}{U} Instant. Target artifact or creature's owner puts it
+/// on their choice of the top or bottom of their library. Surveil 1.
+pub fn lost_in_space() -> CardDefinition {
+    CardDefinition {
+        name: "Lost in Space",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: crate::effect::LibraryPosition::OwnerChoice,
+                },
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sinister Cryologist — {2}{U} Creature — Jellyfish Wizard 2/3. ETB: target
+/// creature an opponent controls gets -3/-0 until end of turn. Warp {U}.
+pub fn sinister_cryologist() -> CardDefinition {
+    CardDefinition {
+        name: "Sinister Cryologist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-3),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        alternative_cost: Some(warp(cost(&[u()]))),
+        ..Default::default()
+    }
+}
+
+/// Orbital Plunge — {3}{R} Sorcery. Deals 6 damage to target creature. If excess
+/// damage was dealt, create a Lander token (excess approximated as toughness < 6).
+pub fn orbital_plunge() -> CardDefinition {
+    CardDefinition {
+        name: "Orbital Plunge",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Value::Const(5),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(6),
+                },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            ])),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }),
+        },
+        ..Default::default()
+    }
+}

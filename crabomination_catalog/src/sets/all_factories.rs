@@ -3963,6 +3963,13 @@ static EOE: &[Factory] = &[
     super::eoe::solar_blaze,
     super::eoe::fungal_colossus,
     super::eoe::dark_endurance,
+    super::eoe::shattered_wings,
+    super::eoe::seam_rip,
+    super::eoe::seedship_impact,
+    super::eoe::desculpting_blast,
+    super::eoe::lost_in_space,
+    super::eoe::sinister_cryologist,
+    super::eoe::orbital_plunge,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
