@@ -580,3 +580,53 @@ fn frontline_war_rager_end_step_counter() {
         "two tapped creatures → end-step counter"
     );
 }
+
+/// Gravkill exiles a creature (no graveyard, no regen).
+#[test]
+fn gravkill_exiles_target() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::gravkill());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gravkill");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled, not in graveyard");
+}
+
+/// Invasive Maneuvers deals 5 instead of 3 while you control a Spacecraft.
+#[test]
+fn invasive_maneuvers_scales_with_spacecraft() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::galvanizing_sawship()); // a Spacecraft
+    let victim = g.add_card_to_battlefield(1, catalog::hazard_of_the_dunes()); // 4/4
+    let spell = g.add_card_to_hand(0, catalog::invasive_maneuvers());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Invasive Maneuvers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "5 damage killed the 4/4");
+}
+
+/// Gravpack Monoist leaves a tapped 2/2 Robot when it dies.
+#[test]
+fn gravpack_monoist_dies_into_robot() {
+    let mut g = two_player_game();
+    let mono = g.add_card_to_battlefield(0, catalog::gravpack_monoist());
+    kill(&mut g, mono);
+    drain_stack(&mut g);
+    let robot = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Robot")
+        .expect("died into a Robot");
+    assert!(robot.tapped, "the Robot enters tapped");
+}

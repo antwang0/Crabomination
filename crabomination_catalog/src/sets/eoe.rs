@@ -2159,3 +2159,129 @@ pub fn harmonious_grovestrider() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 6 — removal + utility ──────────────────────────────────────────
+
+/// Gravkill — {3}{B} Instant. Exile target creature or Spacecraft.
+pub fn gravkill() -> CardDefinition {
+    CardDefinition {
+        name: "Gravkill",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Depressurize — {1}{B} Instant. Target creature gets -3/-0 until end of turn.
+/// Then if that creature's power is 0 or less, destroy it.
+pub fn depressurize() -> CardDefinition {
+    CardDefinition {
+        name: "Depressurize",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::PowerAtMost(0),
+                },
+                then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Invasive Maneuvers — {1}{R} Instant. Deals 3 damage to target creature — 5
+/// instead if you control a Spacecraft.
+pub fn invasive_maneuvers() -> CardDefinition {
+    CardDefinition {
+        name: "Invasive Maneuvers",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            amount: Value::IfAtLeast {
+                value: Box::new(Value::count(Selector::EachPermanent(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
+                threshold: 1,
+                then: Box::new(Value::Const(5)),
+                else_: Box::new(Value::Const(3)),
+            },
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
+
+/// Gravpack Monoist — {2}{B} 2/1 Human Scout. Flying. When this dies, create a
+/// tapped 2/2 colorless Robot artifact creature token.
+pub fn gravpack_monoist() -> CardDefinition {
+    let robot = TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        tapped: true,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Gravpack Monoist",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: robot,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gene Pollinator — {G} 1/2 Artifact Creature — Robot Insect. {T}, Tap an
+/// untapped permanent you control: Add one mana of any color.
+pub fn gene_pollinator() -> CardDefinition {
+    CardDefinition {
+        name: "Gene Pollinator",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_other_filter: Some(SelectionRequirement::Permanent),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

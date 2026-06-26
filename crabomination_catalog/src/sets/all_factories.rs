@@ -3902,6 +3902,11 @@ static EOE: &[Factory] = &[
     super::eoe::lightless_evangel,
     super::eoe::honored_knight_captain,
     super::eoe::harmonious_grovestrider,
+    super::eoe::gravkill,
+    super::eoe::depressurize,
+    super::eoe::invasive_maneuvers,
+    super::eoe::gravpack_monoist,
+    super::eoe::gene_pollinator,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
