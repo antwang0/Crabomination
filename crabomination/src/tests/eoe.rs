@@ -1101,3 +1101,65 @@ fn reroute_systems_zaps_tapped_creature() {
     resolve_modal(&mut g, 0, catalog::reroute_systems().effect, 1, &[bear]);
     assert!(g.battlefield_find(bear).is_none(), "2 damage kills the 2/2");
 }
+
+/// Mouth of the Storm shrinks opponents' creatures by 3 power on entry.
+#[test]
+fn mouth_of_the_storm_shrinks_opponents() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let mouth = g.move_card_to_battlefield_for_test(0, catalog::mouth_of_the_storm());
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(mouth).unwrap().keywords.contains(&Keyword::Flying));
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 1, "-3/-0 on opponents");
+}
+
+/// Meltstrider Eulogist draws when a counter-bearing creature you control dies.
+#[test]
+fn meltstrider_eulogist_draws_on_countered_death() {
+    // AnotherOfYours death triggers need the unified cast→SBA→dispatch path
+    // (mirrors the Felisa test), so kill the bear with a real Murder.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::meltstrider_eulogist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let hand0 = g.players[0].hand.len();
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Murder on the bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "counter-bearing death drew a card");
+}
+
+/// Cryogen Relic draws when it leaves the battlefield.
+#[test]
+fn cryogen_relic_draws_on_leave() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let relic = g.add_card_to_battlefield(0, catalog::cryogen_relic());
+    let hand0 = g.players[0].hand.len();
+    kill(&mut g, relic);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "leaving drew a card");
+}
+
+/// Chrome Companion gains 1 life when it becomes tapped.
+#[test]
+fn chrome_companion_gains_on_tap() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::chrome_companion());
+    let life0 = g.players[0].life;
+    g.battlefield_find_mut(dog).unwrap().tapped = false;
+    let evs = vec![GameEvent::PermanentTapped { card_id: dog }];
+    g.battlefield_find_mut(dog).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 1);
+}

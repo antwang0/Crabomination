@@ -3952,6 +3952,10 @@ static EOE: &[Factory] = &[
     super::eoe::ruinous_rampage,
     super::eoe::drill_too_deep,
     super::eoe::reroute_systems,
+    super::eoe::mouth_of_the_storm,
+    super::eoe::chrome_companion,
+    super::eoe::meltstrider_eulogist,
+    super::eoe::cryogen_relic,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

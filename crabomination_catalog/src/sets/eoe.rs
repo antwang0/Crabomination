@@ -3584,3 +3584,118 @@ pub fn reroute_systems() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 13 — keyword bodies + small triggers ───────────────────────────
+
+/// Mouth of the Storm — {6}{U} Creature — Elemental 6/6, flying, ward {2}. When
+/// it enters, creatures your opponents control get -3/-0 until your next turn.
+pub fn mouth_of_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Mouth of the Storm",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-3),
+            toughness: Value::Const(0),
+            duration: Duration::UntilNextTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Chrome Companion — {2} Artifact Creature — Dog 2/1. Whenever it becomes
+/// tapped, you gain 1 life. {2}, {T}: Put target card from a graveyard on the
+/// bottom of its owner's library.
+pub fn chrome_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Chrome Companion",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InGraveyard),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Meltstrider Eulogist — {2}{G} Creature — Insect Soldier 3/3. Whenever a
+/// creature you control with a +1/+1 counter on it dies, draw a card.
+pub fn meltstrider_eulogist() -> CardDefinition {
+    CardDefinition {
+        name: "Meltstrider Eulogist",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cryogen Relic — {1}{U} Artifact. When it enters or leaves the battlefield,
+/// draw a card. {1}{U}, Sacrifice this: Put a stun counter on up to one target
+/// tapped creature.
+pub fn cryogen_relic() -> CardDefinition {
+    CardDefinition {
+        name: "Cryogen Relic",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            sac_cost: true,
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+                effect: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
