@@ -4,8 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
-    StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
+    DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, WardCost,
 };
 use crate::effect::shortcut::{etb, on_dies, station, target, target_any, target_filtered, warp};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
@@ -1902,6 +1902,260 @@ pub fn lumen_class_frigate() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+// ── EOE batch 5 — commons/uncommons on existing primitives ───────────────────
+
+/// Shared "control two or more tapped creatures" intervening-if for the
+/// end-step tap-payoff cycle (Frontline War-Rager, Dawnstrike Vanguard).
+fn two_tapped_creatures() -> Predicate {
+    Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::Tapped),
+        ),
+        n: Value::Const(2),
+    }
+}
+
+/// Frontline War-Rager — {2}{R} 2/3 Kavu Soldier. At your end step, if you
+/// control two or more tapped creatures, put a +1/+1 counter on this.
+pub fn frontline_war_rager() -> CardDefinition {
+    CardDefinition {
+        name: "Frontline War-Rager",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: two_tapped_creatures(),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dawnstrike Vanguard — {5}{W} 4/5 Human Knight. Lifelink. At your end step,
+/// if you control two or more tapped creatures, put a +1/+1 counter on each
+/// other creature you control.
+pub fn dawnstrike_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Dawnstrike Vanguard",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: two_tapped_creatures(),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Icecave Crasher — {3}{G} 4/4 Beast. Trample. Landfall — whenever a land you
+/// control enters, this creature gets +1/+0 until end of turn.
+pub fn icecave_crasher() -> CardDefinition {
+    CardDefinition {
+        name: "Icecave Crasher",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Illvoi Galeblade — {U} 1/1 Jellyfish Warrior. Flash, flying. {2}, Sacrifice
+/// this: Draw a card.
+pub fn illvoi_galeblade() -> CardDefinition {
+    CardDefinition {
+        name: "Illvoi Galeblade",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Intrepid Tenderfoot — {1}{G} 2/2 Insect Citizen. {3}: Put a +1/+1 counter on
+/// this. Activate only as a sorcery.
+pub fn intrepid_tenderfoot() -> CardDefinition {
+    CardDefinition {
+        name: "Intrepid Tenderfoot",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lightless Evangel — {1}{B} 2/2 Vampire Cleric. Whenever you sacrifice
+/// another creature or artifact, put a +1/+1 counter on this.
+pub fn lightless_evangel() -> CardDefinition {
+    CardDefinition {
+        name: "Lightless Evangel",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Honored Knight-Captain — {1}{W} 1/1 Human Advisor Knight. ETB: create a 1/1
+/// white Human Soldier token. {4}{W}{W}, Sacrifice this: Search your library
+/// for an Equipment card, put it onto the battlefield, then shuffle.
+pub fn honored_knight_captain() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Honored Knight-Captain",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: soldier,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w(), w()]),
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harmonious Grovestrider — {3}{G}{G} */* Beast. Ward {2}. Its power and
+/// toughness are each equal to the number of lands you control.
+pub fn harmonious_grovestrider() -> CardDefinition {
+    CardDefinition {
+        name: "Harmonious Grovestrider",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        dynamic_pt: Some(DynamicPt::LandsControlled { base: 0 }),
         ..Default::default()
     }
 }

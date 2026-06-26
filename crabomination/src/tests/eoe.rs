@@ -527,3 +527,56 @@ fn view_surfaces_station_next_threshold() {
     let pv2 = v2.battlefield.iter().find(|p| p.id == ship).unwrap();
     assert_eq!(pv2.station_next_threshold, None, "all bands active");
 }
+
+/// Harmonious Grovestrider's power/toughness equal the lands you control.
+#[test]
+fn harmonious_grovestrider_pt_tracks_lands() {
+    let mut g = two_player_game();
+    let strider = g.add_card_to_battlefield(0, catalog::harmonious_grovestrider());
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let cp = g.computed_permanent(strider).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "*/* = three lands");
+}
+
+/// Lightless Evangel grows when you sacrifice another creature or artifact.
+#[test]
+fn lightless_evangel_grows_on_sacrifice() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let evangel = g.add_card_to_battlefield(0, catalog::lightless_evangel());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(evangel, 0, None);
+    let evs = g
+        .resolve_effect(
+            &Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: crate::card::SelectionRequirement::Creature
+                    .and(crate::card::SelectionRequirement::OtherThanSource),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(evangel).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "sacrificing another creature added a +1/+1 counter"
+    );
+}
+
+/// Frontline War-Rager grows at end step while you control two+ tapped creatures.
+#[test]
+fn frontline_war_rager_end_step_counter() {
+    let mut g = two_player_game();
+    let rager = g.add_card_to_battlefield(0, catalog::frontline_war_rager());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(rager).unwrap().tapped = true;
+    g.battlefield_find_mut(other).unwrap().tapped = true;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(rager).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "two tapped creatures → end-step counter"
+    );
+}

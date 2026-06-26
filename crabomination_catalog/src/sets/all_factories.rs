@@ -3894,6 +3894,14 @@ static EOE: &[Factory] = &[
     super::eoe::specimen_freighter,
     super::eoe::rescue_skiff,
     super::eoe::lumen_class_frigate,
+    super::eoe::frontline_war_rager,
+    super::eoe::dawnstrike_vanguard,
+    super::eoe::icecave_crasher,
+    super::eoe::illvoi_galeblade,
+    super::eoe::intrepid_tenderfoot,
+    super::eoe::lightless_evangel,
+    super::eoe::honored_knight_captain,
+    super::eoe::harmonious_grovestrider,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
