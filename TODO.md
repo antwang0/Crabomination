@@ -1770,9 +1770,9 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   creates a 0/0 black Army with N +1/+1 counters; `CreatureType::Army`).
   **Melee** is a
   flat +1/+1 — wants a per-combat attacked-opponent tally for multiplayer.
-  **Renown** is gated on "no +1/+1 counters" as a renowned-once proxy; a real
-  `renowned` flag would be more faithful for creatures that gain counters
-  by other means.
+  **Renown** ✅ now keys off a real `CardInstance.renowned` flag
+  (`Predicate::SourceIsRenowned` + `Effect::BecomeRenowned`), so unrelated
+  +1/+1 counters no longer suppress it.
 - **Mulligan color-screw** — ✅ done (claude/modern_decks). `decide_mulligan`
   now unions the producible colors of the hand's lands (`land_color_output`:
   basic land types + `AddMana` payloads; "any color" → WUBRG) and only counts
@@ -2075,9 +2075,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `Value::TappedForCostPower` carried by `Effect::WithTappedPower`).
   `CardDefinition.station` bands (`StationBand{min,keywords,pt}`) grant keywords
   (L6) and, at a `{N+}` P/T threshold, add the Creature type (L4) + base P/T
-  (L7a CDA). `ArtifactSubtype::{Spacecraft,Lander}`. 8 Spacecraft in `eoe`;
-  tests in `tests/eoe.rs`. Counter-gated static/triggered bands deferred (see
-  the EOE follow-ups section).
+  (L7a CDA). `ArtifactSubtype::{Spacecraft,Lander}`. 18 Spacecraft in `eoe`;
+  tests in `tests/eoe.rs`. Counter-gated static **and** triggered bands now ship
+  (`StationBand.statics` / `.triggers`).
+- ✅ CR 701.53 — Incubate. `Effect::Incubate { who, amount }` mints an Incubator
+  double-faced token (`TokenDefinition.back_face`) with N +1/+1 counters;
+  `{2}: Transform` flips it to a 0/0 Phyrexian artifact creature (→ N/N). ONE
+  cards in `sets::one` + Sunfall's Incubate-X; tests in `tests/one.rs`.
 - ✅ CR 111 / 614.13 — `Effect::CreateToken` now mints for **every** matched
   player (EachPlayer / EachOpponent), with each player's own token-doublers
   applied; fixes a latent single-player bug (gift cycle, Edge Rover).
@@ -2195,7 +2199,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework. Damage *halving* ✅ (614.5 — `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent; composed with doublers via `scale_damage` at both damage funnels). Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* ✅ (`Player.skip_turns`, Chronatog / Ral Zarek -7). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
-- 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Source-of-your-choice prevention (615.7) ✅ via
+- 🟡 **CR 615.1 / 615.12 — Prevention effects** — global "combat damage can't be prevented" ✅ (`StaticEffect::CombatDamageCantBePrevented` — Frenzied Baloth; bypasses shields for any creature-sourced damage, sharing the Questing-Beast combat approximation). Per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Source-of-your-choice prevention (615.7) ✅ via
   `Effect::PreventAllDamageFromChosenSourceThisTurn` +
   `GameState.damage_prevented_sources`, consulted at both damage funnels
   (Burrenton Forge-Tender; the source is chosen as the ability resolves,
@@ -2300,15 +2304,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
   (not the {T} cast-from-graveyard half); Lord Skitter's Rat-ETB exiles a card
   rather than "up to one target"; Llanowar Greenwidow drops the Domain cost
-  reduction + the exile-if-it-would-leave rider. Newer wave: Sunfall drops
-  Incubate; Ossification is modeled as a standalone O-Ring (no enchant-a-basic
+  reduction + the exile-if-it-would-leave rider. Newer wave: Sunfall's Incubate
+  now ships (`Effect::Incubate`, CR 701.53); Ossification is modeled as a standalone O-Ring (no enchant-a-basic
   rider); Steamcore Scholar drops the "unless you discard an I/S or flyer"
   reprieve; Subterranean Schooner explores any creature you control (not
   specifically the one that crewed it); Gathering Throng searches up to three;
   Hexgold Slith drops the optional pay-{E}-for-first-strike attack ability.
 - ⏳ **Noticed this run (recent2 MOM/WOE/OTJ wave):** real-card primitives still
-  missing — modern **Incubate** (Incubator token + {2}: transform to 0/0
-  Phyrexian, for Sunfall); a Value for "noncreature spells a player cast this
+  missing — a Value for "noncreature spells a player cast this
   turn" (Magebane Lizard); **Spree** multi-additional-cost casting (Phantom
   Interference, Three Steps Ahead); chosen-card-type cost reduction (Stenn);
   cast-from-an-opponent's-graveyard on combat damage (Tinybones). Warren
