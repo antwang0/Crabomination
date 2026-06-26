@@ -3258,7 +3258,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -3469,7 +3469,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }

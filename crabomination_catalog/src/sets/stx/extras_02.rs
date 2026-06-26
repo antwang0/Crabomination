@@ -195,7 +195,7 @@ pub fn mizzium_mortars() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -328,7 +328,7 @@ pub fn past_in_flames() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -423,7 +423,7 @@ pub fn resurgent_belief() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }

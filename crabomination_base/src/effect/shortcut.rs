@@ -111,6 +111,13 @@ pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
 }
 
+/// Warp (EOE) alternative cost: cast a permanent for `mana_cost`; at the next
+/// end step it's exiled and may be recast from exile on a later turn (full
+/// cost). Casting via warp also satisfies Void this turn.
+pub fn warp(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost { mana_cost, warp: true, ..Default::default() }
+}
+
 /// Evoke (CR 702.74) alternative cost: cast for `mana_cost`; the creature is
 /// sacrificed when it enters, after its ETB triggers resolve.
 pub fn evoke(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {

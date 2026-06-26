@@ -100,6 +100,9 @@ mod tests_recent21;
 #[path = "../tests/mom.rs"]
 mod tests_mom;
 #[cfg(test)]
+#[path = "../tests/eoe.rs"]
+mod tests_eoe;
+#[cfg(test)]
 #[path = "../tests/ltr.rs"]
 mod tests_ltr;
 #[cfg(test)]
@@ -762,6 +765,11 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// EOE Void — true once any nonland permanent has left the battlefield
+    /// this turn. The left half of `Predicate::VoidActive`; reset at the turn
+    /// boundary.
+    #[serde(default)]
+    pub(crate) nonland_permanent_left_bf_this_turn: bool,
     /// CR 615.1 fog with an exception (Inspire Awe). When `Some(filter)` and
     /// `prevent_combat_damage_this_turn` is set, a creature's combat damage is
     /// prevented unless the *dealer* matches `filter`. `None` = prevent all.
@@ -1155,6 +1163,7 @@ impl Clone for GameState {
             resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            nonland_permanent_left_bf_this_turn: self.nonland_permanent_left_bf_this_turn,
             prevent_combat_damage_except: self.prevent_combat_damage_except.clone(),
             mana_production_multiplier: self.mana_production_multiplier,
             resolving_source: self.resolving_source.clone(),
@@ -1288,6 +1297,7 @@ impl GameState {
             resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
             prevent_combat_damage_this_turn: false,
+            nonland_permanent_left_bf_this_turn: false,
             prevent_combat_damage_except: None,
             mana_production_multiplier: 1,
             resolving_source: None,

@@ -6070,6 +6070,12 @@ impl GameState {
         if alt.blitz {
             card.blitzed = true;
         }
+        if alt.warp {
+            // EOE Warp — stamp the resolving permanent and satisfy Void for
+            // the rest of the turn.
+            card.warped = true;
+            self.players[p].warped_spell_this_turn = true;
+        }
         if alt.impending > 0 {
             // CR 702.183 — enters with N time counters; stamped now, applied
             // at ETB resolution.

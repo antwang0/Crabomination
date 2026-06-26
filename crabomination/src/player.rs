@@ -235,6 +235,10 @@ pub struct Player {
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
     pub silenced_this_turn: bool,
+    /// True once this player has cast a spell for its Warp cost this turn (EOE).
+    /// Reset at the turn boundary; the right half of `Predicate::VoidActive`.
+    #[serde(default)]
+    pub warped_spell_this_turn: bool,
     /// True once this player has searched their own library this turn
     /// (CR 701.19). Reset for every player at the turn boundary. Powers
     /// `Predicate::SearchedLibraryThisTurn` (Archive Trap's free alt cost).
@@ -526,6 +530,7 @@ impl Player {
             dealt_combat_damage_to_player_this_turn: false,
             committed_crime_this_turn: false,
             silenced_this_turn: false,
+            warped_spell_this_turn: false,
             searched_library_this_turn: false,
             protected_from_everything: false,
             cards_exiled_this_turn: 0,

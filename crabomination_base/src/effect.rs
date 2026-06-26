@@ -725,6 +725,11 @@ pub enum Predicate {
     /// control this turn. Backed by
     /// `Player.permanent_left_battlefield_this_turn`.
     RevoltActive { who: PlayerRef },
+    /// EOE Void — true if a nonland permanent left the battlefield this turn
+    /// (any controller) or `who` cast a spell for its warp cost this turn.
+    /// Backed by `GameState.nonland_permanent_left_bf_this_turn` +
+    /// `Player.warped_spell_this_turn`.
+    VoidActive { who: PlayerRef },
     /// True if the effect's source permanent is currently saddled (CR
     /// 702.171). Backed by `CardInstance.saddled`; gates "whenever this
     /// attacks while saddled" triggers on Mounts.

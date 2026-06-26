@@ -521,3 +521,28 @@ pub fn clue_token() -> TokenDefinition {
         ..Default::default()
     }
 }
+
+/// A Lander token (EOE): a colorless Artifact with "{2}, {T}, Sacrifice this
+/// token: Search your library for a basic land card, put it onto the
+/// battlefield tapped, then shuffle."
+pub fn lander_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Lander".into(),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: ManaCost { symbols: vec![ManaSymbol::Generic(2)] },
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            ..ActivatedAbility::default()
+        }],
+        ..Default::default()
+    }
+}

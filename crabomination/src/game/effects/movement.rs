@@ -585,6 +585,11 @@ impl GameState {
             // (bounce / exile / library) *without dying* before it's consumed.
             let leaver = (card.definition.is_creature() && !matches!(resolved_dest, ZoneDest::Graveyard))
                 .then_some((card.id, card.controller));
+            // EOE Void — any nonland permanent leaving the battlefield (bounce,
+            // sacrifice, exile, …) latches the turn-wide flag.
+            if !card.definition.is_land() {
+                self.nonland_permanent_left_bf_this_turn = true;
+            }
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);
             if let Some((card_id, controller)) = leaver {

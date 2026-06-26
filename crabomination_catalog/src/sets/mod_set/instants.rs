@@ -570,7 +570,7 @@ pub fn pyrokinesis() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }

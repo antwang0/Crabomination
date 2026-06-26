@@ -1027,6 +1027,38 @@ impl GameState {
                         });
                     }
 
+                    // Warp (EOE): a permanent cast for its warp cost is exiled
+                    // at the beginning of the next end step and may be recast
+                    // from exile later for its full cost. Arm a delayed
+                    // exile-then-grant-may-play; clear the flag once consumed.
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && c.warped
+                    {
+                        c.warped = false;
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: caster,
+                            source: card_id,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::Seq(vec![
+                                Effect::Move {
+                                    what: crate::effect::Selector::This,
+                                    to: crate::effect::ZoneDest::Exile,
+                                },
+                                Effect::GrantMayPlay {
+                                    what: crate::effect::Selector::LastMoved,
+                                    duration: crate::card::MayPlayDuration::WhileExiled,
+                                    to_owner: true,
+                                    exile_after: false,
+                                    pay_own_cost: true,
+                                    any_color: false,
+                                },
+                            ]),
+                            target: None,
+                            bound_token: None,
+                            fires_once: true,
+                        });
+                    }
+
                     // Suspend (CR 702.62f): a creature cast off its last time
                     // counter gains haste. The flag rode the instance from
                     // exile; clear it once consumed.
@@ -1656,6 +1688,7 @@ impl GameState {
             pl.cast_blue_or_black_this_turn = false;
             pl.cant_cast_noncreature_this_turn = false;
             pl.silenced_this_turn = false;
+            pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
             pl.discarded_this_turn.clear();
@@ -1688,6 +1721,9 @@ impl GameState {
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
         self.players[p].permanent_left_battlefield_this_turn = false;
+        // EOE Void — reset the game-wide "a nonland permanent left this turn"
+        // flag at the turn boundary.
+        self.nonland_permanent_left_bf_this_turn = false;
         // Reset the "cards exiled this turn" tally; powers Strixhaven
         // "if one or more cards were put into exile this turn" payoffs
         // (Ennis the Debate Moderator) per turn.
@@ -2838,6 +2874,10 @@ impl GameState {
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
             }
+            // EOE Void — a nonland permanent left the battlefield this turn.
+            if !card.definition.is_land() {
+                self.nonland_permanent_left_bf_this_turn = true;
+            }
             // Stamp `exiled_with` so the static's controller can recur the
             // card later (Gisa, Glorious Resurrector's upkeep mass-reanimate).
             if let (Some((src_id, _, _)), crate::card::Zone::Exile) =
@@ -2876,6 +2916,10 @@ impl GameState {
             // CR 702.139 — Revolt: a permanent left the battlefield this turn.
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
+            }
+            // EOE Void — a nonland permanent left the battlefield this turn.
+            if !card.definition.is_land() {
+                self.nonland_permanent_left_bf_this_turn = true;
             }
             // CR 603.6 — exile is a non-graveyard exit: a creature leaves
             // without dying (Dour Port-Mage / Three Tree Scribe watchers).

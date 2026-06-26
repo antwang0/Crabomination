@@ -191,7 +191,7 @@ pub fn baleful_mastery() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }

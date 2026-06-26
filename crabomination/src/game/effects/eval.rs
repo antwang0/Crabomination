@@ -1185,6 +1185,12 @@ impl GameState {
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
+            Predicate::VoidActive { who } => {
+                self.nonland_permanent_left_bf_this_turn
+                    || self
+                        .resolve_player(who, ctx)
+                        .is_some_and(|p| self.players[p].warped_spell_this_turn)
+            }
             Predicate::DeliriumActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let mut kinds: std::collections::HashSet<&crate::card::CardType> =

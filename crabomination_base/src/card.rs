@@ -98,6 +98,8 @@ pub enum CreatureType {
     Ninja,
     // Kamigawa Samurai subtype (Bushido — Kitsune Blademaster).
     Samurai,
+    // Edge of Eternities (2025) subtypes.
+    Drix, Scientist,
     // Outlaws of Thunder Junction Mount subtype (Saddle, CR 702.171).
     Mount,
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
@@ -2422,6 +2424,12 @@ pub struct AlternativeCost {
     /// highest-MV match for maximum reduction. The five Kamigawa Patrons.
     #[serde(default)]
     pub offering: Option<SelectionRequirement>,
+    /// EOE Warp (CR 702.x). When `true`, casting via this alternative cost
+    /// stamps the resolving permanent `warped`: at the beginning of the next
+    /// end step it's exiled and gains a `WhileExiled` may-play permission so
+    /// its owner can recast it from exile (paying its full mana cost).
+    #[serde(default)]
+    pub warp: bool,
 }
 
 impl CardDefinition {
@@ -2935,6 +2943,10 @@ pub struct CardInstance {
     /// — on ETB it gains haste and a death-draw rider, and is sacrificed at
     /// the next end step.
     pub blitzed: bool,
+    /// True if this card was cast via a Warp alternative cost (EOE) — on ETB
+    /// it arms a delayed exile-at-next-end-step that grants a `WhileExiled`
+    /// may-play so it can be recast from exile.
+    pub warped: bool,
     /// CR 702.183 — number of time counters this permanent should enter with
     /// because it was cast for its Impending cost. Consumed at ETB (the
     /// counters are added to the permanent), then irrelevant. 0 = cast
@@ -3262,6 +3274,7 @@ impl CardInstance {
             cast_from_suspend: false,
             cast_from_escape: false,
             blitzed: false,
+            warped: false,
             impending_counters: 0,
             cast_from_hand: false,
             cast_target_was_battlefield: false,
@@ -3732,6 +3745,8 @@ struct CardInstanceWire {
     #[serde(default)]
     blitzed: bool,
     #[serde(default)]
+    warped: bool,
+    #[serde(default)]
     impending_counters: u32,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
@@ -3916,6 +3931,7 @@ impl serde::Serialize for CardInstance {
             cast_from_suspend: self.cast_from_suspend,
             cast_from_escape: self.cast_from_escape,
             blitzed: self.blitzed,
+            warped: self.warped,
             impending_counters: self.impending_counters,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
@@ -4031,6 +4047,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_suspend = wire.cast_from_suspend;
         c.cast_from_escape = wire.cast_from_escape;
         c.blitzed = wire.blitzed;
+        c.warped = wire.warped;
         c.impending_counters = wire.impending_counters;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;

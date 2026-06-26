@@ -8,6 +8,24 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
+
+Warp / Void / Lander shipped (see the rules-audit rows). Still open:
+- **Station / Spacecraft** (CR — EOE): "Station (tap another creature: add charge
+  counters = its power); STATION N grants abilities / makes it a creature." A
+  leveler-like threshold mechanic on artifact Spacecraft. Needs `station`
+  thresholds + a sorcery-speed tap-a-creature activation. ~30 cards blocked
+  (Atmospheric Greenhouse, …).
+- **`set_gaps.py "set:eoe"` still lists ~225 cards.** Easy batches remaining:
+  more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
+- **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
+  needs a `Value::ManaSpentToCast`), **Blade of the Swarm** (modal "put an exiled
+  warp card on the bottom"), **Sothera, the Supervoid**, **Anticausal Vestige**
+  (LTB put-a-permanent), **Solar Blaze** (each creature self-damages = power).
+- Approximations in the shipped batch: All-Fates Stalker drops the "up to one
+  non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature, not as
+  a single batched event; Tidal Terror omits the tap-two-to-be-unblockable rider.
+
 ## Discovered follow-ups — `decks::ltr` / The Ring batch
 
 - **Ring-bearer choice for UI players.** `GameState::ring_tempts` auto-picks the
@@ -2028,6 +2046,24 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   state-flip, `DamagedBySourceThisTurn` death-watch, two-target aura-move)
 - ✅ CR 601.2c — two-target activated abilities (`ActivateAbility.additional_targets`
   threaded to `StackItem::Trigger`; Autumn-Tail, Kitsune Sage)
+- ✅ EOE Warp — `AlternativeCost.warp` + `CardInstance.warped`; cast for the
+  warp cost, then a `NextEndStep` delayed trigger exiles the permanent and grants
+  a `WhileExiled` may-play (recast from exile, full cost). Sets
+  `Player.warped_spell_this_turn`. `shortcut::warp`; `decks`/`eoe` batch; tests in
+  `tests/eoe.rs`.
+- ✅ EOE Void — `Predicate::VoidActive { who }` = a nonland permanent left the
+  battlefield this turn (`GameState.nonland_permanent_left_bf_this_turn`, set at
+  every battlefield-leave funnel) OR `who` warped a spell this turn. Decode
+  Transmissions (`Effect::If`), Elegy Acolyte (end-step intervening-if). Tests in
+  `tests/eoe.rs`.
+- ✅ EOE Lander token — `tokens::lander_token` ({2},{T},Sac: fetch a basic land
+  tapped). Biomechan Engineer, Biotech Specialist, Beamsaw Prospector,
+  Bioengineered Future.
+- ✅ CR 310 — Battle / Siege. `CardType::Battle` + `BattleSubtype::Siege`, defense
+  counters (310.7), protector choice (310.6), attack-your-own-Siege
+  (`AttackTarget::Battle`), combat damage strips defense counters (310.10),
+  defeat→exile/transform SBA (704.5x via `defeat_battle`). 6 MOM Invasions in
+  `decks::mom`; tests in `tests/mom.rs`. ⏳ multiplayer protector choice.
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked
@@ -2046,7 +2082,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   host fails its printed `aura_enchant_filter`, e.g. a "you control" Aura on a
   stolen creature, goes to the owner's graveyard; tests `cr_704_5n_*`).
   Zero-toughness → graveyard ✅ (704.5g, test
-  `cr_704_5g_zero_toughness_creature_dies`). Battle / Dungeon / Speed SBAs
+  `cr_704_5g_zero_toughness_creature_dies`). Battle-with-no-defense-counters
+  defeat ✅ (704.5x via `defeat_battle`, `tests/mom.rs`). Dungeon / Speed SBAs
   remain; multi-SBA "collapse into one replacement" (704.7).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`).
@@ -2076,7 +2113,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   enforced by the server deck loader). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). (AutoDecider now flips a real random coin; scripted tests stay deterministic.)
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half is still approximated.
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g) ✅ (`CounterType::Defense`, CR 310). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half is still approximated.
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
   surfaced via `LibraryView.known_top` + a HUD chip; Courser, Oracle of Mul

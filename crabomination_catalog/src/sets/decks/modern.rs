@@ -2273,7 +2273,7 @@ pub fn snuff_out() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -3680,7 +3680,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-        }),
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -6527,7 +6527,7 @@ pub fn rout() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            ..Default::default()
+            warp: false,            ..Default::default()
         }),
         ..Default::default()
     }
