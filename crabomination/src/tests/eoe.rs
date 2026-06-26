@@ -679,3 +679,54 @@ fn kavaron_turbodrone_pumps_and_hastes() {
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
     assert!(cp.keywords.contains(&Keyword::Haste));
 }
+
+/// Plasma Bolt deals 2, or 3 with Void active.
+#[test]
+fn plasma_bolt_void_scales_damage() {
+    // Void off: a 3-toughness creature survives 2 damage.
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::prowcatcher_specialist()); // 2/1
+    let bolt = g.add_card_to_hand(0, catalog::plasma_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Void on: a nonland permanent left the battlefield this turn.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, fodder);
+    drain_stack(&mut g);
+    let toughie = g.add_card_to_battlefield(1, catalog::hazard_of_the_dunes()); // 4/4
+    let _ = victim;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(toughie)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Plasma Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(toughie).unwrap().damage, 3, "Void active → 3 damage");
+}
+
+/// Seedship Agrarian mints a Lander when it taps and grows on landfall.
+#[test]
+fn seedship_agrarian_taps_for_lander_and_grows() {
+    let mut g = two_player_game();
+    let agr = g.add_card_to_battlefield(0, catalog::seedship_agrarian());
+    g.battlefield_find_mut(agr).unwrap().tapped = false;
+    // Tapping mints a Lander.
+    let evs = vec![GameEvent::PermanentTapped { card_id: agr }];
+    g.battlefield_find_mut(agr).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Lander"),
+        "becoming tapped created a Lander");
+}
+
+/// Nutrient Block draws a card when it's sacrificed (left for the graveyard).
+#[test]
+fn nutrient_block_draws_on_leave() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let block = g.add_card_to_battlefield(0, catalog::nutrient_block());
+    let hand0 = g.players[0].hand.len();
+    kill(&mut g, block);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "leaving the battlefield drew a card");
+}

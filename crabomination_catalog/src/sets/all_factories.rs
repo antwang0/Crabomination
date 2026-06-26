@@ -3913,6 +3913,14 @@ static EOE: &[Factory] = &[
     super::eoe::comet_crawler,
     super::eoe::kavaron_harrier,
     super::eoe::dubious_delicacy,
+    super::eoe::nebula_dragon,
+    super::eoe::plasma_bolt,
+    super::eoe::remnant_elemental,
+    super::eoe::slagdrill_scrapper,
+    super::eoe::seedship_agrarian,
+    super::eoe::nutrient_block,
+    super::eoe::oreplate_pangolin,
+    super::eoe::rayblade_trooper,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

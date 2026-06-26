@@ -2486,3 +2486,255 @@ pub fn dubious_delicacy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 8 — burn, landfall, robots ─────────────────────────────────────
+
+/// Nebula Dragon — {6}{R} 4/4 Dragon. Flying. ETB: deals 3 damage to any target.
+pub fn nebula_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Nebula Dragon",
+        cost: cost(&[generic(6), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            amount: Value::Const(3),
+            to: target_any(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Plasma Bolt — {R} Sorcery. Deals 2 damage to any target — 3 instead if Void
+/// is active (a nonland permanent left the battlefield, or a spell was warped,
+/// this turn).
+pub fn plasma_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Plasma Bolt",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { amount: Value::Const(2), to: target_any() },
+            Effect::If {
+                cond: Predicate::VoidActive { who: PlayerRef::You },
+                then: Box::new(Effect::DealDamage {
+                    amount: Value::Const(1),
+                    to: Selector::Target(0),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Remnant Elemental — {1}{R} 0/4 Elemental. Reach. Landfall — whenever a land
+/// you control enters, this creature gets +2/+0 until end of turn.
+pub fn remnant_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Remnant Elemental",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Slagdrill Scrapper — {R} 1/2 Artifact Creature — Robot Scout. {2}, {T},
+/// Sacrifice another artifact or land: Draw a card.
+pub fn slagdrill_scrapper() -> CardDefinition {
+    CardDefinition {
+        name: "Slagdrill Scrapper",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Land),
+                1,
+            )),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seedship Agrarian — {3}{G} 3/3 Insect Scientist. Whenever this becomes
+/// tapped, create a Lander token. Landfall — whenever a land you control
+/// enters, put a +1/+1 counter on this.
+pub fn seedship_agrarian() -> CardDefinition {
+    CardDefinition {
+        name: "Seedship Agrarian",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Scientist],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lander_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Land,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nutrient Block — {1} Artifact — Food. Indestructible. {2}, {T}, Sacrifice
+/// this: You gain 3 life. When it's put into a graveyard from the battlefield,
+/// draw a card.
+pub fn nutrient_block() -> CardDefinition {
+    CardDefinition {
+        name: "Nutrient Block",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        keywords: vec![Keyword::Indestructible],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oreplate Pangolin — {1}{R} 2/2 Artifact Creature — Robot Pangolin. Whenever
+/// another artifact you control enters, you may pay {1}; if you do, put a +1/+1
+/// counter on this.
+pub fn oreplate_pangolin() -> CardDefinition {
+    CardDefinition {
+        name: "Oreplate Pangolin",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Pangolin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {1} for a +1/+1 counter".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rayblade Trooper — {2}{W} 2/2 Human Soldier. ETB: put a +1/+1 counter on
+/// target creature you control. Whenever a nontoken creature you control with a
+/// +1/+1 counter on it dies, create a 1/1 white Human Soldier token. Warp
+/// {1}{W}.
+pub fn rayblade_trooper() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rayblade Trooper",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)
+                            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+                    }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: soldier,
+                },
+            },
+        ],
+        alternative_cost: Some(warp(cost(&[generic(1), w()]))),
+        ..Default::default()
+    }
+}
