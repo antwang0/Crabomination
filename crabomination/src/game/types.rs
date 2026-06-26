@@ -32,6 +32,10 @@ pub enum Target {
 pub enum AttackTarget {
     Player(usize),
     Planeswalker(CardId),
+    /// CR 508.4 — a Battle controlled by a player other than its protector.
+    /// In 2-player games this is the active player's own Siege (defended by the
+    /// opponent it chose as protector).
+    Battle(CardId),
 }
 
 /// One attacker's declared assignment.

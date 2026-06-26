@@ -876,6 +876,21 @@ impl GameState {
                     card.counters
                         .insert(CounterType::Loyalty, card.definition.base_loyalty);
                 }
+                // CR 310.7 — a Battle enters with defense counters equal to its
+                // printed defense, and (CR 310.6) its controller chooses an
+                // opponent to protect it. In 2-player there is a single
+                // opponent; multiplayer protector choice is a follow-up.
+                if card.definition.is_battle() {
+                    if card.definition.defense > 0 {
+                        card.counters
+                            .insert(CounterType::Defense, card.definition.defense);
+                    }
+                    if card.protected_by.is_none() {
+                        let ctrl = card.controller;
+                        card.protected_by = (0..self.players.len())
+                            .find(|&p| p != ctrl && self.players[p].is_alive());
+                    }
+                }
                 let cid = card.id;
                 // CR 614.12 — apply "enters with N counters" replacement
                 // BEFORE the new permanent is exposed to state-based-action

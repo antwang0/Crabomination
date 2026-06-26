@@ -5761,6 +5761,9 @@ impl GameState {
                     AttackTarget::Planeswalker(pw) => {
                         self.battlefield_find(pw).map(|c| c.controller).unwrap_or(usize::MAX)
                     }
+                    AttackTarget::Battle(b) => {
+                        self.battlefield_find(b).and_then(|c| c.protected_by).unwrap_or(usize::MAX)
+                    }
                 };
                 let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
                     return Ok(());

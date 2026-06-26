@@ -78,6 +78,21 @@ impl GameState {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
                     }
                 }
+                // CR 508.4 — a battle is a legal target as long as the active
+                // player isn't its protector (you can attack your own Siege,
+                // which a teammate-checked planeswalker arm would reject).
+                AttackTarget::Battle(b_id) => {
+                    let b = self
+                        .battlefield_find(b_id)
+                        .ok_or(GameError::InvalidPlaneswalkerAttackTarget(b_id))?;
+                    let protector = b.protected_by;
+                    if !b.definition.is_battle()
+                        || protector == Some(self.active_player_idx)
+                        || protector.is_none_or(|pr| !self.players[pr].is_alive())
+                    {
+                        return Err(GameError::InvalidPlaneswalkerAttackTarget(b_id));
+                    }
+                }
             }
         }
 
@@ -314,6 +329,11 @@ impl GameState {
                 crate::game::types::AttackTarget::Player(d) => (Some(d), false),
                 crate::game::types::AttackTarget::Planeswalker(pw) => {
                     (self.battlefield_find(pw).map(|c| c.controller), true)
+                }
+                // The protector's attack taxes apply when attacking their
+                // battle; not a planeswalker for `protect_planeswalkers`.
+                crate::game::types::AttackTarget::Battle(b) => {
+                    (self.battlefield_find(b).and_then(|c| c.protected_by), false)
                 }
             };
             let Some(d) = defender else { continue };
@@ -1955,6 +1975,7 @@ impl GameState {
         let ent = match target {
             AttackTarget::Player(p) => EntityRef::Player(p),
             AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
+            AttackTarget::Battle(b) => EntityRef::Permanent(b),
         };
         self.scale_damage_to(source, ent, amount)
     }
@@ -1973,6 +1994,9 @@ impl GameState {
             }
             AttackTarget::Planeswalker(pw) => {
                 self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events)
+            }
+            AttackTarget::Battle(b) => {
+                self.apply_prevention_shields(EntityRef::Permanent(b), amount, source, events)
             }
         }
     }
@@ -2091,6 +2115,22 @@ impl GameState {
                     events.push(GameEvent::LoyaltyChanged {
                         card_id: pw_id,
                         new_loyalty: new_loyalty as i32,
+                    });
+                }
+            }
+            AttackTarget::Battle(b_id) => {
+                // CR 310.10 — combat damage to a battle removes that many
+                // defense counters. The defeat trigger fires from the SBA once
+                // the last counter is gone.
+                if let Some(b) = self.battlefield_find_mut(b_id) {
+                    let current = b.counter_count(crate::card::CounterType::Defense);
+                    let new_defense = current.saturating_sub(amount);
+                    b.counters
+                        .insert(crate::card::CounterType::Defense, new_defense);
+                    events.push(GameEvent::DamageDealt {
+                        amount,
+                        to_player: None,
+                        to_card: Some(b_id),
                     });
                 }
             }

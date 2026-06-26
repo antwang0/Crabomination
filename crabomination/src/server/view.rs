@@ -204,6 +204,9 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                 AttackTarget::Planeswalker(pw) => {
                     *pw_dmg.entry(pw).or_insert(0) += a_power;
                 }
+                // Battle damage removes defense counters, not life — the board
+                // view shows the live counter total, so nothing to predict here.
+                AttackTarget::Battle(_) => {}
             }
             if lifelink && a_power > 0 {
                 *lifegain.entry(a.controller).or_insert(0) += a_power;
@@ -260,6 +263,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                         AttackTarget::Planeswalker(pw) => {
                             *pw_dmg.entry(pw).or_insert(0) += overflow;
                         }
+                        AttackTarget::Battle(_) => {}
                     }
                 }
             }

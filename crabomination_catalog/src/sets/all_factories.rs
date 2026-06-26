@@ -3804,6 +3804,13 @@ static DECKS: &[Factory] = &[
     super::decks::sterling_hound,
     super::decks::hardbristle_bandit,
     super::decks::rumbling_rockslide,
+    // mom — March of the Machine Battle/Siege cards (CR 310)
+    super::decks::invasion_of_zendikar,
+    super::decks::invasion_of_kaladesh,
+    super::decks::invasion_of_amonkhet,
+    super::decks::invasion_of_ravnica,
+    super::decks::invasion_of_theros,
+    super::decks::invasion_of_tarkir,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

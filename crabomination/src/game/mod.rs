@@ -97,6 +97,9 @@ mod tests_recent20;
 #[path = "../tests/recent21.rs"]
 mod tests_recent21;
 #[cfg(test)]
+#[path = "../tests/mom.rs"]
+mod tests_mom;
+#[cfg(test)]
 #[path = "../tests/ltr.rs"]
 mod tests_ltr;
 #[cfg(test)]
@@ -1398,6 +1401,39 @@ impl GameState {
             c.transformed = false;
         }
         events.push(GameEvent::Transformed { card_id: id });
+    }
+
+    /// CR 310.10 — a battle whose last defense counter is removed is defeated.
+    /// For a Siege the printed defeat trigger is "exile it, then cast it
+    /// transformed": we transform the permanent to its back face and flicker it
+    /// (exile, then re-enter under its controller as a new object) so the
+    /// back-face permanent enters with summoning sickness and ETB triggers.
+    /// Modeled as a state-based flicker rather than a stack cast, so it isn't
+    /// separately counterable.
+    pub(crate) fn defeat_battle(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        let Some(c) = self.battlefield_find(id) else { return };
+        let controller = c.controller;
+        let has_back = c.definition.back_face.is_some();
+        let ctx = crate::game::effects::EffectContext::for_ability(id, controller, None);
+        if !has_back {
+            self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, events);
+            return;
+        }
+        // Transform to the back face, then flicker it onto the battlefield.
+        self.transform_permanent(id, events);
+        if let Some(c) = self.battlefield_find_mut(id) {
+            c.protected_by = None;
+        }
+        self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, events);
+        self.move_card_to(
+            id,
+            &crate::effect::ZoneDest::Battlefield {
+                controller: crate::effect::PlayerRef::Seat(controller),
+                tapped: false,
+            },
+            &ctx,
+            events,
+        );
     }
 
     /// CR 711.2 — flip one flip-card permanent to its flipped face in place.
@@ -5250,6 +5286,11 @@ impl GameState {
             AttackTarget::Player(p) => Some(p),
             AttackTarget::Planeswalker(pw) => {
                 self.battlefield_find(pw).map(|c| c.controller)
+            }
+            // CR 508.4 — the defending player for an attack on a battle is its
+            // protector, who defends it with their creatures.
+            AttackTarget::Battle(b) => {
+                self.battlefield_find(b).and_then(|c| c.protected_by)
             }
         }
     }

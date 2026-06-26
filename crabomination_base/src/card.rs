@@ -203,6 +203,12 @@ pub enum SpellSubtype {
     Adventure, Lesson, Trap, Arcane,
 }
 
+/// Battle subtypes (CR 310.4). Siege is the only printed one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BattleSubtype {
+    Siege,
+}
+
 /// Planeswalker subtypes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PlaneswalkerSubtype {
@@ -237,6 +243,8 @@ pub struct Subtypes {
     pub enchantment_subtypes: Vec<EnchantmentSubtype>,
     pub spell_subtypes: Vec<SpellSubtype>,
     pub planeswalker_subtypes: Vec<PlaneswalkerSubtype>,
+    #[serde(default)]
+    pub battle_subtypes: Vec<BattleSubtype>,
 }
 
 /// Counter types that can be placed on permanents or players.
@@ -350,6 +358,11 @@ pub enum CounterType {
     /// counter, scaling a `PumpPTPerCounterOnSource` team anthem (Intrepid
     /// Adversary).
     Valor,
+    /// Defense counter — CR 310.7. A battle enters with a number of defense
+    /// counters equal to its printed defense; combat/noncombat damage removes
+    /// that many, and when the last is removed the battle is defeated
+    /// (`EventKind::BattleDefeated`).
+    Defense,
 }
 
 /// Every zone a card can occupy.
@@ -1552,6 +1565,10 @@ pub struct CardDefinition {
     pub power: i32,
     pub toughness: i32,
     pub base_loyalty: u32,
+    /// CR 310.7 — printed defense of a Battle. The permanent enters with this
+    /// many `CounterType::Defense` counters. 0 for non-battles.
+    #[serde(default)]
+    pub defense: u32,
     pub keywords: Vec<Keyword>,
     pub static_abilities: Vec<StaticAbility>,
     /// For instants/sorceries: the effect that resolves. Defaults to `Effect::Noop`
@@ -2415,6 +2432,7 @@ impl CardDefinition {
     pub fn is_artifact(&self) -> bool { self.card_types.contains(&CardType::Artifact) }
     pub fn is_enchantment(&self) -> bool { self.card_types.contains(&CardType::Enchantment) }
     pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
+    pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
     pub fn is_permanent(&self) -> bool {
         self.card_types.iter().any(|t| {
             matches!(
@@ -3162,6 +3180,11 @@ pub struct CardInstance {
     /// Set on a mutate spell on the stack: `(host id, on_top)`. On resolution
     /// the spell merges onto the host instead of entering as a new creature.
     pub mutate_onto: Option<(CardId, bool)>,
+    /// CR 310.6 — the protector of a Battle: the opponent its controller chose
+    /// as it entered. That player is the defending player for attacks aimed at
+    /// the battle (CR 508.4) and its creatures block them. `None` for
+    /// non-battles. Round-trips via `CardInstanceWire` with `#[serde(default)]`.
+    pub protected_by: Option<usize>,
 }
 
 impl CardInstance {
@@ -3192,6 +3215,11 @@ impl CardInstance {
         let mut counters = HashMap::new();
         if is_planeswalker && base_loyalty > 0 {
             counters.insert(CounterType::Loyalty, base_loyalty);
+        }
+        // CR 310.7 — a Battle enters with defense counters equal to its printed
+        // defense (re-seeded on reanimate/blink in `move_card_to`).
+        if definition.is_battle() && definition.defense > 0 {
+            counters.insert(CounterType::Defense, definition.defense);
         }
         Self {
             id,
@@ -3279,6 +3307,7 @@ impl CardInstance {
             meld_parts: Vec::new(),
             mutate_stack: Vec::new(),
             mutate_onto: None,
+            protected_by: None,
         }
     }
 
@@ -3831,6 +3860,9 @@ struct CardInstanceWire {
     /// linked source stays tapped. `#[serde(default)]` for back-compat.
     #[serde(default)]
     untap_locked_by: Option<CardId>,
+    /// CR 310.6 Battle protector. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    protected_by: Option<usize>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -3924,6 +3956,7 @@ impl serde::Serialize for CardInstance {
             mutate_stack: self.mutate_stack.clone(),
             mutate_onto: self.mutate_onto,
             untap_locked_by: self.untap_locked_by,
+            protected_by: self.protected_by,
         };
         wire.serialize(ser)
     }
@@ -4045,6 +4078,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.rebuild_mutate_definition();
         }
         c.untap_locked_by = wire.untap_locked_by;
+        c.protected_by = wire.protected_by;
         Ok(c)
     }
 }

@@ -766,6 +766,20 @@ impl GameState {
                         usize::from(card.split_cast == Some(1))
                     });
                     self.battlefield.push(card);
+                    // CR 310.6 — a cast Siege's controller chooses an opponent
+                    // to protect it (the lone opponent in 2-player; multiplayer
+                    // choice is a follow-up).
+                    if let Some(c) = self.battlefield.iter().find(|c| c.id == card_id)
+                        && c.definition.is_battle()
+                        && c.protected_by.is_none()
+                    {
+                        let ctrl = c.controller;
+                        let protector = (0..self.players.len())
+                            .find(|&pl| pl != ctrl && self.players[pl].is_alive());
+                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                            c.protected_by = protector;
+                        }
+                    }
                     // CR 614.13 — enters-tapped replacements (Imposing
                     // Sovereign, Urabrask) apply to cast permanents too.
                     self.apply_enters_tapped_replacement(card_id);
@@ -2474,6 +2488,21 @@ impl GameState {
         for id in pw_dead {
             events.push(GameEvent::PlaneswalkerDied { card_id: id });
             self.remove_from_battlefield_to_graveyard_raw(id);
+        }
+
+        // CR 310.10 / 704.5x — a battle with no defense counters is defeated.
+        let defeated_battles: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.is_battle()
+                    && c.definition.defense > 0
+                    && c.counter_count(crate::card::CounterType::Defense) == 0
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in defeated_battles {
+            self.defeat_battle(id, &mut events);
         }
 
         // CR 702.103e — a bestowed permanent whose enchanted creature has
