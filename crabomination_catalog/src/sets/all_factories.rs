@@ -3983,6 +3983,7 @@ static EOE: &[Factory] = &[
     super::eoe::zealous_display,
     super::eoe::thawbringer,
     super::eoe::susurian_voidborn,
+    super::eoe::mental_modulation,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

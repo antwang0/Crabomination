@@ -219,6 +219,11 @@ pub enum StaticEffect {
     /// `cost_reduction_for_spell` off the *spell being cast*. Generic-only;
     /// clamped by `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByDistinctLandNames,
+    /// Card-intrinsic "This spell costs {amount} less to cast during your turn"
+    /// (Mental Modulation). Read by `cost_reduction_for_spell` off the spell
+    /// being cast when the caster is the active player. Generic-only; clamped by
+    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedDuringYourTurn { amount: u32 },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// devotion to `colors`" (Theros — Daybreak Chimera, etc.). Read by
     /// `cost_reduction_for_spell` off the *spell being cast*; the count is the

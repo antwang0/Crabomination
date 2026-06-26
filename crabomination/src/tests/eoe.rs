@@ -1598,3 +1598,23 @@ fn susurian_voidborn_drains_on_friendly_death() {
     assert_eq!(g.players[1].life, foe_life - 1, "opponent lost 1");
     assert_eq!(g.players[0].life, my_life + 1, "you gained 1");
 }
+
+/// Mental Modulation is {1} cheaper on your own turn (CR 601.2f), and taps +
+/// draws on resolution.
+#[test]
+fn mental_modulation_turn_discount_and_effect() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::mental_modulation(), 0);
+    g.active_player_idx = 0;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 1, "{{1}} off on your turn");
+    g.active_player_idx = 1;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no discount on opponent's turn");
+    // Effect taps the target and draws.
+    g.add_card_to_library(0, catalog::forest());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    resolve_targeted(&mut g, 0, catalog::mental_modulation().effect, &[foe]);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
+}

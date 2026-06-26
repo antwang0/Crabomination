@@ -443,6 +443,15 @@ pub(crate) fn cost_reduction_for_spell_zoned(
         names.dedup();
         reduction = reduction.saturating_add(names.len() as u32);
     }
+    // Card-intrinsic "costs {amount} less during your turn" (Mental Modulation).
+    // Generic-only, clamped by the caller.
+    if state.active_player_idx == caster {
+        for sa in &card.definition.static_abilities {
+            if let StaticEffect::SelfCostReducedDuringYourTurn { amount } = sa.effect {
+                reduction = reduction.saturating_add(amount);
+            }
+        }
+    }
     // Card-intrinsic "costs {X} less, where X is your devotion to [colors]"
     // (Theros — Daybreak Chimera). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

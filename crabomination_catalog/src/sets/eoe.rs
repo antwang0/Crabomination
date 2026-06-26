@@ -4478,3 +4478,26 @@ pub fn susurian_voidborn() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mental Modulation — {1}{U} Instant. Costs {1} less during your turn. Tap
+/// target artifact or creature, then draw a card.
+pub fn mental_modulation() -> CardDefinition {
+    CardDefinition {
+        name: "Mental Modulation",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast during your turn.",
+            effect: StaticEffect::SelfCostReducedDuringYourTurn { amount: 1 },
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}

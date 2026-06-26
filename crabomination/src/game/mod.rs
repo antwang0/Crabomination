@@ -10539,6 +10539,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByDomain { .. }
             // SelfCostReducedByDistinctLandNames (Fungal Colossus) — same.
             | StaticEffect::SelfCostReducedByDistinctLandNames
+            // SelfCostReducedDuringYourTurn (Mental Modulation) — same.
+            | StaticEffect::SelfCostReducedDuringYourTurn { .. }
             // SelfCostReducedByDevotion (Daybreak Chimera) — same, off the spell.
             | StaticEffect::SelfCostReducedByDevotion { .. }
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
