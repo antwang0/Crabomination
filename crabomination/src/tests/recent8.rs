@@ -76,6 +76,40 @@ fn earth_village_ruffians_earthbends_on_death() {
     );
 }
 
+/// CR 701.66a — an earthbent land returns tapped when it dies, but a bounce to
+/// hand does NOT return it ("when it dies or is exiled").
+#[test]
+fn cr_701_66a_earthbent_land_returns_only_on_death_not_bounce() {
+    use crate::effect::{Effect, Selector, ZoneDest, PlayerRef};
+    // Death path: the land returns to the battlefield tapped.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::badgermole_cub());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    g.remove_to_graveyard_with_triggers(land);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Forest" && c.controller == 0);
+    assert!(back.is_some_and(|c| c.tapped), "died → returns tapped");
+
+    // Bounce path: the land goes to hand and stays there.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::badgermole_cub());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let ctx = crate::game::effects::EffectContext::for_ability(land, 0, Some(Target::Permanent(land)));
+    g.resolve_effect(&Effect::Move {
+        what: Selector::Target(0),
+        to: ZoneDest::Hand(PlayerRef::Seat(0)),
+    }, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Forest"), "bounced land does not return");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "stays in hand");
+}
+
 /// Earthbender Ascension earthbends 2, then ramps a basic onto the battlefield
 /// tapped.
 #[test]

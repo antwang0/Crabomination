@@ -103,10 +103,6 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 - **Client: render `ExileCardView.may_play_alt_cost`** on the in-hand /
   battlefield castable affordances too (the exile-browser badge already shows
   "May play (you) for {2}").
-- **Earthbend return on bounce.** The delayed return rides
-  `WhenCardLeavesBattlefield`, so an earthbent land bounced to hand is also
-  returned tapped (should only return on death/exile, CR 701.66a). Needs a
-  dies-or-exiled-only delayed-trigger kind, or a zone guard on the return body.
 
 ## Discovered follow-ups — `decks::recent3` / `sets::fin` batch
 

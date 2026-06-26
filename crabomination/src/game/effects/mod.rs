@@ -5065,19 +5065,29 @@ impl GameState {
                         events,
                     )?;
                 }
-                // Delayed return: when that land leaves play (dies/exiled or
-                // any other leave), bring it back tapped under its
-                // earthbender's control.
+                // CR 701.66a — delayed return only "when it dies or is
+                // exiled": bring it back tapped under its earthbender's
+                // control. A bounce to hand / library (any other leave) must
+                // NOT return it, so the body guards on the card landing in a
+                // graveyard or exile.
                 self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(CardId(0)),
                     kind: crate::game::types::DelayedKind::WhenCardLeavesBattlefield(land),
-                    effect: Effect::Move {
-                        what: Selector::TriggerSource,
-                        to: ZoneDest::Battlefield {
-                            controller: crate::effect::PlayerRef::Seat(ctx.controller),
-                            tapped: true,
+                    effect: Effect::If {
+                        cond: crate::effect::Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::InGraveyard
+                                .or(SelectionRequirement::InExile),
                         },
+                        then: Box::new(Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                                tapped: true,
+                            },
+                        }),
+                        else_: Box::new(Effect::Noop),
                     },
                     target: None,
                     bound_token: None,
