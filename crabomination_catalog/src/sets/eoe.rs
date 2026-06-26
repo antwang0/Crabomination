@@ -7,7 +7,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
     StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{etb, on_dies, station, target, target_filtered, warp};
+use crate::effect::shortcut::{etb, on_dies, station, target, target_any, target_filtered, warp};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 use crabomination_base::tokens::lander_token;
@@ -1686,6 +1686,186 @@ pub fn larval_scoutlander() -> CardDefinition {
         })],
         activated_abilities: vec![station()],
         station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((3, 3)) }],
+        ..Default::default()
+    }
+}
+
+/// Galvanizing Sawship — {5}{R} Artifact — Spacecraft. Station; {3+}: 6/5 with
+/// flying, haste.
+pub fn galvanizing_sawship() -> CardDefinition {
+    CardDefinition {
+        name: "Galvanizing Sawship",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![station()],
+        station: vec![StationBand {
+            min: 3,
+            keywords: vec![Keyword::Flying, Keyword::Haste],
+            pt: Some((6, 5)),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Susurian Dirgecraft — {4}{B} Artifact — Spacecraft. ETB: each opponent
+/// sacrifices a nontoken creature of their choice. Station; {7+}: 4/3 with
+/// flying.
+pub fn susurian_dirgecraft() -> CardDefinition {
+    CardDefinition {
+        name: "Susurian Dirgecraft",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 3)) }],
+        ..Default::default()
+    }
+}
+
+/// Pinnacle Kill-Ship — {7} Artifact — Spacecraft. ETB: deals 10 damage to up
+/// to one target creature. Station; {7+}: 7/7 with flying.
+pub fn pinnacle_kill_ship() -> CardDefinition {
+    CardDefinition {
+        name: "Pinnacle Kill-Ship",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::DealDamage {
+                amount: Value::Const(10),
+                to: Selector::Target(0),
+            }),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((7, 7)) }],
+        ..Default::default()
+    }
+}
+
+/// Debris Field Crusher — {4}{R} Artifact — Spacecraft. ETB: deals 3 damage to
+/// any target. {1}{R}: gets +2/+0 until end of turn. Station; {8+}: 1/5 with
+/// flying.
+pub fn debris_field_crusher() -> CardDefinition {
+    CardDefinition {
+        name: "Debris Field Crusher",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            amount: Value::Const(3),
+            to: target_any(),
+        })],
+        activated_abilities: vec![
+            station(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((1, 5)) }],
+        ..Default::default()
+    }
+}
+
+/// Extinguisher Battleship — {8} Artifact — Spacecraft. ETB: destroy target
+/// noncreature permanent, then deal 4 damage to each creature. Station; {5+}:
+/// 10/10 with flying, trample.
+pub fn extinguisher_battleship() -> CardDefinition {
+    CardDefinition {
+        name: "Extinguisher Battleship",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Noncreature),
+                ),
+            },
+            Effect::DealDamage {
+                amount: Value::Const(4),
+                to: Selector::EachPermanent(SelectionRequirement::Creature),
+            },
+        ]))],
+        activated_abilities: vec![station()],
+        station: vec![StationBand {
+            min: 5,
+            keywords: vec![Keyword::Flying, Keyword::Trample],
+            pt: Some((10, 10)),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Specimen Freighter — {5}{U} Artifact — Spacecraft. ETB: return up to two
+/// target non-Spacecraft creatures to their owners' hands. Whenever it attacks,
+/// defending player mills four. Station; {9+}: 4/7 with flying.
+pub fn specimen_freighter() -> CardDefinition {
+    CardDefinition {
+        name: "Specimen Freighter",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![
+            etb(Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasArtifactSubtype(
+                        ArtifactSubtype::Spacecraft,
+                    )))),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::DefendingPlayer),
+                    amount: Value::Const(4),
+                },
+            },
+        ],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 9, keywords: vec![Keyword::Flying], pt: Some((4, 7)) }],
+        ..Default::default()
+    }
+}
+
+/// Rescue Skiff — {5}{W} Artifact — Spacecraft. ETB: return target creature or
+/// enchantment card from your graveyard to the battlefield. Station; {10+}: 5/6
+/// with flying.
+pub fn rescue_skiff() -> CardDefinition {
+    CardDefinition {
+        name: "Rescue Skiff",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::InYourGraveyard.and(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                ),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 10, keywords: vec![Keyword::Flying], pt: Some((5, 6)) }],
         ..Default::default()
     }
 }

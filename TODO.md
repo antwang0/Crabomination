@@ -10,14 +10,18 @@ state-corrupting in ordinary play.
 
 ## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
 
-Warp / Void / Lander shipped (see the rules-audit rows). Still open:
-- **Station / Spacecraft** (CR 702.184 + CR 721 Station Cards): "Station (tap
-  another untapped creature you control: put charge counters = its power on this;
-  sorcery-speed only); STATION N station symbols grant abilities / make it a
-  creature." A leveler-like threshold mechanic on artifact Spacecraft. Needs
-  `station` thresholds + a sorcery-speed tap-a-creature activation. ~30 cards
-  blocked (Atmospheric Greenhouse, …).
-- **`set_gaps.py "set:eoe"` still lists ~225 cards.** Easy batches remaining:
+Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still open:
+- **Station bands with non-keyword abilities.** `StationBand` grants keywords +
+  a creature P/T. Bands whose `{N+}` striation is a *static* (Lumen-Class
+  Frigate `{2+}: other creatures get +1/+1`) or a *triggered* ability
+  (Synthesizer Labship `{2+}` combat trigger) need a counter-gated static/
+  trigger primitive — defer those two cards until then.
+- **More Spacecraft** (22 in set): Lumen-Class Frigate, Synthesizer Labship (see
+  above), plus the legendaries (Dawnsire, The Seriema, Infinite Guideline
+  Station, The Eternity Elevator) and 8/7-cost battleships (Extinguisher
+  Battleship, Pinnacle Kill-Ship) — mostly keyword/P-T bands the shipped
+  `StationBand` already covers; just need the ETB/attack bodies wired.
+- **`set_gaps.py "set:eoe"` still lists ~215 cards.** Easy batches remaining:
   more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
   needs a `Value::ManaSpentToCast`), **Blade of the Swarm** (modal "put an exiled
@@ -2060,6 +2064,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 111.10u — Lander token. `tokens::lander_token` ({2},{T},Sac: fetch a
   basic land tapped). Biomechan/Biotech/Galactic/Glacier/Kav makers, Edge Rover
   (each player), Dauntless Scrapbot, Emergency Eject (target's controller).
+- ✅ CR 702.184 + 721 — Station / Spacecraft. `shortcut::station` (tap another
+  untapped creature, sorcery-speed: charge counters = its power via
+  `Value::TappedForCostPower` carried by `Effect::WithTappedPower`).
+  `CardDefinition.station` bands (`StationBand{min,keywords,pt}`) grant keywords
+  (L6) and, at a `{N+}` P/T threshold, add the Creature type (L4) + base P/T
+  (L7a CDA). `ArtifactSubtype::{Spacecraft,Lander}`. 8 Spacecraft in `eoe`;
+  tests in `tests/eoe.rs`. Counter-gated static/triggered bands deferred (see
+  the EOE follow-ups section).
 - ✅ CR 111 / 614.13 — `Effect::CreateToken` now mints for **every** matched
   player (EachPlayer / EachOpponent), with each player's own token-doublers
   applied; fixes a latent single-player bug (gift cycle, Edge Rover).

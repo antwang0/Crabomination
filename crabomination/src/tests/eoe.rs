@@ -434,3 +434,55 @@ fn station_is_sorcery_speed_only() {
         card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
     }).is_err(), "station rejected outside a main phase");
 }
+
+/// Galvanizing Sawship's {3+} band grants flying + haste and a 6/5 body once
+/// stationed.
+#[test]
+fn galvanizing_sawship_band_grants_flying_haste() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::galvanizing_sawship());
+    g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes()); // 4/4
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("station");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(ship).unwrap();
+    assert!(post.card_types.contains(&CardType::Creature));
+    assert_eq!((post.power, post.toughness), (6, 5));
+    assert!(post.keywords.contains(&Keyword::Flying) && post.keywords.contains(&Keyword::Haste));
+}
+
+/// Susurian Dirgecraft's ETB makes each opponent sacrifice a nontoken creature.
+#[test]
+fn susurian_dirgecraft_etb_each_opponent_sacrifices() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ship = g.add_card_to_hand(0, catalog::susurian_dirgecraft());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ship, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Susurian Dirgecraft");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
+}
+
+/// Pinnacle Kill-Ship's ETB deals 10 to a creature.
+#[test]
+fn pinnacle_kill_ship_etb_deals_ten() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ship = g.add_card_to_hand(0, catalog::pinnacle_kill_ship());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ship, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Pinnacle Kill-Ship");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 took 10 and died");
+}

@@ -3886,6 +3886,13 @@ static EOE: &[Factory] = &[
     super::eoe::warmaker_gunship,
     super::eoe::sledge_class_seedship,
     super::eoe::larval_scoutlander,
+    super::eoe::galvanizing_sawship,
+    super::eoe::susurian_dirgecraft,
+    super::eoe::pinnacle_kill_ship,
+    super::eoe::debris_field_crusher,
+    super::eoe::extinguisher_battleship,
+    super::eoe::specimen_freighter,
+    super::eoe::rescue_skiff,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
