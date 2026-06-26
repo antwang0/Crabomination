@@ -696,6 +696,11 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.monstrous)
                 .unwrap_or(false),
+            Predicate::SourceIsRenowned => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| c.renowned)
+                .unwrap_or(false),
             Predicate::SourceIsEquipped => {
                 ctx.source.is_some_and(|cid| self.attached_equipment_count(cid) > 0)
             }

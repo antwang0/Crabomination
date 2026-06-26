@@ -3162,6 +3162,9 @@ pub struct CardInstance {
     /// and any "as long as ~ is monstrous" state. Round-trips through
     /// `CardInstanceWire` with `#[serde(default)]`.
     pub monstrous: bool,
+    /// CR 702.93 — true once this creature has become renowned. Persistent;
+    /// gates the once-only Renown counter add.
+    pub renowned: bool,
     /// CR 701.60 — true while this creature is suspected. A suspected
     /// creature has menace and can't block (injected as computed keywords).
     /// Persistent until it leaves the battlefield. Round-trips through
@@ -3343,6 +3346,7 @@ impl CardInstance {
             chosen_color: None,
             goaded_by: Vec::new(),
             monstrous: false,
+            renowned: false,
             suspected: false,
             adventuring: false,
             on_adventure: false,
@@ -3849,6 +3853,10 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     monstrous: bool,
+    /// CR 702.93 renowned flag. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    renowned: bool,
     /// CR 701.60 suspected flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -3992,6 +4000,7 @@ impl serde::Serialize for CardInstance {
             chosen_color: self.chosen_color,
             goaded_by: self.goaded_by.clone(),
             monstrous: self.monstrous,
+            renowned: self.renowned,
             suspected: self.suspected,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
@@ -4103,6 +4112,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_color = wire.chosen_color;
         c.goaded_by = wire.goaded_by;
         c.monstrous = wire.monstrous;
+        c.renowned = wire.renowned;
         c.suspected = wire.suspected;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;

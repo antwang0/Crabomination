@@ -4656,6 +4656,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeRenowned { what } => {
+                // CR 702.93 — mark each resolved permanent as renowned.
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.renowned = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Flip { what } => {
                 // CR 711.2 — flip each matching flip-card permanent to its
                 // flipped face in place (counters / tapped / attachments persist).

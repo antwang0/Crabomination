@@ -2228,18 +2228,21 @@ pub fn bloodthirst(n: i32) -> TriggeredAbility {
 /// it only renowns once because the counters then block re-triggering.
 pub fn renown(n: i32) -> TriggeredAbility {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+    // CR 702.93 — "if it isn't renowned, put N +1/+1 counters on it and it
+    // becomes renowned." Gated on the real `renowned` flag (not a counter
+    // heuristic) so unrelated +1/+1 counters don't suppress it.
     TriggeredAbility {
         event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
         effect: Effect::If {
-            cond: Predicate::Not(Box::new(Predicate::EntityMatches {
-                what: Selector::This,
-                filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
-            })),
-            then: Box::new(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(n),
-            }),
+            cond: Predicate::Not(Box::new(Predicate::SourceIsRenowned)),
+            then: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(n),
+                },
+                Effect::BecomeRenowned { what: Selector::This },
+            ])),
             else_: Box::new(Effect::Noop),
         },
     }

@@ -711,6 +711,10 @@ pub enum Predicate {
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
     SourceIsMonstrous,
+    /// CR 702.93 — the source permanent is renowned. Backed by
+    /// `CardInstance.renowned`. Powers "if it's renowned, …" attack intervening-
+    /// ifs (Consul's Lieutenant) and "as long as renowned" statics.
+    SourceIsRenowned,
     /// CR 301.5 — the source permanent is equipped (an Equipment is attached).
     /// Powers "as long as this creature is equipped, …" team statics (Auriok
     /// Steelshaper's Soldier/Knight anthem).
@@ -2355,6 +2359,10 @@ pub enum Effect {
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
     /// fires per permanent so "when this transforms" triggers can react.
     Transform { what: Selector },
+    /// CR 702.93 — mark each matching permanent as renowned (sets
+    /// `CardInstance.renowned`). Paired with the Renown counter add so the
+    /// once-only gate keys off the real flag, not a counter heuristic.
+    BecomeRenowned { what: Selector },
     /// CR 711.2 — Flip the matching flip-card permanent(s) to their flipped
     /// (bottom) face in place (same object, keeping counters / tapped state /
     /// attachments). One-way; no-op on a permanent already flipped or without a

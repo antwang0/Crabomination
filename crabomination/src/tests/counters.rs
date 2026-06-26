@@ -172,6 +172,26 @@ fn renown_adds_counters_on_first_combat_damage() {
     assert!(g.players[1].life < 20, "defender took combat damage");
 }
 
+/// CR 702.93 fidelity: Renown keys off the real `renowned` flag, so a creature
+/// that already carries an unrelated +1/+1 counter still becomes renowned and
+/// gains its Renown counter on its first connection.
+#[test]
+fn renown_fires_despite_preexisting_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::topan_freeblade()); // Renown 1
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.fire_combat_damage_to_player_triggers(id, 1, 2);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.renowned, "became renowned");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2, "renown counter added on top");
+    // Already renowned → a second connection adds nothing.
+    g.fire_combat_damage_to_player_triggers(id, 1, 2);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "renowned creature doesn't re-trigger");
+}
+
 // ── Outlast (CR 702.97) ────────────────────────────────────────────────────
 
 #[test]
