@@ -718,6 +718,7 @@ impl GameState {
         self.nonland_cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
+        self.excess_damage_this_resolution = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         let mut events = vec![];

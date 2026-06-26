@@ -633,6 +633,11 @@ pub enum Predicate {
     /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
     /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).
     PlayerSacrificedThisResolution(PlayerRef),
+    /// CR 120.10 — true if excess damage was dealt to a creature / planeswalker
+    /// / battle during the current resolution (Orbital Plunge's "if excess
+    /// damage was dealt this way"). Backed by
+    /// `GameState.excess_damage_this_resolution`.
+    ExcessDamageDealtThisResolution,
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
     /// The game is currently in the given turn step (CR 500). Gates

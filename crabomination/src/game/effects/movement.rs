@@ -430,7 +430,25 @@ impl GameState {
                             new_loyalty: new_loyalty as i32,
                         });
                     }
-                } else if let Some(c) = self.battlefield_find_mut(cid) {
+                } else {
+                    // CR 120.10 — excess damage: amount beyond what's lethal,
+                    // accounting for damage already marked. Deathtouch makes any
+                    // damage past 1 excess (CR 702.2c). Computed before the
+                    // mutable borrow below applies the new damage.
+                    if let Some(cp) = self.computed_permanent(cid) {
+                        if cp.card_types.contains(&crate::card::CardType::Creature) {
+                            let prior = self.battlefield_find(cid).map(|c| c.damage).unwrap_or(0);
+                            let lethal_needed = if source_has_deathtouch {
+                                1
+                            } else {
+                                (cp.toughness.max(0) as u32).saturating_sub(prior)
+                            };
+                            let excess = amount.saturating_sub(lethal_needed);
+                            self.excess_damage_this_resolution =
+                                self.excess_damage_this_resolution.saturating_add(excess);
+                        }
+                    }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
                         if let Some(src) = source {
@@ -458,6 +476,7 @@ impl GameState {
                     let is_creature = c.definition.is_creature();
                     if source_exiles_damaged && is_creature {
                         self.dies_to_exile_eot.insert(cid);
+                    }
                     }
                 }
             }

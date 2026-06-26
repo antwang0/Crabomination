@@ -4060,26 +4060,27 @@ pub fn sinister_cryologist() -> CardDefinition {
 }
 
 /// Orbital Plunge — {3}{R} Sorcery. Deals 6 damage to target creature. If excess
-/// damage was dealt, create a Lander token (excess approximated as toughness < 6).
+/// damage was dealt this way (CR 120.10), create a Lander token.
 pub fn orbital_plunge() -> CardDefinition {
     CardDefinition {
         name: "Orbital Plunge",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::If {
-            cond: Predicate::ValueAtMost(
-                Value::ToughnessOf(Box::new(Selector::Target(0))),
-                Value::Const(5),
-            ),
-            then: Box::new(Effect::Seq(vec![
-                Effect::DealDamage {
-                    to: target_filtered(SelectionRequirement::Creature),
-                    amount: Value::Const(6),
-                },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
-            ])),
-            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(6),
+            },
+            Effect::If {
+                cond: Predicate::ExcessDamageDealtThisResolution,
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lander_token(),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

@@ -649,6 +649,13 @@ pub struct GameState {
     /// between independent resolutions.
     #[serde(skip)]
     pub(crate) permanents_destroyed_this_resolution: u32,
+    /// Transient: total excess damage (CR 120.10) dealt during the current
+    /// resolution — for each creature/planeswalker/battle, damage beyond what
+    /// would be lethal/its loyalty/its defense. Read by
+    /// `Predicate::ExcessDamageDealtThisResolution` to gate "if excess damage
+    /// was dealt this way" riders (Orbital Plunge). Reset between resolutions.
+    #[serde(skip)]
+    pub(crate) excess_damage_this_resolution: u32,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1157,6 +1164,7 @@ impl Clone for GameState {
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
+            excess_damage_this_resolution: self.excess_damage_this_resolution,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
@@ -1292,6 +1300,7 @@ impl GameState {
             haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
+            excess_damage_this_resolution: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,

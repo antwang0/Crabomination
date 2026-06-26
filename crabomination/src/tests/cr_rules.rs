@@ -4912,3 +4912,25 @@ fn one_sided_power_damage_no_backswing() {
     assert!(!g.battlefield.iter().any(|c| c.id == foe), "enemy took 3 and died");
     assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "our creature takes no back-swing");
 }
+
+// ── CR 120.10 — excess damage ─────────────────────────────────────────────────
+
+/// Excess damage (CR 120.10) is the amount beyond lethal; it accumulates per
+/// resolution and resets between resolutions, gating Orbital Plunge's Lander.
+#[test]
+fn cr_120_10_excess_damage_tracked_per_resolution() {
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::hill_giant());
+    // 6 to a 2/2 → 4 excess.
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(small)));
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }, &ctx).unwrap();
+    assert_eq!(g.excess_damage_this_resolution, 4, "6 to a 2/2 → 4 excess");
+    // 6 to a 9/9 → no excess, and the counter reset between resolutions.
+    let big = g.add_card_to_battlefield(1, catalog::bygone_colossus());
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(big)));
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }, &ctx).unwrap();
+    assert_eq!(g.excess_damage_this_resolution, 0, "6 to a 9/9 → no excess");
+}

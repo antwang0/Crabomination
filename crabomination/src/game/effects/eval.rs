@@ -602,6 +602,7 @@ impl GameState {
             Predicate::PlayerSacrificedThisResolution(pref) => self
                 .resolve_player(pref, ctx)
                 .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
+            Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::CurrentStepIs(step) => self.step == *step,
             Predicate::EntityMatches { what, filter } => self
