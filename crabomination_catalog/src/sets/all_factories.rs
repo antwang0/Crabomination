@@ -3712,6 +3712,9 @@ static DECKS: &[Factory] = &[
     super::decks::seeds_of_renewal,
     super::decks::sparas_headquarters,
     super::decks::mishras_foundry,
+    super::decks::quirion_beastcaller,
+    super::decks::yotian_frontliner,
+    super::decks::heaped_harvest,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
