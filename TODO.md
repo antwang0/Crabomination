@@ -11,16 +11,16 @@ state-corrupting in ordinary play.
 ## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
 
 Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still open:
-- **Station bands with non-keyword abilities.** `StationBand` grants keywords +
-  a creature P/T. Bands whose `{N+}` striation is a *static* (Lumen-Class
-  Frigate `{2+}: other creatures get +1/+1`) or a *triggered* ability
-  (Synthesizer Labship `{2+}` combat trigger) need a counter-gated static/
-  trigger primitive — defer those two cards until then.
-- **More Spacecraft** (22 in set): Lumen-Class Frigate, Synthesizer Labship (see
-  above), plus the legendaries (Dawnsire, The Seriema, Infinite Guideline
-  Station, The Eternity Elevator) and 8/7-cost battleships (Extinguisher
-  Battleship, Pinnacle Kill-Ship) — mostly keyword/P-T bands the shipped
-  `StationBand` already covers; just need the ETB/attack bodies wired.
+- **Station bands with triggered abilities.** `StationBand.statics` now handles
+  charge-gated *static* bands (Lumen-Class Frigate shipped). Bands whose `{N+}`
+  striation is a *triggered* ability (Synthesizer Labship `{2+}` combat trigger,
+  Entropic Battlecruiser `{1+}` discard-punisher) still need a counter-gated
+  trigger primitive — defer those until then.
+- **More Spacecraft** remaining: Synthesizer Labship / Entropic Battlecruiser
+  (see above), the legendaries (Dawnsire, The Seriema, Infinite Guideline
+  Station, The Eternity Elevator), Debris-less keyword bands. Most are keyword/
+  P-T bands the shipped `StationBand` already covers; just need ETB/attack
+  bodies wired. (16 Spacecraft shipped.)
 - **`set_gaps.py "set:eoe"` still lists ~215 cards.** Easy batches remaining:
   more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —

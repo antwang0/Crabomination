@@ -255,6 +255,22 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // Station progress (CR 721) — show the next {N+} charge threshold so the
+    // player can see how close the Spacecraft is to its next striation.
+    if let Some(threshold) = p.station_next_threshold {
+        let charges = p
+            .counters
+            .iter()
+            .find(|(k, _)| matches!(k, CounterType::Charge))
+            .map(|(_, n)| *n)
+            .unwrap_or(0);
+        lines.push(format!(
+            "Station → {} ({} more)",
+            threshold,
+            threshold.saturating_sub(charges)
+        ));
+    }
+
     // Effective keywords (after layer effects). Show these so anthem
     // effects ("All your creatures have Lifelink", Inkling Verselord)
     // are visible even when the printed text doesn't include the

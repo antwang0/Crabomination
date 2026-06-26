@@ -511,3 +511,19 @@ fn lumen_frigate_charge_gated_anthem_band() {
     assert_eq!((post.power, post.toughness), (3, 5));
     assert!(post.keywords.contains(&Keyword::Lifelink));
 }
+
+/// The server view surfaces a Station card's next `{N+}` charge threshold so
+/// the client can show progress (CR 721).
+#[test]
+fn view_surfaces_station_next_threshold() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // {4+}
+    let v = crate::server::view::project(&g, 0);
+    let pv = v.battlefield.iter().find(|p| p.id == ship).expect("ship in view");
+    assert_eq!(pv.station_next_threshold, Some(4), "next threshold before any charges");
+    // Add 4 charges → threshold reached → no next threshold.
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 4);
+    let v2 = crate::server::view::project(&g, 0);
+    let pv2 = v2.battlefield.iter().find(|p| p.id == ship).unwrap();
+    assert_eq!(pv2.station_next_threshold, None, "all bands active");
+}

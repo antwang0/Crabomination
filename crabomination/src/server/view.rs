@@ -695,6 +695,15 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .omen
             .as_ref()
             .is_some_and(|o| o.effect.requires_target()),
+        station_next_threshold: {
+            let charges = card.counter_count(crate::card::CounterType::Charge);
+            card.definition
+                .station
+                .iter()
+                .map(|b| b.min)
+                .filter(|&m| m > charges)
+                .min()
+        },
     }
 }
 
@@ -820,6 +829,15 @@ fn project_permanent(
         counters: card.counters.iter().map(|(k, v)| (*k, *v)).collect(),
         attached_to: card.attached_to,
         is_token: card.is_token,
+        station_next_threshold: {
+            let charges = card.counter_count(crate::card::CounterType::Charge);
+            card.definition
+                .station
+                .iter()
+                .map(|b| b.min)
+                .filter(|&m| m > charges)
+                .min()
+        },
         attacking: attacking.contains(&card.id),
         blocking_attacker: block_map
             .iter()

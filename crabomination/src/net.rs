@@ -835,6 +835,12 @@ pub struct KnownCard {
     /// to arm the targeting cursor before submitting `CastOmen`.
     #[serde(default)]
     pub omen_needs_target: bool,
+    /// CR 721 — for a Station card on the battlefield, the next `{N+}` charge
+    /// threshold it hasn't yet reached (so the client can show "Station → N"
+    /// progress next to its charge counters). `None` for non-station cards or
+    /// once every band is active. Pair with the `Charge` entry in `counters`.
+    #[serde(default)]
+    pub station_next_threshold: Option<u32>,
 }
 
 /// One activated ability as projected for the client.
@@ -1025,6 +1031,11 @@ pub struct PermanentView {
     pub counters: Vec<(CounterType, u32)>,
     pub attached_to: Option<CardId>,
     pub is_token: bool,
+    /// CR 721 — the next `{N+}` charge threshold this Station card hasn't
+    /// reached, for the client's "Station → N" progress hint. `None` for
+    /// non-station permanents or once every band is active.
+    #[serde(default)]
+    pub station_next_threshold: Option<u32>,
     /// Whether this permanent is currently declared as an attacker.
     pub attacking: bool,
     /// If this permanent is declared as a blocker, the attacker it is
