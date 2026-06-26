@@ -179,7 +179,10 @@ Each unblocks a large swath of cards.
 - 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
   CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power
   `StaticEffect::LethalDamageByPower` — Zilortha — now overrides the toughness
-  threshold in the SBA. Remaining: the broader marking-interplay audit.)
+  threshold in the SBA. **Excess damage** (CR 120.10) is tracked per resolution
+  in `deal_damage_to_from` — `Predicate::ExcessDamageDealtThisResolution` gates
+  "if excess damage was dealt this way" (Orbital Plunge). Remaining: the broader
+  marking-interplay audit, and excess-to-another-permanent redirection (120.4a).)
 - 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
   (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`).
   Remaining: "any time" activation riders, attacking-planeswalker redirect.

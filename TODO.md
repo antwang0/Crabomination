@@ -17,23 +17,23 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (18 Spacecraft shipped — `StationBand.triggers` now grants counter-gated
   *triggered* bands too, so Synthesizer Labship `{2+}` animate + Entropic
   Battlecruiser `{1+}` discard-punisher both ship.)
-- **`set_gaps.py "set:eoe"` still lists ~150 cards.** Easy batches remaining:
+- **`set_gaps.py "set:eoe"` still lists ~140 cards.** Easy batches remaining:
   more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
-  Newly-noticed deferrals: Emissary Escort / "greatest MV among other artifacts
-  you control" needs a `DynamicPt`/`Value` for that; Dark Endurance needs a
-  *target-aware* cost reduction ("costs {1} less if it targets a blocking
-  creature"); Pulsar Squadron Ace / Possibility Technician need filtered
-  impulse-reveal (top-5 → Spacecraft to hand) and impulse-from-gy-while-Kavu;
-  Genemorph Imago's 6+-lands 5/5 upgrade is approximated to the 3/3 set.
+  Still-open deferrals: Pulsar Squadron Ace / Possibility Technician need
+  filtered impulse-reveal (top-5 → Spacecraft to hand) and impulse-from-gy-while-
+  Kavu.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
   `Value::CastSpellManaSpent` exists but isn't propagated onto ETB triggers, and
-  a MV-≤-Value target filter is needed), **Blade of the Swarm** (modal "put an exiled
-  warp card on the bottom"), **Sothera, the Supervoid**, **Anticausal Vestige**
-  (LTB put-a-permanent), **Solar Blaze** (each creature self-damages = power),
-  **Fungal Colossus** (cost {X} less = differently-named lands — needs a
-  distinct-land-name count Value). Frenzied Baloth (`SpellsUncounterable` +
-  new `CombatDamageCantBePrevented` static), Gravblade Heavy (`PumpSelfIf` with
-  keywords) and Skystinger (blocks-a-flier trigger) all ship.
+  a MV-≤-Value target filter is needed), **Blade of the Swarm** (modal "put an
+  exiled warp card on the bottom"), **Sothera, the Supervoid** (each-opponent
+  exile-a-creature on friendly death). Emissary Escort
+  (`DynamicPt::BasePlusGreatestOtherArtifactMv`), Dark Endurance (target-aware
+  cost reduction via `self_cost_reduction_if_target`/`IsBlocking`), Genemorph
+  Imago's six-lands 5/5, Fungal Colossus (`SelfCostReducedByDistinctLandNames`),
+  Mental Modulation (`SelfCostReducedDuringYourTurn`) and Anticausal Vestige
+  (LTB cheat-into-play via `ManaValueAtMostYourCount`) now ship. Orbital Plunge's
+  "if excess damage" now reads real excess (`Predicate::ExcessDamageDealtThisResolution`,
+  CR 120.10).
 - Approximations in the shipped batches: All-Fates Stalker drops the "up to one
   non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature; Tidal
   Terror omits tap-two-to-be-unblockable; Larval Scoutlander's sacrifice option
