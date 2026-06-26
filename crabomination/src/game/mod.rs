@@ -507,6 +507,11 @@ pub struct GameState {
     /// Reset between independent resolutions.
     #[serde(default)]
     pub(crate) sacrificed_mana_value: Option<u32>,
+    /// Transient: power of the creature tapped to pay a Station ability's cost
+    /// (CR 702.184a). Stamped by `Effect::WithTappedPower` at resolution; read
+    /// by `Value::TappedForCostPower`. Reset between independent resolutions.
+    #[serde(default)]
+    pub(crate) tapped_for_cost_power: Option<i32>,
     /// Transient: the firing event's amount for the trigger currently being
     /// targeted or resolved (stamped in `drain_trigger_queue` and
     /// `continue_trigger_resolution_with_source`). For died events this is
@@ -1129,6 +1134,7 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
+            tapped_for_cost_power: self.tapped_for_cost_power,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
@@ -1263,6 +1269,7 @@ impl GameState {
             sacrificed_power: None,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
+            tapped_for_cost_power: None,
             trigger_event_amount_scratch: 0,
             last_created_token: None,
             last_die_roll: 0,
@@ -4680,6 +4687,49 @@ impl GameState {
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddKeyword(kw.clone()),
                 });
+            }
+        }
+        // CR 721.2 — Station symbols. Every band whose `{N+}` threshold is met
+        // by the permanent's charge-counter count grants its abilities (layer
+        // 6); a band with a `[P/T]` box also makes it a creature with that base
+        // P/T (CR 721.2b — layers 4 + 7a).
+        for card in &self.battlefield {
+            if card.definition.station.is_empty() {
+                continue;
+            }
+            let charges = card.counter_count(crate::card::CounterType::Charge);
+            for band in card.definition.station.iter().filter(|b| charges >= b.min) {
+                for kw in &band.keywords {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+                if let Some((power, toughness)) = band.pt {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddCardType(crate::card::CardType::Creature),
+                    });
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::CharDefining),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(power, toughness),
+                    });
+                }
             }
         }
         for card in &self.battlefield {

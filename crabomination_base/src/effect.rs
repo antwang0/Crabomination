@@ -389,6 +389,9 @@ pub enum Value {
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
     SacrificedPower,
+    /// CR 702.184a — power of the creature tapped to pay a Station ability's
+    /// cost, carried to resolution by `Effect::WithTappedPower`.
+    TappedForCostPower,
     /// Toughness of the most recently sacrificed creature this
     /// resolution (set by `Effect::SacrificeAndRemember`). Used by
     /// Tribute to Hunger (gain life equal to sacrificed creature's
@@ -3455,6 +3458,12 @@ pub enum Effect {
     /// Transfigure). Wrapped around the queued ability effect by
     /// `activate_ability`; not meant for card definitions.
     WithSacrificedPt { power: i32, toughness: i32, #[serde(default)] mana_value: u32, body: Box<Effect> },
+
+    /// Internal plumbing: re-stamp the power of the creature tapped to pay a
+    /// Station ability's cost (CR 702.184a) before running `body`, so
+    /// `Value::TappedForCostPower` reads it at resolution. Wrapped around the
+    /// queued Station effect by `activate_ability`; not for card definitions.
+    WithTappedPower { power: i32, body: Box<Effect> },
 
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,

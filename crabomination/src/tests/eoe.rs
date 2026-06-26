@@ -2,7 +2,7 @@
 //! exile), Void (a nonland permanent left the battlefield or a spell was warped
 //! this turn), Lander tokens, and assorted card behaviors.
 
-use crate::card::{CounterType, Keyword};
+use crate::card::{CardType, CounterType, Keyword};
 use crate::catalog;
 use crate::game::types::TurnStep;
 use crate::game::*;
@@ -367,4 +367,70 @@ fn hymn_of_the_faller_void_draws_extra() {
     drain_stack(&mut g);
     // -1 (spell) + 2 drawn (base + Void).
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "Void granted the extra draw");
+}
+
+/// CR 702.184 + 721 — Station: tapping a creature adds charge counters equal to
+/// its power, and reaching a `{N+}` band turns the Spacecraft into a creature
+/// with that band's P/T and keywords.
+#[test]
+fn station_charges_from_tapped_power_then_band_makes_creature() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper());
+    let beast = g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes()); // 4/4
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Before stationing it's a noncreature artifact.
+    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("station the 4/4");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(ship).unwrap();
+    assert_eq!(s.counter_count(CounterType::Charge), 4, "charges = tapped creature's power");
+    assert!(g.battlefield_find(beast).unwrap().tapped, "the stationed creature is tapped");
+    let post = g.computed_permanent(ship).unwrap();
+    assert!(post.card_types.contains(&CardType::Creature), "{{4+}} makes it a creature");
+    assert_eq!((post.power, post.toughness), (2, 2));
+    assert!(post.keywords.contains(&Keyword::Flying));
+}
+
+/// Charge counters accumulate across multiple stationings; a higher `{N+}`
+/// band (Atmospheric Greenhouse, {8+}) only applies once the total is reached.
+#[test]
+fn station_accumulates_to_higher_band() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::atmospheric_greenhouse());
+    let a = g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes()); // 4/4
+    let b = g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes()); // 4/4
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        }).expect("station");
+        drain_stack(g);
+    };
+    act(&mut g); // 4 charges — below {8+}
+    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
+    let _ = (a, b);
+    act(&mut g); // 8 charges — {8+} applies
+    let post = g.computed_permanent(ship).unwrap();
+    assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 8);
+    assert!(post.card_types.contains(&CardType::Creature));
+    assert_eq!((post.power, post.toughness), (5, 4));
+    assert!(post.keywords.contains(&Keyword::Flying) && post.keywords.contains(&Keyword::Trample));
+}
+
+/// Station is sorcery-speed only (CR 702.184a) — it can't be activated with the
+/// stack non-empty / at instant speed.
+#[test]
+fn station_is_sorcery_speed_only() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper());
+    g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes());
+    g.step = TurnStep::Upkeep; // not a main phase
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "station rejected outside a main phase");
 }

@@ -697,6 +697,7 @@ impl GameState {
         self.sacrificed_power = None;
         self.sacrificed_toughness = None;
         self.sacrificed_mana_value = None;
+        self.tapped_for_cost_power = None;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
         // to tokens created by *this* resolution.
@@ -8840,6 +8841,11 @@ impl GameState {
                 self.sacrificed_power = Some(*power);
                 self.sacrificed_toughness = Some(*toughness);
                 self.sacrificed_mana_value = Some(*mana_value);
+                self.run_effect(body, ctx, events)
+            }
+
+            Effect::WithTappedPower { power, body } => {
+                self.tapped_for_cost_power = Some(*power);
                 self.run_effect(body, ctx, events)
             }
 

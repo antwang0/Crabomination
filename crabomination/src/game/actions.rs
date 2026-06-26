@@ -8726,10 +8726,14 @@ impl GameState {
 
         // Tap-another-as-cost (CR 602.5b): with tap/mana/life paid, tap the
         // pre-selected untapped permanent. Opposition's "Tap an untapped
-        // creature you control" cost runs here.
+        // creature you control" cost runs here. Capture its power first so a
+        // Station ability (CR 702.184a) can stamp the counter count at
+        // resolution via `Effect::WithTappedPower`.
+        let mut tap_other_power: Option<i32> = None;
         if let Some(other_cid) = tap_other_pick
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
         {
+            tap_other_power = Some(c.power());
             c.tapped = true;
         }
 
@@ -8871,7 +8875,7 @@ impl GameState {
             let ability_target = target.clone();
             // Carry a cost-sacrificed creature's P/T into resolution
             // (intervening resolutions reset the scratch).
-            let queued_effect = match cost_sac_pt {
+            let mut queued_effect = match cost_sac_pt {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
                     toughness,
@@ -8880,6 +8884,11 @@ impl GameState {
                 },
                 None => ability.effect,
             };
+            // Carry the Station-tapped creature's power into resolution
+            // (CR 702.184a) so `Value::TappedForCostPower` reads it.
+            if let Some(power) = tap_other_power {
+                queued_effect = Effect::WithTappedPower { power, body: Box::new(queued_effect) };
+            }
             // CR 601.2b — a modal activated ability's mode is chosen as part
             // of the activation (Shifting Ceratops's reach/trample/haste).
             let mode = self.pick_trigger_mode(&queued_effect, card_id, p);

@@ -717,6 +717,23 @@ pub fn ripple(n: u32) -> TriggeredAbility {
     }
 }
 
+/// Station (CR 702.184): "Tap another untapped creature you control: Put a
+/// number of charge counters on this permanent equal to the tapped creature's
+/// power. Activate only as a sorcery." Every station card carries this ability
+/// (CR 721.4); pair it with `CardDefinition.station` bands.
+pub fn station() -> ActivatedAbility {
+    ActivatedAbility {
+        sorcery_speed: true,
+        tap_other_filter: Some(crate::card::SelectionRequirement::Creature),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: crate::card::CounterType::Charge,
+            amount: Value::TappedForCostPower,
+        },
+        ..Default::default()
+    }
+}
+
 /// Unearth `cost` (CR 702.84). "[cost]: Return this card from your graveyard to
 /// the battlefield. It gains haste. Exile it at the beginning of the next end
 /// step …" — a sorcery-speed graveyard-activated ability. The "exile it if it

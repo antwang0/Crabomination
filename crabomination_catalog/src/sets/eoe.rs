@@ -3,11 +3,11 @@
 //! `ActivatedAbility.exhaust` flag + `CardInstance.exhausted_abilities`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, LandType, Predicate, SelectionRequirement, StaticAbility, Subtypes,
-    TokenDefinition, TriggeredAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{etb, on_dies, target, target_filtered, warp};
+use crate::effect::shortcut::{etb, on_dies, station, target, target_filtered, warp};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 use crabomination_base::tokens::lander_token;
@@ -1482,6 +1482,210 @@ pub fn insatiable_skittermaw() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── EOE Station cards (CR 721 + CR 702.184) ──────────────────────────────────
+// Each Spacecraft enters as a noncreature artifact carrying the Station
+// activated ability (`shortcut::station`). Once charge counters reach a band's
+// `{N+}` threshold, the band's keywords + base P/T apply (it becomes a
+// creature). Bands live in `CardDefinition.station`.
+
+/// Wurmwall Sweeper — {2} Artifact — Spacecraft. ETB: surveil 2. Station;
+/// {4+}: 2/2 with flying.
+pub fn wurmwall_sweeper() -> CardDefinition {
+    CardDefinition {
+        name: "Wurmwall Sweeper",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 4, keywords: vec![Keyword::Flying], pt: Some((2, 2)) }],
+        ..Default::default()
+    }
+}
+
+/// Uthros Scanship — {3}{U} Artifact — Spacecraft. ETB: draw two, then discard
+/// one. Station; {8+}: 4/4 with flying.
+pub fn uthros_scanship() -> CardDefinition {
+    CardDefinition {
+        name: "Uthros Scanship",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]))],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((4, 4)) }],
+        ..Default::default()
+    }
+}
+
+/// Atmospheric Greenhouse — {4}{G} Artifact — Spacecraft. ETB: put a +1/+1
+/// counter on each creature you control. Station; {8+}: 5/4 with flying,
+/// trample.
+pub fn atmospheric_greenhouse() -> CardDefinition {
+    CardDefinition {
+        name: "Atmospheric Greenhouse",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand {
+            min: 8,
+            keywords: vec![Keyword::Flying, Keyword::Trample],
+            pt: Some((5, 4)),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wedgelight Rammer — {3}{W} Artifact — Spacecraft. ETB: create a 2/2
+/// colorless Robot artifact creature token. Station; {9+}: 3/4 with flying,
+/// first strike.
+pub fn wedgelight_rammer() -> CardDefinition {
+    let robot = TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Wedgelight Rammer",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: robot,
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand {
+            min: 9,
+            keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+            pt: Some((3, 4)),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fell Gravship — {2}{B} Artifact — Spacecraft. ETB: mill three, then return a
+/// creature or Spacecraft card from your graveyard to your hand. Station;
+/// {8+}: 3/2 with flying, lifelink.
+pub fn fell_gravship() -> CardDefinition {
+    CardDefinition {
+        name: "Fell Gravship",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                max: Value::Const(1),
+            },
+        ]))],
+        activated_abilities: vec![station()],
+        station: vec![StationBand {
+            min: 8,
+            keywords: vec![Keyword::Flying, Keyword::Lifelink],
+            pt: Some((3, 2)),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warmaker Gunship — {2}{R} Artifact — Spacecraft. ETB: deal damage equal to
+/// the number of artifacts you control to target creature an opponent
+/// controls. Station; {6+}: 4/3 with flying.
+pub fn warmaker_gunship() -> CardDefinition {
+    CardDefinition {
+        name: "Warmaker Gunship",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            amount: Value::count(Selector::EachPermanent(
+                SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+            )),
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 6, keywords: vec![Keyword::Flying], pt: Some((4, 3)) }],
+        ..Default::default()
+    }
+}
+
+/// Sledge-Class Seedship — {2}{G} Artifact — Spacecraft. Station; {7+}: 4/5
+/// with flying. Whenever it attacks, you may put a creature card from your hand
+/// onto the battlefield.
+pub fn sledge_class_seedship() -> CardDefinition {
+    CardDefinition {
+        name: "Sledge-Class Seedship",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 5)) }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Put a creature card from your hand onto the battlefield".into(),
+                body: Box::new(Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                    count: Value::Const(1),
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Larval Scoutlander — {2}{G} Artifact — Spacecraft. ETB: you may sacrifice a
+/// land. If you do, search your library for up to two basic lands and put them
+/// onto the battlefield tapped. Station; {7+}: 3/3 with flying. (The "or
+/// Lander" sacrifice option is approximated as land-only.)
+pub fn larval_scoutlander() -> CardDefinition {
+    CardDefinition {
+        name: "Larval Scoutlander",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice a land".into(),
+            filter: SelectionRequirement::Land,
+            count: Value::Const(1),
+            then: Box::new(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::Const(2),
+            }),
+            else_: None,
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((3, 3)) }],
         ..Default::default()
     }
 }

@@ -529,6 +529,10 @@ pub fn lander_token() -> TokenDefinition {
     TokenDefinition {
         name: "Lander".into(),
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Lander],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,

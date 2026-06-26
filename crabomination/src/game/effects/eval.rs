@@ -284,6 +284,7 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::TappedForCostPower => self.tapped_for_cost_power.unwrap_or(0),
             Value::SacrificedToughness => self.sacrificed_toughness.unwrap_or(0),
             Value::SacrificedManaValue => self.sacrificed_mana_value.unwrap_or(0) as i32,
             Value::CardsDiscardedThisEffect => self.cards_discarded_this_resolution as i32,

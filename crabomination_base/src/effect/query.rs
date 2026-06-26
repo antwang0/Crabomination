@@ -261,6 +261,7 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
+            Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
@@ -815,6 +816,7 @@ impl Effect {
                 then.primary_target_filter()
             }
             Effect::WithSacrificedPt { body, .. }
+            | Effect::WithTappedPower { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
@@ -1692,6 +1694,7 @@ impl Effect {
                     eff_find(then, slot, mode, kicked)
                 }
                 Effect::WithSacrificedPt { body, .. }
+                | Effect::WithTappedPower { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),

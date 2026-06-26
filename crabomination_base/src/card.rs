@@ -191,6 +191,8 @@ pub enum ArtifactSubtype {
     Map,
     // The Brothers' War mana token (CR 111.10q).
     Powerstone,
+    // Edge of Eternities: station card (CR 721) and its Lander token.
+    Spacecraft, Lander,
 }
 
 /// Enchantment subtypes.
@@ -1007,6 +1009,20 @@ pub struct LevelBand {
     pub keywords: Vec<Keyword>,
 }
 
+/// CR 721.2 — one `{N+}[abilities][P/T]` striation of a station card.
+/// While the permanent has `min` or more charge counters, it gains
+/// `keywords` (layer 6); if `pt` is `Some`, it also becomes a creature with
+/// that base power/toughness in addition to its other types (CR 721.2b,
+/// layers 4 + 7a).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StationBand {
+    pub min: u32,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
+    #[serde(default)]
+    pub pt: Option<(i32, i32)>,
+}
+
 /// Composable filter for valid targets of a spell or ability.
 /// `Default` is the match-anything `Any`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1582,6 +1598,11 @@ pub struct CardDefinition {
     /// non-leveler cards.
     #[serde(default)]
     pub level_bands: Vec<LevelBand>,
+    /// CR 721 — Station-card striations (`{N+}` symbols), ordered by `min`.
+    /// Empty for non-station cards. Cards with any station band always carry
+    /// the Station ability (CR 721.4); add it via `shortcut::station()`.
+    #[serde(default)]
+    pub station: Vec<StationBand>,
     pub loyalty_abilities: Vec<LoyaltyAbility>,
     /// CR 606.3 override — "You may activate the loyalty abilities of [this]
     /// twice each turn rather than only once." (Urza, Planeswalker.)
