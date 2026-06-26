@@ -4483,3 +4483,276 @@ pub fn mental_modulation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Weftstalker Ardent — {2}{R} Creature — Drix Artificer 2/3. Whenever another
+/// creature or artifact you control enters, deal 1 to each opponent. Warp {R}.
+pub fn weftstalker_ardent() -> CardDefinition {
+    CardDefinition {
+        name: "Weftstalker Ardent",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drix, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        alternative_cost: Some(warp(cost(&[r()]))),
+        ..Default::default()
+    }
+}
+
+/// Weftblade Enhancer — {5}{W} Creature — Drix Artificer 3/4. ETB: put a +1/+1
+/// counter on each of up to two target creatures. Warp {2}{W}.
+pub fn weftblade_enhancer() -> CardDefinition {
+    CardDefinition {
+        name: "Weftblade Enhancer",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drix, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        alternative_cost: Some(warp(cost(&[generic(2), w()]))),
+        ..Default::default()
+    }
+}
+
+/// Swarm Culler — {3}{B} Creature — Insect Warrior 2/4, flying. Whenever it
+/// becomes tapped, you may sacrifice another creature or artifact; if you do,
+/// draw a card.
+pub fn swarm_culler() -> CardDefinition {
+    CardDefinition {
+        name: "Swarm Culler",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice another creature or artifact?".into(),
+                filter: (SelectionRequirement::Creature.or(SelectionRequirement::Artifact))
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+                count: Value::Const(1),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sunstar Chaplain — {1}{W} Creature — Human Cleric 3/2. At your end step, if
+/// you control two or more tapped creatures, put a +1/+1 counter on target
+/// creature you control. {2}, Remove a +1/+1 counter from a creature you
+/// control: Tap target artifact or creature.
+pub fn sunstar_chaplain() -> CardDefinition {
+    CardDefinition {
+        name: "Sunstar Chaplain",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: two_tapped_creatures(),
+                then: Box::new(Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zookeeper Mechan — {1}{R} Artifact Creature — Robot 1/3. {T}: Add {R}.
+/// {6}{R}: Target creature you control gets +4/+0 until end of turn. Sorcery
+/// speed.
+pub fn zookeeper_mechan() -> CardDefinition {
+    CardDefinition {
+        name: "Zookeeper Mechan",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(6), r()]),
+                sorcery_speed: true,
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(4),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Vaultguard Trooper — {4}{R} Creature — Kavu Soldier 5/5. At your end step, if
+/// you control two or more tapped creatures, you may discard your hand; if you
+/// do, draw two cards.
+pub fn vaultguard_trooper() -> CardDefinition {
+    CardDefinition {
+        name: "Vaultguard Trooper",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: two_tapped_creatures(),
+                then: Box::new(Effect::MayDo {
+                    description: "Discard your hand to draw two?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(99),
+                            random: false,
+                        },
+                        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Terrapact Intimidator — {1}{R} Creature — Kavu Scout 2/1. ETB: target opponent
+/// may have you create two Lander tokens; if they don't, put two +1/+1 counters
+/// on this creature.
+pub fn terrapact_intimidator() -> CardDefinition {
+    CardDefinition {
+        name: "Terrapact Intimidator",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::VillainousChoice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            option_a: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lander_token(),
+            }),
+            option_b: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Voidforged Titan — {4}{B} Artifact Creature — Robot Warrior 5/4. Void — At
+/// your end step, if a nonland permanent left the battlefield this turn or a
+/// spell was warped this turn, draw a card and lose 1 life.
+pub fn voidforged_titan() -> CardDefinition {
+    CardDefinition {
+        name: "Voidforged Titan",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::VoidActive { who: PlayerRef::You },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}

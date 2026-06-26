@@ -1618,3 +1618,97 @@ fn mental_modulation_turn_discount_and_effect() {
     assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
     assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
 }
+
+/// Weftstalker Ardent pings each opponent when another permanent enters.
+#[test]
+fn weftstalker_ardent_pings_on_other_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::weftstalker_ardent());
+    let foe_life = g.players[1].life;
+    // Dispatch the ETB of another creature so Weftstalker's watcher triggers.
+    let entered = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentEntered { card_id: entered }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "each opponent took 1");
+}
+
+/// Weftblade Enhancer drops +1/+1 counters on up to two creatures.
+#[test]
+fn weftblade_enhancer_counters_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::weftblade_enhancer().triggered_abilities[0].effect.clone(), &[a, b]);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Swarm Culler loots when it becomes tapped and you sac something.
+#[test]
+fn swarm_culler_sac_to_draw_on_tap() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let culler = g.add_card_to_battlefield(0, catalog::swarm_culler());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let before = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(culler, 0, None);
+    g.resolve_effect(&catalog::swarm_culler().triggered_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew");
+}
+
+/// Sunstar Chaplain's end-step trigger grows a creature when two are tapped.
+#[test]
+fn sunstar_chaplain_end_step_counter() {
+    let mut g = two_player_game();
+    let chap = g.add_card_to_battlefield(0, catalog::sunstar_chaplain());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(chap).unwrap().tapped = true;
+    g.battlefield_find_mut(other).unwrap().tapped = true;
+    resolve_targeted(&mut g, 0, catalog::sunstar_chaplain().triggered_abilities[0].effect.clone(), &[other]);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Terrapact Intimidator: when the opponent declines the Landers, it gets two
+/// +1/+1 counters (the lesser self-harm in a 2-player game is the counters).
+#[test]
+fn terrapact_intimidator_villainous_choice() {
+    let mut g = two_player_game();
+    let terra = g.move_card_to_battlefield_for_test(0, catalog::terrapact_intimidator());
+    drain_stack(&mut g);
+    let landers = g.battlefield.iter().filter(|c| c.definition.name == "Lander").count();
+    let counters = g.battlefield_find(terra).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0);
+    // Exactly one branch happened.
+    assert!((landers == 2) ^ (counters == 2), "opponent picked exactly one option");
+}
+
+/// Voidforged Titan draws and pays 1 life at end step while Void is active.
+#[test]
+fn voidforged_titan_void_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::voidforged_titan());
+    g.nonland_permanent_left_bf_this_turn = true; // Void on
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    resolve_targeted(&mut g, 0, catalog::voidforged_titan().triggered_abilities[0].effect.clone(), &[]);
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Zookeeper Mechan taps for {R}.
+#[test]
+fn zookeeper_mechan_taps_for_red() {
+    let mut g = two_player_game();
+    let zoo = g.add_card_to_battlefield(0, catalog::zookeeper_mechan());
+    g.clear_sickness(zoo);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zoo, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 1);
+}

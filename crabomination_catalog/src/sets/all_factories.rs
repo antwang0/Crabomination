@@ -3983,6 +3983,14 @@ static EOE: &[Factory] = &[
     super::eoe::thawbringer,
     super::eoe::susurian_voidborn,
     super::eoe::mental_modulation,
+    super::eoe::weftstalker_ardent,
+    super::eoe::weftblade_enhancer,
+    super::eoe::swarm_culler,
+    super::eoe::sunstar_chaplain,
+    super::eoe::zookeeper_mechan,
+    super::eoe::vaultguard_trooper,
+    super::eoe::terrapact_intimidator,
+    super::eoe::voidforged_titan,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
