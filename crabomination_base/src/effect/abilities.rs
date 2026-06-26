@@ -348,6 +348,11 @@ pub enum StaticEffect {
     /// prevention shields only for damage whose source is a creature that
     /// controller controls.
     ControllerCreaturesCombatDamageCantBePrevented,
+    /// CR 615.12 — *all* combat damage can't be prevented, regardless of
+    /// controller (Frenzied Baloth). Bypasses prevention shields for any
+    /// damage whose source is a creature (the combat approximation shared
+    /// with `ControllerCreaturesCombatDamageCantBePrevented`).
+    CombatDamageCantBePrevented,
     /// CR 508.1g — creatures can't attack the source's controller (and, when
     /// `protect_planeswalkers`, a planeswalker they control) unless the
     /// attacking player pays `amount` generic mana for each such attacker.

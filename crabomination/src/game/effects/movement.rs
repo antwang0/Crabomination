@@ -61,13 +61,14 @@ impl GameState {
         {
             let ctrl = src.controller;
             let unpreventable = self.battlefield.iter().any(|c| {
-                c.controller == ctrl
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
-                        )
-                    })
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::CombatDamageCantBePrevented)
+                        || (c.controller == ctrl
+                            && matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+                            ))
+                })
             });
             if unpreventable {
                 return amount;

@@ -10470,6 +10470,8 @@ fn static_effect_to_effects(
             // Questing Beast — consulted directly in `apply_prevention_shields`;
             // no layer effect.
             | StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+            // Frenzied Baloth — consulted in `apply_prevention_shields`; no layer.
+            | StaticEffect::CombatDamageCantBePrevented
             // Bloodletter — consulted in `adjust_life` via `life_loss_doubled_now`;
             // no layer effect.
             | StaticEffect::OpponentLifeLossDoubledDuringYourTurn

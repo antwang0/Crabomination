@@ -3923,6 +3923,9 @@ static EOE: &[Factory] = &[
     super::eoe::nutrient_block,
     super::eoe::oreplate_pangolin,
     super::eoe::rayblade_trooper,
+    super::eoe::frenzied_baloth,
+    super::eoe::gravblade_heavy,
+    super::eoe::skystinger,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

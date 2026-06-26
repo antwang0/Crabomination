@@ -2826,3 +2826,94 @@ pub fn rayblade_trooper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── EOE batch 9 — new primitives (uncounterable/unpreventable statics) ────────
+
+/// Frenzied Baloth — {G}{G} Creature — Beast 3/2, trample, haste. This spell
+/// can't be countered. Creature spells you control can't be countered. Combat
+/// damage can't be prevented.
+pub fn frenzied_baloth() -> CardDefinition {
+    CardDefinition {
+        name: "Frenzied Baloth",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::Haste, Keyword::CantBeCountered],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creature spells you control can't be countered.",
+                effect: StaticEffect::SpellsUncounterable { filter: SelectionRequirement::Creature },
+            },
+            StaticAbility {
+                description: "Combat damage can't be prevented.",
+                effect: StaticEffect::CombatDamageCantBePrevented,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gravblade Heavy — {3}{B} Creature — Human Soldier 3/4. As long as you control
+/// an artifact, this creature gets +1/+0 and has deathtouch.
+pub fn gravblade_heavy() -> CardDefinition {
+    CardDefinition {
+        name: "Gravblade Heavy",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control an artifact, this gets +1/+0 and has deathtouch.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::Deathtouch],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skystinger — {2}{G} Creature — Insect Warrior 3/3, reach. Whenever it blocks
+/// a creature with flying, it gets +5/+0 until end of turn.
+pub fn skystinger() -> CardDefinition {
+    CardDefinition {
+        name: "Skystinger",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::BlockedAttacker,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(5),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

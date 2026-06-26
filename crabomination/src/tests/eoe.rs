@@ -767,3 +767,81 @@ fn nutrient_block_draws_on_leave() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "leaving the battlefield drew a card");
 }
+
+/// Frenzied Baloth's static makes all combat damage unpreventable: a prevention
+/// shield on the defending player is bypassed.
+#[test]
+fn frenzied_baloth_combat_damage_unpreventable() {
+    use crate::game::types::{Attack, AttackTarget, PreventionShield, PreventionTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::frenzied_baloth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::Player(1),
+        remaining: None,
+        gain_life: false,
+        source: None,
+        one_event: false,
+        reflect: false,
+        source_controller: None,
+    });
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].life, 18, "prevention shield bypassed");
+}
+
+/// Frenzied Baloth's static makes the controller's creature spells uncounterable.
+#[test]
+fn frenzied_baloth_creature_spells_uncounterable() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::frenzied_baloth());
+    let bear_id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear = g.players[0].hand.iter().find(|c| c.id == bear_id).unwrap().clone();
+    let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
+    assert!(g.caster_grants_uncounterable(0, &bear), "your creature spell can't be countered");
+    assert!(!g.caster_grants_uncounterable(0, &bolt), "noncreature spells still counterable");
+}
+
+/// Gravblade Heavy gains +1/+0 and deathtouch while you control an artifact.
+#[test]
+fn gravblade_heavy_artifact_conditional_buff() {
+    let mut g = two_player_game();
+    let gh = g.add_card_to_battlefield(0, catalog::gravblade_heavy());
+    let cp = g.computed_permanent(gh).unwrap();
+    assert_eq!(cp.power, 3, "no artifact → base 3/4");
+    assert!(!cp.keywords.contains(&Keyword::Deathtouch));
+    g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // an artifact
+    let cp2 = g.computed_permanent(gh).unwrap();
+    assert_eq!(cp2.power, 4, "artifact → +1/+0");
+    assert!(cp2.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Skystinger gets +5/+0 when it blocks a creature with flying.
+#[test]
+fn skystinger_pumps_blocking_flier() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    g.clear_sickness(flier);
+    let sky = g.add_card_to_battlefield(0, catalog::skystinger());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: flier,
+        target: AttackTarget::Player(0),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(sky, flier)])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(sky).unwrap().power, 8, "blocked a flier → +5/+0");
+}

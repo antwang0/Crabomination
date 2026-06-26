@@ -24,11 +24,9 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   warp card on the bottom"), **Sothera, the Supervoid**, **Anticausal Vestige**
   (LTB put-a-permanent), **Solar Blaze** (each creature self-damages = power),
   **Fungal Colossus** (cost {X} less = differently-named lands — needs a
-  distinct-land-name count Value), **Frenzied Baloth** ("your creature spells
-  can't be countered" + "combat damage can't be prevented" statics),
-  **Gravblade Heavy** / **Skystinger** (a conditional self-keyword static —
-  deathtouch/anthem gated on a predicate; and a "blocks a creature with flying"
-  filtered trigger).
+  distinct-land-name count Value). Frenzied Baloth (`SpellsUncounterable` +
+  new `CombatDamageCantBePrevented` static), Gravblade Heavy (`PumpSelfIf` with
+  keywords) and Skystinger (blocks-a-flier trigger) all ship.
 - Approximations in the shipped batches: All-Fates Stalker drops the "up to one
   non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature; Tidal
   Terror omits tap-two-to-be-unblockable; Larval Scoutlander's sacrifice option
