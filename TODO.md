@@ -2168,6 +2168,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **Cards noticed this run (recent12–15) but deferred — need new primitives:**
+  Kutzil's Flanker (mode 1 wants a "creatures that left the battlefield under
+  your control this turn" count); Caustic Bronco (attack-reveal life-loss/drain
+  equal to the *revealed card's* mana value — a Value reading a just-revealed
+  card); Mosswood Dreadknight (cast-from-graveyard-as-Adventure death rider);
+  Ao, the Dawn Sky (dies-modal "look top 7, deploy nonland permanents with total
+  MV ≤ 4"); Gix, Yawgmoth Praetor (combat-damage "may pay 1 life: draw" +
+  discard-X exile-and-play); Valgavoth (opponent-graveyard-exile replacement +
+  play-from-exile-paying-life); Battle Cry Goblin (Pack tactics — "if you
+  attacked with total power ≥ N this combat"); Goblin Recruiter (search any
+  number + arrange on top); Gilt-Leaf Archdruid (tap-seven-untapped-Druids cost
+  + gain control of all lands); Divergent Transformations / Seeds-cycle's last
+  Undaunted card (polymorph-reveal-until-creature).
+
 - ⏳ **Equipment-matters follow-ups** (`decks::recent12` batch shipped these as
   documented approximations): a **while-equipped anthem** primitive (Auriok
   Steelshaper's "Soldiers/Knights you control +1/+1 while equipped" — drop the
