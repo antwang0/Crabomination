@@ -3765,6 +3765,9 @@ static DECKS: &[Factory] = &[
     super::decks::bear_cub,
     super::decks::sworn_guardian,
     super::decks::hunters_edge,
+    super::decks::beast_kin_ranger,
+    super::decks::marble_gargoyle,
+    super::decks::coral_colony,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
