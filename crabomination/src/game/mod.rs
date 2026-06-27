@@ -6749,7 +6749,7 @@ impl GameState {
                 crate::card::CardType::Creature,
             ),
         });
-        events.push(GameEvent::VehicleCrewed { vehicle });
+        events.push(GameEvent::VehicleCrewed { vehicle, crew: crew_creatures.to_vec() });
         Ok(events)
     }
 
@@ -6814,6 +6814,7 @@ impl GameState {
         if let Some(m) = self.battlefield.iter_mut().find(|c| c.id == mount) {
             m.saddled = true;
         }
+        events.push(GameEvent::MountSaddled { mount, riders: creatures.to_vec() });
         Ok(events)
     }
 

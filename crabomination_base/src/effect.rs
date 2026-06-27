@@ -1354,6 +1354,14 @@ pub enum EventKind {
     /// A permanent became tapped (Magda, Brazen Outlaw). The tapped
     /// permanent is the event subject; matched to `GameEvent::PermanentTapped`.
     Tapped,
+    /// CR 702.122/702.171 — "Whenever this creature crews a Vehicle or saddles
+    /// a Mount (during your main phase)." Fires from the crewing/saddling
+    /// creature's side (`SelfSource` matches when the source is among the
+    /// crew/riders); the crewed Vehicle / saddled Mount is the event subject,
+    /// so `Selector::TriggerSource` binds to it. Matched to
+    /// `GameEvent::VehicleCrewed` / `GameEvent::MountSaddled`. The "during your
+    /// main phase" rider is baked into the match (both printed cards carry it).
+    CrewsOrSaddles,
     /// CR 702.26 — a permanent phased in. The phasing-in permanent is the
     /// event subject; matched to `GameEvent::PermanentPhasedIn`.
     PhasesIn,

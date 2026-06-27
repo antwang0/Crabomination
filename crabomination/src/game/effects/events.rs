@@ -58,6 +58,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
+        (
+            EventKind::CrewsOrSaddles,
+            GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
+        ) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
@@ -78,6 +82,15 @@ pub(crate) fn event_matches_spec(
         _ => false,
     };
     if !kind_ok {
+        return false;
+    }
+
+    // CR 702.122/702.171 — the printed crew/saddle triggers fire only "during
+    // your main phase." Bake that rider into the match (both DFT cards carry
+    // it): the controller must be the active player in a main phase.
+    if matches!(spec.kind, EventKind::CrewsOrSaddles)
+        && !(source.controller == state.active_player_idx && state.step.is_main_phase())
+    {
         return false;
     }
 
@@ -226,6 +239,14 @@ pub(crate) fn event_matches_spec(
             // so this matches by id from the event's snapshot.
             event,
             GameEvent::CreatureLeftWithoutDying { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // CR 702.122/702.171 — "Whenever this creature crews a Vehicle or
+            // saddles a Mount." The source must be among the crew / riders.
+            event,
+            GameEvent::VehicleCrewed { crew, .. } if crew.contains(&source.id)
+        ) || matches!(
+            event,
+            GameEvent::MountSaddled { riders, .. } if riders.contains(&source.id)
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A
@@ -439,6 +460,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        // CR 702.122/702.171 — bind `Selector::TriggerSource` to the crewed
+        // Vehicle / saddled Mount ("that Mount or Vehicle gains …").
+        GameEvent::VehicleCrewed { vehicle, .. } => Some(EntityRef::Permanent(*vehicle)),
+        GameEvent::MountSaddled { mount, .. } => Some(EntityRef::Permanent(*mount)),
         GameEvent::PermanentPhasedIn { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BecameMonstrous { card_id } => Some(EntityRef::Permanent(*card_id)),

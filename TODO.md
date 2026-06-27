@@ -20,11 +20,12 @@ Mechanics deferred while batching the 20-card `recent23` wave:
   `StaticEffect::CrewSaddlePowerBonus`, read by `crew`/`saddle`, the bot's
   `pick_crew`, and surfaced in `PermanentView.crew_power_bonus` (Cloudspire
   Captain, Deathless Pilot in `decks::recent24`).
-- **Crew/saddle triggered event** (DFT — "whenever this creature saddles a
-  Mount or crews a Vehicle during your main phase, …"). Needs a
-  `GameEvent::VehicleCrewed`/`MountSaddled` (carrying the crewer list) + a
-  dispatcher path firing a crewer's `SelfSource` trigger targeting the crewed
-  permanent. Blocks Canyon Vaulter, Reckless Velocitaur.
+- ✅ **Crew/saddle triggered event** (DFT, CR 702.122/702.171 — "whenever this
+  creature saddles a Mount or crews a Vehicle during your main phase, …") —
+  `EventKind::CrewsOrSaddles` + `GameEvent::VehicleCrewed { crew }` /
+  `MountSaddled { riders }`; the crewer's `SelfSource` trigger fires with the
+  crewed permanent as `Selector::TriggerSource`, gated to the controller's main
+  phase. Canyon Vaulter, Reckless Velocitaur in `decks::recent24`.
 - **Spree** (DSK/OTJ, CR 702.172 — "choose one or more additional costs") — no
   variable additional-cost-mode primitive yet; blocked on cast-time modal
   selection (same as the guild Commands). Blocks Insatiable Avarice, Caught in

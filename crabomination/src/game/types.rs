@@ -1401,6 +1401,9 @@ pub enum GameEvent {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// CR 702.171 — a Mount was saddled; `riders` lists the tapped creatures.
+    /// Powers `EventKind::CrewsOrSaddles` (the riders' triggers).
+    MountSaddled { mount: CardId, riders: Vec<CardId> },
     /// CR 702.26 — a permanent phased out (moved to `GameState.phased_out`).
     PermanentPhasedOut { card_id: CardId },
     /// CR 702.26 — a permanent phased in (returned from `phased_out` during its
@@ -1439,8 +1442,9 @@ pub enum GameEvent {
     /// triggers (Siona, Captain of the Pyleas).
     AuraAttached { aura: CardId, attached_to: CardId },
     /// CR 702.122 — a Vehicle was crewed and became an artifact creature
-    /// until end of turn.
-    VehicleCrewed { vehicle: CardId },
+    /// until end of turn. `crew` lists the tapped crew members (their
+    /// `EventKind::CrewsOrSaddles` triggers fire).
+    VehicleCrewed { vehicle: CardId, crew: Vec<CardId> },
     PoisonAdded { player: usize, amount: u32 },
     /// CR 724 — `player` became the monarch.
     MonarchChanged { player: usize },

@@ -1809,6 +1809,7 @@ pub enum GameEventWire {
     TopCardRevealed { player: usize, card_name: String, is_land: bool },
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
     VehicleCrewed { vehicle: CardId },
+    MountSaddled { mount: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
     CityBlessingGained { player: usize },
@@ -2031,8 +2032,11 @@ impl From<&GameEvent> for GameEventWire {
                     attached_to: Some(*attached_to),
                 }
             }
-            GameEvent::VehicleCrewed { vehicle } => {
+            GameEvent::VehicleCrewed { vehicle, .. } => {
                 GameEventWire::VehicleCrewed { vehicle: *vehicle }
+            }
+            GameEvent::MountSaddled { mount, .. } => {
+                GameEventWire::MountSaddled { mount: *mount }
             }
             GameEvent::PoisonAdded { player, amount } => GameEventWire::PoisonAdded {
                 player: *player,
@@ -2232,7 +2236,8 @@ impl GameEventWire {
                 Some(target) => format!("{} attached to {}", name(*attachment), name(*target)),
                 None => format!("{} unattached", name(*attachment)),
             },
-            E::VehicleCrewed { vehicle } => format!("{} crewed", name(*vehicle)),
+            E::VehicleCrewed { vehicle, .. } => format!("{} crewed", name(*vehicle)),
+            E::MountSaddled { mount } => format!("{} saddled", name(*mount)),
             E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
             E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),
             E::CityBlessingGained { player } => format!("{} gets the city's blessing", pn(*player)),

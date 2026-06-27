@@ -514,6 +514,63 @@ fn full_throttle_adds_two_combats() {
     assert_eq!(g.additional_post_main_combats, combats_before + 2, "two additional combats queued");
 }
 
+/// Canyon Vaulter's crew trigger (CR 702.122) gives the crewed Vehicle flying.
+#[test]
+fn canyon_vaulter_crew_grants_flying() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::debris_beetle()); // Crew 2, no flying
+    let cv = g.add_card_to_battlefield(0, catalog::canyon_vaulter()); // power 3
+    g.clear_sickness(cv);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![cv] })
+        .expect("crew");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(veh).unwrap().keywords.contains(&Keyword::Flying),
+        "crewed Vehicle gained flying from Canyon Vaulter's trigger",
+    );
+}
+
+/// Reckless Velocitaur's crew trigger pumps the crewed Vehicle +2/+0 trample.
+#[test]
+fn reckless_velocitaur_crew_pumps() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::air_response_unit()); // 3/3 Crew 1
+    let rv = g.add_card_to_battlefield(0, catalog::reckless_velocitaur());
+    g.clear_sickness(rv);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![rv] })
+        .expect("crew");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(veh).unwrap();
+    assert_eq!(cp.power, 5, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// The crew trigger is gated to the controller's main phase: crewing during
+/// combat (instant speed) doesn't fire it.
+#[test]
+fn crew_trigger_silent_outside_main_phase() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::debris_beetle()); // no flying
+    let cv = g.add_card_to_battlefield(0, catalog::canyon_vaulter());
+    g.clear_sickness(cv);
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat; // not a main phase
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![cv] })
+        .expect("crew");
+    drain_stack(&mut g);
+    assert!(
+        !g.computed_permanent(veh).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying — crew happened outside the main phase",
+    );
+}
+
 /// Air Response Unit ships as a 3/3 Vehicle with Crew 1.
 #[test]
 fn air_response_unit_is_crewable_vehicle() {

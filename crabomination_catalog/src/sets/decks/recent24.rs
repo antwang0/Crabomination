@@ -922,6 +922,65 @@ pub fn full_throttle() -> CardDefinition {
     }
 }
 
+/// Canyon Vaulter — {1}{W} 3/1 Kor Pilot. Whenever it crews a Vehicle or
+/// saddles a Mount during your main phase, that permanent gains flying.
+pub fn canyon_vaulter() -> CardDefinition {
+    CardDefinition {
+        name: "Canyon Vaulter",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckless Velocitaur — {3}{R} 3/3 Minotaur Pilot. Whenever it crews a Vehicle
+/// or saddles a Mount during your main phase, that permanent gets +2/+0 and
+/// gains trample.
+pub fn reckless_velocitaur() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Velocitaur",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Tokens ───────────────────────────────────────────────────────────────────
 
 fn pilot_token() -> TokenDefinition {
