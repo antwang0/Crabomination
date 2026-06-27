@@ -26,6 +26,11 @@ Mechanics deferred while batching the 20-card `recent23` wave:
   `MountSaddled { riders }`; the crewer's `SelfSource` trigger fires with the
   crewed permanent as `Selector::TriggerSource`, gated to the controller's main
   phase. Canyon Vaulter, Reckless Velocitaur in `decks::recent24`.
+- **"Untap all attackers each combat" rider** (Full Throttle in
+  `decks::recent24` ships the two extra combat phases via
+  `AdditionalCombatPhaseAfterMain` but drops the begin-combat untap-attackers
+  delayed trigger). Needs a turn-scoped "at the beginning of each combat,
+  untap creatures that attacked this turn" delayed trigger.
 - **Spree** (DSK/OTJ, CR 702.172 — "choose one or more additional costs") — no
   variable additional-cost-mode primitive yet; blocked on cast-time modal
   selection (same as the guild Commands). Blocks Insatiable Avarice, Caught in
