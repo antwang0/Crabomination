@@ -677,6 +677,9 @@ pub enum Keyword {
     Phasing,
     Dredge(u32),
     Annihilator(u32),
+    /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
+    /// you don't lose this mana as steps and phases end (until end of combat)."
+    Firebending(u32),
     Banding,
     Equip(crate::mana::ManaCost),
     /// CR 702.151 — Reconfigure [cost]. An Equipment-creature attaches to a

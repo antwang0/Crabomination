@@ -118,6 +118,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Undying => "Und",
         // Eldrazi annihilator — a combat threat worth surfacing on the board.
         Annihilator(_) => "Ann",
+        // Firebending — attack-triggered red mana worth flagging on the board.
+        Firebending(_) => "FB",
         // Status keywords that change what a creature can be targeted/blocked by
         // or how it reads in combat.
         Phasing => "Phs",

@@ -97,6 +97,9 @@ mod tests_recent20;
 #[path = "../tests/recent21.rs"]
 mod tests_recent21;
 #[cfg(test)]
+#[path = "../tests/recent22.rs"]
+mod tests_recent22;
+#[cfg(test)]
 #[path = "../tests/mom.rs"]
 mod tests_mom;
 #[cfg(test)]
@@ -4932,6 +4935,9 @@ impl GameState {
             })
             .map(|c| c.controller)
             .collect();
+        // CR 702.189a — Firebending mana survives until end of combat; the
+        // end-of-combat-step empty is where it finally clears (no re-seed).
+        let end_of_combat = self.step == crate::game::types::TurnStep::EndCombat;
         for (i, player) in self.players.iter_mut().enumerate() {
             if keepers.contains(&i) {
                 let total = player.mana_pool.total();
@@ -4939,6 +4945,13 @@ impl GameState {
                 player.mana_pool.add_colorless(total);
             } else {
                 player.mana_pool.empty();
+            }
+            if player.firebending_kept_red > 0 {
+                if end_of_combat {
+                    player.firebending_kept_red = 0;
+                } else {
+                    player.mana_pool.add(crate::mana::Color::Red, player.firebending_kept_red);
+                }
             }
         }
     }

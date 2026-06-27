@@ -482,6 +482,17 @@ impl GameState {
                 };
                 triggers.push((id, sac_effect, p, None));
             }
+            // Firebending N — CR 702.189a: a triggered mana ability (resolves
+            // without the stack, CR 605.3b). Add N {R} now; the mana survives
+            // step/phase emptying until end of combat (`firebending_kept_red`).
+            if let Some(n) = computed_kw(id).iter().find_map(|kw| match kw {
+                Keyword::Firebending(n) => Some(*n),
+                _ => None,
+            }) {
+                self.players[p].mana_pool.add(crate::mana::Color::Red, n);
+                self.players[p].firebending_kept_red =
+                    self.players[p].firebending_kept_red.saturating_add(n);
+            }
             // ControllerAttackedByOpponent (CR 508.1g listeners): permanents
             // the defending player controls that fire "when a creature an
             // opponent attacks me" — Coveted Jewel's control-flip. The

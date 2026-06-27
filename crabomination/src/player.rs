@@ -392,6 +392,12 @@ pub struct Player {
     /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
     #[serde(default)]
     pub lands_dont_untap_next_untap: u32,
+    /// CR 702.189 — red mana added by Firebending this combat that survives
+    /// step/phase mana emptying ("you don't lose this mana as steps and phases
+    /// end"). Re-seeded into the pool by `empty_mana_pools`; cleared at end of
+    /// combat. `#[serde(default)]`.
+    #[serde(default)]
+    pub firebending_kept_red: u32,
     /// CR 500.7 — extra turns this player will take. When `advance_turn`
     /// would pass the turn, an active player with `extra_turns > 0`
     /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
@@ -563,6 +569,7 @@ impl Player {
             skip_turns: 0,
             skip_next_untap_step: 0,
             lands_dont_untap_next_untap: 0,
+            firebending_kept_red: 0,
             extra_turns: 0,
             epic_spells: Vec::new(),
             emblems: Vec::new(),
