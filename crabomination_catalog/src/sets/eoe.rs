@@ -4983,20 +4983,72 @@ fn eoe_planet(name: &'static str, color: crate::mana::Color) -> CardDefinition {
     }
 }
 
+/// A Planet's `12+` Station band that adds `color` mana for each permanent you
+/// control matching `filter` (Evendo — per creature; Uthros — per artifact).
+fn planet_mana_band(
+    mana: crate::mana::ManaCost,
+    color: crate::mana::Color,
+    filter: SelectionRequirement,
+) -> StationBand {
+    use crate::effect::ManaPayload;
+    StationBand {
+        min: 12,
+        activated: vec![ActivatedAbility {
+            mana_cost: mana,
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    color,
+                    Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                        filter,
+                    },
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// Adagia/Kavaron's 12+ bands (legendary token-copy / sac-a-land Robot-and-buff)
+// are dropped; see TODO.md. Evendo/Uthros/Susur Secundi ride the new activated
+// Station band (CR 721.2a).
 pub fn adagia_windswept_bastion() -> CardDefinition {
     eoe_planet("Adagia, Windswept Bastion", crate::mana::Color::White)
 }
 pub fn evendo_waking_haven() -> CardDefinition {
-    eoe_planet("Evendo, Waking Haven", crate::mana::Color::Green)
+    let mut c = eoe_planet("Evendo, Waking Haven", crate::mana::Color::Green);
+    c.station = vec![planet_mana_band(cost(&[g()]), crate::mana::Color::Green, SelectionRequirement::Creature)];
+    c
 }
 pub fn kavaron_memorial_world() -> CardDefinition {
     eoe_planet("Kavaron, Memorial World", crate::mana::Color::Red)
 }
 pub fn susur_secundi_void_altar() -> CardDefinition {
-    eoe_planet("Susur Secundi, Void Altar", crate::mana::Color::Black)
+    let mut c = eoe_planet("Susur Secundi, Void Altar", crate::mana::Color::Black);
+    // 12+ | {1}{B}, {T}, Pay 2 life, Sacrifice a creature: Draw cards equal to
+    // its power. Sorcery-speed.
+    c.station = vec![StationBand {
+        min: 12,
+        activated: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: true,
+            life_cost: 2,
+            sorcery_speed: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::SacrificedPower },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }];
+    c
 }
 pub fn uthros_titanic_godcore() -> CardDefinition {
-    eoe_planet("Uthros, Titanic Godcore", crate::mana::Color::Blue)
+    let mut c = eoe_planet("Uthros, Titanic Godcore", crate::mana::Color::Blue);
+    c.station = vec![planet_mana_band(cost(&[u()]), crate::mana::Color::Blue, SelectionRequirement::Artifact)];
+    c
 }
 
 // ── Creatures ───────────────────────────────────────────────────────────────

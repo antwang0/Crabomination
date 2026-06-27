@@ -23,9 +23,19 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   is resolved). Easy batches remaining: more Lander makers, Warp creatures, Void
   payoffs, vanilla/keyword commons. **Planets** (`LandType::Planet` — Adagia,
   Evendo, Kavaron, Susur Secundi, Uthros) ship as tapland + tap-for-color +
-  Station; their **12+ charge-counter activated band is dropped** (12 charges is
-  rarely reached; each band differs, and `StationBand` has no activated-ability
-  slot — adding one would let Planets/legendary Spacecraft bands be faithful).
+  Station. **`StationBand.activated` now exists** (CR 721.2a — surfaced via
+  `granted_abilities_for` when charges ≥ `min`), so Evendo/Uthros (`12+` scaled
+  mana) and Susur Secundi (`12+` sac-a-creature draw) ride faithful activated
+  bands. **Adagia** (legendary token-copy) and **Kavaron** (sac-a-land → Robot +
+  team-haste) 12+ bands are still dropped — both want `CreateTokenCopyOf`
+  legendary/`Seq` band bodies. The legendary Spacecraft (Dawnsire, The Seriema,
+  Infinite Guideline Station, The Eternity Elevator) can now use activated bands
+  too.
+- **Client render of `PermanentView.station_charges`** (new — current charge
+  count paired with `station_next_threshold` for an "N/M" Station chip). The
+  view field + test ship; the Bevy chip render is the remaining desktop-only
+  piece. The bot now **cracks Lander tokens for ramp** (`pick_crack_lander`)
+  when it has spare mana and a basic still in library.
 - **Recently shipped (modern_decks):** Pulsar Squadron Ace, Umbral Collar Zealot,
   Sunset Saboteur, Station Monitor, Virulent Silencer, Steelswarm Operator, Syr
   Vondam (Sunstar Exemplar), Starfield Shepherd, Timeline Culler, Tannuk

@@ -1035,6 +1035,12 @@ pub struct StationBand {
     /// off the source via `statics_granted_triggers_for` when charges ≥ `min`.
     #[serde(default)]
     pub triggers: Vec<TriggeredAbility>,
+    /// CR 721.2a — activated abilities active only while the threshold is met
+    /// (e.g. a Planet's `12+ | {cost}: …` band). Surfaced off the source via
+    /// `granted_abilities_for` (appended after printed + instance-granted) when
+    /// charges ≥ `min`, so the activation index path treats them as grants.
+    #[serde(default)]
+    pub activated: Vec<crate::effect::ActivatedAbility>,
 }
 
 /// Composable filter for valid targets of a spell or ability.

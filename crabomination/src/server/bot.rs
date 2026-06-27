@@ -2003,6 +2003,14 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Crack a Lander token (CR — `{2}, {T}, Sacrifice: fetch a basic land
+    // tapped`) for ramp when there's a basic still in the library and spare
+    // mana. Sequenced after spell-casting so the bot only ramps when it has
+    // nothing better to spend mana on. Dry-run-gated.
+    if let Some(action) = pick_crack_lander(state, seat) {
+        return action;
+    }
+
     // Fire a "{cost}: deal damage to any target" value ability (Frostwielder's
     // {T} ping, Kiku's tap-and-burn, Pain Kami-style sac burn) when it kills an
     // opposing creature outright. Dry-run-gated so cost / timing / target
@@ -2481,6 +2489,44 @@ fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameActi
                 card_id: card.id,
                 ability_index: idx,
                 target,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
+/// Crack a Lander token for ramp: a `{2}, {T}, Sacrifice: search a basic land
+/// onto the battlefield tapped` ability. Only fires when the controller still
+/// has a basic land in their library (so the fetch isn't wasted) and the
+/// engine accepts the activation (mana/timing). Targets nothing — the fetch
+/// resolves via the library-search decider.
+fn pick_crack_lander(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::{ArtifactSubtype, SelectionRequirement};
+    let has_basic = state.players[seat]
+        .library
+        .iter()
+        .any(|c| state.evaluate_requirement_on_card(&SelectionRequirement::IsBasicLand, c, seat));
+    if !has_basic {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat && !c.tapped) {
+        let is_lander = card.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Lander);
+        if !is_lander {
+            continue;
+        }
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !ab.sac_cost || !matches!(ab.effect, Effect::Search { .. }) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
                 additional_targets: Vec::new(),
                 x_value: None,
             };
@@ -5796,5 +5842,23 @@ mod stack_response_tests {
         assert!(matches!(action,
             GameAction::ActivateAbility { card_id, ref additional_targets, .. }
                 if card_id == squire && additional_targets == &vec![crate::game::Target::Permanent(bear)]));
+    }
+
+    /// The bot cracks a Lander token for ramp when it has spare mana and a basic
+    /// still in the library — but not when the library has no basic to fetch.
+    #[test]
+    fn bot_cracks_lander_for_ramp() {
+        let mut g = two_player_game();
+        let lander = g.add_token_to_battlefield(0, &crabomination_base::tokens::lander_token());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(2);
+        // No basic in library → don't waste the Lander.
+        assert!(pick_crack_lander(&g, 0).is_none(), "no basic to fetch → hold the Lander");
+        g.add_card_to_library(0, catalog::forest());
+        assert!(matches!(pick_crack_lander(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == lander),
+            "with a basic in library and spare mana, the bot ramps");
     }
 }

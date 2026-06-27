@@ -847,6 +847,11 @@ pub struct KnownCard {
     /// once every band is active. Pair with the `Charge` entry in `counters`.
     #[serde(default)]
     pub station_next_threshold: Option<u32>,
+    /// CR 721 — current charge-counter count on this Station card (mirror of
+    /// `PermanentView.station_charges`), for the client's "N/M" progress chip.
+    /// `None` for non-station cards.
+    #[serde(default)]
+    pub station_charges: Option<u32>,
 }
 
 /// One activated ability as projected for the client.
@@ -1042,6 +1047,11 @@ pub struct PermanentView {
     /// non-station permanents or once every band is active.
     #[serde(default)]
     pub station_next_threshold: Option<u32>,
+    /// CR 721 — current charge-counter count on this Station card, so the
+    /// client can render a "N/M" Station progress chip alongside
+    /// `station_next_threshold`. `None` for non-station permanents.
+    #[serde(default)]
+    pub station_charges: Option<u32>,
     /// Whether this permanent is currently declared as an attacker.
     pub attacking: bool,
     /// If this permanent is declared as a blocker, the attacker it is

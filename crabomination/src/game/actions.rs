@@ -7706,6 +7706,17 @@ impl GameState {
                 out.extend(bonus.activated_abilities.iter().cloned());
             }
         }
+        // CR 721.2a — Station `{N+}` activated-ability bands. While the source's
+        // charge-counter count meets a band threshold, that band's activated
+        // abilities are usable (a Planet's `12+ | {cost}: …`).
+        if let Some(c) = self.battlefield_find(card_id)
+            && !c.definition.station.is_empty()
+        {
+            let charges = c.counter_count(crate::card::CounterType::Charge);
+            for band in c.definition.station.iter().filter(|b| charges >= b.min) {
+                out.extend(band.activated.iter().cloned());
+            }
+        }
         out
     }
 

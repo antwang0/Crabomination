@@ -706,6 +706,8 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 .filter(|&m| m > charges)
                 .min()
         },
+        station_charges: (!card.definition.station.is_empty())
+            .then(|| card.counter_count(crate::card::CounterType::Charge)),
     }
 }
 
@@ -840,6 +842,8 @@ fn project_permanent(
                 .filter(|&m| m > charges)
                 .min()
         },
+        station_charges: (!card.definition.station.is_empty())
+            .then(|| card.counter_count(crate::card::CounterType::Charge)),
         attacking: attacking.contains(&card.id),
         blocking_attacker: block_map
             .iter()

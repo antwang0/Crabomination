@@ -521,11 +521,13 @@ fn view_surfaces_station_next_threshold() {
     let v = crate::server::view::project(&g, 0);
     let pv = v.battlefield.iter().find(|p| p.id == ship).expect("ship in view");
     assert_eq!(pv.station_next_threshold, Some(4), "next threshold before any charges");
+    assert_eq!(pv.station_charges, Some(0), "current charges surfaced");
     // Add 4 charges → threshold reached → no next threshold.
     g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 4);
     let v2 = crate::server::view::project(&g, 0);
     let pv2 = v2.battlefield.iter().find(|p| p.id == ship).unwrap();
     assert_eq!(pv2.station_next_threshold, None, "all bands active");
+    assert_eq!(pv2.station_charges, Some(4), "charge count tracks");
 }
 
 /// The server view surfaces the renowned flag (CR 702.93) so the client can
@@ -2159,4 +2161,27 @@ fn weapons_manufacturing_mints_munitions() {
         g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Munitions"),
         "Munitions token created"
     );
+}
+
+/// CR 721.2a — a Planet's 12+ activated Station band becomes usable once it has
+/// 12 charge counters (Uthros taps for {U} per artifact you control).
+#[test]
+fn station_activated_band_unlocks_at_threshold() {
+    let mut g = two_player_game();
+    let uthros = g.add_card_to_battlefield(0, catalog::uthros_titanic_godcore());
+    g.add_card_to_battlefield(0, catalog::melded_moxite()); // one artifact you control
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Below threshold the band ability isn't offered (index 2 = first granted band ability).
+    assert!(g.granted_abilities_for(uthros).is_empty(), "no band abilities below 12 charges");
+    // Charge it up to the 12+ band.
+    g.battlefield_find_mut(uthros).unwrap().add_counters(CounterType::Charge, 12);
+    assert_eq!(g.granted_abilities_for(uthros).len(), 1, "12+ band ability now granted");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    // Printed abilities are tap-for-U (0) and Station (1); the band is index 2.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: uthros, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate 12+ band");
+    // Spent {U}, produced {U} per artifact (1) → at least one blue back.
+    assert!(g.players[0].mana_pool.total() >= 1, "band added scaled mana");
 }

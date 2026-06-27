@@ -31,8 +31,10 @@ exercising each) was elided in a compaction pass; recover it from
   Cascade/Storm/Convoke/Delve); plus Fading/Vanishing, Cumulative Upkeep, Echo,
   Dredge, Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift,
   Unleash, Devoid, Ingest, Absorb, Warp, Station (CR 702.184/721 — charge-counter
-  `{N+}` Spacecraft striations: keyword + base-P/T + static **and triggered**
-  bands), Incubate (CR 701.53 — Incubator DFC token via `TokenDefinition.back_face`).
+  `{N+}` Spacecraft/Planet striations: keyword + base-P/T + static, triggered
+  **and activated** bands — `StationBand.activated`, surfaced via
+  `granted_abilities_for` so a Planet's `12+ | {cost}: …` band is usable once
+  charged), Incubate (CR 701.53 — Incubator DFC token via `TokenDefinition.back_face`).
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
   Convoke/Delve reduction; Commander tax; alternative (pitch) costs;
   energy-gated mana abilities; X-cost activated abilities.
