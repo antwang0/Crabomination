@@ -2875,6 +2875,10 @@ pub enum Effect {
         /// destroy it alongside a legendary host.
         #[serde(default)]
         non_legendary: bool,
+        /// Add the Legendary supertype to the copy even if the source isn't
+        /// legendary (Adagia, Windswept Bastion's "except it's legendary").
+        #[serde(default)]
+        legendary: bool,
     },
     /// Create `count` token copies of the permanent resolved by `source`
     /// (controlled by `who`), each gaining haste until end of turn and

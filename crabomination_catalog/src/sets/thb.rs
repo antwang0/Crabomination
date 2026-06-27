@@ -5197,6 +5197,7 @@ pub fn nightmare_shepherd() -> CardDefinition {
                         extra_card_types: vec![],
                         override_pt: Some((1, 1)),
                         non_legendary: false,
+                        legendary: false,
                     },
                     Effect::Exile { what: Selector::TriggerSource },
                 ])),

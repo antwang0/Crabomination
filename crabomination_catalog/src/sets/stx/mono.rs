@@ -805,6 +805,7 @@ pub fn replication_technique() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
         ..Default::default()

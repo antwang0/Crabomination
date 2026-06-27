@@ -1298,6 +1298,7 @@ pub fn rite_of_replication() -> CardDefinition {
         extra_card_types: vec![],
         override_pt: None,
         non_legendary: false,
+        legendary: false,
     };
     CardDefinition {
         name: "Rite of Replication",

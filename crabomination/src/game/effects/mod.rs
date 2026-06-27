@@ -5948,6 +5948,7 @@ impl GameState {
                 extra_card_types,
                 override_pt,
                 non_legendary,
+                legendary,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;
@@ -6001,6 +6002,9 @@ impl GameState {
                 }
                 if *non_legendary {
                     def.supertypes.clear();
+                }
+                if *legendary && !def.supertypes.contains(&crate::card::Supertype::Legendary) {
+                    def.supertypes.push(crate::card::Supertype::Legendary);
                 }
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, false, events);

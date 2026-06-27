@@ -78,7 +78,7 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   primitives): Famished Worldsire (Devour-land on a 0/0 — needs an enters-with-
   counters replacement so it survives SBA), Sothera, Chorale of the Void, Moonlit
   Meditation, Requiem Monolith, The Dominion Bracelet (control-an-opponent),
-  Pull's land-return half, Adagia/Kavaron 12+ bands. (Tapestry Warden ✅ via
+  Pull's land-return half. (Tapestry Warden ✅ via
   `Keyword::AssignsCombatDamageByToughness` — its Station-by-toughness half is
   still dropped.)
 - **`set_gaps.py "set:eoe"` still lists ~85 cards** (the script's `name:`-regex
@@ -89,10 +89,10 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   Evendo, Kavaron, Susur Secundi, Uthros) ship as tapland + tap-for-color +
   Station. **`StationBand.activated` now exists** (CR 721.2a — surfaced via
   `granted_abilities_for` when charges ≥ `min`), so Evendo/Uthros (`12+` scaled
-  mana) and Susur Secundi (`12+` sac-a-creature draw) ride faithful activated
-  bands. **Adagia** (legendary token-copy) and **Kavaron** (sac-a-land → Robot +
-  team-haste) 12+ bands are still dropped — both want `CreateTokenCopyOf`
-  legendary/`Seq` band bodies.
+  mana), Susur Secundi (`12+` sac-a-creature draw), **Adagia** (`12+`
+  legendary token-copy via `CreateTokenCopyOf { legendary: true }`) and
+  **Kavaron** (`12+` sac-a-land → Robot + `Seq` team haste/pump) all ride
+  faithful activated bands.
 - **Client render of `PermanentView.station_charges`** (new — current charge
   count paired with `station_next_threshold` for an "N/M" Station chip). The
   view field + test ship; the Bevy chip render is the remaining desktop-only

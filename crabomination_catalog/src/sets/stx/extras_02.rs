@@ -697,6 +697,7 @@ pub fn sublime_epiphany() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 // Mode 4: Target player draws a card.
                 Effect::Draw {

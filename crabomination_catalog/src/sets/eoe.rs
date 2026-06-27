@@ -4968,9 +4968,8 @@ fn robot_token() -> TokenDefinition {
 
 // ── Planets (CR 721 Station lands) ──────────────────────────────────────────
 //
-// "Land — Planet": enters tapped, taps for one color, carries Station. Each
-// Planet's 12+ charge-counter activated band is dropped (12 charges is rarely
-// reached and each band differs); see TODO.md.
+// "Land — Planet": enters tapped, taps for one color, carries Station. All
+// five carry their 12+ charge-counter activated Station band (CR 721.2a).
 
 fn eoe_planet(name: &'static str, color: crate::mana::Color) -> CardDefinition {
     CardDefinition {
@@ -5012,11 +5011,36 @@ fn planet_mana_band(
     }
 }
 
-// Adagia/Kavaron's 12+ bands (legendary token-copy / sac-a-land Robot-and-buff)
-// are dropped; see TODO.md. Evendo/Uthros/Susur Secundi ride the new activated
-// Station band (CR 721.2a).
+// All five Planets ride faithful 12+ activated Station bands (CR 721.2a).
 pub fn adagia_windswept_bastion() -> CardDefinition {
-    eoe_planet("Adagia, Windswept Bastion", crate::mana::Color::White)
+    let mut c = eoe_planet("Adagia, Windswept Bastion", crate::mana::Color::White);
+    // 12+ | {3}{W}, {T}: Create a token that's a copy of target artifact or
+    // enchantment you control, except it's legendary. Sorcery-speed.
+    c.station = vec![StationBand {
+        min: 12,
+        activated: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+                legendary: true,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }];
+    c
 }
 pub fn evendo_waking_haven() -> CardDefinition {
     let mut c = eoe_planet("Evendo, Waking Haven", crate::mana::Color::Green);
@@ -5024,7 +5048,43 @@ pub fn evendo_waking_haven() -> CardDefinition {
     c
 }
 pub fn kavaron_memorial_world() -> CardDefinition {
-    eoe_planet("Kavaron, Memorial World", crate::mana::Color::Red)
+    let mut c = eoe_planet("Kavaron, Memorial World", crate::mana::Color::Red);
+    // 12+ | {1}{R}, {T}, Sacrifice a land: Create a 2/2 Robot, then creatures
+    // you control get +1/+0 and gain haste until end of turn.
+    let team = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    c.station = vec![StationBand {
+        min: 12,
+        activated: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: robot_token(),
+                },
+                Effect::PumpPT {
+                    what: team(),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: team(),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }];
+    c
 }
 pub fn susur_secundi_void_altar() -> CardDefinition {
     let mut c = eoe_planet("Susur Secundi, Void Altar", crate::mana::Color::Black);

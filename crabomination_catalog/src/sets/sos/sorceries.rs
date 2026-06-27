@@ -2133,6 +2133,7 @@ pub fn echocasting_symposium() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
             Effect::RegisterParadigm,
         ]),
@@ -2262,6 +2263,7 @@ pub fn applied_geometry() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: Some((0, 0)),
                 non_legendary: false,
+                legendary: false,
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

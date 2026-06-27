@@ -806,6 +806,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 // "When that token leaves the battlefield, return the exiled
                 // card to its owner's graveyard."

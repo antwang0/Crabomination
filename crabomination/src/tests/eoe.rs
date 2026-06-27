@@ -3095,3 +3095,52 @@ fn unravel_draws_when_target_was_underpaid() {
         "Opt was countered");
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card (underpaid)");
 }
+
+/// Adagia's 12+ band makes a legendary token copy of a target artifact you control.
+#[test]
+fn adagia_band_makes_legendary_copy() {
+    let mut g = two_player_game();
+    let adagia = g.add_card_to_battlefield(0, catalog::adagia_windswept_bastion());
+    let moxite = g.add_card_to_battlefield(0, catalog::melded_moxite()); // non-legendary artifact
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.battlefield_find_mut(adagia).unwrap().add_counters(CounterType::Charge, 12);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: adagia, ability_index: 2,
+        target: Some(crate::game::types::Target::Permanent(moxite)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Adagia 12+ band");
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().find(|c| {
+        c.controller == 0 && c.definition.name == "Melded Moxite" && c.is_token
+    }).expect("legendary token copy minted");
+    assert!(copy.definition.is_legendary(), "copy is legendary per the band");
+}
+
+/// Kavaron's 12+ band sacrifices a land for a Robot and a team haste+pump.
+#[test]
+fn kavaron_band_robot_and_team_haste() {
+    let mut g = two_player_game();
+    let kavaron = g.add_card_to_battlefield(0, catalog::kavaron_memorial_world());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.battlefield_find_mut(kavaron).unwrap().add_counters(CounterType::Charge, 12);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kavaron, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Kavaron 12+ band");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "a land was sacrificed");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Robot").count(),
+        1, "made a Robot token"
+    );
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "team +1/+0 → 3 power");
+    assert!(cp.keywords.contains(&Keyword::Haste), "team gained haste");
+}

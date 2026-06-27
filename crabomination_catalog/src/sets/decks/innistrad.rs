@@ -3496,6 +3496,7 @@ pub fn dreadfeast_demon() -> CardDefinition {
                         extra_card_types: vec![],
                         override_pt: None,
                         non_legendary: false,
+                        legendary: false,
                     }),
                     else_: Box::new(Effect::Noop),
                 },

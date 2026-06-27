@@ -11891,6 +11891,7 @@ pub fn saheeli_rai() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         Effect::GrantKeyword {
             what: Selector::LastCreatedToken,
@@ -16934,6 +16935,7 @@ pub fn thundertrap_trainer() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: Some((1, 1)),
                     non_legendary: false,
+                    legendary: false,
                 }),
                 else_: Box::new(Effect::Noop),
             }),
@@ -20555,6 +20557,7 @@ pub fn esikas_chariot() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
             },
         ],
@@ -23702,6 +23705,7 @@ pub fn helm_of_the_host() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: true,
+                    legendary: false,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -25206,6 +25210,7 @@ pub fn followed_footsteps() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
         }],
         ..Default::default()
@@ -33329,6 +33334,7 @@ pub fn kiki_jiki_mirror_breaker() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -38841,6 +38847,7 @@ pub fn stolen_identity() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
             Effect::Cipher,
         ]),
@@ -42049,6 +42056,7 @@ pub fn reflection_of_kiki_jiki() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -44226,6 +44234,7 @@ pub fn splinter_twin() -> CardDefinition {
                             extra_card_types: vec![],
                             override_pt: None,
                             non_legendary: false,
+                            legendary: false,
                         },
                         Effect::GrantKeyword {
                             what: Selector::LastCreatedToken,
@@ -46091,6 +46100,7 @@ pub fn scute_swarm() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
@@ -46178,6 +46188,7 @@ pub fn pack_rat() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
             ..Default::default()
         }],
@@ -46508,6 +46519,7 @@ pub fn ocelot_pride() -> CardDefinition {
                                     extra_card_types: vec![],
                                     override_pt: None,
                                     non_legendary: false,
+                                    legendary: false,
                                 }),
                             }),
                             else_: Box::new(Effect::Noop),
@@ -48906,6 +48918,7 @@ pub fn springheart_nantuko() -> CardDefinition {
                         extra_creature_types: vec![],
                         extra_card_types: vec![],
                         non_legendary: true,
+                        legendary: false,
                         override_pt: None,
                     }),
                     else_: Box::new(Effect::CreateToken {
@@ -50199,6 +50212,7 @@ pub fn fractured_identity() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
             Effect::Exile { what: Selector::Target(0) },
         ]),
@@ -51926,6 +51940,7 @@ pub fn tempt_with_reflections() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             }),
         },
         ..Default::default()
@@ -56039,6 +56054,7 @@ pub fn mythos_of_illuna() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         ..Default::default()
     }

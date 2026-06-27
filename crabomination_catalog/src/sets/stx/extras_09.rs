@@ -1762,6 +1762,7 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 // ...except it has haste.
                 Effect::GrantKeyword {

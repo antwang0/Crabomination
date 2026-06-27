@@ -2620,6 +2620,7 @@ pub fn vaultborn_tyrant() -> CardDefinition {
                     extra_card_types: vec![CardType::Artifact],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
             },
         ],
@@ -4063,6 +4064,7 @@ pub fn stormsplitter() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
@@ -4850,6 +4852,7 @@ pub fn pawpatch_recruit() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: Some((1, 1)),
                     non_legendary: false,
+                    legendary: false,
                 }),
                 else_: Box::new(Effect::Noop),
             }),
@@ -5101,6 +5104,7 @@ pub fn coiling_rebirth() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: Some((1, 1)),
                     non_legendary: true,
+                    legendary: false,
                 },
             ]),
         })),
@@ -9999,6 +10003,7 @@ pub fn croaking_counterpart() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: Some((1, 1)),
             non_legendary: true,
+            legendary: false,
         },
         ..Default::default()
     }
@@ -10406,6 +10411,7 @@ pub fn necroduality() -> CardDefinition {
                 extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
         }],
         ..Default::default()

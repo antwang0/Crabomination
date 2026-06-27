@@ -1127,6 +1127,7 @@ pub fn cackling_counterpart() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         ..Default::default()
     }

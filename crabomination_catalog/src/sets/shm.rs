@@ -136,6 +136,7 @@ pub fn rally_the_galadhrim() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         ..Default::default()
     }
