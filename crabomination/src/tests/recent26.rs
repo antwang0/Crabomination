@@ -1,0 +1,109 @@
+//! Functionality tests for `catalog::sets::decks::recent26` — Aetherdrift (DFT)
+//! Mount/Saddle attack triggers + Exhaust activated abilities.
+
+use crate::catalog;
+use crate::card::{CounterType, Keyword, Supertype};
+use crate::game::types::{Attack, AttackTarget};
+use crate::game::*;
+use crate::TurnStep;
+
+fn count_named(g: &GameState, controller: usize, name: &str) -> usize {
+    g.battlefield
+        .iter()
+        .filter(|c| c.controller == controller && c.definition.name == name)
+        .count()
+}
+
+/// Saddle `id` and attack player 1 with it, resolving the triggers.
+fn saddled_attack(g: &mut GameState, id: CardId) {
+    g.battlefield_find_mut(id).unwrap().saddled = true;
+    g.clear_sickness(id);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(g);
+}
+
+/// Jibbirik Omnivore is a vanilla 3/2.
+#[test]
+fn jibbirik_omnivore_stats() {
+    let def = catalog::jibbirik_omnivore();
+    assert_eq!((def.power, def.toughness), (3, 2));
+    assert!(def.activated_abilities.is_empty() && def.triggered_abilities.is_empty());
+}
+
+/// Caelorna is a legendary 0/8 wall.
+#[test]
+fn caelorna_is_legendary_wall() {
+    let def = catalog::caelorna_coral_tyrant();
+    assert_eq!((def.power, def.toughness), (0, 8));
+    assert!(def.supertypes.contains(&Supertype::Legendary));
+}
+
+/// Gilded Ghoda makes a Treasure when it attacks while saddled.
+#[test]
+fn gilded_ghoda_makes_treasure_when_saddled() {
+    let mut g = two_player_game();
+    let gg = g.add_card_to_battlefield(0, catalog::gilded_ghoda());
+    saddled_attack(&mut g, gg);
+    assert_eq!(count_named(&g, 0, "Treasure"), 1, "saddled attack made a Treasure");
+}
+
+/// Brightfield Mustang untaps and grows when it attacks while saddled.
+#[test]
+fn brightfield_mustang_untaps_and_grows() {
+    let mut g = two_player_game();
+    let bm = g.add_card_to_battlefield(0, catalog::brightfield_mustang());
+    saddled_attack(&mut g, bm);
+    let c = g.battlefield_find(bm).unwrap();
+    assert!(!c.tapped, "untapped by its own trigger after attacking");
+    assert_eq!(g.computed_permanent(bm).unwrap().power, 4, "+1/+1 counter → 4 power");
+}
+
+/// Draconautics Engineer's first exhaust grants team haste and grows itself.
+#[test]
+fn draconautics_engineer_exhaust_haste() {
+    let mut g = two_player_game();
+    let de = g.add_card_to_battlefield(0, catalog::draconautics_engineer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(de);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate exhaust");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "ally got haste");
+    assert_eq!(g.computed_permanent(de).unwrap().power, 3, "self +1/+1 → 3 power");
+    // Exhaust: can't activate the same ability twice.
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    let again = g.perform_action(GameAction::ActivateAbility {
+        card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(again.is_err(), "exhaust ability is one-shot");
+}
+
+/// Afterburner Expert's exhaust puts two +1/+1 counters on it.
+#[test]
+fn afterburner_expert_exhaust_counters() {
+    let mut g = two_player_game();
+    let ae = g.add_card_to_battlefield(0, catalog::afterburner_expert());
+    g.clear_sickness(ae);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ae, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate exhaust");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ae).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2);
+}
