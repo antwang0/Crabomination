@@ -91,6 +91,29 @@ fn balemurk_leech_eerie_room_fully_unlocked() {
     assert_eq!(g.players[1].life, foe_life - 1, "opponent lost 1 from Eerie");
 }
 
+/// Unwilling Vessel mints an X/X flying Spirit on death where X is its
+/// possession counters (LKI counter read, CR 603.10).
+#[test]
+fn unwilling_vessel_dies_mints_spirit() {
+    let mut g = two_player_game();
+    let uv = g.add_card_to_battlefield(0, catalog::unwilling_vessel());
+    {
+        let c = g.battlefield_find_mut(uv).unwrap();
+        c.add_counters(CounterType::Possession, 2);
+        c.damage = 2; // lethal vs 2 toughness
+    }
+    g.priority.player_with_priority = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let spirit = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Spirit")
+        .expect("Spirit token minted");
+    assert_eq!((spirit.power(), spirit.toughness()), (2, 2), "X/X from 2 possession counters");
+    assert!(spirit.definition.keywords.contains(&Keyword::Flying), "Spirit flies");
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {

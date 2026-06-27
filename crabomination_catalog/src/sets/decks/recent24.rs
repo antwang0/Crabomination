@@ -740,6 +740,53 @@ pub fn balemurk_leech() -> CardDefinition {
     }
 }
 
+/// Unwilling Vessel — {2}{U} 3/2 Human Wizard with vigilance. Eerie — put a
+/// possession counter on it. When it dies, mint an X/X blue flying Spirit
+/// where X is the number of counters on it (CR 603.10 LKI counter read).
+pub fn unwilling_vessel() -> CardDefinition {
+    let mut abilities = eerie(Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::Possession,
+        amount: Value::Const(1),
+    });
+    abilities.push(crate::effect::shortcut::on_dies(Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: TokenDefinition {
+            name: "Spirit".into(),
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::Blue],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+            keywords: vec![Keyword::Flying],
+            dynamic_pt: Some((
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Possession,
+                },
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Possession,
+                },
+            )),
+            ..Default::default()
+        },
+    }));
+    CardDefinition {
+        name: "Unwilling Vessel",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: abilities,
+        ..Default::default()
+    }
+}
+
 /// Patched Plaything — {2}{W} 4/3 Toy artifact creature with double strike.
 /// Enters with two -1/-1 counters if you cast it from your hand (CR 614.12 —
 /// cast-zone-gated enters-with-counters).

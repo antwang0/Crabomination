@@ -374,6 +374,9 @@ pub enum CounterType {
     /// that many, and when the last is removed the battle is defeated
     /// (`EventKind::BattleDefeated`).
     Defense,
+    /// Possession counter — DSK Unwilling Vessel accrues one per Eerie
+    /// trigger; on death it mints an X/X Spirit where X is the count.
+    Possession,
 }
 
 /// Every zone a card can occupy.

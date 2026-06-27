@@ -3606,6 +3606,7 @@ static DECKS: &[Factory] = &[
     super::decks::patched_plaything,
     super::decks::cult_healer,
     super::decks::balemurk_leech,
+    super::decks::unwilling_vessel,
     super::decks::air_response_unit,
     super::decks::debris_beetle,
     super::decks::cryptcaller_chariot,

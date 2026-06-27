@@ -956,6 +956,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Bounty => "Bounty",
         CounterType::Oil => "Oil",
         CounterType::Valor => "Valor",
+        CounterType::Defense => "Defense",
+        CounterType::Possession => "Possession",
     }
 }
 
