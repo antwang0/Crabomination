@@ -341,7 +341,15 @@ impl GameState {
                 {
                     return ms;
                 }
-                ctx.mana_spent as i32
+                if ctx.mana_spent > 0 {
+                    return ctx.mana_spent as i32;
+                }
+                // ETB rider reading the cost after the spell left the stack:
+                // the value was stamped onto the entered permanent.
+                ctx.source
+                    .and_then(|s| self.battlefield_find(s))
+                    .map(|c| c.cast_mana_spent as i32)
+                    .unwrap_or(ctx.mana_spent as i32)
             }
             Value::LoyaltyOf(s) => self
                 .resolve_selector(s, ctx)
@@ -1554,6 +1562,9 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::ManaValueAtMostCastManaSpent => source
+                        .and_then(|s| self.battlefield_find(s))
+                        .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
                     R::InGraveyard => self
                         .players
                         .iter()
@@ -1738,7 +1749,8 @@ impl GameState {
                 card.definition.cost.cmc() <= n
             }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
-            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged => false,
+            // `CastManaSpent` is source-relative; no source here, so vacuous.
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,

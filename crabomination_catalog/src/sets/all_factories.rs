@@ -4041,6 +4041,8 @@ static EOE: &[Factory] = &[
     super::eoe::starport_security,
     super::eoe::mmmenon_the_right_hand,
     super::eoe::memorial_vault,
+    super::eoe::astelli_reclaimer,
+    super::eoe::tractor_beam,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

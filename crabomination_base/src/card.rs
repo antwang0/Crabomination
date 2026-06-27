@@ -1229,6 +1229,11 @@ pub enum SelectionRequirement {
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").
     ManaValueAtMostYourCount(Box<SelectionRequirement>),
+    /// Mana value ≤ the mana spent to cast the source permanent's spell
+    /// (`CardInstance.cast_mana_spent`). Read source-relative at filter time —
+    /// Astelli Reclaimer's "with mana value X or less, where X is the amount of
+    /// mana spent to cast this".
+    ManaValueAtMostCastManaSpent,
     /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
@@ -2917,6 +2922,11 @@ pub struct CardInstance {
     /// Persists onto the permanent so its ETB mints one token copy per payment
     /// (`Value::SquadCount`). Defaults to 0 (no Squad / not paid).
     pub squad_count: u32,
+    /// Mana spent to cast the spell that became this permanent, stamped at
+    /// resolution so ETB riders can read it after the spell left the stack
+    /// (`Value::CastSpellManaSpent`, `ManaValueAtMostCastManaSpent` — Astelli
+    /// Reclaimer). Defaults to 0.
+    pub cast_mana_spent: u32,
     /// CR 702.176 — true if this spell was cast paying its optional Bargain
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
@@ -3314,6 +3324,7 @@ impl CardInstance {
             granted_activated_abilities: Vec::new(),
             kick_count: 0,
             squad_count: 0,
+            cast_mana_spent: 0,
             bargained: false,
             spliced_effects: Vec::new(),
             bought_back: false,
@@ -3739,6 +3750,9 @@ struct CardInstanceWire {
     /// CR 702.157 squad-payment count. `#[serde(default)]` for back-compat.
     #[serde(default)]
     squad_count: u32,
+    /// Mana spent to cast this permanent's spell. `#[serde(default)]`.
+    #[serde(default)]
+    cast_mana_spent: u32,
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     bargained: bool,
@@ -3976,6 +3990,7 @@ impl serde::Serialize for CardInstance {
             kicked: self.kicked,
             kick_count: self.kick_count,
             squad_count: self.squad_count,
+            cast_mana_spent: self.cast_mana_spent,
             bargained: self.bargained,
             spliced_effects: self.spliced_effects.clone(),
             encoded_on: self.encoded_on,
@@ -4067,6 +4082,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.kicked = wire.kicked;
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
+        c.cast_mana_spent = wire.cast_mana_spent;
         c.bargained = wire.bargained;
         c.spliced_effects = wire.spliced_effects.clone();
         c.encoded_on = wire.encoded_on;

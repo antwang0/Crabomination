@@ -762,6 +762,9 @@ impl GameState {
                     // cards: Gonti, Hostage Taker).
                     card.controller = caster;
                     card.controller = self.apply_etb_control_replacement(&card, card.controller);
+                    // Stamp the cast cost so ETB riders can read it after the
+                    // spell leaves the stack (Astelli Reclaimer's MV-≤-X return).
+                    card.cast_mana_spent = mana_spent;
                     let room_door = card.definition.room.as_ref().map(|_| {
                         usize::from(card.split_cast == Some(1))
                     });

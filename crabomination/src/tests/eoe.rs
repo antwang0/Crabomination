@@ -2399,3 +2399,72 @@ fn memorial_vault_exiles_scaled_by_sacrifice() {
     drain_stack(&mut g);
     assert_eq!(g.exile.len(), exile_before + 3, "exiled 1 + MV 2 = 3 cards");
 }
+
+/// Astelli Reclaimer returns a noncreature, nonland permanent whose mana value
+/// is ≤ the mana spent to cast it (5). Memorial Vault is MV 4 → comes back.
+#[test]
+fn astelli_reclaimer_returns_cheap_noncreature() {
+    let mut g = two_player_game();
+    let vault = g.add_card_to_graveyard(0, catalog::memorial_vault()); // MV 4
+    let astelli = g.add_card_to_hand(0, catalog::astelli_reclaimer());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: astelli, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Astelli Reclaimer");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vault).is_some(), "Memorial Vault (MV 4 ≤ 5) reanimated");
+}
+
+/// The MV gate excludes a permanent costing more than the mana spent — Staff of
+/// Nin is MV 6 > 5, so there's no legal target and it stays in the graveyard.
+#[test]
+fn astelli_reclaimer_skips_overcost_permanent() {
+    let mut g = two_player_game();
+    let staff = g.add_card_to_graveyard(0, catalog::staff_of_nin()); // MV 6
+    let astelli = g.add_card_to_hand(0, catalog::astelli_reclaimer());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: astelli, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Astelli Reclaimer");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == staff),
+        "Staff of Nin (MV 6 > 5) stays in the graveyard"
+    );
+}
+
+/// Tractor Beam steals control of the enchanted creature, taps it, and keeps it
+/// tapped through its (new) controller's untap step. Control reverts when the
+/// Aura leaves.
+#[test]
+fn tractor_beam_steals_control_and_locks_untap() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    let aura = g.add_card_to_hand(0, catalog::tractor_beam());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tractor Beam");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "control stolen");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "ETB tapped it");
+    // Its new controller's untap step must not untap it.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "doesn't untap under new controller");
+    // Aura leaves → control reverts to the original owner.
+    kill(&mut g, aura);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "control reverts when Aura leaves");
+}

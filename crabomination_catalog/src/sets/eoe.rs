@@ -6059,6 +6059,36 @@ pub fn pain_for_all() -> CardDefinition {
     }
 }
 
+/// Tractor Beam — {2}{U}{U} Aura. Enchant creature or Spacecraft. ETB taps the
+/// enchanted permanent; you control it and it doesn't untap during its
+/// controller's untap step.
+pub fn tractor_beam() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EnchantmentSubtype};
+    CardDefinition {
+        name: "Tractor Beam",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+            },
+        },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: Selector::attached_to(Selector::This) },
+            Effect::GainControlWhileSourceRemains { what: Selector::attached_to(Selector::This) },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted permanent doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::attached_to(Selector::This) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Starport Security — {W} 1/1 Artifact Creature — Robot Soldier. {3}{W}, {T}:
 /// Tap another target creature. (The "{2} less if you control a +1/+1-countered
 /// creature" discount is dropped.)
@@ -6142,6 +6172,36 @@ pub fn memorial_vault() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Astelli Reclaimer — {3}{W}{W} 5/4 Angel Warrior, flying. ETB: return target
+/// noncreature, nonland permanent card with mana value ≤ the mana spent to cast
+/// this from your graveyard to the battlefield.
+pub fn astelli_reclaimer() -> CardDefinition {
+    CardDefinition {
+        name: "Astelli Reclaimer",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::PermanentCard
+                    .and(SelectionRequirement::Noncreature)
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMostCastManaSpent),
+            },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
         ..Default::default()
     }
 }
