@@ -1,16 +1,18 @@
-//! A twenty-second wave — two new keyword mechanics. TLA Firebending
+//! A twenty-second wave — three keyword mechanics. TLA Firebending
 //! (`Keyword::Firebending(n)`, CR 702.189): an attack-triggered mana ability
 //! adding N {R} that survives until end of combat. TMNT Sneak
 //! (`shortcut::sneak`, CR 702.190): a declare-blockers alt cast that returns an
-//! unblocked attacker. Tests in `crabomination/src/tests/recent22.rs`.
+//! unblocked attacker. Bloodthirst (`shortcut::bloodthirst`, CR 702.54):
+//! enters with N +1/+1 counters if an opponent took damage this turn. Tests in
+//! `crabomination/src/tests/recent22.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     SelectionRequirement, Selector, Subtypes, Supertype, Value,
 };
-use crate::effect::shortcut::sneak;
-use crate::effect::{Duration, Effect, PlayerRef};
-use crate::mana::{cost, generic, r, u};
+use crate::effect::shortcut::{bloodthirst, sneak};
+use crate::effect::{Duration, Effect};
+use crate::mana::{b, cost, generic, r, u};
 
 /// Jeong Jeong the Deserter — {2}{R} 2/3 legendary Human Rebel Ally with
 /// firebending 1. Exhaust — {3}: put a +1/+1 counter on it. (The "next Lesson
@@ -106,6 +108,42 @@ pub fn jennikas_technique() -> CardDefinition {
             to: Selector::EachPermanent(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        ..Default::default()
+    }
+}
+
+/// Bloodrage Vampire — {2}{B} 3/1 Vampire with bloodthirst 1.
+pub fn bloodrage_vampire() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodrage Vampire",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Bloodthirst(1)],
+        triggered_abilities: vec![bloodthirst(1)],
+        ..Default::default()
+    }
+}
+
+/// Furyborn Hellkite — {4}{R}{R}{R} 6/6 Dragon with flying and bloodthirst 6.
+pub fn furyborn_hellkite() -> CardDefinition {
+    CardDefinition {
+        name: "Furyborn Hellkite",
+        cost: cost(&[generic(4), r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Bloodthirst(6)],
+        triggered_abilities: vec![bloodthirst(6)],
         ..Default::default()
     }
 }

@@ -136,6 +136,60 @@ fn jennikas_technique_sweeps_two() {
         "both 2/2s died to 2 damage each");
 }
 
+fn cast_creature(g: &mut GameState, card: CardId) {
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: card, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast creature");
+    drain_stack(g);
+}
+
+/// Bloodthirst 1 (CR 702.54): Bloodrage Vampire enters with a +1/+1 counter
+/// only if an opponent took damage this turn.
+#[test]
+fn bloodrage_vampire_bloodthirst_conditional() {
+    use crate::card::CounterType;
+    // No opponent damage → enters a vanilla 3/1.
+    let mut g = two_player_game();
+    let v1 = g.add_card_to_hand(0, catalog::bloodrage_vampire());
+    cast_creature(&mut g, v1);
+    assert_eq!(g.battlefield_find(v1).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "no bloodthirst without opponent damage");
+
+    // Opponent took damage this turn → enters with one +1/+1 counter.
+    let mut g = two_player_game();
+    g.players[1].was_dealt_damage_this_turn = true;
+    let v2 = g.add_card_to_hand(0, catalog::bloodrage_vampire());
+    cast_creature(&mut g, v2);
+    assert_eq!(g.battlefield_find(v2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "bloodthirst 1 adds a counter");
+}
+
+/// Furyborn Hellkite's bloodthirst 6 adds six counters after opponent damage.
+#[test]
+fn furyborn_hellkite_bloodthirst_six() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.players[1].was_dealt_damage_this_turn = true;
+    let dragon = g.add_card_to_hand(0, catalog::furyborn_hellkite());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dragon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Furyborn Hellkite");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dragon).unwrap().counter_count(CounterType::PlusOnePlusOne), 6,
+        "bloodthirst 6 adds six counters");
+}
+
 /// Sneak is only legal during your declare blockers step (CR 702.190a).
 #[test]
 fn sneak_rejected_outside_declare_blockers() {

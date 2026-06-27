@@ -3545,6 +3545,8 @@ static DECKS: &[Factory] = &[
     super::decks::sozins_comet,
     super::decks::donatellos_technique,
     super::decks::jennikas_technique,
+    super::decks::bloodrage_vampire,
+    super::decks::furyborn_hellkite,
     super::decks::solphim_mayhem_dominus,
     super::decks::atraxa_praetors_voice,
     super::decks::deathrite_shaman,

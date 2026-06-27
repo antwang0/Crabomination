@@ -685,6 +685,10 @@ pub enum Keyword {
     /// unblocked creature you control to its owner's hand. Carried for display;
     /// the alt-cost itself lives in `CardDefinition.alternative_cost`.
     Sneak(crate::mana::ManaCost),
+    /// CR 702.54 — Bloodthirst N. "If an opponent was dealt damage this turn,
+    /// this creature enters with N +1/+1 counters on it." Carried for display;
+    /// the counters ride an ETB trigger (`shortcut::bloodthirst`).
+    Bloodthirst(u32),
     Banding,
     Equip(crate::mana::ManaCost),
     /// CR 702.151 — Reconfigure [cost]. An Equipment-creature attaches to a
