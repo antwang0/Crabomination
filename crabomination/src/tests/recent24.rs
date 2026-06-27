@@ -1389,3 +1389,94 @@ fn marauding_dreadship_etb_incubates() {
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Incubator"), 1, "Incubator token created");
 }
+
+/// Live or Die mode 0 reanimates a creature card from your graveyard.
+#[test]
+fn live_or_die_reanimates() {
+    let mut g = two_player_game();
+    let dead = g.next_id();
+    g.players[0].graveyard.push(crate::card::CardInstance::new(dead, catalog::grizzly_bears(), 0));
+    let lod = g.add_card_to_hand(0, catalog::live_or_die());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lod, target: Some(Target::Permanent(dead)), additional_targets: vec![],
+        mode: Some(0), x_value: None,
+    })
+    .expect("cast Live or Die (reanimate)");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dead), "creature reanimated");
+}
+
+/// Live or Die mode 1 destroys a creature.
+#[test]
+fn live_or_die_destroys() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lod = g.add_card_to_hand(0, catalog::live_or_die());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lod, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: Some(1), x_value: None,
+    })
+    .expect("cast Live or Die (destroy)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature destroyed");
+}
+
+/// Unsettling Twins manifests dread on ETB.
+#[test]
+fn unsettling_twins_manifests_dread() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let ut = g.add_card_to_battlefield(0, catalog::unsettling_twins());
+    g.fire_self_etb_triggers(ut, 0);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.face_down),
+        "manifest dread placed a face-down creature",
+    );
+}
+
+/// Intruding Soulrager sacrifices a Room to deal 2 to each opponent and draw.
+#[test]
+fn intruding_soulrager_sacs_room() {
+    let mut g = two_player_game();
+    let sr = g.add_card_to_battlefield(0, catalog::intruding_soulrager());
+    // A fully-cast Room on the battlefield as sac fodder.
+    let room = g.add_card_to_battlefield(0, catalog::unholy_annex_ritual_chamber());
+    g.clear_sickness(sr);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    ready(&mut g);
+    let (foe_life, hand) = (g.players[1].life, g.players[0].hand.len());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Soulrager");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(room).is_none(), "Room sacrificed");
+    assert_eq!(g.players[1].life, foe_life - 2, "2 damage to opponent");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Clammy Prowler's attack trigger makes another attacker unblockable.
+#[test]
+fn clammy_prowler_makes_ally_unblockable() {
+    let mut g = two_player_game();
+    let cp = g.add_card_to_battlefield(0, catalog::clammy_prowler());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(cp);
+    g.clear_sickness(ally);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: cp, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Unblockable),
+        "ally attacker became unblockable",
+    );
+}

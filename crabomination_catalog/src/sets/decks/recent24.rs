@@ -12,7 +12,7 @@ use crate::card::{
     Subtypes, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{
-    deal, draw, drain, each_opponent, eerie, etb, gain_life, pump_target,
+    deal, draw, drain, each_opponent, eerie, etb, gain_life, on_attack, pump_target,
     target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
@@ -2083,6 +2083,88 @@ pub fn marauding_dreadship() -> CardDefinition {
             who: PlayerRef::You,
             amount: Value::Const(2),
         })],
+        ..Default::default()
+    }
+}
+
+/// Live or Die — {3}{B}{B} Instant. Choose one — return target creature card
+/// from your graveyard to the battlefield; or destroy target creature.
+pub fn live_or_die() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Live or Die",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Unsettling Twins — {3}{W} 2/2 Human. When it enters, manifest dread.
+pub fn unsettling_twins() -> CardDefinition {
+    CardDefinition {
+        name: "Unsettling Twins",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ManifestDread { who: PlayerRef::You })],
+        ..Default::default()
+    }
+}
+
+/// Clammy Prowler — {3}{U} 2/5 Enchantment Creature — Horror. Whenever it
+/// attacks, another target attacking creature can't be blocked this turn.
+pub fn clammy_prowler() -> CardDefinition {
+    CardDefinition {
+        name: "Clammy Prowler",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 2,
+        toughness: 5,
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::IsAttacking)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            keyword: Keyword::Unblockable,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Intruding Soulrager — {U}{R} 2/2 Spirit with vigilance. {T}, Sacrifice a
+/// Room: deal 2 damage to each opponent and draw a card.
+pub fn intruding_soulrager() -> CardDefinition {
+    CardDefinition {
+        name: "Intruding Soulrager",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Room),
+                1,
+            )),
+            effect: Effect::Seq(vec![deal(2, each_opponent()), draw(1)]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
