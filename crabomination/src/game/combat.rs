@@ -712,6 +712,20 @@ impl GameState {
                     return Err(GameError::CannotBlock(blocker_id));
                 }
             }
+
+            // CR 509.1b — "can't be blocked if you've cast N+ spells this turn"
+            // (Illvoi Infiltrator). Reads the attacker's controller's spell
+            // count this turn, so it lives here rather than in the pure
+            // two-creature check.
+            if let Some(atk_ctl) = self.battlefield_find(attacker_id).map(|c| c.controller) {
+                for kw in kws_of(attacker_id) {
+                    if let Keyword::CantBeBlockedIfControllerCastSpells(n) = kw
+                        && self.players[atk_ctl].spells_cast_this_turn >= *n
+                    {
+                        return Err(GameError::CannotBlock(blocker_id));
+                    }
+                }
+            }
         }
 
         // CR 509.1d — block tax (Archangel of Tithes). Sum every active

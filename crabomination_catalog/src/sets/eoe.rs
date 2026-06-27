@@ -5863,3 +5863,80 @@ pub fn temporal_intervention() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vote Out — {3}{B} Sorcery. Convoke. Destroy target creature.
+pub fn vote_out() -> CardDefinition {
+    CardDefinition {
+        name: "Vote Out",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Archenemy's Charm — {B}{B}{B} Instant. Choose one — exile target creature or
+/// planeswalker; or return up to two creature/planeswalker cards from your
+/// graveyard to your hand; or put two +1/+1 counters on a creature you control
+/// and it gains lifelink. (Mode 2's per-card targeting is modeled as "up to
+/// two".)
+pub fn archenemys_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Archenemy's Charm",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                },
+                Effect::ReturnGraveyardCardsToHand {
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    max: Value::Const(2),
+                },
+                Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Illvoi Infiltrator — {2}{U} 1/3 Jellyfish Rogue. Can't be blocked if you've
+/// cast two or more spells this turn. Whenever it deals combat damage to a
+/// player, draw a card.
+pub fn illvoi_infiltrator() -> CardDefinition {
+    CardDefinition {
+        name: "Illvoi Infiltrator",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::CantBeBlockedIfControllerCastSpells(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}

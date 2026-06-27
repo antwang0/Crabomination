@@ -46,7 +46,11 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   Pinnacle Starcage (ETB mass O-Ring; `{6}{W}{W}` dump-to-gy/make-Robots payoff
   dropped), Temporal Intervention (Void cost reduction + each-opponent discard;
   the "target opponent" single-target restriction is approximated to each
-  opponent). New deferrals from that batch:
+  opponent), Vote Out (Convoke destroy), Archenemy's Charm (modal exile / mass
+  gy-return / counters+lifelink), **Illvoi Infiltrator** — now ships the new
+  `Keyword::CantBeBlockedIfControllerCastSpells(n)` (CR 509.1b, enforced in
+  `declare_blockers`), reusable for other "can't be blocked if you've cast N
+  spells" cards. New deferrals from that batch:
   **Tannuk's "second landfall this turn → draw"** needs a per-source
   resolution-count predicate; **Timeline Culler's cast-from-graveyard warp**
   needs `AlternativeCost` to allow a graveyard cast zone; **Syr Vondam's

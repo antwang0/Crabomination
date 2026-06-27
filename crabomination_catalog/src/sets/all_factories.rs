@@ -4031,6 +4031,9 @@ static EOE: &[Factory] = &[
     super::eoe::starwinder,
     super::eoe::pinnacle_starcage,
     super::eoe::temporal_intervention,
+    super::eoe::vote_out,
+    super::eoe::archenemys_charm,
+    super::eoe::illvoi_infiltrator,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

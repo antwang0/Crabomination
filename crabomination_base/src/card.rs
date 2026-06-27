@@ -954,6 +954,11 @@ pub enum Keyword {
     /// blocker's computed power being `<= N`. Enforced in
     /// `can_block_attacker_computed`.
     CantBeBlockedByPowerAtMost(u32),
+    /// "This creature can't be blocked if you've cast N or more spells this
+    /// turn" (Illvoi Infiltrator — N=2). Game-state-dependent, so it's enforced
+    /// in the stateful block-declaration path (`declare_blockers`) rather than
+    /// the pure two-creature `can_block_attacker_computed`. CR 509.1b.
+    CantBeBlockedIfControllerCastSpells(u32),
     /// "This creature can block only creatures with flying." A blocker-side
     /// restriction (the inverse of the others here): when set, the bearer
     /// can't be declared as a blocker for an attacker that lacks Flying.

@@ -2250,3 +2250,47 @@ fn temporal_intervention_void_discount_and_discard() {
     resolve_targeted(&mut g, 0, def.effect.clone(), &[]);
     assert_eq!(g.players[1].graveyard.len(), gy_before + 1, "opponent discarded a nonland");
 }
+
+/// Vote Out destroys a creature (Convoke is a cast-time discount, not tested here).
+#[test]
+fn vote_out_destroys_creature() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::vote_out().effect.clone(), &[theirs]);
+    assert!(g.battlefield_find(theirs).is_none(), "creature destroyed");
+}
+
+/// Archenemy's Charm mode 0 exiles a creature (AutoDecider picks the first mode).
+#[test]
+fn archenemys_charm_exiles_creature() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::archenemys_charm().effect.clone(), &[theirs]);
+    assert!(g.battlefield_find(theirs).is_none(), "mode 0 exiles the creature");
+}
+
+/// CR 509.1b — Illvoi Infiltrator can't be blocked once its controller has cast
+/// two or more spells this turn.
+#[test]
+fn illvoi_infiltrator_conditional_unblockable() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let illvoi = g.add_card_to_battlefield(0, catalog::illvoi_infiltrator());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(illvoi);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: illvoi, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    // One spell cast → blockable.
+    g.players[0].spells_cast_this_turn = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, illvoi)])).is_ok(),
+        "blockable with one spell cast");
+    // Two spells cast → unblockable.
+    g.players[0].spells_cast_this_turn = 2;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, illvoi)])).is_err(),
+        "unblockable after two spells");
+}
