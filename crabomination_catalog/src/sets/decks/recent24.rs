@@ -1928,3 +1928,84 @@ pub fn twitching_doll() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fear of Isolation — {1}{U} 2/3 Enchantment Creature — Nightmare with flying.
+/// Additional cost: return a permanent you control to its owner's hand.
+pub fn fear_of_isolation() -> CardDefinition {
+    CardDefinition {
+        name: "Fear of Isolation",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::ReturnToHand {
+            filter: SelectionRequirement::ControlledByYou,
+            count: 1,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Trapped in the Screen — {2}{W} Enchantment with ward {2}. When it enters,
+/// exile target artifact, creature, or enchantment an opponent controls until
+/// this leaves (CR 603.6e linked exile).
+pub fn trapped_in_the_screen() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Trapped in the Screen",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::ControlledByOpponent.and(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Enchantment),
+                ),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sheltered by Ghosts — {1}{W} Aura. Enchant creature you control. ETB exile
+/// target nonland permanent an opponent controls until this leaves. Enchanted
+/// creature gets +1/+0 and has lifelink and ward {1}.
+pub fn sheltered_by_ghosts() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Sheltered by Ghosts",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 0,
+            keywords: vec![Keyword::Lifelink, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}

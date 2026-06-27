@@ -1285,3 +1285,53 @@ fn fanatic_of_the_harrowing_conditional_draw() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 0, "no discard this way → no draw");
 }
+
+/// Fear of Isolation costs an extra "return a permanent you control"; cast it
+/// and the bounce happens while it enters.
+#[test]
+fn fear_of_isolation_bounces_a_permanent() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let foi = g.add_card_to_hand(0, catalog::fear_of_isolation());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: foi, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Fear of Isolation");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "permanent returned to hand");
+    assert_eq!(count_named(&g, 0, "Fear of Isolation"), 1, "enchantment creature entered");
+}
+
+/// Trapped in the Screen exiles an opponent's permanent on ETB and gives it
+/// back when the enchantment leaves (linked exile, CR 603.6e).
+#[test]
+fn trapped_in_the_screen_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let trap = g.add_card_to_battlefield(0, catalog::trapped_in_the_screen());
+    g.fire_self_etb_triggers(trap, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "opponent's creature exiled");
+    // Destroy the enchantment → linked exile returns the creature.
+    g.remove_to_graveyard_with_triggers(trap);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == foe), "creature returns when Trapped leaves");
+}
+
+/// Sheltered by Ghosts enchants your creature (+1/+0, lifelink, ward) and
+/// exiles an opponent's nonland permanent on ETB.
+#[test]
+fn sheltered_by_ghosts_buffs_and_exiles() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::sheltered_by_ghosts());
+    ready(&mut g);
+    cast_at(&mut g, aura, Target::Permanent(mine));
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::Lifelink), "gains lifelink");
+    assert!(g.battlefield_find(foe).is_none(), "opponent permanent exiled on ETB");
+}
