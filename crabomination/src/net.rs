@@ -1235,6 +1235,12 @@ pub struct PermanentView {
     /// offer the "crew" action. Populated by `project_permanent`.
     #[serde(default)]
     pub crew_value: u32,
+    /// CR 702.122e/702.171 — extra power this creature contributes when
+    /// crewing a Vehicle or saddling a Mount, beyond its real power
+    /// (Cloudspire Captain, Deathless Pilot). 0 for the common case; lets the
+    /// client badge "crews as +N".
+    #[serde(default)]
+    pub crew_power_bonus: i32,
     /// True when this creature's marked damage is already lethal (≥ its
     /// current toughness) and it isn't indestructible — i.e. it will die
     /// at the next state-based-action check. Lets the client grey out /

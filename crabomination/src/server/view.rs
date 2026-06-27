@@ -829,6 +829,27 @@ fn graveyard_entry(
     }
 }
 
+/// CR 702.122e/702.171 — sum of "crews/saddles as though its power were N
+/// greater" bonuses applying to `cid`, computed from a battlefield slice (the
+/// view layer has no `GameState`). Mirrors `GameState::crew_saddle_power_bonus`.
+fn crew_saddle_power_bonus_in(cid: CardId, battlefield: &[CardInstance]) -> i32 {
+    use crate::effect::StaticEffect;
+    let Some(target) = battlefield.iter().find(|c| c.id == cid) else { return 0 };
+    let mut bonus = 0;
+    for src in battlefield {
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount } = &sa.effect
+                && let Some(affected) =
+                    crate::game::selector_to_affected(applies_to, src)
+                && crate::game::layers::affected_includes(&affected, src.id, target)
+            {
+                bonus += amount;
+            }
+        }
+    }
+    bonus
+}
+
 fn project_permanent(
     card: &CardInstance,
     computed: &[crate::game::layers::ComputedPermanent],
@@ -951,6 +972,7 @@ fn project_permanent(
         regeneration_shields: card.regeneration_shields,
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
         crew_value: card.definition.crew_cost().unwrap_or(0),
+        crew_power_bonus: crew_saddle_power_bonus_in(card.id, battlefield),
         marked_lethal: {
             let tough = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
             let indestructible = cp
@@ -2976,6 +2998,20 @@ mod tests {
         let pv = view.battlefield.iter().find(|p| p.id == wagon).expect("wagon in view");
         assert_eq!(pv.power, 3, "power = lands controlled");
         assert!(pv.pt_modified, "noncreature Vehicle flagged as P/T-modified");
+    }
+
+    /// CR 702.122e/702.171 — Deathless Pilot's crew-power rider surfaces in the
+    /// view so the client can badge "crews as +2".
+    #[test]
+    fn crew_power_bonus_surfaces_in_view() {
+        let mut g = two_player_game();
+        let pilot = g.add_card_to_battlefield(0, catalog::deathless_pilot());
+        let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&g, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == pilot).expect("pilot in view");
+        assert_eq!(pv.crew_power_bonus, 2, "rider surfaces");
+        let bv = view.battlefield.iter().find(|p| p.id == plain).expect("bears in view");
+        assert_eq!(bv.crew_power_bonus, 0, "no rider on a plain creature");
     }
 
     /// A non-mana alternative cost surfaces a descriptive label (Escape

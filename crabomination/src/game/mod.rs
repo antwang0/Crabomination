@@ -6664,7 +6664,7 @@ impl GameState {
     /// CR 702.122e / 702.171 — sum of "crews/saddles as though its power were
     /// N greater" bonuses applying to `cid` (Cloudspire Captain, Deathless
     /// Pilot). Folded into the crew / saddle power total, not real P/T.
-    fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
+    pub(crate) fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
         use crate::effect::StaticEffect;
         let Some(target) = self.battlefield.iter().find(|c| c.id == cid) else { return 0 };
         let mut bonus = 0;
@@ -10670,7 +10670,7 @@ fn requirement_mentions_attacking(req: &SelectionRequirement) -> bool {
     }
 }
 
-fn selector_to_affected(
+pub(crate) fn selector_to_affected(
     sel: &crate::effect::Selector,
     card: &CardInstance,
 ) -> Option<AffectedPermanents> {

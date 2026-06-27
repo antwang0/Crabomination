@@ -2633,7 +2633,9 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
                     && c.definition.is_creature()
                     && !c.tapped
             })
-            .map(|c| (c.id, c.power().max(0) as u32))
+            // CR 702.122e/702.171 — count the crew-power rider (Cloudspire
+            // Captain / Deathless Pilot crew "as though power N greater").
+            .map(|c| (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32))
             .collect();
         crew.sort_by_key(|&(_, p)| p);
         let mut picked = Vec::new();
