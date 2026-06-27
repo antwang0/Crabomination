@@ -35,7 +35,34 @@ impl Format {
             }
         }
     }
+    /// Decklist-override env keys that this format will silently ignore.
+    /// Only the demo format honors `CRAB_DECK` / `CRAB_BOT_DECK`; the cube /
+    /// SOS / commander formats build their own decks. Pure (takes the set of
+    /// present keys) so it's unit-testable without touching the environment.
+    pub(crate) fn ignored_override_keys<'a>(&self, set_keys: &[&'a str]) -> Vec<&'a str> {
+        if matches!(self, Self::Demo) {
+            return Vec::new();
+        }
+        ["CRAB_DECK", "CRAB_BOT_DECK"]
+            .into_iter()
+            .filter(|k| set_keys.contains(k))
+            .collect()
+    }
+
     pub(crate) fn build(&self) -> GameState {
+        // Warn (don't silently misconfigure) when deck overrides are set for a
+        // format that won't use them — mirrors `load_deck_env`'s philosophy.
+        let present: Vec<&str> = ["CRAB_DECK", "CRAB_BOT_DECK"]
+            .into_iter()
+            .filter(|k| env::var(k).is_ok())
+            .collect();
+        for key in self.ignored_override_keys(&present) {
+            eprintln!(
+                "warning: {key} is set but ignored in {} format \
+                 (deck overrides apply only to the demo format).",
+                self.label(),
+            );
+        }
         match self {
             Self::Demo => {
                 let overrides = deck_overrides();

@@ -497,6 +497,17 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn deck_overrides_ignored_outside_demo_format() {
+        let set = ["CRAB_DECK", "CRAB_BOT_DECK"];
+        // Demo honors both → nothing flagged.
+        assert!(Format::Demo.ignored_override_keys(&set).is_empty());
+        // Cube / SOS / Commander flag every present override key.
+        assert_eq!(Format::Cube.ignored_override_keys(&set), set);
+        assert_eq!(Format::Sos.ignored_override_keys(&["CRAB_DECK"]), ["CRAB_DECK"]);
+        assert!(Format::Commander.ignored_override_keys(&[]).is_empty());
+    }
+
+    #[test]
     pub(crate) fn pairing_timeout_defaults_when_unset() {
         let t = with_env("CRAB_PAIRING_TIMEOUT_SECS", None, pairing_timeout_from_env);
         assert_eq!(t, DEFAULT_PAIRING_TIMEOUT);
