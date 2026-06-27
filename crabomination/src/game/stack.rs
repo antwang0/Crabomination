@@ -1703,6 +1703,7 @@ impl GameState {
             pl.searched_library_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
             pl.discarded_this_turn.clear();
+            pl.permanents_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.
             pl.dealt_combat_damage_to_player_this_turn = false;
             // CR 700.13 — "committed a crime this turn" resets each turn.

@@ -498,6 +498,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)
                 .unwrap_or(0),
+            Value::PermanentsSacrificedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].permanents_sacrificed_this_turn as i32)
+                .unwrap_or(0),
             Value::CreaturesDiedThisTurnTotal => self
                 .players
                 .iter()
@@ -846,6 +850,12 @@ impl GameState {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)
                     .map(|p| self.players[p].creatures_died_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::PermanentsSacrificedThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].permanents_sacrificed_this_turn >= n)
                     .unwrap_or(false)
             }
             Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least } => {

@@ -294,6 +294,12 @@ pub struct Player {
     /// Populated in `discard_card`; cleared in `do_untap`.
     #[serde(default)]
     pub discarded_this_turn: std::collections::HashSet<crate::card::CardId>,
+    /// Number of permanents this player has sacrificed so far this turn.
+    /// Bumped in `dispatch_triggers_for_events` per `PermanentSacrificed`
+    /// event; reset in `do_untap`. Powers "if you sacrificed a permanent
+    /// this turn" payoffs (Sawblade Skinripper).
+    #[serde(default)]
+    pub permanents_sacrificed_this_turn: u32,
     /// "[Filter] spells you cast this turn cost {N} less" grants
     /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
     /// Each entry applies to every matching spell for the rest of the
@@ -547,6 +553,7 @@ impl Player {
             turn_spell_discounts: Vec::new(),
             cards_discarded_this_turn: 0,
             discarded_this_turn: std::collections::HashSet::new(),
+            permanents_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,

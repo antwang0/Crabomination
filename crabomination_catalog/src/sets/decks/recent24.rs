@@ -1757,3 +1757,56 @@ pub fn shroudstomper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sawblade Skinripper — {1}{B}{R} 3/2 Human Assassin with menace. {2},
+/// Sacrifice another creature or enchantment: put a +1/+1 counter on it. At
+/// your end step, if you sacrificed one or more permanents this turn, it deals
+/// that much damage to any target.
+pub fn sawblade_skinripper() -> CardDefinition {
+    CardDefinition {
+        name: "Sawblade Skinripper",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::PermanentsSacrificedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::ONE,
+            }),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::PermanentsSacrificedThisTurn(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}

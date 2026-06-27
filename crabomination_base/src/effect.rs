@@ -570,6 +570,9 @@ pub enum Value {
     /// died under your control this turn"). The companion predicate is
     /// `Predicate::CreaturesDiedThisTurnAtLeast`.
     CreaturesDiedThisTurn(PlayerRef),
+    /// Number of permanents `who` has sacrificed so far this turn. Backed by
+    /// `Player.permanents_sacrificed_this_turn`.
+    PermanentsSacrificedThisTurn(PlayerRef),
     /// Number of creatures that died this turn across **every** player.
     /// Sums `Player.creatures_died_this_turn` over all seats. Powers
     /// table-wide aristocrat scaling, mirroring
@@ -841,6 +844,10 @@ pub enum Predicate {
     /// Witherbloom "if a creature died under your control this turn, …"
     /// end-step payoffs (Essenceknit Scholar).
     CreaturesDiedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// `who` has sacrificed at least `at_least` permanents this turn. Backed
+    /// by `Player.permanents_sacrificed_this_turn`. Used by "if you
+    /// sacrificed a permanent this turn" payoffs (Sawblade Skinripper).
+    PermanentsSacrificedThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// At least `at_least` creatures died this turn under **any** player's
     /// control — the global "Morbid" condition (CR 700.4 "a creature died
     /// this turn"). Sums `Player.creatures_died_this_turn` across all

@@ -6989,6 +6989,15 @@ impl GameState {
                         c.battlefield_timestamp = ts;
                     }
                 }
+                // Per-turn sacrifice tally — every sacrifice path funnels a
+                // `PermanentSacrificed` through here exactly once, so this is
+                // the one place to count "you sacrificed a permanent this turn".
+                GameEvent::PermanentSacrificed { who, .. } => {
+                    if let Some(pl) = self.players.get_mut(*who) {
+                        pl.permanents_sacrificed_this_turn =
+                            pl.permanents_sacrificed_this_turn.saturating_add(1);
+                    }
+                }
                 _ => {}
             }
         }

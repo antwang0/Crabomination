@@ -15,6 +15,12 @@ fn count_named(g: &GameState, controller: usize, name: &str) -> usize {
         .count()
 }
 
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 /// Stand a player at PreCombatMain with priority and a full mana pool.
 fn ready(g: &mut GameState) {
     g.active_player_idx = 0;
@@ -1117,4 +1123,31 @@ fn air_response_unit_is_crewable_vehicle() {
     let c = g.battlefield_find(v).unwrap();
     assert!(c.definition.keywords.contains(&Keyword::Crew(1)));
     assert_eq!((c.definition.power, c.definition.toughness), (3, 3));
+}
+
+/// Sawblade Skinripper grows on its sac ability and, at end step, deals damage
+/// equal to the number of permanents sacrificed this turn to any target.
+#[test]
+fn sawblade_skinripper_sac_payoff() {
+    let mut g = two_player_game();
+    let saw = g.add_card_to_battlefield(0, catalog::sawblade_skinripper());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(saw);
+    ready(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: saw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Sawblade sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(
+        g.battlefield_find(saw).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Sawblade got a +1/+1 counter",
+    );
+    assert_eq!(g.players[0].permanents_sacrificed_this_turn, 1);
+    // End step: 1 permanent sacrificed → 1 damage to the opponent.
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 damage from the end-step trigger");
 }
