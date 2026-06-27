@@ -2310,3 +2310,25 @@ pub fn midnight_mayhem() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Stalked Researcher — {1}{U} 3/3 Human Wizard with defender. Eerie — whenever
+/// an enchantment you control enters and whenever you fully unlock a Room, it
+/// can attack this turn as though it didn't have defender (CR 508.1a).
+pub fn stalked_researcher() -> CardDefinition {
+    CardDefinition {
+        name: "Stalked Researcher",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: eerie(Effect::AttackDespiteDefenderThisTurn {
+            what: Selector::This,
+        }),
+        ..Default::default()
+    }
+}

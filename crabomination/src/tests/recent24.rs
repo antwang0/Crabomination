@@ -1565,3 +1565,21 @@ fn midnight_mayhem_makes_and_buffs_gremlins() {
     let cp = g.computed_permanent(gremlins[0]).unwrap();
     assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Menace) && cp.keywords.contains(&Keyword::Lifelink));
 }
+
+/// Stalked Researcher's Eerie trigger lets it attack despite defender.
+#[test]
+fn stalked_researcher_eerie_lifts_defender() {
+    let mut g = two_player_game();
+    let sr = g.add_card_to_battlefield(0, catalog::stalked_researcher());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    g.clear_sickness(sr);
+    ready(&mut g);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Room (enchantment enters → Eerie)");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    let res = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sr, target: AttackTarget::Player(1),
+    }]));
+    assert!(res.is_ok(), "defender lifted by Eerie → attack legal");
+}
