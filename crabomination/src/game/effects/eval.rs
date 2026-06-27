@@ -834,6 +834,16 @@ impl GameState {
                         .unwrap_or(0)
                         > 0
                 }),
+            Predicate::DiscardedThisEffect { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| {
+                    self.cards_discarded_per_player_this_resolution
+                        .get(&p)
+                        .copied()
+                        .unwrap_or(0)
+                        > 0
+                }),
             Predicate::CardsLeftGraveyardThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

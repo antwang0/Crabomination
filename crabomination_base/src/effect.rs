@@ -801,6 +801,11 @@ pub enum Predicate {
     /// 3 life" — pair `Not(DiscardedNonlandThisEffect { Triggerer })` with a
     /// per-opponent `ForEach` so each opponent is judged independently.
     DiscardedNonlandThisEffect { who: PlayerRef },
+    /// True if `who` discarded at least one card (any type) within the current
+    /// effect resolution. Backed by
+    /// `GameState.cards_discarded_per_player_this_resolution`. Gates "if you
+    /// discarded a card this way, …" riders (Fanatic of the Harrowing).
+    DiscardedThisEffect { who: PlayerRef },
     /// `who` has had at least `at_least` cards leave their graveyard
     /// this turn. Backed by `Player.cards_left_graveyard_this_turn`.
     /// Used by Lorehold "if a card left your graveyard this turn"

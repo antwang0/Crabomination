@@ -42,13 +42,14 @@ Mechanics deferred while batching the 20-card `recent23` wave:
 - **Other genuinely-unimplemented CR keywords** (each needs a new subsystem):
   Read Ahead (702.155 — Saga enters-chapter choice), Space Sculptor (702.158 —
   sector assignment), Living Metal (702.161 — needs the MTMTE transform DFCs).
-- **DSK cards noticed but deferred** (need new primitives): Sawblade Skinripper
-  & "if you sacrificed one or more permanents this turn" payoffs (a
-  permanents-sacrificed-this-turn counter); Twitching Doll (a mana ability that
-  also adds a counter + sac-for-N-tokens); Toby, Beastie Befriender (token-count
-  conditional anthem + "can't attack/block alone" keyword). Fanatic of the
-  Harrowing ships with its conditional draw approximated as unconditional (no
-  "you discarded this way" predicate yet).
+- ✅ **DSK deferred cards shipped** — Sawblade Skinripper
+  (`Player.permanents_sacrificed_this_turn` + `Value::PermanentsSacrificedThisTurn`
+  / `Predicate::PermanentsSacrificedThisTurnAtLeast`); Twitching Doll
+  (`is_mana_ability` accepts an incidental self-`AddCounter` rider,
+  `Value::TotalCountersOn`, `CounterType::Nest`, sac-cost `leaves_bf_lki` stash);
+  Toby, Beastie Befriender (`Keyword::CantAttackOrBlockAlone` +
+  `StaticEffect::PumpTeamIf` token-count anthem); Fanatic of the Harrowing now
+  gates its draw on `Predicate::DiscardedThisEffect`.
 - ✅ **Conditional enters-with-counters by cast zone** (Patched Plaything) —
   the ETB context now stamps `cast_from_hand` from the entering instance, so
   `enters_with_counters` can gate its `Value` on `Predicate::CastFromHand`

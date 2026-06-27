@@ -1262,3 +1262,26 @@ fn twitching_doll_nests_then_sacs_for_spiders() {
     assert!(g.battlefield_find(doll).is_none(), "Doll sacrificed");
     assert_eq!(count_named(&g, 0, "Spider"), 2, "two Spiders from two counters");
 }
+
+/// Fanatic of the Harrowing only draws if you discarded a card this way: with
+/// an empty hand you discard nothing and don't draw.
+#[test]
+fn fanatic_of_the_harrowing_conditional_draw() {
+    // You have a card to discard → discard it, then draw.
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let fan = g.add_card_to_battlefield(0, catalog::fanatic_of_the_harrowing());
+    g.fire_self_etb_triggers(fan, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "discarded one, drew one");
+
+    // Empty hand → nothing discarded by you → no draw.
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let fan = g.add_card_to_battlefield(0, catalog::fanatic_of_the_harrowing());
+    g.fire_self_etb_triggers(fan, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "no discard this way → no draw");
+}

@@ -1576,8 +1576,7 @@ pub fn cryptid_inspector() -> CardDefinition {
 }
 
 /// Fanatic of the Harrowing — {3}{B} 2/2 Human Cleric. When it enters, each
-/// player discards a card, then you draw a card. (The "if you discarded" gate
-/// is approximated as an unconditional draw.)
+/// player discards a card; if you discarded a card this way, draw a card.
 pub fn fanatic_of_the_harrowing() -> CardDefinition {
     CardDefinition {
         name: "Fanatic of the Harrowing",
@@ -1595,7 +1594,11 @@ pub fn fanatic_of_the_harrowing() -> CardDefinition {
                 amount: Value::Const(1),
                 random: false,
             },
-            draw(1),
+            Effect::If {
+                cond: Predicate::DiscardedThisEffect { who: PlayerRef::You },
+                then: Box::new(draw(1)),
+                else_: Box::new(Effect::Noop),
+            },
         ]))],
         ..Default::default()
     }
