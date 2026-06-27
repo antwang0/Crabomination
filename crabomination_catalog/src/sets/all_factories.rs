@@ -4027,6 +4027,10 @@ static EOE: &[Factory] = &[
     super::eoe::thaumaton_torpedo,
     super::eoe::terrasymbiosis,
     super::eoe::weapons_manufacturing,
+    super::eoe::syr_vondam_the_lucent,
+    super::eoe::starwinder,
+    super::eoe::pinnacle_starcage,
+    super::eoe::temporal_intervention,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

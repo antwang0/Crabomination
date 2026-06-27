@@ -2185,3 +2185,68 @@ fn station_activated_band_unlocks_at_threshold() {
     // Spent {U}, produced {U} per artifact (1) → at least one blue back.
     assert!(g.players[0].mana_pool.total() >= 1, "band added scaled mana");
 }
+
+/// Syr Vondam, the Lucent buffs your other creatures and grants deathtouch on attack.
+#[test]
+fn syr_vondam_lucent_buffs_team() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::syr_vondam_the_lucent());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::syr_vondam_the_lucent().triggered_abilities[0].effect.clone(), &[]);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0 to other creatures");
+    assert!(cp.keywords.contains(&Keyword::Deathtouch), "granted deathtouch");
+}
+
+/// Starwinder draws cards equal to combat damage one of your creatures deals.
+#[test]
+fn starwinder_draws_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::starwinder());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([crate::decision::DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew 2 = combat damage dealt");
+}
+
+/// Pinnacle Starcage exiles small permanents until it leaves, then returns them.
+#[test]
+fn pinnacle_starcage_exiles_small_permanents() {
+    let mut g = two_player_game();
+    let cage = g.add_card_to_battlefield(0, catalog::pinnacle_starcage());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    resolve_targeted(&mut g, 0, catalog::pinnacle_starcage().triggered_abilities[0].effect.clone(), &[]);
+    let _ = cage;
+    assert!(g.battlefield_find(bear).is_none(), "MV-2 creature exiled");
+}
+
+/// Temporal Intervention is cheaper with Void active and discards a nonland.
+#[test]
+fn temporal_intervention_void_discount_and_discard() {
+    let mut g = two_player_game();
+    // A nonland permanent left the battlefield this turn → Void active.
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, token);
+    drain_stack(&mut g);
+    assert!(g.nonland_permanent_left_bf_this_turn, "Void latched");
+    let def = catalog::temporal_intervention();
+    // The static reduces the cost by {2} when Void is active.
+    assert!(matches!(def.static_abilities[0].effect,
+        crate::effect::StaticEffect::SelfCostReducedIf { amount: 2, .. }));
+    let nid = g.next_id();
+    g.players[1].hand.push(crate::card::CardInstance::new(nid, catalog::grizzly_bears(), 1));
+    let gy_before = g.players[1].graveyard.len();
+    resolve_targeted(&mut g, 0, def.effect.clone(), &[]);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 1, "opponent discarded a nonland");
+}

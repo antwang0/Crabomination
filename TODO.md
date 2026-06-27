@@ -42,7 +42,11 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (Memorial Ensign), Xu-Ifit, Monoist Circuit-Feeder, Space-Time Anomaly, Systems
   Override, Mutinous Massacre, Focus Fire, Scour for Scrap, Terminal Velocity,
   Melded Moxite, Squire's Lightblade, Auxiliary Boosters, Thaumaton Torpedo,
-  Terrasymbiosis, Weapons Manufacturing. New deferrals from that batch:
+  Terrasymbiosis, Weapons Manufacturing, Syr Vondam (the Lucent), Starwinder,
+  Pinnacle Starcage (ETB mass O-Ring; `{6}{W}{W}` dump-to-gy/make-Robots payoff
+  dropped), Temporal Intervention (Void cost reduction + each-opponent discard;
+  the "target opponent" single-target restriction is approximated to each
+  opponent). New deferrals from that batch:
   **Tannuk's "second landfall this turn → draw"** needs a per-source
   resolution-count predicate; **Timeline Culler's cast-from-graveyard warp**
   needs `AlternativeCost` to allow a graveyard cast zone; **Syr Vondam's

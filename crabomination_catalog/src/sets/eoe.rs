@@ -5751,3 +5751,115 @@ pub fn weapons_manufacturing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── New EOE batch 2 (modern_decks) ──────────────────────────────────────────
+
+/// Syr Vondam, the Lucent — {2}{W}{B}{B} 4/4 Legendary Human Knight. Deathtouch,
+/// lifelink. Whenever Syr Vondam enters or attacks, other creatures you control
+/// get +1/+0 and gain deathtouch until end of turn.
+pub fn syr_vondam_the_lucent() -> CardDefinition {
+    use crate::card::Supertype;
+    let buff = || {
+        let others = || Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        );
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: others(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: others(),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Syr Vondam, the Lucent",
+        cost: cost(&[generic(2), w(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![etb(buff()), on_attack(buff())],
+        ..Default::default()
+    }
+}
+
+/// Starwinder — {5}{U}{U} 7/7 Leviathan. Whenever a creature you control deals
+/// combat damage to a player, you may draw that many cards. Warp {2}{U}{U}.
+pub fn starwinder() -> CardDefinition {
+    CardDefinition {
+        name: "Starwinder",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Draw that many cards".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount }),
+            },
+        }],
+        alternative_cost: Some(warp(cost(&[generic(2), u(), u()]))),
+        ..Default::default()
+    }
+}
+
+/// Pinnacle Starcage — {1}{W}{W} Artifact. ETB: exile all artifacts and
+/// creatures with mana value 2 or less until this leaves. (The `{6}{W}{W}`
+/// dump-to-graveyard-and-make-Robots activated payoff is dropped.)
+pub fn pinnacle_starcage() -> CardDefinition {
+    CardDefinition {
+        name: "Pinnacle Starcage",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::ManaValueAtMost(2))
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Temporal Intervention — {2}{B} Sorcery. Void — costs {2} less if a nonland
+/// permanent left the battlefield or a spell was warped this turn. Target
+/// opponent reveals their hand; you choose a nonland card and they discard it.
+/// (Modeled against each opponent — the single-target restriction is dropped.)
+pub fn temporal_intervention() -> CardDefinition {
+    CardDefinition {
+        name: "Temporal Intervention",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "Void — costs {2} less to cast.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::VoidActive { who: PlayerRef::You },
+                amount: 2,
+            },
+        }],
+        effect: Effect::DiscardChosen {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland,
+        },
+        ..Default::default()
+    }
+}
