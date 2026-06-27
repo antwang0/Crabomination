@@ -3038,3 +3038,60 @@ fn close_encounter_deals_greatest_power() {
     cast_at(&mut g, id, crate::game::types::Target::Permanent(foe));
     assert!(g.battlefield_find(foe).is_none(), "2/2 took 3 damage and died");
 }
+
+/// Devastating Onslaught makes X hasty token copies that are sacrificed at the
+/// next end step.
+#[test]
+fn devastating_onslaught_makes_hasty_copies_sacrificed_at_end() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::devastating_onslaught());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4); // X=2 → {2}{2}{R}
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Devastating Onslaught X=2");
+    drain_stack(&mut g);
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Grizzly Bears").collect();
+    assert_eq!(tokens.len(), 2, "X=2 token copies");
+    let tid = tokens[0].id;
+    assert!(g.computed_permanent(tid).unwrap().keywords.contains(&Keyword::Haste), "tokens have haste");
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Grizzly Bears"),
+        "token copies sacrificed at the end step");
+}
+
+/// Unravel counters a spell and draws only if it was cast for less than its MV.
+#[test]
+fn unravel_draws_when_target_was_underpaid() {
+    use crate::game::types::StackItem;
+    let mut g = two_player_game();
+    // Opponent casts Opt ({U}, MV 1) at instant speed; force it to look
+    // "underpaid" (mana_spent 0 < MV 1).
+    let spell = g.add_card_to_hand(1, catalog::opt());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts Opt");
+    if let Some(StackItem::Spell { mana_spent, .. }) =
+        g.stack.iter_mut().find(|si| matches!(si, StackItem::Spell { card, .. } if card.id == spell))
+    {
+        *mana_spent = 0;
+    }
+    let unr = g.add_card_to_hand(0, catalog::unravel());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len() - 1; // minus the Unravel about to leave
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, unr, crate::game::types::Target::Permanent(spell));
+    assert!(!g.stack.iter().any(|si| matches!(si, StackItem::Spell { card, .. } if card.id == spell)),
+        "Opt was countered");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card (underpaid)");
+}

@@ -2842,6 +2842,16 @@ pub enum Effect {
         #[serde(default)]
         non_legendary: bool,
     },
+    /// Create `count` token copies of the permanent resolved by `source`
+    /// (controlled by `who`), each gaining haste until end of turn and
+    /// sacrificed at the beginning of the next end step. Devastating Onslaught
+    /// ("create X tokens that are copies of target artifact or creature you
+    /// control").
+    CreateTokenCopiesHasteSac {
+        who: PlayerRef,
+        count: Value,
+        source: Selector,
+    },
     /// CR 701.32 — Populate: `who` creates a token that's a copy of a creature
     /// token they control (their choice; AutoDecider keeps the highest-power
     /// one). No-op if they control no creature token.
@@ -2903,6 +2913,9 @@ pub enum Effect {
     // ── Stack interaction ────────────────────────────────────────────────────
     /// Counter target spell (removes from stack; sends to owner's graveyard).
     CounterSpell { what: Selector },
+    /// Counter target spell; if the mana spent to cast it was less than its
+    /// mana value, the controller draws a card (Unravel).
+    CounterSpellDrawIfUnderpaid { what: Selector },
     /// Counter target spell and route it to a specific zone instead of the
     /// owner's graveyard. CR 701.6a's default is "a countered spell is put
     /// into its owner's graveyard"; cards like Memory Lapse / Remand /

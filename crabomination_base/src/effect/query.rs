@@ -435,6 +435,7 @@ impl Effect {
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
             | Effect::CounterAbility { what }
@@ -605,7 +606,8 @@ impl Effect {
             Effect::AdditionalCombatPhase { count }
             | Effect::AdditionalCombatPhaseAfterMain { count } => value_has_target(count),
             Effect::CreateEmblem { who, .. } => player_has_target(who),
-            Effect::CreateTokenCopyOf { who, count, source, .. } => {
+            Effect::CreateTokenCopyOf { who, count, source, .. }
+            | Effect::CreateTokenCopiesHasteSac { who, count, source } => {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
@@ -701,6 +703,7 @@ impl Effect {
             | Effect::Suspect { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
+            | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
             | Effect::CounterAbility { what }
@@ -734,7 +737,8 @@ impl Effect {
             | Effect::AddRandomMissingCounter { what, .. } => sel_filter(what),
             // CreateTokenCopyOf — the `source` is the targeted permanent to
             // copy (Esika's Chariot "copy target token you control").
-            Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
+            Effect::CreateTokenCopyOf { source, .. }
+            | Effect::CreateTokenCopiesHasteSac { source, .. } => sel_filter(source),
             // CreateTokenAttachedTo — the `target` is the creature the minted
             // Aura/Role token attaches to (Splashy Spellcaster's Role).
             Effect::CreateTokenAttachedTo { target, .. } => sel_filter(target),
@@ -909,7 +913,7 @@ impl Effect {
             // the caster, not the opponent.
             Effect::DoubleLife { .. } => true,
             // Copying "target token you control" is friendly (Esika's Chariot).
-            Effect::CreateTokenCopyOf { .. } => true,
+            Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_friendly_target()),
@@ -1071,6 +1075,7 @@ impl Effect {
             Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
             Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
             Effect::CounterSpell { .. }
+            | Effect::CounterSpellDrawIfUnderpaid { .. }
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
             Effect::Fight { .. } => "fight".into(),
@@ -1277,6 +1282,7 @@ impl Effect {
             // Stack-targeted counter spells take a permanent slot but the
             // target is a stack item, not a player. Reject player target.
             Effect::CounterSpell { .. }
+            | Effect::CounterSpellDrawIfUnderpaid { .. }
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. }
             | Effect::CounterAbility { .. }
@@ -1593,6 +1599,7 @@ impl Effect {
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
                 | Effect::CounterSpell { what }
+                | Effect::CounterSpellDrawIfUnderpaid { what }
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
                 | Effect::CounterAbility { what }
@@ -1683,7 +1690,8 @@ impl Effect {
                 | Effect::BecomeCopyOfFor { what, source, .. } => {
                     sel_find(what, slot).or_else(|| sel_find(source, slot))
                 }
-                Effect::CreateTokenCopyOf { source, .. } => sel_find(source, slot),
+                Effect::CreateTokenCopyOf { source, .. }
+                | Effect::CreateTokenCopiesHasteSac { source, .. } => sel_find(source, slot),
                 Effect::Endure { target, .. } => sel_find(target, slot),
                 Effect::Airbend { what } => sel_find(what, slot),
                 Effect::LifeGainLockThisTurn { who }

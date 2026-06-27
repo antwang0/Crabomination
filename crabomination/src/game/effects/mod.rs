@@ -6008,6 +6008,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CreateTokenCopiesHasteSac { who, count, source } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
+                for _ in 0..self.token_doublers_for(p) {
+                    n = n.saturating_mul(2);
+                }
+                let src_id = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    });
+                let Some(src_id) = src_id else { return Ok(()); };
+                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| (*c.definition).clone())
+                else { return Ok(()); };
+                for _ in 0..n {
+                    let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
+                    self.grant_keyword_eot(tid, Keyword::Haste);
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: tid,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::SacrificeSource,
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::Populate { who } => {
                 // CR 701.32 — copy one creature token the player controls.
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -6061,6 +6093,35 @@ impl GameState {
                 for pos in to_remove {
                     if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
                         self.route_to_graveyard(*card, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CounterSpellDrawIfUnderpaid { what } => {
+                let targets = self.resolve_selector(what, ctx);
+                let mut hit: Option<(usize, bool)> = None;
+                for t in &targets {
+                    if let Some(cid) = t.as_card_id()
+                        && let Some(pos) = self.stack.iter().position(|si| matches!(
+                            si,
+                            StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                        ))
+                    {
+                        let underpaid = matches!(&self.stack[pos],
+                            StackItem::Spell { card, mana_spent, .. }
+                                if (*mana_spent as i32) < card.definition.cost.cmc() as i32);
+                        hit = Some((pos, underpaid));
+                        break;
+                    }
+                }
+                if let Some((pos, underpaid)) = hit {
+                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                        self.route_to_graveyard(*card, events);
+                    }
+                    if underpaid {
+                        let draw = Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(1) };
+                        self.resolve_effect(&draw, ctx)?;
                     }
                 }
                 Ok(())

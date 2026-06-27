@@ -6951,3 +6951,37 @@ pub fn close_encounter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Devastating Onslaught — {X}{X}{R} Sorcery. Create X tokens that are copies of
+/// target artifact or creature you control. Those tokens gain haste until end
+/// of turn. Sacrifice them at the beginning of the next end step.
+pub fn devastating_onslaught() -> CardDefinition {
+    CardDefinition {
+        name: "Devastating Onslaught",
+        cost: cost(&[x(), x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateTokenCopiesHasteSac {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            source: target_filtered(
+                SelectionRequirement::ControlledByYou
+                    .and(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Unravel — {1}{U}{U} Instant. Counter target spell. If the amount of mana
+/// spent to cast that spell was less than its mana value, you draw a card.
+pub fn unravel() -> CardDefinition {
+    CardDefinition {
+        name: "Unravel",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpellDrawIfUnderpaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}

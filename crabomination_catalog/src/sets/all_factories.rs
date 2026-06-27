@@ -4121,6 +4121,8 @@ static EOE: &[Factory] = &[
     super::eoe::weftwalking,
     super::eoe::pull_through_the_weft,
     super::eoe::close_encounter,
+    super::eoe::devastating_onslaught,
+    super::eoe::unravel,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
