@@ -1980,6 +1980,13 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Saddle (CR 702.171): tap the bot's least-valuable untapped creatures to
+    // saddle a Mount that's about to attack, so its "attacks while saddled"
+    // riders fire. Dry-run-gated.
+    if let Some(action) = pick_saddle(state, seat) {
+        return action;
+    }
+
     // Equip (CR 702.6): if the bot controls an Equipment that isn't yet
     // attached to one of its creatures, and it controls a creature to wear
     // it, move the Equipment onto the biggest such creature. Dry-run-gated
@@ -2655,6 +2662,58 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
             continue;
         }
         let action = GameAction::Crew { vehicle: vehicle.id, crew_creatures: picked };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
+/// CR 702.171 — saddle a Mount the bot is about to attack with by tapping its
+/// least-valuable other untapped creatures (smallest power first). Only saddles
+/// a Mount that can attack this turn and isn't already saddled, and never spends
+/// more board power than the Mount itself is worth.
+fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
+    for mount in &state.battlefield {
+        if mount.controller != seat || mount.saddled || mount.tapped {
+            continue;
+        }
+        let Some(saddle_n) = mount.definition.saddle_cost() else { continue };
+        if !mount.can_attack() {
+            continue;
+        }
+        // Candidate saddlers: the bot's other untapped creatures that can't
+        // attack profitably themselves are tapped first — sort smallest power
+        // first (the crew-power rider counts, CR 702.171).
+        let mut riders: Vec<(CardId, u32)> = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.id != mount.id
+                    && c.definition.is_creature()
+                    && !c.tapped
+            })
+            .map(|c| (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32))
+            .collect();
+        riders.sort_by_key(|&(_, p)| p);
+        let mut picked = Vec::new();
+        let mut total = 0u32;
+        for (id, p) in &riders {
+            if total >= saddle_n {
+                break;
+            }
+            picked.push(*id);
+            total += p;
+        }
+        if total < saddle_n {
+            continue;
+        }
+        // Don't tap more board power than the Mount is worth.
+        if total > mount.power().max(0) as u32 {
+            continue;
+        }
+        let action = GameAction::Saddle { mount: mount.id, creatures: picked };
         if state.would_accept(action.clone()) {
             return Some(action);
         }
@@ -4037,6 +4096,27 @@ mod tests {
         let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
         g.clear_sickness(dragon);
         assert!(pick_crew(&g, 0).is_none(), "won't tap a bigger body to crew a smaller Vehicle");
+    }
+
+    /// The bot saddles a Mount it can attack with using a spare small creature,
+    /// but won't tap a creature bigger than the Mount to do it.
+    #[test]
+    fn bot_saddles_a_mount_with_a_small_creature() {
+        let mut g = two_player_game();
+        let ghoda = g.add_card_to_battlefield(0, catalog::gilded_ghoda()); // 2/2, Saddle 1
+        g.clear_sickness(ghoda);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        g.clear_sickness(bear);
+        match pick_saddle(&g, 0) {
+            Some(GameAction::Saddle { mount, creatures }) => {
+                assert_eq!(mount, ghoda);
+                assert_eq!(creatures, vec![bear]);
+            }
+            other => panic!("expected a saddle action, got {other:?}"),
+        }
+        // A summoning-sick Mount can't attack → don't waste a saddler on it.
+        g.battlefield_find_mut(ghoda).unwrap().summoning_sick = true;
+        assert!(pick_saddle(&g, 0).is_none(), "won't saddle a Mount that can't attack");
     }
 
     /// The bot sacrifices Pus Kami to destroy a bigger opposing creature, but
