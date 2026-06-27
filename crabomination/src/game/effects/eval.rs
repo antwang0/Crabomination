@@ -1463,6 +1463,7 @@ impl GameState {
                     }
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     R::AttackedThisTurn => card.attacked_this_turn,
+                    R::FaceDown => card.face_down,
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
                     R::EnteredFromGraveyardThisTurn => {
@@ -1865,7 +1866,7 @@ impl GameState {
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::AttackedThisTurn | R::HasAbilityOnStack
+            | R::AttackedThisTurn | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted

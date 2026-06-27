@@ -114,6 +114,154 @@ fn unwilling_vessel_dies_mints_spirit() {
     assert!(spirit.definition.keywords.contains(&Keyword::Flying), "Spirit flies");
 }
 
+/// Gremlin Tamer's Eerie trigger mints a Gremlin when an enchantment enters.
+#[test]
+fn gremlin_tamer_eerie_makes_gremlin() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gremlin_tamer());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    ready(&mut g);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Room");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Gremlin"), 1, "Eerie minted a Gremlin");
+}
+
+/// Erratic Apparition's Eerie trigger pumps it +1/+1.
+#[test]
+fn erratic_apparition_eerie_pumps() {
+    let mut g = two_player_game();
+    let ea = g.add_card_to_battlefield(0, catalog::erratic_apparition());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    ready(&mut g);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Room");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ea).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4), "+1/+1 from Eerie");
+}
+
+/// Commune with Evil puts one of the top four into hand, the rest into the
+/// graveyard, and gains 3 life.
+#[test]
+fn commune_with_evil_digs_and_gains() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let cwe = g.add_card_to_hand(0, catalog::commune_with_evil());
+    ready(&mut g);
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cwe, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Commune with Evil");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "one card to hand (spell left hand)");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3, "rest to graveyard");
+    assert_eq!(g.players[0].life, life + 3, "gained 3 life");
+}
+
+/// Acrobatic Cheerleader's Survival gives it a flying counter once it's tapped.
+#[test]
+fn acrobatic_cheerleader_survival_flies() {
+    let mut g = two_player_game();
+    let ac = g.add_card_to_battlefield(0, catalog::acrobatic_cheerleader());
+    g.battlefield_find_mut(ac).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(ac).unwrap().keywords.contains(&Keyword::Flying),
+        "gained flying from Survival",
+    );
+}
+
+/// Clockwork Percussionist's death exiles the top card and grants a may-play.
+#[test]
+fn clockwork_percussionist_dies_impulse() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    let cp = g.add_card_to_battlefield(0, catalog::clockwork_percussionist());
+    g.battlefield_find_mut(cp).unwrap().damage = 1; // lethal vs 1 toughness
+    g.priority.player_with_priority = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == top), "top card exiled with may-play");
+}
+
+/// Diversion Specialist sacrifices a creature to impulse the top card.
+#[test]
+fn diversion_specialist_sac_impulses() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::diversion_specialist());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    ready(&mut g);
+    let ds = g.battlefield.iter().find(|c| c.definition.name == "Diversion Specialist").unwrap().id;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ds, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Diversion Specialist");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert!(g.exile.iter().any(|c| c.id == top), "top card exiled to play this turn");
+}
+
+/// Sumala Sentry counters itself and the turned card when a face-down
+/// permanent you control is turned face up.
+#[test]
+fn sumala_sentry_turn_face_up_counters() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::sumala_sentry());
+    let top = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(top, catalog::elder_gargaroth(), 0));
+    let ctx = crate::game::effects::EffectContext::for_ability(top, 0, None);
+    let mut events = vec![];
+    g.manifest_card(top, 0, &ctx, &mut events);
+    ready(&mut g);
+    g.perform_action(GameAction::TurnFaceUp { card_id: top }).expect("turn face up");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ss).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Sumala got a +1/+1 counter",
+    );
+    assert_eq!(
+        g.battlefield_find(top).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "turned card got a +1/+1 counter",
+    );
+}
+
+/// Cryptid Inspector counters itself when a face-down permanent enters and
+/// when one is turned face up.
+#[test]
+fn cryptid_inspector_face_down_matters() {
+    let mut g = two_player_game();
+    let ci = g.add_card_to_battlefield(0, catalog::cryptid_inspector());
+    let top = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(top, catalog::elder_gargaroth(), 0));
+    let ctx = crate::game::effects::EffectContext::for_ability(top, 0, None);
+    let mut events = vec![];
+    g.manifest_card(top, 0, &ctx, &mut events);
+    g.dispatch_triggers_for_events(&events); // face-down permanent entered
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ci).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "+1/+1 when a face-down permanent entered",
+    );
+    ready(&mut g);
+    g.perform_action(GameAction::TurnFaceUp { card_id: top }).expect("turn face up");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ci).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "+1/+1 again when turned face up",
+    );
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {

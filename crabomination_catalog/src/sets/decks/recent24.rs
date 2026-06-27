@@ -1355,3 +1355,222 @@ fn zombie_2_2_token() -> TokenDefinition {
         ..Default::default()
     }
 }
+
+// ── Duskmourn (DSK) staples — wave 4 ─────────────────────────────────────────
+
+/// A 1/1 red Gremlin creature token (DSK).
+fn gremlin_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Gremlin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gremlin], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Gremlin Tamer — {W}{U} 2/2 Human Scout. Eerie — create a 1/1 red Gremlin.
+pub fn gremlin_tamer() -> CardDefinition {
+    CardDefinition {
+        name: "Gremlin Tamer",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: eerie(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: gremlin_token(),
+        }),
+        ..Default::default()
+    }
+}
+
+/// Erratic Apparition — {2}{U} 1/3 Spirit with flying and vigilance. Eerie —
+/// gets +1/+1 until end of turn.
+pub fn erratic_apparition() -> CardDefinition {
+    CardDefinition {
+        name: "Erratic Apparition",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: eerie(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        }),
+        ..Default::default()
+    }
+}
+
+/// Diversion Specialist — {3}{R} 4/3 Human Warrior with menace. {1}, Sacrifice
+/// another creature or enchantment: exile the top card of your library; you
+/// may play it this turn.
+pub fn diversion_specialist() -> CardDefinition {
+    CardDefinition {
+        name: "Diversion Specialist",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Clockwork Percussionist — {R} 1/1 Monkey Toy with haste. When it dies,
+/// exile the top card of your library; you may play it until the end of your
+/// next turn.
+pub fn clockwork_percussionist() -> CardDefinition {
+    CardDefinition {
+        name: "Clockwork Percussionist",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Monkey, CreatureType::Toy],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Commune with Evil — {2}{B} Sorcery. Look at the top four cards of your
+/// library; put one into your hand and the rest into your graveyard, then gain
+/// 3 life.
+pub fn commune_with_evil() -> CardDefinition {
+    CardDefinition {
+        name: "Commune with Evil",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+            },
+            gain_life(3),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sumala Sentry — {G}{W} 1/3 Elf Archer with reach. Whenever a face-down
+/// permanent you control is turned face up, put a +1/+1 counter on it and on
+/// Sumala Sentry.
+pub fn sumala_sentry() -> CardDefinition {
+    CardDefinition {
+        name: "Sumala Sentry",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cryptid Inspector — {2}{G} 2/3 Elf Warrior with vigilance. Whenever a
+/// face-down permanent you control enters, and whenever a permanent you
+/// control is turned face up, put a +1/+1 counter on Cryptid Inspector.
+pub fn cryptid_inspector() -> CardDefinition {
+    CardDefinition {
+        name: "Cryptid Inspector",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::FaceDown,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

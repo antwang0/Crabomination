@@ -6,7 +6,8 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Predicate, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Keyword, Predicate, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};
@@ -66,6 +67,31 @@ fn survivor(
         triggered_abilities: vec![survival(effect)],
         ..Default::default()
     }
+}
+
+/// Acrobatic Cheerleader — {1}{W} 2/2 Human Survivor. Survival: put a flying
+/// counter on it (the "triggers only once" rider is modeled by gating on it
+/// not already having flying).
+pub fn acrobatic_cheerleader() -> CardDefinition {
+    survivor(
+        "Acrobatic Cheerleader",
+        cost(&[generic(1), w()]),
+        vec![CreatureType::Human, CreatureType::Survivor],
+        2,
+        2,
+        Effect::If {
+            cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+            })),
+            then: Box::new(Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    )
 }
 
 /// Cautious Survivor — {3}{G} 4/4. Survival: gain 2 life.

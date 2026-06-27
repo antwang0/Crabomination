@@ -1192,6 +1192,10 @@ pub enum SelectionRequirement {
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless
     /// Assault's "untap all creatures that attacked this turn".
     AttackedThisTurn,
+    /// CR 708 — true when the candidate permanent is face down (a manifested /
+    /// morphed / cloaked / disguised permanent showing a 2/2 vanilla). Powers
+    /// DSK "face-down permanent you control" matters (Cryptid Inspector).
+    FaceDown,
     /// True when the candidate permanent is the source of an activated or
     /// triggered ability currently on the stack. Targeting filter for
     /// `Effect::CounterAbility` (Stifle — CR 113.9).

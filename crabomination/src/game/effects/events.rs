@@ -474,6 +474,11 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
+        // DSK — bind `Selector::TriggerSource` to the turned-up permanent
+        // ("put a +1/+1 counter on it" — Sumala Sentry) and to the Room that
+        // was fully unlocked.
+        GameEvent::TurnedFaceUp { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::RoomFullyUnlocked { room, .. } => Some(EntityRef::Permanent(*room)),
         // Enrage: the subject is the damaged permanent, so trigger bodies
         // referencing `Selector::TriggerSource` (and the implicit
         // SelfSource scope) bind to the creature that took the damage.
@@ -586,6 +591,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::Mutated { card_id }
         | GameEvent::TokenCreated { card_id }
         | GameEvent::CounterAdded { card_id, .. }
+        | GameEvent::TurnedFaceUp { card_id }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
         GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
         GameEvent::AttackerWentUnblocked { attacker } => Some(*attacker),
