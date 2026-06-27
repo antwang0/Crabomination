@@ -324,6 +324,61 @@ fn ghostly_keybearer_unlocks_a_door() {
     assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 0b11, "right door unlocked");
 }
 
+/// Enduring Tenacity drains an opponent when you gain life.
+#[test]
+fn enduring_tenacity_drains_on_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::enduring_tenacity());
+    let foe = g.players[1].life;
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(999), 0, None);
+    let events = g
+        .resolve_effect(
+            &crate::card::Effect::GainLife {
+                who: crate::card::Selector::You,
+                amount: crate::card::Value::Const(3),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe - 3, "opponent lost the life gained");
+}
+
+/// Threats Around Every Corner manifests dread on ETB.
+#[test]
+fn threats_around_every_corner_manifests() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let tac = g.add_card_to_hand(0, catalog::threats_around_every_corner());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tac, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Threats");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.face_down), "manifested a face-down 2/2");
+}
+
+/// Insidious Fungus sacrifices itself to destroy an artifact.
+#[test]
+fn insidious_fungus_sacs_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let fungus = g.add_card_to_battlefield(0, catalog::insidious_fungus());
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter());
+    g.clear_sickness(fungus);
+    ready(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fungus, ability_index: 0, target: Some(Target::Permanent(art)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Insidious Fungus (mode 0)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fungus).is_none(), "Fungus sacrificed");
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {

@@ -1642,3 +1642,83 @@ pub fn ghostly_keybearer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Enduring Tenacity — {2}{B}{B} 4/3 Snake Glimmer enchantment creature.
+/// Whenever you gain life, an opponent loses that much life. When it dies,
+/// return it to the battlefield as an enchantment (Enduring).
+pub fn enduring_tenacity() -> CardDefinition {
+    CardDefinition {
+        name: "Enduring Tenacity",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Glimmer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+            crate::effect::shortcut::on_dies(Effect::ReturnSelfAsEnchantment),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Threats Around Every Corner — {3}{G} Enchantment. ETB manifest dread.
+/// Whenever a face-down permanent you control enters, search for a basic land
+/// and put it onto the battlefield tapped.
+pub fn threats_around_every_corner() -> CardDefinition {
+    CardDefinition {
+        name: "Threats Around Every Corner",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::ManifestDread { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::FaceDown,
+                    }),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Insidious Fungus — {G} 1/2 Fungus. {2}, Sacrifice it: choose one — destroy
+/// target artifact; destroy target enchantment; or draw a card. (The "may put
+/// a land onto the battlefield" rider on the draw mode is dropped.)
+pub fn insidious_fungus() -> CardDefinition {
+    CardDefinition {
+        name: "Insidious Fungus",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+                draw(1),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
