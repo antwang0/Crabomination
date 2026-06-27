@@ -652,6 +652,9 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Bargain => "You may sacrifice an artifact, enchantment, or token as you cast this spell.",
         K::AttacksAlone => "Can only attack alone.",
         K::CantAttackAlone => "Can't attack alone (another creature must also attack).",
+        K::CantAttackOrBlockAlone => {
+            "Can't attack or block alone (another creature must also attack/block)."
+        }
         K::CantBlock => "Can't block.",
         K::CantAttack => "Can't attack.",
         K::MustAttack => "Attacks each combat if able.",
@@ -804,6 +807,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantActivateAbilities => "Activated abilities can't be activated".into(),
         K::AttacksAlone => "Attacks only alone".into(),
         K::CantAttackAlone => "Can't attack alone".into(),
+        K::CantAttackOrBlockAlone => "Can't attack or block alone".into(),
         K::DealsNoCombatDamage => "Deals no combat damage".into(),
         K::AssignsCombatDamageByToughness => "Assigns combat damage by toughness".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),

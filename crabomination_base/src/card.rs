@@ -785,6 +785,11 @@ pub enum Keyword {
     /// Cemetery Gatekeeper-era). Enforced in `declare_attackers`: a batch
     /// where this is the *only* attacker is rejected.
     CantAttackAlone,
+    /// CR 509.1c — "This creature can't attack or block alone" (Duskmourn's
+    /// Beast tokens). Enforced in `declare_attackers` / `declare_blockers`:
+    /// a batch where this is the *only* attacker (resp. only blocker this
+    /// combat) is rejected.
+    CantAttackOrBlockAlone,
     /// CR 508.1a restriction — "This creature can't attack unless you've cast
     /// a creature spell this turn" (Goblin Cohort, Goblin War Strike-era
     /// aggro). Enforced in `declare_attackers` against the controller's

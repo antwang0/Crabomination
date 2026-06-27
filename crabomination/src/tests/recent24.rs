@@ -2,8 +2,8 @@
 //! staples (Vehicles, cycling, discard-count triggers, Mount/Vehicle anthems).
 
 use crate::catalog;
-use crate::card::{Keyword, CounterType};
-use crate::game::types::Target;
+use crate::card::{CardType, CounterType, CreatureType, Keyword, Subtypes, TokenDefinition};
+use crate::game::types::{Attack, AttackTarget, Target};
 use crate::game::*;
 use crate::mana::Color;
 use crate::TurnStep;
@@ -1150,4 +1150,87 @@ fn sawblade_skinripper_sac_payoff() {
     advance_to(&mut g, TurnStep::End);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "1 damage from the end-step trigger");
+}
+
+/// A minimal 1/1 white creature token (test fixture).
+fn soldier_1_1() -> TokenDefinition {
+    TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Toby enters and mints a 4/4 Beast that can't attack or block alone.
+#[test]
+fn toby_makes_lonely_beast() {
+    let mut g = two_player_game();
+    let toby = g.add_card_to_battlefield(0, catalog::toby_beastie_befriender());
+    g.fire_self_etb_triggers(toby, 0);
+    drain_stack(&mut g);
+    let beast = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Beast")
+        .expect("Beast token created");
+    assert_eq!((beast.definition.power, beast.definition.toughness), (4, 4));
+    assert!(beast.definition.keywords.contains(&Keyword::CantAttackOrBlockAlone));
+}
+
+/// A creature with CantAttackOrBlockAlone can't be the only attacker.
+#[test]
+fn cant_attack_or_block_alone_blocks_lone_attack() {
+    let mut g = two_player_game();
+    let beast = g.add_token_to_battlefield(0, &soldier_with_alone());
+    g.clear_sickness(beast);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    let res = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: beast,
+        target: AttackTarget::Player(1),
+    }]));
+    assert!(res.is_err(), "lone attack with can't-attack-alone is illegal");
+}
+
+/// Toby's anthem grants flying to your creature tokens once you control four.
+#[test]
+fn toby_anthem_grants_flying_at_four_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::toby_beastie_befriender());
+    let t1 = g.add_token_to_battlefield(0, &soldier_1_1());
+    // Three tokens: below the threshold, no flying yet.
+    g.add_token_to_battlefield(0, &soldier_1_1());
+    g.add_token_to_battlefield(0, &soldier_1_1());
+    assert!(!g.computed_permanent(t1).unwrap().keywords.contains(&Keyword::Flying));
+    // Fourth token trips the anthem.
+    g.add_token_to_battlefield(0, &soldier_1_1());
+    assert!(g.computed_permanent(t1).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// A token with CantAttackOrBlockAlone — a soldier fixture for the combat test.
+fn soldier_with_alone() -> TokenDefinition {
+    let mut t = soldier_1_1();
+    t.keywords = vec![Keyword::CantAttackOrBlockAlone];
+    t
+}
+
+/// A creature with CantAttackOrBlockAlone can't be the only blocker (CR 509.1c).
+#[test]
+fn cant_block_alone_rejects_lone_block() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lone = g.add_token_to_battlefield(1, &soldier_with_alone());
+    g.clear_sickness(atk);
+    g.clear_sickness(lone);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(lone, atk)]));
+    assert!(err.is_err(), "can't block alone");
 }

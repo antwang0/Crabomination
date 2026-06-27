@@ -116,11 +116,10 @@ impl GameState {
         // carrying CantAttackAlone makes the batch illegal.
         if attacks.len() == 1 {
             let computed_pre = self.compute_battlefield();
-            if computed_pre
-                .iter()
-                .find(|c| c.id == attacks[0].attacker)
-                .is_some_and(|c| c.keywords.contains(&Keyword::CantAttackAlone))
-            {
+            if computed_pre.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
+                c.keywords.contains(&Keyword::CantAttackAlone)
+                    || c.keywords.contains(&Keyword::CantAttackOrBlockAlone)
+            }) {
                 return Err(GameError::CannotAttack(attacks[0].attacker));
             }
         }
@@ -733,6 +732,22 @@ impl GameState {
                     if let Keyword::CantBeBlockedIfControllerCastSpells(n) = kw
                         && self.players[atk_ctl].spells_cast_this_turn >= *n
                     {
+                        return Err(GameError::CannotBlock(blocker_id));
+                    }
+                }
+            }
+        }
+
+        // CR 509.1c — "can't block alone". A creature blocks alone if it's the
+        // only creature blocking this combat; count the merged block set
+        // (this batch plus any earlier-declared blockers).
+        {
+            let mut all_blockers: std::collections::HashSet<CardId> =
+                self.block_map.keys().copied().collect();
+            all_blockers.extend(assignments.iter().map(|(b, _)| *b));
+            if all_blockers.len() == 1 {
+                for &(blocker_id, _) in &assignments {
+                    if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockAlone) {
                         return Err(GameError::CannotBlock(blocker_id));
                     }
                 }

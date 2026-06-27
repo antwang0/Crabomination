@@ -1810,3 +1810,57 @@ pub fn sawblade_skinripper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 4/4 white Beast token that can't attack or block alone (Toby's ETB).
+fn lonely_beast_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Beast".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        keywords: vec![Keyword::CantAttackOrBlockAlone],
+        ..Default::default()
+    }
+}
+
+/// Toby, Beastie Befriender — {2}{W} 1/1 Legendary Human Wizard. ETB: make a
+/// 4/4 white Beast that can't attack or block alone. As long as you control
+/// four or more creature tokens, creature tokens you control have flying.
+pub fn toby_beastie_befriender() -> CardDefinition {
+    let creature_tokens_you_control = SelectionRequirement::Creature
+        .and(SelectionRequirement::IsToken)
+        .and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Toby, Beastie Befriender",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: lonely_beast_token(),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "While you control 4+ creature tokens, your creature tokens have flying.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(creature_tokens_you_control.clone()),
+                    n: Value::Const(4),
+                },
+                applies_to: Selector::EachPermanent(creature_tokens_you_control),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying],
+            },
+        }],
+        ..Default::default()
+    }
+}
