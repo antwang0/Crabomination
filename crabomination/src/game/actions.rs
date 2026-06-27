@@ -14,6 +14,7 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Mana(c) => c.cmc() == 0,
         WardCost::Life(n) => *n == 0,
         WardCost::Discard(n) => *n == 0,
+        WardCost::Blight(n) => *n == 0,
         WardCost::SacrificeCreature => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.

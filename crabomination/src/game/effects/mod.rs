@@ -6381,6 +6381,35 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::Blight(n) => {
+                        // Ward—Blight N (CR 701.68): the warding player puts N
+                        // -1/-1 counters on a creature they control. Auto-pay
+                        // picks their highest-toughness creature so the body
+                        // is likeliest to survive; unpayable with none.
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == affected_controller && c.definition.is_creature()
+                            })
+                            .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.toughness).unwrap_or(0))
+                            .map(|c| c.id);
+                        if let Some(cid) = pick {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.add_counters(CounterType::MinusOneMinusOne, *n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: CounterType::MinusOneMinusOne,
+                                    count: *n,
+                                });
+                            }
+                            let mut sba = self.check_state_based_actions();
+                            events.append(&mut sba);
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     WardCost::SacrificeCreature => {
                         let pick = self
                             .battlefield

@@ -406,6 +406,9 @@ pub enum WardCost {
     Mana(crate::mana::ManaCost),
     Life(u32),
     Discard(u32),
+    /// "Ward—Blight N." (CR 701.68 — Auntie Ool, Cursewretch.) The warding
+    /// player must put N -1/-1 counters on a creature they control.
+    Blight(u32),
     SacrificeCreature,
     /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
     SacrificePermanents(u32),
