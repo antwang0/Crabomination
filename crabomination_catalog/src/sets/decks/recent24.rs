@@ -1617,3 +1617,28 @@ pub fn spectral_snatcher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ghostly Keybearer — {3}{U} 3/3 Spirit with flying. Whenever it deals combat
+/// damage to a player, unlock a locked door of up to one target Room you
+/// control.
+pub fn ghostly_keybearer() -> CardDefinition {
+    CardDefinition {
+        name: "Ghostly Keybearer",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::UnlockRoomDoor {
+                what: target_filtered(
+                    SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Room)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}

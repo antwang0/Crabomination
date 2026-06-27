@@ -2381,6 +2381,12 @@ pub enum Effect {
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
     /// fires per permanent so "when this transforms" triggers can react.
     Transform { what: Selector },
+    /// CR 709.5 — "unlock a locked door of up to one target Room." Unlocks one
+    /// still-locked door of each Room the selector resolves to (the left door
+    /// first, else the right), firing that door's unlock triggers and the
+    /// Eerie `RoomFullyUnlocked` event. No-op for fully-unlocked Rooms.
+    /// Ghostly Keybearer's combat-damage trigger.
+    UnlockRoomDoor { what: Selector },
     /// CR 702.93 — mark each matching permanent as renowned (sets
     /// `CardInstance.renowned`). Paired with the Renown counter add so the
     /// once-only gate keys off the real flag, not a counter heuristic.

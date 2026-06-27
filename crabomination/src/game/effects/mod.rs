@@ -11519,6 +11519,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::UnlockRoomDoor { what } => {
+                // CR 709.5 — unlock one still-locked door of each resolved Room
+                // (left first, else right). `set_room_door_unlocked` fires the
+                // door's own triggers and the Eerie RoomFullyUnlocked event.
+                let rooms: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                for room in rooms {
+                    let Some(c) = self.battlefield_find(room) else { continue };
+                    if c.definition.room.is_none() {
+                        continue;
+                    }
+                    // bit 1 = left, bit 2 = right; unlock the lowest still-locked door.
+                    let right = if c.unlocked_doors & 0b01 == 0 {
+                        false
+                    } else if c.unlocked_doors & 0b10 == 0 {
+                        true
+                    } else {
+                        continue; // already fully unlocked
+                    };
+                    self.set_room_door_unlocked(room, right, events);
+                }
+                Ok(())
+            }
+
             Effect::AtEachCombatThisTurn { body } => {
                 // Register a turn-scoped delayed trigger that re-fires at the
                 // start of every Begin-Combat step for the controller's turn.

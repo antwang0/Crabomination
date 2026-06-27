@@ -290,6 +290,40 @@ fn spectral_snatcher_keywords() {
     assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, crate::card::LandType::Swamp))));
 }
 
+/// Ghostly Keybearer carries a combat-damage trigger; the UnlockRoomDoor
+/// effect it fires opens a still-locked door of the targeted Room.
+#[test]
+fn ghostly_keybearer_unlocks_a_door() {
+    use crate::card::Effect;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let gk = g.add_card_to_battlefield(0, catalog::ghostly_keybearer());
+    let def = catalog::ghostly_keybearer();
+    assert_eq!(
+        def.triggered_abilities[0].event.kind,
+        crate::card::EventKind::DealsCombatDamageToPlayer,
+        "fires on dealing combat damage to a player",
+    );
+    // A Room with its left door unlocked; the right is still locked.
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    ready(&mut g);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast left door");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 0b01, "only left open");
+    // Resolve the unlock effect directly (the trigger body) against the Room.
+    let ctx = EffectContext::for_ability(gk, 0, Some(Target::Permanent(room)));
+    let evs = g
+        .resolve_effect(
+            &Effect::UnlockRoomDoor { what: crate::card::Selector::Target(0) },
+            &ctx,
+        )
+        .expect("unlock effect");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 0b11, "right door unlocked");
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {
