@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — this run (recent25/26, blight)
+
+- **Ward-cost side effects don't fire triggers.** `WardCost::Blight` /
+  `SacrificeCreature` / `Discard` payments mutate state and push events inline
+  during ward resolution, but those events aren't run back through the trigger
+  gatherer — so Auntie Ool's own `CounterAdded` payoff doesn't fire off *her*
+  Ward—Blight (it does fire off any normal blight). Route ward-payment events
+  through the standard post-resolution trigger sweep.
+- **Territorial Bruntar (EOE)** wants an "exile from top until a nonland card;
+  you may cast it this turn" effect (impulse-until-nonland with a pay-cost
+  may-play, *not* Cascade's free-cast). Would also unblock similar landfall
+  impulse cards.
+- **DFT/DSK still have ~70 gaps each** after this run's batches; the
+  `set_gaps.py` over-reports helper-built cards (positional `name` args), so
+  filter by the literal card-name string before judging a card missing.
+
 ## Discovered follow-ups — DSK / DFT staples (`decks::recent23`)
 
 Mechanics deferred while batching the 20-card `recent23` wave:

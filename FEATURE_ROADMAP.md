@@ -334,6 +334,9 @@ Each a small targeted feature; sweep batch by batch.
   card from the graveyard or exiles it; Coldsnap I/S in `decks::recent`).
   Spiritcraft "cast a Spirit or Arcane spell" triggers
   ride `SelectionRequirement::HasSpellSubtype` + `shortcut::spiritcraft`.
+  ✅ Blight (CR 701.68 — `Effect::Blight`: put N -1/-1 counters on a creature
+  you control; `WardCost::Blight` is the Ward—Blight variant — Auntie Ool,
+  Blighted Blackthorn, TLA).
   ✅ Haunt (CR 702.55 — `Effect::HauntCreature` + `DelayedKind::
   WhenHauntedCreatureDies`: a dying creature / resolved I/S is exiled haunting a
   creature, firing its haunt body when that creature dies; Guildpact cycle in
@@ -489,7 +492,9 @@ Each a small targeted feature; sweep batch by batch.
   lethal to its loyalty — the life-threat calc counts only player-bound
   damage**); attacking has a suicide filter + evasion awareness + planeswalker
   redirection. Value-ping removal also aims an "any target" ping at an opponent's
-  face when that hit is exactly lethal (reach for the win). Remaining: race math,
+  face when that hit is exactly lethal (reach for the win). The bot crews
+  Vehicles (`pick_crew`) **and now saddles Mounts** (`pick_saddle`) before
+  combat so attacks-while-saddled riders fire. Remaining: race math,
   multi-blocker math, attacking-into-open-mana respect.
 - ⏳ **Better sequencing** (land drops, hold-up, when to cast).
 - 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
