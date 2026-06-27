@@ -6661,6 +6661,26 @@ impl GameState {
     /// usable at instant speed (CR 702.122c), so there's no sorcery-speed
     /// gate. Re-crewing an already-crewed Vehicle is legal but pointless;
     /// the engine still taps the creatures and stacks a redundant effect.
+    /// CR 702.122e / 702.171 — sum of "crews/saddles as though its power were
+    /// N greater" bonuses applying to `cid` (Cloudspire Captain, Deathless
+    /// Pilot). Folded into the crew / saddle power total, not real P/T.
+    fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
+        use crate::effect::StaticEffect;
+        let Some(target) = self.battlefield.iter().find(|c| c.id == cid) else { return 0 };
+        let mut bonus = 0;
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount } = &sa.effect
+                    && let Some(affected) = selector_to_affected(applies_to, src)
+                    && crate::game::layers::affected_includes(&affected, src.id, target)
+                {
+                    bonus += amount;
+                }
+            }
+        }
+        bonus
+    }
+
     fn crew(
         &mut self,
         vehicle: crate::card::CardId,
@@ -6703,7 +6723,7 @@ impl GameState {
             if tapped {
                 return Err(GameError::CardIsTapped(cid));
             }
-            total_power += cp.power.max(0);
+            total_power += (cp.power + self.crew_saddle_power_bonus(cid)).max(0);
         }
         if (total_power as u32) < crew_n {
             return Err(GameError::SelectionRequirementViolated);
@@ -6779,7 +6799,7 @@ impl GameState {
             if tapped {
                 return Err(GameError::CardIsTapped(cid));
             }
-            total_power += cp.power.max(0);
+            total_power += (cp.power + self.crew_saddle_power_bonus(cid)).max(0);
         }
         if (total_power as u32) < saddle_n {
             return Err(GameError::SelectionRequirementViolated);
@@ -10415,6 +10435,9 @@ fn static_effect_to_effects(
             // GrantKeywordToAttackers — needs live combat state, resolved in
             // `compute_battlefield` against `GameState.attacking`.
             | StaticEffect::GrantKeywordToAttackers { .. }
+            // CrewSaddlePowerBonus — read directly by `crew` / `saddle` when
+            // summing crew/saddle power; not a real P/T modification.
+            | StaticEffect::CrewSaddlePowerBonus { .. }
             // GrantTriggeredAbility — surfaced by `statics_granted_triggers_for`
             // in both trigger dispatchers; no layer effect.
             | StaticEffect::GrantTriggeredAbility { .. }

@@ -528,8 +528,7 @@ pub fn guidelight_synergist() -> CardDefinition {
 }
 
 /// Cloudspire Captain — {2}{W} 2/3 Human Pilot. Mounts and Vehicles you control
-/// get +1/+1. (The "saddles/crews as though power 2 greater" rider is omitted —
-/// no crew/saddle-power event yet; tracked in TODO.md.)
+/// get +1/+1; it saddles/crews as though its power were 2 greater.
 pub fn cloudspire_captain() -> CardDefinition {
     CardDefinition {
         name: "Cloudspire Captain",
@@ -541,19 +540,25 @@ pub fn cloudspire_captain() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        static_abilities: vec![StaticAbility {
-            description: "Mounts and Vehicles you control get +1/+1.",
-            effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::ControlledByYou.and(
-                        SelectionRequirement::HasCreatureType(CreatureType::Mount)
-                            .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Mounts and Vehicles you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::ControlledByYou.and(
+                            SelectionRequirement::HasCreatureType(CreatureType::Mount)
+                                .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                        ),
                     ),
-                ),
-                power: 1,
-                toughness: 1,
+                    power: 1,
+                    toughness: 1,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Saddles Mounts and crews Vehicles as though its power were 2 greater.",
+                effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -587,9 +592,8 @@ pub fn daring_mechanic() -> CardDefinition {
     }
 }
 
-/// Deathless Pilot — {1}{B} 2/2 Zombie Pilot. {3}{B}: return this card from
-/// your graveyard to your hand. (The "saddles/crews as though power 2 greater"
-/// rider is omitted; tracked in TODO.md.)
+/// Deathless Pilot — {1}{B} 2/2 Zombie Pilot. Saddles/crews as though its power
+/// were 2 greater. {3}{B}: return this card from your graveyard to your hand.
 pub fn deathless_pilot() -> CardDefinition {
     CardDefinition {
         name: "Deathless Pilot",
@@ -601,6 +605,10 @@ pub fn deathless_pilot() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Saddles Mounts and crews Vehicles as though its power were 2 greater.",
+            effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), b()]),
             from_graveyard: true,

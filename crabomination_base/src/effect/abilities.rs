@@ -124,6 +124,12 @@ pub enum StaticEffect {
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though
+    /// its power were N greater." Adds `amount` to each affected creature's
+    /// power *only* when summing crew / saddle totals (it is not a real P/T
+    /// modification). `applies_to` is usually `Selector::This` (Cloudspire
+    /// Captain, Deathless Pilot). Read in `GameState::crew` / `saddle`.
+    CrewSaddlePowerBonus { applies_to: Selector, amount: i32 },
     /// CR 613 — the source has `keyword` as long as it itself matches
     /// `condition` ("As long as this creature is equipped, it has double
     /// strike" — Kor Duelist). Recomputed live against the source via

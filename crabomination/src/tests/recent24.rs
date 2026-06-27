@@ -381,6 +381,28 @@ fn cloudspire_skycycle_distributes_counters() {
     );
 }
 
+/// Deathless Pilot's CR 702.122e rider lets a 2-power creature crew a Crew 4
+/// Vehicle by itself (counts as power 4).
+#[test]
+fn deathless_pilot_crews_as_though_power_greater() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::debris_beetle()); // Crew 2... use a Crew 4
+    // Debris Beetle is Crew 2; pair the pilot with a Crew 4 vehicle instead.
+    g.battlefield.retain(|c| c.id != veh);
+    let chariot = g.add_card_to_battlefield(0, catalog::lumbering_worldwagon()); // Crew 4
+    let pilot = g.add_card_to_battlefield(0, catalog::deathless_pilot()); // power 2 (+2 rider = 4)
+    g.clear_sickness(pilot);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![pilot] })
+        .expect("2-power pilot crews Crew 4 via the +2 rider");
+    assert!(
+        g.computed_permanent(chariot).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "Vehicle is crewed (an artifact creature)",
+    );
+}
+
 /// Air Response Unit ships as a 3/3 Vehicle with Crew 1.
 #[test]
 fn air_response_unit_is_crewable_vehicle() {
