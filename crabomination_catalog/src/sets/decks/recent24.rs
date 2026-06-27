@@ -7,9 +7,9 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
+    Effect, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
     MayPlayDuration, Predicate, SelectionRequirement, Selector, StaticAbility, StaticEffect,
-    Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Subtypes, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{
     deal, draw, drain, each_opponent, eerie, etb, gain_life, pump_target,
@@ -1570,6 +1570,49 @@ pub fn cryptid_inspector() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fanatic of the Harrowing — {3}{B} 2/2 Human Cleric. When it enters, each
+/// player discards a card, then you draw a card. (The "if you discarded" gate
+/// is approximated as an unconditional draw.)
+pub fn fanatic_of_the_harrowing() -> CardDefinition {
+    CardDefinition {
+        name: "Fanatic of the Harrowing",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+                random: false,
+            },
+            draw(1),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Spectral Snatcher — {4}{B}{B} 6/5 Spirit. Ward—Discard a card. Swampcycling {2}.
+pub fn spectral_snatcher() -> CardDefinition {
+    CardDefinition {
+        name: "Spectral Snatcher",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![
+            Keyword::Ward(WardCost::Discard(1)),
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp),
         ],
         ..Default::default()
     }

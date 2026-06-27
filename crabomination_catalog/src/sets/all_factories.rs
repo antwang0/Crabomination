@@ -3624,6 +3624,8 @@ static DECKS: &[Factory] = &[
     super::decks::commune_with_evil,
     super::decks::sumala_sentry,
     super::decks::cryptid_inspector,
+    super::decks::fanatic_of_the_harrowing,
+    super::decks::spectral_snatcher,
     super::decks::air_response_unit,
     super::decks::debris_beetle,
     super::decks::cryptcaller_chariot,

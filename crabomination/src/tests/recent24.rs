@@ -262,6 +262,34 @@ fn cryptid_inspector_face_down_matters() {
     );
 }
 
+/// Fanatic of the Harrowing makes each player discard, then its controller draws.
+#[test]
+fn fanatic_of_the_harrowing_discards_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let foh = g.add_card_to_hand(0, catalog::fanatic_of_the_harrowing());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: foh, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Fanatic");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 1, "opponent discarded one");
+    // P0 discarded the fodder and drew the Forest: net hand back to one card.
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"), "you discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "you drew");
+}
+
+/// Spectral Snatcher carries Ward—Discard and Swampcycling.
+#[test]
+fn spectral_snatcher_keywords() {
+    let def = catalog::spectral_snatcher();
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Ward(crate::card::WardCost::Discard(1)))));
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, crate::card::LandType::Swamp))));
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {
