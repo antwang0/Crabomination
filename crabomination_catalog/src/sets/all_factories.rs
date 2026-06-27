@@ -3635,6 +3635,7 @@ static DECKS: &[Factory] = &[
     super::decks::shroudstomper,
     super::decks::sawblade_skinripper,
     super::decks::toby_beastie_befriender,
+    super::decks::twitching_doll,
     super::decks::air_response_unit,
     super::decks::debris_beetle,
     super::decks::cryptcaller_chariot,

@@ -962,6 +962,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Valor => "Valor",
         CounterType::Defense => "Defense",
         CounterType::Possession => "Possession",
+        CounterType::Nest => "Nest",
     }
 }
 
@@ -982,6 +983,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Tide => "Ominous Seas: at four or more, remove them to make an 8/8 Kraken.",
         CounterType::Bounty => "When this bountied creature dies, its bounty's owner draws a card and gains 1 life.",
         CounterType::Possession => "DSK Eerie tally — counted by the creature's death-replacement payoff.",
+        CounterType::Nest => "DSK Twitching Doll tally — one Spider token per counter when sacrificed.",
         _ => return None,
     })
 }

@@ -1864,3 +1864,64 @@ pub fn toby_beastie_befriender() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 2/2 green Spider creature token with reach (Twitching Doll).
+fn spider_2_2_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spider".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        keywords: vec![Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Twitching Doll — {1}{G} 2/2 Artifact Creature — Spider Toy. {T}: add one
+/// mana of any color and put a nest counter on it. {T}, Sacrifice it: make a
+/// 2/2 green Spider with reach for each counter on it. Sorcery speed.
+pub fn twitching_doll() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Twitching Doll",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Toy],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::ONE),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Nest,
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::TotalCountersOn { what: Box::new(Selector::This) },
+                    definition: spider_2_2_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

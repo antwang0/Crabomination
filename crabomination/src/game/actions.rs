@@ -40,6 +40,9 @@ fn is_mana_ability(effect: &Effect) -> bool {
             Effect::AddMana { .. } | Effect::Noop => true,
             // Incidental you-only life gain (Altar of the Pantheon).
             Effect::GainLife { who: crate::effect::Selector::You, .. } => true,
+            // Incidental non-targeting self-counter (Twitching Doll's "put a
+            // nest counter on this creature") — CR 605.1a rider, no stack use.
+            Effect::AddCounter { what: crate::effect::Selector::This, .. } => true,
             Effect::Seq(steps) => steps.iter().all(mana_compatible),
             // A board-state-conditional that only ever adds mana on both
             // branches is still a mana ability (Ilysian Caryatid's "add one
@@ -8719,7 +8722,14 @@ impl GameState {
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
-                    self.died_card_snapshots.insert(card_id, snap);
+                    self.died_card_snapshots.insert(card_id, snap.clone());
+                    // CR 603.10 — also stash it as leaves-battlefield LKI so a
+                    // body that reads the sacrificed source's own counters at
+                    // resolution (Twitching Doll's "Spider per counter on it")
+                    // sees the last-known total; `died_card_snapshots` is
+                    // cleared after event dispatch, but `leaves_bf_lki` lives
+                    // until the ability resolves (scoped in `resolve_stack_item`).
+                    self.leaves_bf_lki.insert(card_id, snap);
                 }
                 // CR 701.16 — emit the sacrifice-specific event first.
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });

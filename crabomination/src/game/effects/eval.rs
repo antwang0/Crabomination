@@ -280,6 +280,27 @@ impl GameState {
                 // you control" cards (Reflective Anatomy). Lock-in test:
                 // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`.
                 .sum(),
+            Value::TotalCountersOn { what } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| {
+                    let cid = match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => return None,
+                    };
+                    // Same LKI fallback chain as `CountersOn` so a source
+                    // sacrificed as a cost (Twitching Doll) reads its last
+                    // counter total (CR 603.10 / 608.2).
+                    self.battlefield_find(cid)
+                        .or_else(|| {
+                            self.resolving_lki_source
+                                .filter(|s| *s == cid)
+                                .and_then(|_| self.leaves_bf_lki.get(&cid))
+                        })
+                        .or_else(|| self.died_card_snapshots.get(&cid))
+                        .map(|inst| inst.counters.values().sum::<u32>() as i32)
+                })
+                .sum(),
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
             Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),

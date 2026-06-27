@@ -371,6 +371,9 @@ pub enum Value {
     DevotionTo(Vec<crate::mana::Color>),
     /// Counters of the given type on `what`.
     CountersOn { what: Box<Selector>, kind: CounterType },
+    /// All counters (every kind) on `what` — "for each counter on it"
+    /// (Twitching Doll). Sums every counter the permanent carries.
+    TotalCountersOn { what: Box<Selector> },
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),

@@ -377,6 +377,9 @@ pub enum CounterType {
     /// Possession counter — DSK Unwilling Vessel accrues one per Eerie
     /// trigger; on death it mints an X/X Spirit where X is the count.
     Possession,
+    /// Nest counter — DSK Twitching Doll accrues one each time its mana
+    /// ability is used; sacrificing it makes a Spider per counter on it.
+    Nest,
 }
 
 /// Every zone a card can occupy.

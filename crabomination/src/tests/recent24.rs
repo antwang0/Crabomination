@@ -1234,3 +1234,31 @@ fn cant_block_alone_rejects_lone_block() {
     let err = g.perform_action(GameAction::DeclareBlockers(vec![(lone, atk)]));
     assert!(err.is_err(), "can't block alone");
 }
+
+/// Twitching Doll's mana ability adds a nest counter; sacrificing it makes a
+/// Spider per counter (CR 605.1a incidental rider + LKI counter read).
+#[test]
+fn twitching_doll_nests_then_sacs_for_spiders() {
+    let mut g = two_player_game();
+    let doll = g.add_card_to_battlefield(0, catalog::twitching_doll());
+    g.clear_sickness(doll);
+    ready(&mut g);
+    // Mana ability twice → two nest counters; pool gains two mana total.
+    for _ in 0..2 {
+        g.battlefield_find_mut(doll).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: doll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        })
+        .expect("mana + nest counter");
+    }
+    assert_eq!(g.battlefield_find(doll).unwrap().counter_count(CounterType::Nest), 2);
+    // Sacrifice ability: make a Spider per counter (2).
+    g.battlefield_find_mut(doll).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: doll, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("sacrifice for Spiders");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(doll).is_none(), "Doll sacrificed");
+    assert_eq!(count_named(&g, 0, "Spider"), 2, "two Spiders from two counters");
+}
