@@ -11,12 +11,27 @@ state-corrupting in ordinary play.
 ## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
 
 Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still open:
-- **More Spacecraft** remaining: the legendaries (Dawnsire, The Seriema,
-  Infinite Guideline Station, The Eternity Elevator). Most are keyword/P-T bands
-  the shipped `StationBand` already covers; just need ETB/attack bodies wired.
-  (18 Spacecraft shipped — `StationBand.triggers` now grants counter-gated
-  *triggered* bands too, so Synthesizer Labship `{2+}` animate + Entropic
-  Battlecruiser `{1+}` discard-punisher both ship.)
+- **Legendary Spacecraft now ship** — Dawnsire (10+ attack-100, 20+ flying
+  20/20), Infinite Guideline Station (ETB Robots per multicolored + 12+ flying/
+  attack-draw), The Eternity Elevator (20+ mana-per-charge band). The Seriema
+  was already shipped. `StationBand.triggers`/`.activated` cover counter-gated
+  triggered + activated bands.
+- **2026-06-27 batch (modern_decks):** 20 missing rares/lands — Possibility
+  Technician (impulse ETB; "if you control a Kavu" gate dropped), Haliya, both
+  Alpharaels, Roving Actuator (Void gy-recast), Tannuk (haste anthem; in-hand
+  warp grant dropped), All-Fates Scroll (`Value::DifferentlyNamedLandsControlled`),
+  Command Bridge, Secluded Starforge (pump dropped), Atomic Microsizer, Dyadrine,
+  Zero Point Ballad (X≥6 reanimate dropped), Scout for Survivors
+  (`Effect::ReturnGraveyardCreaturesUpToTotalManaValue`), Weftwalking (first-
+  spell-free static dropped), Pull Through the Weft (land-return half dropped),
+  Close Encounter (additional-cost choice → greatest power), Devastating
+  Onslaught (`Effect::CreateTokenCopiesHasteSac`), Unravel
+  (`Effect::CounterSpellDrawIfUnderpaid`). **Remaining EOE rares** (want new
+  primitives): Famished Worldsire (Devour-land on a 0/0 — needs an enters-with-
+  counters replacement so it survives SBA), Sothera, Chorale of the Void, Moonlit
+  Meditation, Requiem Monolith, Tapestry Warden (assign-damage-by-toughness
+  static), The Dominion Bracelet (control-an-opponent), Pull's land-return half,
+  Adagia/Kavaron 12+ bands.
 - **`set_gaps.py "set:eoe"` still lists ~85 cards** (the script's `name:`-regex
   over-reports helper-built cards as missing — Pulsar Squadron Ace now ships via
   `LookPickToHand{pick_filter: Spacecraft}`, so the "filtered impulse-reveal" note
@@ -28,9 +43,7 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   mana) and Susur Secundi (`12+` sac-a-creature draw) ride faithful activated
   bands. **Adagia** (legendary token-copy) and **Kavaron** (sac-a-land → Robot +
   team-haste) 12+ bands are still dropped — both want `CreateTokenCopyOf`
-  legendary/`Seq` band bodies. The legendary Spacecraft (Dawnsire, The Seriema,
-  Infinite Guideline Station, The Eternity Elevator) can now use activated bands
-  too.
+  legendary/`Seq` band bodies.
 - **Client render of `PermanentView.station_charges`** (new — current charge
   count paired with `station_next_threshold` for an "N/M" Station chip). The
   view field + test ship; the Bevy chip render is the remaining desktop-only
@@ -55,8 +68,7 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   resolution-count predicate; **Timeline Culler's cast-from-graveyard warp**
   needs `AlternativeCost` to allow a graveyard cast zone; **Syr Vondam's
   "or is put into exile" branch** is dropped (dies-only); **Steelswarm
-  Operator's** two restricted mana abilities both collapse to `ArtifactOnly`;
-  **Possibility Technician** still wants impulse-from-gy-while-Kavu.
+  Operator's** two restricted mana abilities both collapse to `ArtifactOnly`.
 - **Astelli Reclaimer** ✅ — `CardInstance.cast_mana_spent` stamped at
   resolution; `Value::CastSpellManaSpent` + `SelectionRequirement::Mana-
   ValueAtMostCastManaSpent` read it on ETB. **Blade of the Swarm** ✅ (modal ETB:
