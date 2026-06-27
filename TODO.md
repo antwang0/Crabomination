@@ -15,11 +15,23 @@ Mechanics deferred while batching the 20-card `recent23` wave:
   whenever you fully unlock a Room") needs a combined enchantment-ETB +
   room-unlock trigger combo. Blocks Cult Healer, Balemurk Leech, Optimistic
   Scavenger, Unwilling Vessel.
-- **Mount saddle / Pilot crew power bonus** (DFT — "saddles Mounts and crews
-  Vehicles as though its power were N greater"). Dynamite Diver ships without it
-  (its dies-ping is faithful).
-- **Spree** (DSK — "choose one or more additional costs") — no variable
-  additional-cost-mode primitive yet. Blocks Insatiable Avarice.
+- ✅ **Mount saddle / Pilot crew power bonus** (DFT, CR 702.122e/702.171 —
+  "saddles Mounts and crews Vehicles as though its power were N greater") —
+  `StaticEffect::CrewSaddlePowerBonus`, read by `crew`/`saddle`, the bot's
+  `pick_crew`, and surfaced in `PermanentView.crew_power_bonus` (Cloudspire
+  Captain, Deathless Pilot in `decks::recent24`).
+- **Crew/saddle triggered event** (DFT — "whenever this creature saddles a
+  Mount or crews a Vehicle during your main phase, …"). Needs a
+  `GameEvent::VehicleCrewed`/`MountSaddled` (carrying the crewer list) + a
+  dispatcher path firing a crewer's `SelfSource` trigger targeting the crewed
+  permanent. Blocks Canyon Vaulter, Reckless Velocitaur.
+- **Spree** (DSK/OTJ, CR 702.172 — "choose one or more additional costs") — no
+  variable additional-cost-mode primitive yet; blocked on cast-time modal
+  selection (same as the guild Commands). Blocks Insatiable Avarice, Caught in
+  the Crossfire.
+- **Other genuinely-unimplemented CR keywords** (each needs a new subsystem):
+  Read Ahead (702.155 — Saga enters-chapter choice), Space Sculptor (702.158 —
+  sector assignment), Living Metal (702.161 — needs the MTMTE transform DFCs).
 - **Conditional enters-with-counters by cast zone** (Patched Plaything —
   "enters with two -1/-1 counters if you cast it from your hand"); needs a
   cast-zone predicate on the enters-with-counters replacement.
