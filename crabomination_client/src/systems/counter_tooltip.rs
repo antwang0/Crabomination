@@ -1062,6 +1062,9 @@ mod tests {
             prepare_needs_target: false,
             creature_subtypes: vec![],
             lost_all_abilities: false,
+            crew_power_bonus: 0,
+            station_charges: None,
+            station_next_threshold: None,
         }
     }
 
