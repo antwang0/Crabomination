@@ -3,8 +3,9 @@
 //! damage equal to its toughness rather than its power"): Doran, the Siege
 //! Tower (all creatures), Tapestry Warden / Ancient Lumberknot (your creatures
 //! with toughness > power), Bill the Pony (a sacrifice-a-Food temporary grant).
-//! Plus Thrumming Hivepool (Affinity for Slivers) and a clutch of DSK staples
-//! on existing primitives. Tests in `crabomination/src/tests/recent23.rs`.
+//! Plus Affinity for a type (Thrumming Hivepool — Slivers; Gearseeker Serpent
+//! — artifacts; Chitin Gravestalker — graveyard) and a clutch of DSK/DFT/EOE
+//! staples on existing primitives. Tests in `crabomination/src/tests/recent23.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, EventKind,
@@ -397,6 +398,154 @@ pub fn vengeful_possession() -> CardDefinition {
                 ])),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Unstoppable Plan — {2}{U} Enchantment. At the beginning of your end step,
+/// untap all nonland permanents you control.
+pub fn unstoppable_plan() -> CardDefinition {
+    CardDefinition {
+        name: "Unstoppable Plan",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gearseeker Serpent — {5}{U}{U} 5/6 Serpent with Affinity for artifacts.
+/// {5}{U}: it can't be blocked this turn.
+pub fn gearseeker_serpent() -> CardDefinition {
+    CardDefinition {
+        name: "Gearseeker Serpent",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        affinity_filter: Some(
+            SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+        ),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aetherjacket — {3} 2/1 artifact Thopter with flying and vigilance. {2}, {T},
+/// Sacrifice this creature: destroy another target artifact (sorcery speed).
+pub fn aetherjacket() -> CardDefinition {
+    CardDefinition {
+        name: "Aetherjacket",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dynamite Diver — {R} 1/1 Goblin Pilot. When it dies, it deals 1 damage to
+/// any target. (Its saddle/crew power bonus is dropped — no engine hook yet.)
+pub fn dynamite_diver() -> CardDefinition {
+    CardDefinition {
+        name: "Dynamite Diver",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(deal(1, target_any()))],
+        ..Default::default()
+    }
+}
+
+/// Gas Guzzler — {B} 2/1 Vampire Rogue with "Start your engines!". Enters
+/// tapped. Max speed — {B}, Sacrifice another creature: draw a card.
+pub fn gas_guzzler() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Gas Guzzler",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::StartYourEngines],
+        static_abilities: vec![StaticAbility {
+            description: "This creature enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chitin Gravestalker — {5}{B} 5/4 Insect Warrior. This spell costs {1} less to
+/// cast for each artifact and/or creature card in your graveyard. Cycling {2}.
+pub fn chitin_gravestalker() -> CardDefinition {
+    CardDefinition {
+        name: "Chitin Gravestalker",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        affinity_graveyard_filter: Some(
+            SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+        ),
         ..Default::default()
     }
 }

@@ -336,3 +336,91 @@ fn vengeful_possession_steals_creature() {
     assert!(!g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped, "untapped");
     assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
 }
+
+/// Unstoppable Plan untaps your nonland permanents at your end step.
+#[test]
+fn unstoppable_plan_untaps_at_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::unstoppable_plan());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped, "untapped at end step");
+}
+
+/// Gearseeker Serpent's Affinity for artifacts discounts its generic cost.
+#[test]
+fn gearseeker_serpent_affinity_for_artifacts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    let serp = g.add_card_to_battlefield(0, catalog::gearseeker_serpent());
+    let inst = g.battlefield.iter().find(|c| c.id == serp).unwrap().clone();
+    let reduced = crate::game::actions::cost_reduction_for_spell(&g, 0, &inst, None);
+    assert_eq!(reduced, 3, "three artifacts give {{3}} off");
+}
+
+/// Aetherjacket sacrifices itself to destroy another artifact.
+#[test]
+fn aetherjacket_sacs_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let jacket = g.add_card_to_battlefield(0, catalog::aetherjacket());
+    let target = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jacket,
+        ability_index: 0,
+        target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("activate Aetherjacket");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == target), "target artifact destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == jacket), "Aetherjacket sacrificed");
+}
+
+/// Dynamite Diver deals 1 to any target when it dies.
+#[test]
+fn dynamite_diver_dies_pings() {
+    let mut g = two_player_game();
+    let diver = g.add_card_to_battlefield(0, catalog::dynamite_diver());
+    let mut evs = g.remove_to_graveyard_with_triggers(diver);
+    evs.push(GameEvent::CreatureDied { card_id: diver });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "dies trigger pinged the opponent for 1");
+}
+
+/// Gas Guzzler starts your engines, enters tapped, and its max-speed ability is
+/// gated until speed 4.
+#[test]
+fn gas_guzzler_starts_engines_enters_tapped() {
+    let mut g = two_player_game();
+    let guz = g.move_card_to_battlefield_for_test(0, catalog::gas_guzzler());
+    assert!(g.battlefield.iter().find(|c| c.id == guz).unwrap().tapped, "enters tapped");
+    assert_eq!(g.players[0].speed, 1, "Start your engines! sets speed to 1");
+}
+
+/// Chitin Gravestalker's graveyard affinity discounts {1} per artifact/creature
+/// card in your graveyard.
+#[test]
+fn chitin_gravestalker_graveyard_affinity() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // creature
+    g.add_card_to_graveyard(0, catalog::sol_ring()); // artifact
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // neither — no discount
+    let inst = crate::card::CardInstance::new(
+        crate::card::CardId(9999),
+        catalog::chitin_gravestalker(),
+        0,
+    );
+    let reduced = crate::game::actions::cost_reduction_for_spell(&g, 0, &inst, None);
+    assert_eq!(reduced, 2, "two matching gy cards give {{2}} off");
+}
