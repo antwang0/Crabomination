@@ -69,12 +69,16 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (LTB cheat-into-play via `ManaValueAtMostYourCount`) now ship. Orbital Plunge's
   "if excess damage" now reads real excess (`Predicate::ExcessDamageDealtThisResolution`,
   CR 120.10).
-- **Newly-noticed deferrals (this run).** **Auras** aren't modeled in `sets::eoe`
-  yet — Hardlight Containment (enchant-artifact O-Ring), Cryoshatter (−5/−0 +
-  destroy-on-tap/damage), Tractor Beam (control-steal), Meltstrider's Resolve
-  (ETB fight) all wait on an Aura builder. **Territorial Bruntar** / Pulsar
-  Squadron Ace / Possibility Technician need filtered impulse-dig (exile-top-
-  until-nonland / top-5→Spacecraft). **Haliya, Ascendant Cadet** ships without
+- **Newly-noticed deferrals (this run).** **EOE Auras now ship** — Hardlight
+  Containment (enchant-artifact O-Ring), Cryoshatter (−5/−0 +
+  destroy-on-tap/damage), Meltstrider's Resolve (ETB fight) and Pain for All
+  (ETB ping = power) use the standard Aura shape (`Attach` + `equipped_bonus`).
+  Remaining EOE auras: **Tractor Beam** (control-steal — needs a
+  `GainControlWhileSourceRemains` aura host), **Chorale of the Void** (attack →
+  reanimate from defender's graveyard), **Moonlit Meditation** (token-doubling
+  replacement). **Territorial Bruntar** /
+  Possibility Technician need filtered impulse-dig (exile-top-
+  until-nonland). **Haliya, Ascendant Cadet** ships without
   its "counter-creatures deal combat damage → draw" rider (needs a
   combat-damage-from-filtered-creature trigger). **Excess-to-another-permanent
   redirection** (CR 120.4a — "excess damage is dealt to … instead") is the next

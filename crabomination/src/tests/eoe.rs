@@ -2294,3 +2294,54 @@ fn illvoi_infiltrator_conditional_unblockable() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, illvoi)])).is_err(),
         "unblockable after two spells");
 }
+
+/// Cryoshatter shrinks the enchanted creature by 5 power and kills it when tapped.
+#[test]
+fn cryoshatter_debuffs_and_destroys_on_tap() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let cryo = g.add_card_to_hand(0, catalog::cryoshatter());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cryo, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cryoshatter");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, -1, "-5/-0 applied (4 - 5)");
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bear }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "destroyed when tapped");
+}
+
+/// Hardlight Containment exiles an opposing creature while it's attached.
+#[test]
+fn hardlight_containment_exiles_opponent_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::melded_moxite()); // an artifact host
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let host = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Melded Moxite").unwrap().id;
+    resolve_targeted(&mut g, 0, catalog::hardlight_containment().effect.clone(), &[host, theirs]);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent creature exiled");
+}
+
+/// Meltstrider's Resolve makes the enchanted creature fight an opposing creature.
+#[test]
+fn meltstriders_resolve_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    resolve_targeted(&mut g, 0, catalog::meltstriders_resolve().effect.clone(), &[mine, theirs]);
+    assert!(g.battlefield_find(theirs).is_none(), "2/2 dies to the 4/4's fight");
+}
+
+/// Pain for All pings a target for the enchanted creature's power.
+#[test]
+fn pain_for_all_pings_for_power() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    resolve_targeted(&mut g, 0, catalog::pain_for_all().effect.clone(), &[mine, theirs]);
+    assert!(g.battlefield_find(theirs).is_none(), "4 damage kills the 2/2");
+}

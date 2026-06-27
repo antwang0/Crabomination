@@ -5940,3 +5940,121 @@ pub fn illvoi_infiltrator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Auras ───────────────────────────────────────────────────────────────────
+
+/// Cryoshatter — {U} Aura. Enchant creature. Enchanted creature gets -5/-0; when
+/// it becomes tapped or is dealt damage, destroy it.
+pub fn cryoshatter() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    let destroy_host = |event: EventKind| TriggeredAbility {
+        event: EventSpec::new(event, EventScope::SelfSource),
+        effect: Effect::Destroy { what: Selector::This },
+    };
+    CardDefinition {
+        name: "Cryoshatter",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: -5,
+            triggered_abilities: vec![
+                destroy_host(EventKind::Tapped),
+                destroy_host(EventKind::DealtDamage),
+            ],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Hardlight Containment — {W} Aura. Enchant artifact you control. When it
+/// enters, exile target creature an opponent controls until this Aura leaves.
+pub fn hardlight_containment() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Hardlight Containment",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::ExileUntilSourceLeaves {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Meltstrider's Resolve — {G} Aura. Enchant creature you control. When it
+/// enters, the enchanted creature fights up to one target creature an opponent
+/// controls.
+pub fn meltstriders_resolve() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Meltstrider's Resolve",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pain for All — {2}{R} Aura. Enchant creature you control. When it enters, the
+/// enchanted creature deals damage equal to its power to any other target.
+pub fn pain_for_all() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Pain for All",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
