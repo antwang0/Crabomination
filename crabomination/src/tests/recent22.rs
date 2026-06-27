@@ -190,6 +190,32 @@ fn furyborn_hellkite_bloodthirst_six() {
         "bloodthirst 6 adds six counters");
 }
 
+/// The server view greys out Sneak's alt cast unless there's an unblocked
+/// attacker to return (return-to-hand feasibility gating).
+#[test]
+fn server_view_gates_sneak_on_unblocked_attacker() {
+    use crate::game::types::Attack;
+    use crate::net::HandCardView;
+    let alt_available = |g: &GameState, name: &str| -> bool {
+        let v = crate::server::view::project(g, 0);
+        v.players[0].hand.iter().any(|h| matches!(h,
+            HandCardView::Known(k) if k.name == name && k.alt_cost_available))
+    };
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::donatellos_technique());
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    assert!(!alt_available(&g, "Donatello's Technique"),
+        "no unblocked attacker → Sneak greyed out");
+
+    // Add an unblocked attacker; now the Sneak alt cast is offered.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    assert!(alt_available(&g, "Donatello's Technique"),
+        "unblocked attacker present → Sneak available");
+}
+
 /// Sneak is only legal during your declare blockers step (CR 702.190a).
 #[test]
 fn sneak_rejected_outside_declare_blockers() {

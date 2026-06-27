@@ -625,7 +625,38 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                         )
                 })
             });
-            cond_ok && offering_ok && !(a.not_your_turn_only && st.active_player_idx == card.owner)
+            // A return-to-hand / sacrifice additional cost greys out unless the
+            // caster controls enough matching permanents to pay it (Sneak needs
+            // an unblocked attacker, Web-slinging a tapped creature, Fireblast
+            // two Mountains).
+            let controls_at_least = |filter: &crate::card::SelectionRequirement, n: u32| {
+                st.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == card.owner
+                            && st.evaluate_requirement_static(
+                                filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                card.owner,
+                                None,
+                            )
+                    })
+                    .count() as u32
+                    >= n
+            };
+            let return_ok = a
+                .return_to_hand
+                .as_ref()
+                .is_none_or(|(f, n)| controls_at_least(f, *n));
+            let sac_ok = a
+                .sacrifice_permanents
+                .as_ref()
+                .is_none_or(|(f, n)| controls_at_least(f, *n));
+            cond_ok
+                && offering_ok
+                && return_ok
+                && sac_ok
+                && !(a.not_your_turn_only && st.active_player_idx == card.owner)
         }),
         back_face_name: card
             .definition
