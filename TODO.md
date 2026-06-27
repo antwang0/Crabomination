@@ -38,9 +38,11 @@ Mechanics deferred while batching the 20-card `recent23` wave:
 - **Other genuinely-unimplemented CR keywords** (each needs a new subsystem):
   Read Ahead (702.155 — Saga enters-chapter choice), Space Sculptor (702.158 —
   sector assignment), Living Metal (702.161 — needs the MTMTE transform DFCs).
-- **Conditional enters-with-counters by cast zone** (Patched Plaything —
-  "enters with two -1/-1 counters if you cast it from your hand"); needs a
-  cast-zone predicate on the enters-with-counters replacement.
+- ✅ **Conditional enters-with-counters by cast zone** (Patched Plaything) —
+  the ETB context now stamps `cast_from_hand` from the entering instance, so
+  `enters_with_counters` can gate its `Value` on `Predicate::CastFromHand`
+  (`Value::IfPred`). Both the cast-resolution and the generic
+  `place_card_in_dest` paths thread the flag.
 
 ## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
 

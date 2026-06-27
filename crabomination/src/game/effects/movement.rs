@@ -930,6 +930,11 @@ impl GameState {
                 // additional plumbing through `move_card_to` from the
                 // cast-time ctx, tracked separately.
                 let enters_spec = card.definition.enters_with_counters.clone();
+                // CR 614.12 — "enters with N counters if you cast it from your
+                // hand" (Patched Plaything) reads the resolving card's cast
+                // zone via `Predicate::CastFromHand`. Capture it before the
+                // instance is moved onto the battlefield.
+                let entered_from_hand = card.cast_from_hand;
                 let mut card = card;
                 card.controller = self.apply_etb_control_replacement(&card, card.controller);
                 self.battlefield.push(card);
@@ -946,7 +951,8 @@ impl GameState {
                 }
                 if self.counters_locked() { counter_specs.clear(); }
                 for (kind, value) in counter_specs {
-                    let etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
+                    let mut etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
+                    etb_ctx.cast_from_hand = entered_from_hand;
                     let base = self.evaluate_value(&value, &etb_ctx);
                     if base > 0 {
                         // CR 614.16: counter replacement statics also apply

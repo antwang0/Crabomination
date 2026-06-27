@@ -3603,6 +3603,7 @@ static DECKS: &[Factory] = &[
     super::decks::gastal_blockbuster,
     super::decks::scrounging_skyray,
     super::decks::pactdoll_terror,
+    super::decks::patched_plaything,
     super::decks::air_response_unit,
     super::decks::debris_beetle,
     super::decks::cryptcaller_chariot,

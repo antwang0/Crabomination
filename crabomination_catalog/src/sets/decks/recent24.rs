@@ -696,6 +696,30 @@ pub fn pactdoll_terror() -> CardDefinition {
     }
 }
 
+/// Patched Plaything — {2}{W} 4/3 Toy artifact creature with double strike.
+/// Enters with two -1/-1 counters if you cast it from your hand (CR 614.12 —
+/// cast-zone-gated enters-with-counters).
+pub fn patched_plaything() -> CardDefinition {
+    CardDefinition {
+        name: "Patched Plaything",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::DoubleStrike],
+        enters_with_counters: Some((
+            CounterType::MinusOneMinusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::CastFromHand),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
 // ── Vehicles ─────────────────────────────────────────────────────────────────
 
 /// Air Response Unit — {2}{W} 3/3 Vehicle. Flying, vigilance. Crew 1.

@@ -53,6 +53,33 @@ fn bestow_greatness_pumps_and_tramples() {
     assert!(cp.keywords.contains(&Keyword::Trample));
 }
 
+/// Patched Plaything enters with two -1/-1 counters only when cast from hand.
+#[test]
+fn patched_plaything_cast_zone_counters() {
+    let mut g = two_player_game();
+    // Cast from hand → enters as a 2/1 with two -1/-1 counters.
+    let pp = g.add_card_to_hand(0, catalog::patched_plaything());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Patched Plaything");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(pp).unwrap().counter_count(CounterType::MinusOneMinusOne),
+        2,
+        "hand-cast enters with two -1/-1 counters",
+    );
+
+    // Entering any other way (here: straight onto the battlefield) skips them.
+    let direct = g.add_card_to_battlefield(0, catalog::patched_plaything());
+    assert_eq!(
+        g.battlefield_find(direct).unwrap().counter_count(CounterType::MinusOneMinusOne),
+        0,
+        "non-hand entry has no -1/-1 counters",
+    );
+}
+
 /// Broadside Barrage deals 5 and loots.
 #[test]
 fn broadside_barrage_burns_and_loots() {

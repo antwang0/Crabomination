@@ -759,6 +759,10 @@ impl GameState {
                     // BEFORE the next state-based-action sweep, so a printed
                     // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
                     let enters_spec = card.definition.enters_with_counters.clone();
+                    // CR 614.12 — Patched Plaything's "enters with two -1/-1
+                    // counters if you cast it from your hand" reads the cast
+                    // zone via `Predicate::CastFromHand`.
+                    let cast_from_hand = card.cast_from_hand;
                     let mut card = card;
                     // CR 608.3a — a permanent spell enters under the control
                     // of its caster (matters for casts of opponent-owned
@@ -836,7 +840,7 @@ impl GameState {
                     // CR 122.1 — Solemnity drops enters-with-counters.
                     if self.counters_locked() { counter_specs.clear(); }
                     for (kind, value) in counter_specs {
-                        let etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
+                        let mut etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
                             card_id,
                             self.battlefield
                                 .iter()
@@ -851,6 +855,7 @@ impl GameState {
                             converged_value,
                             mana_spent,
                         );
+                        etb_ctx.cast_from_hand = cast_from_hand;
                         let base = self.evaluate_value(&value, &etb_ctx);
                         if base > 0 {
                             // CR 614.16: counter-doubling replacement effects
