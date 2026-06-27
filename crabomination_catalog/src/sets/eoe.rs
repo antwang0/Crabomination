@@ -6259,6 +6259,29 @@ pub fn perigee_beckoner() -> CardDefinition {
     }
 }
 
+/// The Seriema — {1}{W}{W} legendary Spacecraft. ETB: search your library for a
+/// legendary creature card and put it into your hand. Station; at 7+ it's a 5/5
+/// with flying. (The 7+ "other tapped legendary creatures have indestructible"
+/// static is dropped.)
+pub fn the_seriema() -> CardDefinition {
+    CardDefinition {
+        name: "The Seriema",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((5, 5)), ..Default::default() }],
+        ..Default::default()
+    }
+}
+
 /// Survey Mechan — {4} 1/3 Robot, flying, hexproof. {10}, Sacrifice this: it
 /// deals 3 damage to any target and you draw three cards. (The distinct-land-
 /// name activation discount and the "target player" routing are approximated.)

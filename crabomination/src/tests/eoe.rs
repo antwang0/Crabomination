@@ -2519,6 +2519,29 @@ fn consult_the_star_charts_grabs_by_lands() {
     assert_eq!(g.players[0].hand.len(), hand, "put one card into hand");
 }
 
+/// The Seriema's ETB tutors a legendary creature card into your hand.
+#[test]
+fn the_seriema_tutors_a_legendary_to_hand() {
+    let mut g = two_player_game();
+    let legend = g.add_card_to_library(0, catalog::sami_wildcat_captain()); // legendary
+    g.add_card_to_library(0, catalog::grizzly_bears()); // non-legendary decoy
+    let ship = g.add_card_to_hand(0, catalog::the_seriema());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(legend)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: ship, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast The Seriema");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == legend),
+        "legendary creature tutored to hand");
+}
+
 /// Survey Mechan's {10}, Sac ability deals 3 to a target and draws three.
 #[test]
 fn survey_mechan_sac_burn_and_draw() {

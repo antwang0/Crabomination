@@ -4096,6 +4096,7 @@ static EOE: &[Factory] = &[
     super::eoe::astelli_reclaimer,
     super::eoe::starfield_vocalist,
     super::eoe::perigee_beckoner,
+    super::eoe::the_seriema,
     super::eoe::survey_mechan,
     super::eoe::loading_zone,
     super::eoe::sami_wildcat_captain,
