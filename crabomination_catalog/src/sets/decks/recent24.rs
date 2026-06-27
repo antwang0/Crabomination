@@ -879,7 +879,61 @@ pub fn scrap_compactor() -> CardDefinition {
     }
 }
 
+/// Defend the Rider — {G} Instant. Choose one — your permanent gains hexproof
+/// and indestructible; or create a 1/1 colorless Pilot.
+pub fn defend_the_rider() -> CardDefinition {
+    CardDefinition {
+        name: "Defend the Rider",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::ControlledByYou),
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: pilot_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Full Throttle — {4}{R}{R} Sorcery. After this main phase, there are two
+/// additional combat phases. (The "untap attackers each combat" rider is
+/// omitted — tracked in TODO.md.)
+pub fn full_throttle() -> CardDefinition {
+    CardDefinition {
+        name: "Full Throttle",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
 // ── Tokens ───────────────────────────────────────────────────────────────────
+
+fn pilot_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Pilot".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
+        ..Default::default()
+    }
+}
 
 fn thopter_token() -> TokenDefinition {
     TokenDefinition {

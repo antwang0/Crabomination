@@ -483,6 +483,37 @@ fn scrap_compactor_pings_for_three() {
     assert!(g.battlefield_find(sc).is_none(), "Compactor sacrificed itself");
 }
 
+/// Defend the Rider can make a 1/1 Pilot token.
+#[test]
+fn defend_the_rider_makes_pilot() {
+    let mut g = two_player_game();
+    let dr = g.add_card_to_hand(0, catalog::defend_the_rider());
+    ready(&mut g);
+    // Mode 2 (token) is chosen by the auto-decider when no controlled
+    // permanent exists to target for mode 1.
+    g.perform_action(GameAction::CastSpell {
+        card_id: dr, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast Defend the Rider (token mode)");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Pilot"), 1);
+}
+
+/// Full Throttle adds two combat phases after the main phase.
+#[test]
+fn full_throttle_adds_two_combats() {
+    let mut g = two_player_game();
+    let ft = g.add_card_to_hand(0, catalog::full_throttle());
+    ready(&mut g);
+    let combats_before = g.additional_post_main_combats;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ft, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Full Throttle");
+    drain_stack(&mut g);
+    assert_eq!(g.additional_post_main_combats, combats_before + 2, "two additional combats queued");
+}
+
 /// Air Response Unit ships as a 3/3 Vehicle with Crew 1.
 #[test]
 fn air_response_unit_is_crewable_vehicle() {

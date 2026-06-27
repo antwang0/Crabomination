@@ -3611,6 +3611,8 @@ static DECKS: &[Factory] = &[
     super::decks::wretched_doll,
     super::decks::molt_tender,
     super::decks::scrap_compactor,
+    super::decks::defend_the_rider,
+    super::decks::full_throttle,
     super::decks::solphim_mayhem_dominus,
     super::decks::atraxa_praetors_voice,
     super::decks::deathrite_shaman,
