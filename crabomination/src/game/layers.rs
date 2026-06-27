@@ -651,6 +651,9 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
+        // Read against printed P/T + counters on each layer recompute (the
+        // same approximation `CardMatchPowerGated` uses) — Tapestry Warden.
+        R::ToughnessGreaterThanPower => true,
         R::And(a, b) | R::Or(a, b) => {
             requirement_is_card_only(a) && requirement_is_card_only(b)
         }
@@ -735,6 +738,15 @@ pub(crate) fn requirement_matches_card(
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,
+        // CR 613 lord scope read against printed P/T + counters (same
+        // approximation `CardMatchPowerGated` uses): Tapestry Warden grants
+        // its keyword to "creatures you control with toughness greater than
+        // their power".
+        R::ToughnessGreaterThanPower => {
+            let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
+            let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
+            (def.base_toughness() + plus - minus) > (def.base_power() + plus - minus)
+        }
         _ => false,
     }
 }

@@ -1487,7 +1487,7 @@ impl GameState {
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
                     .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
-                let power = atk_cp.map(|c| c.power).unwrap_or(0);
+                let power = atk_cp.map(combat_damage_value).unwrap_or(0);
                 let total_power = if self.combat_damage_prevented_for_dealer(attacker) {
                     0
                 } else {
@@ -1533,7 +1533,7 @@ impl GameState {
                     id: cp.id,
                     target: atk.target,
                     defender_player,
-                    power: cp.power,
+                    power: combat_damage_value(cp),
                     has_trample: kws.contains(&Keyword::Trample),
                     has_lifelink: kws.contains(&Keyword::Lifelink),
                     has_deathtouch: kws.contains(&Keyword::Deathtouch),
@@ -1814,7 +1814,7 @@ impl GameState {
                         std::collections::HashMap::new();
                     for &bid in &dealing_blocker_ids {
                         let Some(bc) = computed_of(bid) else { continue };
-                        let power = bc.power.max(0) as u32;
+                        let power = combat_damage_value(bc).max(0) as u32;
                         if power == 0 {
                             continue;
                         }
@@ -2412,6 +2412,18 @@ impl GameState {
                     .build(),
             );
         }
+    }
+}
+
+/// The combat-damage value a creature assigns: its toughness when it has
+/// `Keyword::AssignsCombatDamageByToughness` (Doran, the Siege Tower; Bill the
+/// Pony), otherwise its power (CR 510.1c). The substitution is unconditional —
+/// a 5/1 Doran-creature assigns 1.
+fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
+    if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+        cp.toughness
+    } else {
+        cp.power
     }
 }
 

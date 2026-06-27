@@ -658,6 +658,9 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::MustBlock | K::AllMustBlock | K::MustBeBlocked => "Is forced into combat by a block/attack requirement.",
         K::CantBeCopied => "Can't be copied.",
         K::DealsNoCombatDamage => "Assigns no combat damage.",
+        K::AssignsCombatDamageByToughness => {
+            "Assigns combat damage equal to its toughness rather than its power."
+        }
         K::Offspring(_) => {
             "You may pay an additional cost as you cast this; if you do, it enters making a 1/1 token copy of itself."
         }
@@ -802,6 +805,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::AttacksAlone => "Attacks only alone".into(),
         K::CantAttackAlone => "Can't attack alone".into(),
         K::DealsNoCombatDamage => "Deals no combat damage".into(),
+        K::AssignsCombatDamageByToughness => "Assigns combat damage by toughness".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
         K::AllMustBlock => "All creatures able to block this do so".into(),
         K::Skulk => "Skulk".into(),

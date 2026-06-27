@@ -799,6 +799,13 @@ pub enum Keyword {
     /// *computed* keyword set to zero out the bearer's combat damage in
     /// both the first-strike and regular damage steps.
     DealsNoCombatDamage,
+    /// "Assigns combat damage equal to its toughness rather than its power"
+    /// (Doran, the Siege Tower; Bill the Pony's temporary grant). A marker
+    /// keyword read off the *computed* keyword set in `combat.rs`: the bearer
+    /// uses its toughness as the damage value it assigns in both combat-damage
+    /// steps (CR 510.1c — the substitution is unconditional, so a 5/1 bearer
+    /// assigns 1).
+    AssignsCombatDamageByToughness,
     /// CR 509.1c — "This creature must be blocked if able" (Lure-style
     /// block requirement, also Academic Dispute's rider). Enforced in
     /// `declare_blockers`: if an attacker carrying this keyword is left

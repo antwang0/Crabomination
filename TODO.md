@@ -29,9 +29,10 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (`Effect::CounterSpellDrawIfUnderpaid`). **Remaining EOE rares** (want new
   primitives): Famished Worldsire (Devour-land on a 0/0 — needs an enters-with-
   counters replacement so it survives SBA), Sothera, Chorale of the Void, Moonlit
-  Meditation, Requiem Monolith, Tapestry Warden (assign-damage-by-toughness
-  static), The Dominion Bracelet (control-an-opponent), Pull's land-return half,
-  Adagia/Kavaron 12+ bands.
+  Meditation, Requiem Monolith, The Dominion Bracelet (control-an-opponent),
+  Pull's land-return half, Adagia/Kavaron 12+ bands. (Tapestry Warden ✅ via
+  `Keyword::AssignsCombatDamageByToughness` — its Station-by-toughness half is
+  still dropped.)
 - **`set_gaps.py "set:eoe"` still lists ~85 cards** (the script's `name:`-regex
   over-reports helper-built cards as missing — Pulsar Squadron Ace now ships via
   `LookPickToHand{pick_filter: Spacecraft}`, so the "filtered impulse-reveal" note
@@ -137,8 +138,12 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 - **Frodo Baggins "must be blocked while Ring-bearer" rider.** Frodo's ETB
   legendary-tempt half ships; the conditional `MustBeBlocked`-while-bearer
   static is approximated away. Needs a Ring-bearer-gated keyword grant.
-- **"Assigns combat damage equal to toughness" keyword** (Doran / Bill the
-  Pony's Food-sac ability). No primitive yet; Bill is deferred on it.
+- ✅ **"Assigns combat damage equal to toughness" keyword**
+  (`Keyword::AssignsCombatDamageByToughness`, read off the computed keyword set
+  in `combat_damage_value`) — Doran, the Siege Tower (all creatures), Tapestry
+  Warden (your creatures with T>P, via a `ToughnessGreaterThanPower` CardMatch
+  static grant), Bill the Pony (Food-sac temporary grant). `decks::recent23`.
+  Tapestry's "stations using toughness" half is dropped.
 - **Choice additional cost "sacrifice a creature or pay {N}"** (Lash of the
   Balrog). `AdditionalCastCost` has no OR-of-costs variant yet.
 - **Food-per-creature-sacrificed count** (Voracious Fell Beast): currently
@@ -370,9 +375,10 @@ Real cards confirmed absent, deferred for want of a mechanic:
 - **Both-dynamic-P/T tokens** — Seize the Storm's `*/*` Elemental (P=T= I/S in
   gy + flashback-in-exile). `DynamicPt::InstantsSorceriesInGraveyardAndExile`
   only drives power; want a variant (or token CDA) that sets both.
-- **Assign-combat-damage-by-toughness** — Doran / Ancient Lumberknot ("assigns
-  combat damage equal to its toughness"); needs a keyword/static read in the
-  combat-damage assignment step.
+- ✅ **Assign-combat-damage-by-toughness** — `Keyword::AssignsCombatDamageByToughness`
+  read in `combat_damage_value` (Doran, Tapestry Warden, Bill the Pony,
+  `decks::recent23`). Ancient Lumberknot and other "assigns combat damage equal
+  to its toughness" cards can now ride it directly.
 - **Cast-time "choose one or both" modal with a targeted mode** — Markov
   Retribution (mode 2 targets a Vampire + another creature). `Effect::ChooseN`
   exists but per-mode target-slot derivation for the targeted half is fiddly.
