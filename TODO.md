@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — DSK / DFT staples (`decks::recent23`)
+
+Mechanics deferred while batching the 20-card `recent23` wave:
+- **Eerie** (DSK ability word — "whenever an enchantment you control enters and
+  whenever you fully unlock a Room") needs a combined enchantment-ETB +
+  room-unlock trigger combo. Blocks Cult Healer, Balemurk Leech, Optimistic
+  Scavenger, Unwilling Vessel.
+- **Mount saddle / Pilot crew power bonus** (DFT — "saddles Mounts and crews
+  Vehicles as though its power were N greater"). Dynamite Diver ships without it
+  (its dies-ping is faithful).
+- **Spree** (DSK — "choose one or more additional costs") — no variable
+  additional-cost-mode primitive yet. Blocks Insatiable Avarice.
+- **Conditional enters-with-counters by cast zone** (Patched Plaything —
+  "enters with two -1/-1 counters if you cast it from your hand"); needs a
+  cast-zone predicate on the enters-with-counters replacement.
+
 ## Discovered follow-ups — Edge of Eternities (`sets::eoe`)
 
 Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still open:

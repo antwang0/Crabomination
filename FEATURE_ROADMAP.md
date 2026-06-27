@@ -295,7 +295,9 @@ Each a small targeted feature; sweep batch by batch.
   ability that returns the card with haste + an end-step exile; the bot offers
   graveyard-activated abilities, the client hover panel labels them).
 - **Combat-flavor:** ✅ Bushido, Flanking, Rampage, Provoke, Battle Cry, Exalted,
-  Frenzy, Melee, Dash, Boast, Afflict, Enlist, Mobilize, Myriad, Amass.
+  Frenzy, Melee, Dash, Boast, Afflict, Enlist, Mobilize, Myriad, Amass,
+  Assigns-combat-damage-by-toughness (`AssignsCombatDamageByToughness`, CR 510.1c
+  — Doran, Tapestry Warden, Bill the Pony).
 - **Value/ETB:** ✅ Investigate, Fabricate, Riot, Raid, Afterlife, Explore, Squad,
   Forage, Endure, Exploit, Extort, Support, Suspect, Discover, Collect Evidence,
   Expend, Valiant, Cohort (Munda's Vanguard, Drana's Chosen — tap-another-Ally
