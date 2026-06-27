@@ -484,6 +484,10 @@ pub enum Value {
     /// Total (computed) toughness of all creatures the controller controls.
     /// Betor, Kin to All's tiered end-step check (10/20/40).
     TotalToughnessControlled,
+    /// Number of differently-named lands the controller controls (All-Fates
+    /// Scroll's "draw X cards, where X is the number of differently named
+    /// lands you control").
+    DifferentlyNamedLandsControlled,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"

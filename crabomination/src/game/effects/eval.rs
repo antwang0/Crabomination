@@ -195,6 +195,17 @@ impl GameState {
                 powers.dedup();
                 powers.len() as i32
             }
+            Value::DifferentlyNamedLandsControlled => {
+                let mut names: Vec<String> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_land())
+                    .map(|c| c.definition.name.to_string())
+                    .collect();
+                names.sort_unstable();
+                names.dedup();
+                names.len() as i32
+            }
             Value::TotalToughnessControlled => {
                 let ids: Vec<_> = self
                     .battlefield

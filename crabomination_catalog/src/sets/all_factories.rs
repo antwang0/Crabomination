@@ -4102,6 +4102,18 @@ static EOE: &[Factory] = &[
     super::eoe::sami_wildcat_captain,
     super::eoe::divert_disaster,
     super::eoe::blade_of_the_swarm,
+    super::eoe::dawnsire_sunstar_dreadnought,
+    super::eoe::the_eternity_elevator,
+    super::eoe::infinite_guideline_station,
+    super::eoe::command_bridge,
+    super::eoe::secluded_starforge,
+    super::eoe::possibility_technician,
+    super::eoe::haliya_guided_by_light,
+    super::eoe::alpharael_dreaming_acolyte,
+    super::eoe::alpharael_stonechosen,
+    super::eoe::roving_actuator,
+    super::eoe::all_fates_scroll,
+    super::eoe::tannuk_steadfast_second,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

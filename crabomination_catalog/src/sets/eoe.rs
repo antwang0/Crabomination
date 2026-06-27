@@ -6405,3 +6405,398 @@ pub fn blade_of_the_swarm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch: missing EOE rares/lands (claude/modern_decks) ─────────────────────
+
+/// A 2/2 colorless Robot artifact creature token (the EOE staple). `tapped`
+/// mints it tapped (Infinite Guideline Station).
+fn eoe_robot_token(tapped: bool) -> TokenDefinition {
+    TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        tapped,
+        ..Default::default()
+    }
+}
+
+/// Dawnsire, Sunstar Dreadnought — {5} Legendary Artifact — Spacecraft.
+/// Station; 10+ | whenever you attack, deal 100 damage to up to one target
+/// creature or planeswalker. 20+ | flying, and it's a 20/20 artifact creature.
+/// (The "whenever you attack" rider fires per attacker — the codebase's
+/// established YourControl approximation.)
+pub fn dawnsire_sunstar_dreadnought() -> CardDefinition {
+    CardDefinition {
+        name: "Dawnsire, Sunstar Dreadnought",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![station()],
+        station: vec![
+            StationBand {
+                min: 10,
+                triggers: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                    effect: Effect::ApplyToTargets {
+                        max_targets: 1,
+                        filter: SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                        effect: Box::new(Effect::DealDamage {
+                            to: Selector::Target(0),
+                            amount: Value::Const(100),
+                        }),
+                    },
+                }],
+                ..Default::default()
+            },
+            StationBand { min: 20, keywords: vec![Keyword::Flying], pt: Some((20, 20)), ..Default::default() },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Eternity Elevator — {5} Legendary Artifact — Spacecraft. {T}: Add
+/// {C}{C}{C}. Station; 20+ | {T}: Add X mana of any one color, where X is the
+/// number of charge counters on it.
+pub fn the_eternity_elevator() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "The Eternity Elevator",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(3)) },
+                ..Default::default()
+            },
+            station(),
+        ],
+        station: vec![StationBand {
+            min: 20,
+            activated: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Charge,
+                    }),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Infinite Guideline Station — {W}{U}{B}{R}{G} Legendary Artifact — Spacecraft.
+/// ETB: create a tapped 2/2 Robot for each multicolored permanent you control.
+/// Station; 12+ | flying, and whenever it attacks, draw a card for each
+/// multicolored permanent you control.
+pub fn infinite_guideline_station() -> CardDefinition {
+    let multicolored_you =
+        SelectionRequirement::Multicolored.and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Infinite Guideline Station",
+        cost: cost(&[w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(multicolored_you.clone())),
+                filter: SelectionRequirement::Any,
+            },
+            definition: eoe_robot_token(true),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand {
+            min: 12,
+            keywords: vec![Keyword::Flying],
+            triggers: vec![on_attack(Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(multicolored_you)),
+                    filter: SelectionRequirement::Any,
+                },
+            })],
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Command Bridge — Land. Enters tapped, taps for any color. (The "sacrifice it
+/// unless you tap an untapped permanent" ETB cost is dropped.)
+pub fn command_bridge() -> CardDefinition {
+    CardDefinition {
+        name: "Command Bridge",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![super::tap_add_any_color()],
+        triggered_abilities: vec![super::etb_tap()],
+        ..Default::default()
+    }
+}
+
+/// Secluded Starforge — Land. {T}: Add {C}. {5}, {T}: Create a 2/2 colorless
+/// Robot artifact creature token. (The "tap X artifacts: target gets +X/+0"
+/// pump is dropped — no variable-tap cost primitive.)
+pub fn secluded_starforge() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Secluded Starforge",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: eoe_robot_token(false),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Possibility Technician — {2}{R} 3/3 Kavu Artificer, Warp {1}{R}. Whenever
+/// this or another Kavu you control enters, exile the top card; you may play it
+/// for as long as it remains exiled. (The "if you control a Kavu" play
+/// condition is dropped.)
+pub fn possibility_technician() -> CardDefinition {
+    CardDefinition {
+        name: "Possibility Technician",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Kavu),
+                }),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        }],
+        alternative_cost: Some(warp(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Haliya, Guided by Light — {2}{W} 3/3 Legendary Human Soldier, Warp {W}.
+/// Whenever Haliya or another creature or artifact you control enters, gain 1
+/// life. At your end step, draw a card if you've gained 3+ life this turn.
+pub fn haliya_guided_by_light() -> CardDefinition {
+    CardDefinition {
+        name: "Haliya, Guided by Light",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                    }),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::LifeGainedThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(3),
+                    },
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        alternative_cost: Some(warp(cost(&[w()]))),
+        ..Default::default()
+    }
+}
+
+/// Alpharael, Dreaming Acolyte — {1}{U}{B} 2/3 Legendary Human Cleric. ETB:
+/// draw two, then discard two. During your turn, Alpharael has deathtouch. (The
+/// "unless you discard an artifact" reduction is dropped.)
+pub fn alpharael_dreaming_acolyte() -> CardDefinition {
+    CardDefinition {
+        name: "Alpharael, Dreaming Acolyte",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, Alpharael has deathtouch.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Deathtouch],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Alpharael, Stonechosen — {3}{B}{B} 3/3 Legendary Human Cleric. Ward—Discard
+/// a card. Void — whenever Alpharael attacks, if a nonland permanent left the
+/// battlefield this turn or a spell was warped this turn, defending player
+/// loses half their life, rounded up. (Ward's "at random" rider is dropped.)
+pub fn alpharael_stonechosen() -> CardDefinition {
+    CardDefinition {
+        name: "Alpharael, Stonechosen",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(WardCost::Discard(1))],
+        triggered_abilities: vec![on_attack(Effect::If {
+            cond: Predicate::VoidActive { who: PlayerRef::You },
+            then: Box::new(Effect::LoseHalfLife {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                rounded_up: true,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Roving Actuator — {3}{R} 3/4 Robot. Void — when it enters, if a nonland
+/// permanent left the battlefield this turn or a spell was warped this turn,
+/// recast an instant or sorcery with mana value 2 or less from your graveyard
+/// without paying its cost (exiled after). (Modeled as a direct gy recast
+/// rather than exile-then-copy.)
+pub fn roving_actuator() -> CardDefinition {
+    CardDefinition {
+        name: "Roving Actuator",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: target_filtered(
+                    SelectionRequirement::InYourGraveyard
+                        .and(SelectionRequirement::ManaValueAtMost(2))
+                        .and(
+                            SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        ),
+                ),
+                source_zone: crate::card::Zone::Graveyard,
+                exile_after: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// All-Fates Scroll — {3} Artifact. {T}: Add one mana of any color. {7}, {T},
+/// Sacrifice this: Draw X cards, where X is the number of differently named
+/// lands you control.
+pub fn all_fates_scroll() -> CardDefinition {
+    CardDefinition {
+        name: "All-Fates Scroll",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            super::tap_add_any_color(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(7)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::DifferentlyNamedLandsControlled,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tannuk, Steadfast Second — {2}{R}{R} 3/5 Legendary Kavu Pilot. Other
+/// creatures you control have haste. (The "artifact / red creature cards in
+/// your hand have warp {2}{R}" grant is dropped — no in-hand alt-cost static.)
+pub fn tannuk_steadfast_second() -> CardDefinition {
+    CardDefinition {
+        name: "Tannuk, Steadfast Second",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        ..Default::default()
+    }
+}

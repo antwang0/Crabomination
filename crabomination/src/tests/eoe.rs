@@ -2710,3 +2710,193 @@ fn tractor_beam_steals_control_and_locks_untap() {
     kill(&mut g, aura);
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "control reverts when Aura leaves");
 }
+
+// ── Batch: missing EOE rares/lands (claude/modern_decks) ─────────────────────
+
+/// Dawnsire: at 20+ charges it's a 20/20 flying artifact creature.
+#[test]
+fn dawnsire_20plus_band_is_2020_flier() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::dawnsire_sunstar_dreadnought());
+    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
+    g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 20);
+    let post = g.computed_permanent(ship).unwrap();
+    assert!(post.card_types.contains(&CardType::Creature));
+    assert_eq!((post.power, post.toughness), (20, 20));
+    assert!(post.keywords.contains(&Keyword::Flying));
+}
+
+/// Infinite Guideline Station ETB mints a tapped Robot per multicolored permanent.
+#[test]
+fn infinite_guideline_station_etb_robots_per_multicolored() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::boros_recruit()); // multicolored R/W
+    g.add_card_to_battlefield(0, catalog::boros_recruit());
+    let id = g.add_card_to_hand(0, catalog::infinite_guideline_station());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    cast(&mut g, id);
+    let robots: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Robot").collect();
+    // 2 Boros Recruits + the Station itself (WUBRG = multicolored) = 3.
+    assert_eq!(robots.len(), 3, "one Robot per multicolored permanent (incl. itself)");
+    assert!(robots.iter().all(|c| c.tapped), "Robots enter tapped");
+}
+
+/// All-Fates Scroll: {7},{T},Sac → draw X = differently named lands you control.
+#[test]
+fn all_fates_scroll_draws_per_differently_named_land() {
+    let mut g = two_player_game();
+    let scroll = g.add_card_to_battlefield(0, catalog::all_fates_scroll());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest()); // same name → counts once
+    g.add_card_to_battlefield(0, catalog::island());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::plains()); }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(7);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scroll, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate sac-draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "draws 2 (Forest, Island distinct)");
+    assert!(g.battlefield_find(scroll).is_none(), "scroll sacrificed");
+}
+
+/// Haliya: +1 life per creature/artifact ETB; end-step draw after gaining 3+.
+#[test]
+fn haliya_lifegain_then_endstep_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::haliya_guided_by_light());
+    let life0 = g.players[0].life;
+    for _ in 0..3 {
+        let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, b);
+    }
+    assert_eq!(g.players[0].life, life0 + 3, "1 life per creature ETB");
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "draws at end step after gaining 3+");
+}
+
+/// Alpharael, Dreaming Acolyte has deathtouch only during your turn.
+#[test]
+fn alpharael_dreaming_deathtouch_only_on_your_turn() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::alpharael_dreaming_acolyte());
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Deathtouch));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Alpharael, Stonechosen: with Void active, attacking halves the defender's life.
+#[test]
+fn alpharael_stonechosen_void_attack_halves_defender_life() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    drain_stack(&mut g);
+    assert!(g.nonland_permanent_left_bf_this_turn, "Void latched");
+    let alph = g.add_card_to_battlefield(0, catalog::alpharael_stonechosen());
+    g.battlefield_find_mut(alph).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: alph, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 10, "defender loses half (20 → 10)");
+}
+
+/// Possibility Technician's ETB exiles the top card with a play permission.
+#[test]
+fn possibility_technician_etb_exiles_top_grants_may_play() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::possibility_technician());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert!(
+        g.exile.iter().any(|c| c.controller == 0 && c.may_play_until.is_some()),
+        "exiled top card is playable",
+    );
+}
+
+/// Roving Actuator: with Void active, recast a cheap instant from your graveyard.
+#[test]
+fn roving_actuator_void_recasts_cheap_instant() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let idx = g.players[0].hand.iter().position(|c| c.id == bolt).unwrap();
+    let card = g.players[0].hand.remove(idx);
+    g.players[0].graveyard.push(card);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    drain_stack(&mut g);
+    let life1 = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::roving_actuator());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Bool(true)],
+    ));
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, life1 - 3, "recast Bolt hit the opponent for 3");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt left the graveyard");
+}
+
+/// Tannuk gives other creatures you control haste.
+#[test]
+fn tannuk_grants_other_creatures_haste() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tannuk_steadfast_second());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Secluded Starforge's {5},{T} ability mints a 2/2 Robot.
+#[test]
+fn secluded_starforge_makes_a_robot() {
+    let mut g = two_player_game();
+    let forge = g.add_card_to_battlefield(0, catalog::secluded_starforge());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forge, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate robot maker");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Robot").count(), 1);
+}
+
+/// Command Bridge enters tapped and taps for any color.
+#[test]
+fn command_bridge_enters_tapped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::command_bridge());
+    g.perform_action(GameAction::PlayLand(id)).expect("play Command Bridge");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped");
+}
+
+/// The Eternity Elevator's base ability taps for {C}{C}{C}.
+#[test]
+fn eternity_elevator_taps_for_ccc() {
+    let mut g = two_player_game();
+    let elev = g.add_card_to_battlefield(0, catalog::the_eternity_elevator());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elev, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for CCC");
+    assert_eq!(g.players[0].mana_pool.total(), 3, "added 3 colorless");
+}
