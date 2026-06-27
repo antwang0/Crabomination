@@ -106,6 +106,9 @@ mod tests_recent23;
 #[path = "../tests/recent24.rs"]
 mod tests_recent24;
 #[cfg(test)]
+#[path = "../tests/recent25.rs"]
+mod tests_recent25;
+#[cfg(test)]
 #[path = "../tests/mom.rs"]
 mod tests_mom;
 #[cfg(test)]
