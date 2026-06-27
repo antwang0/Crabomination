@@ -4,8 +4,10 @@
 //! Tower (all creatures), Tapestry Warden / Ancient Lumberknot (your creatures
 //! with toughness > power), Bill the Pony (a sacrifice-a-Food temporary grant).
 //! Plus Affinity for a type (Thrumming Hivepool — Slivers; Gearseeker Serpent
-//! — artifacts; Chitin Gravestalker — graveyard) and a clutch of DSK/DFT/EOE
-//! staples on existing primitives. Tests in `crabomination/src/tests/recent23.rs`.
+//! — artifacts; Chitin Gravestalker — graveyard) and ~20 DSK/DFT/EOE staples on
+//! existing primitives (cycling, devoid burn, modal counter/manifest, threaten,
+//! manifest-dread bounce, cycle triggers, …). Tests in
+//! `crabomination/src/tests/recent23.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, EventKind,
@@ -626,6 +628,106 @@ pub fn splitskin_doll() -> CardDefinition {
                 }),
             },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Skittering Surveyor — {3} 1/2 artifact Construct. When it enters, you may
+/// search your library for a basic land card and put it into your hand.
+pub fn skittering_surveyor() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Skittering Surveyor",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for a basic land?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Agonasaur Rex — {3}{G}{G} 8/8 Dinosaur with trample and Cycling {2}{G}. When
+/// you cycle it, put two +1/+1 counters on up to one target creature; it gains
+/// trample and indestructible until end of turn.
+pub fn agonasaur_rex() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Agonasaur Rex",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Cycling(cost(&[generic(2), g()])),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Marketwatch Phantom — {1}{W} 2/2 Spirit Detective. Whenever another creature
+/// you control with power 2 or less enters, this creature gains flying until
+/// end of turn.
+pub fn marketwatch_phantom() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Marketwatch Phantom",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtMost(2))
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
         ..Default::default()
     }
 }

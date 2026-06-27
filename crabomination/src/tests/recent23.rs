@@ -490,3 +490,66 @@ fn splitskin_doll_keeps_card_with_small_creature() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew and kept (no discard)");
 }
+
+/// Skittering Surveyor fetches a basic land to hand on ETB.
+#[test]
+fn skittering_surveyor_fetches_land() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::skittering_surveyor());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "fetched the Forest to hand");
+}
+
+/// Agonasaur Rex's cycle trigger puts two +1/+1 counters on a creature and
+/// grants it trample + indestructible.
+#[test]
+fn agonasaur_rex_cycle_buffs_creature() {
+    use crate::card::{CounterType, Keyword};
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rex = g.add_card_to_hand(0, catalog::agonasaur_rex());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Target the bear with the reflexive cycle trigger.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    g.perform_action(GameAction::Cycle { card_id: rex, x_value: None }).expect("cycle Agonasaur Rex");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "two +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Indestructible),
+        "granted trample + indestructible");
+}
+
+/// Marketwatch Phantom gains flying when another small creature you control
+/// enters.
+#[test]
+fn marketwatch_phantom_gains_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let phantom = g.add_card_to_battlefield(0, catalog::marketwatch_phantom());
+    assert!(!g.computed_permanent(phantom).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying yet");
+    // Cast a 2/1 (power ≤2) through the real ETB funnel so the trigger fires.
+    let piker = g.add_card_to_hand(0, catalog::goblin_piker());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: piker, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a small creature");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(phantom).unwrap().keywords.contains(&Keyword::Flying),
+        "gained flying when a small creature entered");
+}
