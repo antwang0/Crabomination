@@ -1241,6 +1241,12 @@ pub struct PermanentView {
     /// client badge "crews as +N".
     #[serde(default)]
     pub crew_power_bonus: i32,
+    /// True while this Mount is saddled (CR 702.171 — "saddled until end of
+    /// turn"). Lets the client badge the Mount so the player can see that its
+    /// "attacks while saddled" riders are armed this combat. Populated by
+    /// `project_permanent`; defaults false.
+    #[serde(default)]
+    pub saddled: bool,
     /// True when this creature's marked damage is already lethal (≥ its
     /// current toughness) and it isn't indestructible — i.e. it will die
     /// at the next state-based-action check. Lets the client grey out /

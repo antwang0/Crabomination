@@ -255,6 +255,12 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // Saddled (CR 702.171) — flag that the Mount's attacks-while-saddled riders
+    // are armed for this combat.
+    if p.saddled {
+        lines.push("⛨ saddled".to_string());
+    }
+
     // Station progress (CR 721) — show the next {N+} charge threshold so the
     // player can see how close the Spacecraft is to its next striation.
     if let Some(threshold) = p.station_next_threshold {
@@ -1064,6 +1070,7 @@ mod tests {
             creature_subtypes: vec![],
             lost_all_abilities: false,
             crew_power_bonus: 0,
+            saddled: false,
             station_charges: None,
             station_next_threshold: None,
         }
