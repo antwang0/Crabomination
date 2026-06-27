@@ -977,6 +977,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Ice => "Removed by triggered effects; the permanent transforms when the last one is gone.",
         CounterType::Tide => "Ominous Seas: at four or more, remove them to make an 8/8 Kraken.",
         CounterType::Bounty => "When this bountied creature dies, its bounty's owner draws a card and gains 1 life.",
+        CounterType::Possession => "DSK Eerie tally — counted by the creature's death-replacement payoff.",
         _ => return None,
     })
 }
