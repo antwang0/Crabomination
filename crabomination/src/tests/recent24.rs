@@ -1480,3 +1480,57 @@ fn clammy_prowler_makes_ally_unblockable() {
         "ally attacker became unblockable",
     );
 }
+
+/// Arabella drains each opponent for the number of your power-2-or-less creatures.
+#[test]
+fn arabella_attack_drains_for_small_creatures() {
+    let mut g = two_player_game();
+    let ara = g.add_card_to_battlefield(0, catalog::arabella_abandoned_doll());
+    g.clear_sickness(ara);
+    // Two more small creatures (Arabella herself is power 1, so 3 total ≤2 power).
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let (foe_life, my_life) = (g.players[1].life, g.players[0].life);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ara, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 3, "X=3 damage to opponent");
+    assert_eq!(g.players[0].life, my_life + 3, "gained X=3 life");
+}
+
+/// Vile Mutilator forces each opponent to sacrifice an enchantment then a creature.
+#[test]
+fn vile_mutilator_double_edict() {
+    let mut g = two_player_game();
+    let foe_ench = g.add_card_to_battlefield(1, catalog::grasping_longneck()); // enchantment creature
+    let foe_cre = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Pay the additional sacrifice with a spare creature.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let vm = g.add_card_to_battlefield(0, catalog::vile_mutilator());
+    g.fire_self_etb_triggers(vm, 0);
+    drain_stack(&mut g);
+    // Grasping Longneck is an enchantment creature → sacrificed by the first edict;
+    // the plain bear by the second.
+    assert!(g.battlefield_find(foe_ench).is_none(), "opponent's enchantment sacrificed");
+    assert!(g.battlefield_find(foe_cre).is_none(), "opponent's creature sacrificed");
+}
+
+/// Disturbing Mirth draws two when you sacrifice a permanent to its ETB.
+#[test]
+fn disturbing_mirth_etb_may_sacrifice_draws() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let dm = g.add_card_to_battlefield(0, catalog::disturbing_mirth());
+    let hand = g.players[0].hand.len();
+    g.fire_self_etb_triggers(dm, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two from the sacrifice");
+}

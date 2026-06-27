@@ -2168,3 +2168,85 @@ pub fn intruding_soulrager() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Arabella, Abandoned Doll — {R}{W} 1/3 Legendary Artifact Creature — Toy.
+/// Whenever it attacks, it deals X damage to each opponent and you gain X life,
+/// where X is the number of creatures you control with power 2 or less.
+pub fn arabella_abandoned_doll() -> CardDefinition {
+    let small_creatures = || {
+        Value::count(Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::PowerAtMost(2)),
+        ))
+    };
+    CardDefinition {
+        name: "Arabella, Abandoned Doll",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::DealDamage { to: each_opponent(), amount: small_creatures() },
+            Effect::GainLife { who: Selector::You, amount: small_creatures() },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Vile Mutilator — {5}{B}{B} 6/5 Demon with flying and trample. Additional
+/// cost: sacrifice a creature or enchantment. ETB: each opponent sacrifices a
+/// nontoken enchantment, then a nontoken creature (their choice).
+pub fn vile_mutilator() -> CardDefinition {
+    let edict = |filter| Effect::Sacrifice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        count: Value::ONE,
+        filter,
+    };
+    CardDefinition {
+        name: "Vile Mutilator",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            count: 1,
+        }],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            edict(SelectionRequirement::Enchantment.and(SelectionRequirement::NotToken)),
+            edict(SelectionRequirement::Creature.and(SelectionRequirement::NotToken)),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Disturbing Mirth — {B}{R} Enchantment. ETB: you may sacrifice another
+/// enchantment or creature; if you do, draw two cards. When you sacrifice
+/// Disturbing Mirth, manifest dread.
+pub fn disturbing_mirth() -> CardDefinition {
+    CardDefinition {
+        name: "Disturbing Mirth",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::MaySacrifice {
+                description: "Sacrifice another enchantment or creature: draw two.".into(),
+                filter: (SelectionRequirement::Enchantment.or(SelectionRequirement::Creature))
+                    .and(SelectionRequirement::OtherThanSource),
+                count: Value::ONE,
+                then: Box::new(draw(2)),
+                else_: None,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::SelfSource),
+                effect: Effect::ManifestDread { who: PlayerRef::You },
+            },
+        ],
+        ..Default::default()
+    }
+}
