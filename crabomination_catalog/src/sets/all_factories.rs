@@ -2338,6 +2338,7 @@ static DECKS: &[Factory] = &[
     super::decks::munitions_expert,
     super::decks::boggart_harbinger,
     super::decks::unholy_annex_ritual_chamber,
+    super::decks::glassworks_shattered_yard,
     super::decks::bottomless_pool_locker_room,
     super::decks::meat_locker_drowned_diner,
     super::decks::gempalm_incinerator,

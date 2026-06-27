@@ -43264,6 +43264,55 @@ pub fn unholy_annex_ritual_chamber() -> CardDefinition {
     }
 }
 
+/// Glassworks // Shattered Yard — {2}{R} // {4}{R} Room (DSK). Glassworks'
+/// unlock deals 4 to a creature an opponent controls; Shattered Yard pings
+/// each opponent for 1 at your end step.
+pub fn glassworks_shattered_yard() -> CardDefinition {
+    use crate::card::{RoomDoor, RoomDoors};
+    CardDefinition {
+        name: "Glassworks // Shattered Yard",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Room],
+            ..Default::default()
+        },
+        room: Some(Box::new(RoomDoors {
+            left: RoomDoor {
+                name: "Glassworks".to_string(),
+                cost: cost(&[generic(2), r()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
+                    effect: Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                        amount: Value::Const(4),
+                    },
+                }],
+                ..Default::default()
+            },
+            right: RoomDoor {
+                name: "Shattered Yard".to_string(),
+                cost: cost(&[generic(4), r()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(crate::game::types::TurnStep::End),
+                        EventScope::ActivePlayer,
+                    ),
+                    effect: Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    },
+                }],
+                ..Default::default()
+            },
+        })),
+        ..Default::default()
+    }
+}
+
 /// Bottomless Pool // Locker Room — {U} // {4}{U} Room. Pool's unlock
 /// bounces up to one creature; Locker Room draws when your creatures
 /// connect (once per damage batch).

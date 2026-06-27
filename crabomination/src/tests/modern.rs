@@ -48004,6 +48004,34 @@ fn room_right_door_then_unlock_left() {
     assert_eq!(g.players[0].life, 22, "gained 2");
 }
 
+/// Glassworks' unlock deals 4 to an opponent's creature; Shattered Yard pings
+/// each opponent at the end step.
+#[test]
+fn glassworks_room_unlock_and_endstep_ping() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let room = g.add_card_to_hand(0, catalog::glassworks_shattered_yard());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Glassworks");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "4 damage kills the 2/2");
+    // Unlock Shattered Yard, then the end step pings the opponent for 1.
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::UnlockRoomDoor { card_id: room, right: true })
+        .expect("unlock Shattered Yard");
+    drain_stack(&mut g);
+    let foe_life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "Shattered Yard pinged the opponent");
+}
+
 /// Unlocked designations are battlefield-only: a bounced Room comes back
 /// locked, and a Room round-trips through a snapshot.
 #[test]
