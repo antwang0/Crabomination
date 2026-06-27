@@ -11519,6 +11519,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AtEachCombatThisTurn { body } => {
+                // Register a turn-scoped delayed trigger that re-fires at the
+                // start of every Begin-Combat step for the controller's turn.
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::EachCombatThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
             Effect::WinGame { who } => {
                 // CR 104.2a — "you win the game". Resolve `who` to a single
                 // player and eliminate every other (non-eliminated) player.

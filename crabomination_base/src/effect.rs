@@ -3858,6 +3858,13 @@ pub enum Effect {
     /// the following main phase comes from the normal EndCombat → PostMain
     /// flow. Relentless Assault.
     AdditionalCombatPhaseAfterMain { count: Value },
+    /// "At the beginning of each combat this turn, [body]." Registers a
+    /// turn-scoped `DelayedKind::EachCombatThisTurn` delayed trigger that
+    /// runs `body` at the start of every Begin-Combat step for the rest of
+    /// the controller's turn, then expires at cleanup. Full Throttle pairs
+    /// this with `AdditionalCombatPhaseAfterMain` to untap attackers between
+    /// its extra combats.
+    AtEachCombatThisTurn { body: Box<Effect> },
     /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
     /// Appends an `Emblem` (named after its source) to the player's
     /// emblem zone. Emblems never leave; their triggered abilities fire

@@ -910,15 +910,26 @@ pub fn defend_the_rider() -> CardDefinition {
     }
 }
 
-/// Full Throttle — {4}{R}{R} Sorcery. After this main phase, there are two
-/// additional combat phases. (The "untap attackers each combat" rider is
-/// omitted — tracked in TODO.md.)
+/// Full Throttle — {4}{R}{R} Sorcery. After this main phase, two additional
+/// combat phases; at the beginning of each combat this turn, untap all
+/// creatures that attacked this turn.
 pub fn full_throttle() -> CardDefinition {
     CardDefinition {
         name: "Full Throttle",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(2) },
+        effect: Effect::Seq(vec![
+            Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(2) },
+            Effect::AtEachCombatThisTurn {
+                body: Box::new(Effect::Untap {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::AttackedThisTurn),
+                    ),
+                    up_to: None,
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

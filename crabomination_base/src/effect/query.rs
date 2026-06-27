@@ -605,6 +605,8 @@ impl Effect {
             }
             Effect::AdditionalCombatPhase { count }
             | Effect::AdditionalCombatPhaseAfterMain { count } => value_has_target(count),
+            // Registers a delayed trigger; its body targets at fire time, not cast.
+            Effect::AtEachCombatThisTurn { .. } => false,
             Effect::CreateEmblem { who, .. } => player_has_target(who),
             Effect::CreateTokenCopyOf { who, count, source, .. }
             | Effect::CreateTokenCopiesHasteSac { who, count, source } => {

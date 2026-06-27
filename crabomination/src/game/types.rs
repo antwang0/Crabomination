@@ -665,6 +665,11 @@ pub enum DelayedKind {
     /// dies, any turn (not turn-scoped, never expires at cleanup). The source
     /// is the exiled haunting card. Registered by `Effect::HauntCreature`.
     WhenHauntedCreatureDies(crate::card::CardId),
+    /// "At the beginning of each combat this turn, …" (CR 603.4). Fires at
+    /// the start of every Begin-Combat step on the controller's turn; does
+    /// not fire once, expires at cleanup. Registered by
+    /// `Effect::AtEachCombatThisTurn` (Full Throttle).
+    EachCombatThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

@@ -499,11 +499,13 @@ fn defend_the_rider_makes_pilot() {
     assert_eq!(count_named(&g, 0, "Pilot"), 1);
 }
 
-/// Full Throttle adds two combat phases after the main phase.
+/// Full Throttle adds two combat phases after the main phase and untaps
+/// attackers at the beginning of each combat this turn.
 #[test]
 fn full_throttle_adds_two_combats() {
     let mut g = two_player_game();
     let ft = g.add_card_to_hand(0, catalog::full_throttle());
+    let atk = g.add_card_to_battlefield(0, catalog::canyon_vaulter());
     ready(&mut g);
     let combats_before = g.additional_post_main_combats;
     g.perform_action(GameAction::CastSpell {
@@ -512,6 +514,17 @@ fn full_throttle_adds_two_combats() {
     .expect("cast Full Throttle");
     drain_stack(&mut g);
     assert_eq!(g.additional_post_main_combats, combats_before + 2, "two additional combats queued");
+
+    // Mark the creature as a tapped attacker, then enter a fresh Begin
+    // Combat: the delayed rider untaps it so it can attack again.
+    {
+        let c = g.battlefield_find_mut(atk).unwrap();
+        c.tapped = true;
+        c.attacked_this_turn = true;
+    }
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(atk).unwrap().tapped, "attacker untapped for next combat");
 }
 
 /// Canyon Vaulter's crew trigger (CR 702.122) gives the crewed Vehicle flying.

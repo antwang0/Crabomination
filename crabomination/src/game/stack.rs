@@ -500,6 +500,9 @@ impl GameState {
                     dt.controller == active
                 }
                 (DelayedKind::NextEndStep, TurnStep::End) => true,
+                (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => {
+                    dt.controller == active
+                }
                 _ => false,
             };
             if matches {
@@ -1916,6 +1919,7 @@ impl GameState {
                 crate::game::types::DelayedKind::WhenCardDies(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                    | crate::game::types::DelayedKind::EachCombatThisTurn
             )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
