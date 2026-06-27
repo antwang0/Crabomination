@@ -2250,3 +2250,63 @@ pub fn disturbing_mirth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 1/1 black Fungus token that can't block (Synapse Necromage).
+fn fungus_cant_block_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Fungus".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        keywords: vec![Keyword::CantBlock],
+        ..Default::default()
+    }
+}
+
+/// Synapse Necromage — {2}{B} 3/1 Fungus Wizard. When it dies, create two 1/1
+/// black Fungus tokens that can't block.
+pub fn synapse_necromage() -> CardDefinition {
+    CardDefinition {
+        name: "Synapse Necromage",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fungus, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: fungus_cant_block_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Midnight Mayhem — {2}{R}{W} Sorcery. Create three 1/1 red Gremlins, then
+/// Gremlins you control gain menace, lifelink, and haste until end of turn.
+pub fn midnight_mayhem() -> CardDefinition {
+    let gremlins = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Gremlin)
+                .and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    let grant = |kw| Effect::GrantKeyword { what: gremlins(), keyword: kw, duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Midnight Mayhem",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: gremlin_token() },
+            grant(Keyword::Menace),
+            grant(Keyword::Lifelink),
+            grant(Keyword::Haste),
+        ]),
+        ..Default::default()
+    }
+}

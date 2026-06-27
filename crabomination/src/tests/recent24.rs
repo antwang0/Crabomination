@@ -1534,3 +1534,34 @@ fn disturbing_mirth_etb_may_sacrifice_draws() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 2, "drew two from the sacrifice");
 }
+
+/// Synapse Necromage makes two can't-block Fungus tokens when it dies.
+#[test]
+fn synapse_necromage_dies_makes_fungus() {
+    let mut g = two_player_game();
+    let sn = g.add_card_to_battlefield(0, catalog::synapse_necromage());
+    let mut evs = g.remove_to_graveyard_with_triggers(sn);
+    evs.push(GameEvent::CreatureDied { card_id: sn });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let fungi: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Fungus").collect();
+    assert_eq!(fungi.len(), 2, "two Fungus tokens");
+    assert!(fungi.iter().all(|c| c.definition.keywords.contains(&Keyword::CantBlock)));
+}
+
+/// Midnight Mayhem makes three Gremlins and grants them haste/menace/lifelink.
+#[test]
+fn midnight_mayhem_makes_and_buffs_gremlins() {
+    let mut g = two_player_game();
+    let mm = g.add_card_to_hand(0, catalog::midnight_mayhem());
+    ready(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Midnight Mayhem");
+    drain_stack(&mut g);
+    let gremlins: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Gremlin").map(|c| c.id).collect();
+    assert_eq!(gremlins.len(), 3, "three Gremlins");
+    let cp = g.computed_permanent(gremlins[0]).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Menace) && cp.keywords.contains(&Keyword::Lifelink));
+}

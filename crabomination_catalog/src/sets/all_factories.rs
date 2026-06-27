@@ -3649,6 +3649,8 @@ static DECKS: &[Factory] = &[
     super::decks::arabella_abandoned_doll,
     super::decks::vile_mutilator,
     super::decks::disturbing_mirth,
+    super::decks::synapse_necromage,
+    super::decks::midnight_mayhem,
     super::decks::air_response_unit,
     super::decks::debris_beetle,
     super::decks::cryptcaller_chariot,
