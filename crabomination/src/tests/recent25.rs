@@ -148,3 +148,34 @@ fn anthropede_destroys_room() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(room).is_none(), "Room destroyed");
 }
+
+/// Living Phone digs for a small creature when it dies.
+#[test]
+fn living_phone_digs_on_death() {
+    let mut g = two_player_game();
+    let lp = g.add_card_to_battlefield(0, catalog::living_phone());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // 2/2 — power 2, eligible
+    let hand_before = g.players[0].hand.len();
+    kill(&mut g, lp);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "took the small creature");
+}
+
+/// Demonic Counsel tutors a Demon to hand (no delirium).
+#[test]
+fn demonic_counsel_finds_demon() {
+    let mut g = two_player_game();
+    let dc = g.add_card_to_hand(0, catalog::demonic_counsel());
+    let demon = g.add_card_to_library(0, catalog::bloodgift_demon());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(demon)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: dc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Demonic Counsel");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == demon), "Demon tutored to hand");
+}

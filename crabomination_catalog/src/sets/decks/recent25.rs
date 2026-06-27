@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{eerie, etb, on_attack, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Card types for the "Fear of …" Nightmare enchantment-creature cycle.
 fn nightmare(power: i32, toughness: i32) -> CardDefinition {
@@ -259,6 +259,54 @@ pub fn anthropede() -> CardDefinition {
             }),
             else_: None,
         })],
+        ..Default::default()
+    }
+}
+
+// ── Second wave ──────────────────────────────────────────────────────────────
+
+/// Living Phone — {2}{W} 2/1 Artifact Toy. When it dies, look at the top five;
+/// you may put a creature card with power 2 or less into your hand, rest on bottom.
+pub fn living_phone() -> CardDefinition {
+    CardDefinition {
+        name: "Living Phone",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2))),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Demonic Counsel — {1}{B} Sorcery. Search your library for a Demon card to
+/// hand; Delirium — instead search for any card.
+pub fn demonic_counsel() -> CardDefinition {
+    CardDefinition {
+        name: "Demonic Counsel",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::DeliriumActive { who: PlayerRef::You },
+            then: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Demon),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
         ..Default::default()
     }
 }
