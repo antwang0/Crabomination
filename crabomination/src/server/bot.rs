@@ -3458,6 +3458,8 @@ fn effect_uses_x(eff: &Effect) -> bool {
             value_uses_x(count)
         }
         Effect::CreateToken { count, .. }
+        | Effect::CreateTokenCopyOf { count, .. }
+        | Effect::CreateTokenCopiesHasteSac { count, .. }
         | Effect::CopySpell { count, .. }
         | Effect::CopySpellMayChooseTargets { count, .. } => value_uses_x(count),
         Effect::RevealUntilFind { cap, .. } => value_uses_x(cap),

@@ -2902,6 +2902,13 @@ mod tests {
         assert!(k2.has_alternative_cost);
         assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
         assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
+
+        // Warp (Haliya) is a plain alt cost surfaced with its {W} label.
+        let haliya = crate::card::CardInstance::new(
+            crate::card::CardId(3), catalog::haliya_guided_by_light(), 0);
+        let k3 = known_card(&haliya);
+        assert!(k3.has_alternative_cost && !k3.alt_cost_needs_pitch);
+        assert_eq!(k3.alt_cost_label, "{W}", "warp cost label rendered");
     }
 
     #[test]
