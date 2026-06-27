@@ -1583,3 +1583,54 @@ fn stalked_researcher_eerie_lifts_defender() {
     }]));
     assert!(res.is_ok(), "defender lifted by Eerie → attack legal");
 }
+
+/// Glimmer Bairn sacrifices a token for +2/+2.
+#[test]
+fn glimmer_bairn_sacs_token_to_pump() {
+    let mut g = two_player_game();
+    let gb = g.add_card_to_battlefield(0, catalog::glimmer_bairn());
+    g.add_token_to_battlefield(0, &soldier_1_1());
+    g.clear_sickness(gb);
+    ready(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Glimmer Bairn");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(gb).unwrap().power, 3, "+2/+2 → 3/4");
+}
+
+/// Dashing Bloodsucker's Eerie trigger grants +2/+0 and lifelink.
+#[test]
+fn dashing_bloodsucker_eerie_pumps() {
+    let mut g = two_player_game();
+    let db = g.add_card_to_battlefield(0, catalog::dashing_bloodsucker());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    ready(&mut g);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Room");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(db).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0 → 4/5");
+    assert!(cp.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Tunnel Surveyor makes a Glimmer token on ETB.
+#[test]
+fn tunnel_surveyor_makes_glimmer() {
+    let mut g = two_player_game();
+    let ts = g.add_card_to_battlefield(0, catalog::tunnel_surveyor());
+    g.fire_self_etb_triggers(ts, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Glimmer"), 1);
+}
+
+/// Pestilent Syphoner ships with flying and toxic 1.
+#[test]
+fn pestilent_syphoner_has_toxic() {
+    let g = two_player_game();
+    let def = catalog::pestilent_syphoner();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Toxic(1)));
+    let _ = g;
+}

@@ -2332,3 +2332,96 @@ pub fn stalked_researcher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Glimmer Bairn — {G} 1/2 Ouphe. Sacrifice a token: it gets +2/+2 until end of
+/// turn.
+pub fn glimmer_bairn() -> CardDefinition {
+    CardDefinition {
+        name: "Glimmer Bairn",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ouphe], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::IsToken, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dashing Bloodsucker — {3}{B} 2/5 Vampire Warrior. Eerie — it gets +2/+0 and
+/// gains lifelink until end of turn.
+pub fn dashing_bloodsucker() -> CardDefinition {
+    CardDefinition {
+        name: "Dashing Bloodsucker",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        triggered_abilities: eerie(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ])),
+        ..Default::default()
+    }
+}
+
+/// Pestilent Syphoner — {1}{B} 1/1 Phyrexian Insect with flying and toxic 1.
+pub fn pestilent_syphoner() -> CardDefinition {
+    CardDefinition {
+        name: "Pestilent Syphoner",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}
+
+/// Tunnel Surveyor — {2}{U} 2/2 Human Detective. When it enters, create a 1/1
+/// white Glimmer enchantment creature token.
+pub fn tunnel_surveyor() -> CardDefinition {
+    CardDefinition {
+        name: "Tunnel Surveyor",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: glimmer_token(),
+        })],
+        ..Default::default()
+    }
+}
