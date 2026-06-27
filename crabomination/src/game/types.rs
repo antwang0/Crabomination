@@ -1450,6 +1450,10 @@ pub enum GameEvent {
     /// until end of turn. `crew` lists the tapped crew members (their
     /// `EventKind::CrewsOrSaddles` triggers fire).
     VehicleCrewed { vehicle: CardId, crew: Vec<CardId> },
+    /// DSK Eerie — `room`'s second door was just unlocked (both doors now
+    /// open). `controller` is the unlocking player. Drives "whenever you fully
+    /// unlock a Room" triggers.
+    RoomFullyUnlocked { room: CardId, controller: usize },
     PoisonAdded { player: usize, amount: u32 },
     /// CR 724 — `player` became the monarch.
     MonarchChanged { player: usize },

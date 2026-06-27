@@ -2572,13 +2572,18 @@ impl GameState {
         &mut self,
         card_id: CardId,
         right: bool,
-        _events: &mut Vec<GameEvent>,
+        events: &mut Vec<GameEvent>,
     ) {
         let Some(card) = self.battlefield_find_mut(card_id) else { return };
         if !card.unlock_room_door(right) {
             return;
         }
         let controller = card.controller;
+        // DSK Eerie (CR 709.5) — both doors now open: "you fully unlock a
+        // Room". Surface the event so Eerie triggers fire via normal dispatch.
+        if card.unlocked_doors == 0b11 {
+            events.push(GameEvent::RoomFullyUnlocked { room: card_id, controller });
+        }
         let unlock_triggers: Vec<crate::effect::Effect> = card
             .definition
             .room

@@ -53,6 +53,44 @@ fn bestow_greatness_pumps_and_tramples() {
     assert!(cp.keywords.contains(&Keyword::Trample));
 }
 
+/// Cult Healer's Eerie trigger fires when an enchantment (a Room) enters,
+/// granting it lifelink until end of turn.
+#[test]
+fn cult_healer_eerie_enchantment_enters() {
+    let mut g = two_player_game();
+    let healer = g.add_card_to_battlefield(0, catalog::cult_healer());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    ready(&mut g);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Room (enchantment enters)");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(healer).unwrap().keywords.contains(&Keyword::Lifelink),
+        "Cult Healer gained lifelink from Eerie",
+    );
+}
+
+/// Balemurk Leech's Eerie trigger fires on fully unlocking a Room (both
+/// doors): the opponent loses 1 life.
+#[test]
+fn balemurk_leech_eerie_room_fully_unlocked() {
+    let mut g = two_player_game();
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    ready(&mut g);
+    // Open the right door first (no Leech yet → enchantment-enters is a no-op).
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: true })
+        .expect("cast right door");
+    drain_stack(&mut g);
+    g.add_card_to_battlefield(0, catalog::balemurk_leech());
+    let foe_life = g.players[1].life;
+    // Unlock the left door → room fully unlocked → only the Eerie trigger.
+    g.perform_action(GameAction::UnlockRoomDoor { card_id: room, right: false })
+        .expect("unlock left door");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 0b11, "fully unlocked");
+    assert_eq!(g.players[1].life, foe_life - 1, "opponent lost 1 from Eerie");
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {

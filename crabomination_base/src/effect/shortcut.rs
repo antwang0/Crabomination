@@ -542,6 +542,27 @@ pub fn evolve() -> TriggeredAbility {
     }
 }
 
+/// Eerie shortcut (DSK ability word): "Whenever an enchantment you control
+/// enters and whenever you fully unlock a Room, [body]." Returns the two
+/// triggered abilities that share `body` — an enchantment-ETB watcher and a
+/// `RoomFullyUnlocked` watcher (both `YourControl`).
+pub fn eerie(body: Effect) -> Vec<TriggeredAbility> {
+    vec![
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Enchantment,
+                }),
+            effect: body.clone(),
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::RoomFullyUnlocked, EventScope::YourControl),
+            effect: body,
+        },
+    ]
+}
+
 /// ETB-Drain shortcut: "When this creature enters, each opponent loses
 /// `amount` life and you gain `amount` life." Wraps [`etb`] with the
 /// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /

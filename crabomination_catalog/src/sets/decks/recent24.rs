@@ -11,7 +11,10 @@ use crate::card::{
     MayPlayDuration, Predicate, SelectionRequirement, Selector, StaticAbility, StaticEffect,
     Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{deal, draw, drain, etb, gain_life, pump_target, target_filtered};
+use crate::effect::shortcut::{
+    deal, draw, drain, each_opponent, eerie, etb, gain_life, pump_target,
+    target_filtered,
+};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
@@ -692,6 +695,47 @@ pub fn pactdoll_terror() -> CardDefinition {
                 }),
             effect: drain(1),
         }],
+        ..Default::default()
+    }
+}
+
+/// Cult Healer — {2}{W} 3/3 Human Doctor. Eerie — gains lifelink until end
+/// of turn whenever an enchantment you control enters or you fully unlock a
+/// Room (DSK).
+pub fn cult_healer() -> CardDefinition {
+    CardDefinition {
+        name: "Cult Healer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Doctor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: eerie(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Lifelink,
+            duration: Duration::EndOfTurn,
+        }),
+        ..Default::default()
+    }
+}
+
+/// Balemurk Leech — {1}{B} 2/2 Leech. Eerie — each opponent loses 1 life
+/// whenever an enchantment you control enters or you fully unlock a Room.
+pub fn balemurk_leech() -> CardDefinition {
+    CardDefinition {
+        name: "Balemurk Leech",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Leech], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: eerie(Effect::LoseLife {
+            who: each_opponent(),
+            amount: Value::Const(1),
+        }),
         ..Default::default()
     }
 }

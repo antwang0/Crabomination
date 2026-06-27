@@ -62,6 +62,7 @@ pub(crate) fn event_matches_spec(
             EventKind::CrewsOrSaddles,
             GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
         ) => true,
+        (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
@@ -428,6 +429,9 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // its last controller travels in the event (drives YourControl /
         // OpponentControl scope for Three Tree Scribe).
         GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+        // DSK Eerie — the unlocking player drives "whenever you fully unlock
+        // a Room" (YourControl scope).
+        GameEvent::RoomFullyUnlocked { controller, .. } => Some(*controller),
         _ => None,
     }
 }

@@ -11,10 +11,13 @@ state-corrupting in ordinary play.
 ## Discovered follow-ups — DSK / DFT staples (`decks::recent23`)
 
 Mechanics deferred while batching the 20-card `recent23` wave:
-- **Eerie** (DSK ability word — "whenever an enchantment you control enters and
-  whenever you fully unlock a Room") needs a combined enchantment-ETB +
-  room-unlock trigger combo. Blocks Cult Healer, Balemurk Leech, Optimistic
-  Scavenger, Unwilling Vessel.
+- ✅ **Eerie** (DSK ability word — "whenever an enchantment you control enters
+  and whenever you fully unlock a Room") — `shortcut::eerie(body)` returns the
+  enchantment-ETB + `EventKind::RoomFullyUnlocked` trigger pair;
+  `set_room_door_unlocked` emits `GameEvent::RoomFullyUnlocked` when both doors
+  open. Cult Healer, Balemurk Leech, Optimistic Scavenger ship. Still open:
+  **Unwilling Vessel** (wants a `CounterType::Possession` + a death trigger
+  minting an X/X Spirit where X = possession counters via LKI).
 - ✅ **Mount saddle / Pilot crew power bonus** (DFT, CR 702.122e/702.171 —
   "saddles Mounts and crews Vehicles as though its power were N greater") —
   `StaticEffect::CrewSaddlePowerBonus`, read by `crew`/`saddle`, the bot's

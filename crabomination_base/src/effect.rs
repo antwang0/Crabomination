@@ -1414,6 +1414,11 @@ pub enum EventKind {
     /// CR 709.5h — a Room door was unlocked (at cast-entry or via the unlock
     /// special action). Fired with the Room permanent as the subject.
     DoorUnlocked,
+    /// DSK Eerie ability word — "whenever you fully unlock a Room" (both doors
+    /// unlocked). Fired with the Room permanent as the subject; pair with
+    /// `EventScope::YourControl` so the unlocker's permanents trigger. Matched
+    /// to `GameEvent::RoomFullyUnlocked`.
+    RoomFullyUnlocked,
     /// A **land card** was put into a graveyard from anywhere (death,
     /// sacrifice, mill, discard, spell resolution). Matched to
     /// `GameEvent::CardPutIntoGraveyard { is_land: true, .. }`. Not a

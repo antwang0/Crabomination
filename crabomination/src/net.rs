@@ -1810,6 +1810,7 @@ pub enum GameEventWire {
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
     VehicleCrewed { vehicle: CardId },
     MountSaddled { mount: CardId },
+    RoomFullyUnlocked { room: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
     CityBlessingGained { player: usize },
@@ -2035,6 +2036,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::VehicleCrewed { vehicle, .. } => {
                 GameEventWire::VehicleCrewed { vehicle: *vehicle }
             }
+            GameEvent::RoomFullyUnlocked { room, .. } => {
+                GameEventWire::RoomFullyUnlocked { room: *room }
+            }
             GameEvent::MountSaddled { mount, .. } => {
                 GameEventWire::MountSaddled { mount: *mount }
             }
@@ -2238,6 +2242,7 @@ impl GameEventWire {
             },
             E::VehicleCrewed { vehicle, .. } => format!("{} crewed", name(*vehicle)),
             E::MountSaddled { mount } => format!("{} saddled", name(*mount)),
+            E::RoomFullyUnlocked { room } => format!("{} fully unlocked", name(*room)),
             E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
             E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),
             E::CityBlessingGained { player } => format!("{} gets the city's blessing", pn(*player)),

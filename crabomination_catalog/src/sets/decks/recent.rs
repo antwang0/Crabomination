@@ -4177,8 +4177,8 @@ pub fn beza_the_bounding_spring() -> CardDefinition {
 }
 
 /// Optimistic Scavenger — {W} 1/1 Human Scout. Eerie — whenever an enchantment
-/// you control enters, put a +1/+1 counter on target creature. (The
-/// fully-unlock-a-Room half is omitted.)
+/// you control enters or you fully unlock a Room, put a +1/+1 counter on
+/// target creature.
 pub fn optimistic_scavenger() -> CardDefinition {
     CardDefinition {
         name: "Optimistic Scavenger",
@@ -4190,18 +4190,11 @@ pub fn optimistic_scavenger() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Enchantment,
-                }),
-            effect: Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        }],
+        triggered_abilities: crate::effect::shortcut::eerie(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        }),
         ..Default::default()
     }
 }
