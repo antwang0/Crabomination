@@ -1806,3 +1806,357 @@ fn haliya_counters_on_enter_and_attack() {
     resolve_targeted(&mut g, 0, catalog::haliya_ascendant_cadet().triggered_abilities[1].effect.clone(), &[target]);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+// ── New EOE batch (modern_decks) ────────────────────────────────────────────
+
+/// Evendo (a Planet) enters tapped and taps for green.
+#[test]
+fn planet_enters_tapped_and_taps_for_mana() {
+    let mut g = two_player_game();
+    let evendo = g.add_card_to_battlefield(0, catalog::evendo_waking_haven());
+    // A tap-for-G mana ability and a Station ability; an ETB-tap trigger.
+    assert_eq!(g.battlefield_find(evendo).unwrap().definition.activated_abilities.len(), 2);
+    assert_eq!(g.battlefield_find(evendo).unwrap().definition.triggered_abilities.len(), 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: evendo, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for green");
+    assert!(g.players[0].mana_pool.total() >= 1, "Planet taps for mana");
+}
+
+/// Pulsar Squadron Ace's ETB reveals a Spacecraft from the top five to hand.
+#[test]
+fn pulsar_squadron_ace_grabs_a_spacecraft() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::wurmwall_sweeper()); // a Spacecraft
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let hand_before = g.players[0].hand.len();
+    resolve_targeted(&mut g, 0, catalog::pulsar_squadron_ace().triggered_abilities[0].effect.clone(), &[]);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Wurmwall Sweeper"),
+        "Spacecraft put into hand"
+    );
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+/// Umbral Collar Zealot sacrifices an artifact to surveil.
+#[test]
+fn umbral_collar_zealot_sacrifices_to_surveil() {
+    let mut g = two_player_game();
+    let zealot = g.add_card_to_battlefield(0, catalog::umbral_collar_zealot());
+    let art = g.add_card_to_battlefield(0, catalog::melded_moxite());
+    g.add_card_to_library(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zealot, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac an artifact to surveil");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "the artifact was sacrificed");
+}
+
+/// Sunset Saboteur's attack trigger puts a +1/+1 counter on an opponent's creature.
+#[test]
+fn sunset_saboteur_attack_counters_opponent() {
+    let mut g = two_player_game();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::sunset_saboteur().triggered_abilities[0].effect.clone(), &[opp]);
+    assert_eq!(g.battlefield_find(opp).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Station Monitor mints a Drone on the second spell each turn.
+#[test]
+fn station_monitor_second_spell_makes_drone() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::station_monitor());
+    let s1 = g.add_card_to_hand(0, catalog::bombard());
+    let s2 = g.add_card_to_hand(0, catalog::bombard());
+    let d1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s1, target: Some(Target::Permanent(d1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first spell");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: s2, target: Some(Target::Permanent(d2)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("second spell");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Drone"),
+        "second spell created a Drone"
+    );
+}
+
+/// Virulent Silencer poisons the defending player when it connects.
+#[test]
+fn virulent_silencer_poisons_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let silencer = g.add_card_to_battlefield(0, catalog::virulent_silencer());
+    g.clear_sickness(silencer);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: silencer, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "two poison from a nontoken artifact creature hit");
+}
+
+/// Steelswarm Operator's restricted mana ability produces artifact-only mana.
+#[test]
+fn steelswarm_operator_makes_restricted_mana() {
+    let mut g = two_player_game();
+    let op = g.add_card_to_battlefield(0, catalog::steelswarm_operator());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: op, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for restricted mana");
+    assert!(g.players[0].mana_pool.restricted_total() >= 1, "restricted mana added");
+}
+
+/// Syr Vondam grows and gains life when another of your creatures dies.
+#[test]
+fn syr_vondam_grows_on_friendly_death() {
+    let mut g = two_player_game();
+    let vondam = g.add_card_to_battlefield(0, catalog::syr_vondam_sunstar_exemplar());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let mut evs = g.remove_to_graveyard_with_triggers(bear);
+    evs.push(GameEvent::CreatureDied { card_id: bear });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(vondam).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life");
+}
+
+/// Starfield Shepherd's ETB tutors a low-cost creature to hand.
+#[test]
+fn starfield_shepherd_tutors_small_creature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let plains = g.add_card_to_library(0, catalog::plains()); // basic Plains is a legal pick
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(plains))]));
+    resolve_targeted(&mut g, 0, catalog::starfield_shepherd().triggered_abilities[0].effect.clone(), &[]);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "a card was tutored to hand");
+}
+
+/// Tannuk pings each opponent on landfall.
+#[test]
+fn tannuk_pings_on_landfall() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tannuk_memorial_ensign());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "landfall ping");
+}
+
+/// Xu-Ifit reanimates a creature card from your graveyard.
+#[test]
+fn xu_ifit_reanimates_from_graveyard() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let xu = g.add_card_to_battlefield(0, catalog::xu_ifit_osteoharmonist());
+    g.clear_sickness(xu);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: xu, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("reanimate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "creature returned to battlefield");
+}
+
+/// Monoist Circuit-Feeder pumps yours and shrinks theirs by artifact count.
+#[test]
+fn monoist_circuit_feeder_pumps_by_artifacts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::melded_moxite()); // 1 artifact you control
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::monoist_circuit_feeder().triggered_abilities[0].effect.clone(), &[mine, theirs]);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "+X/+0 where X=1 artifact");
+    assert_eq!(g.computed_permanent(theirs).unwrap().toughness, 1, "-0/-X where X=1 artifact");
+}
+
+/// Space-Time Anomaly mills cards equal to your life total.
+#[test]
+fn space_time_anomaly_mills_your_life() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..30 { g.add_card_to_library(1, catalog::forest()); }
+    let anomaly = g.add_card_to_hand(0, catalog::space_time_anomaly());
+    g.players[0].life = 5;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: anomaly, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Space-Time Anomaly");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 5, "milled 5 = your life");
+}
+
+/// Systems Override steals an opposing creature for the turn (untapped, hasty).
+#[test]
+fn systems_override_steals_creature() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::systems_override().effect.clone(), &[theirs]);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "gained control");
+    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Mutinous Massacre destroys creatures of the chosen mana-value parity.
+#[test]
+fn mutinous_massacre_destroys_by_parity() {
+    let mut g = two_player_game();
+    let odd = g.add_card_to_battlefield(1, catalog::memory_guardian()); // MV 5 (odd)
+    let even = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2 (even)
+    resolve_targeted(&mut g, 0, catalog::mutinous_massacre().effect.clone(), &[]);
+    assert!(g.battlefield_find(odd).is_none(), "odd-MV creature destroyed (AutoDecider picks odd)");
+    assert!(g.battlefield_find(even).is_some(), "even-MV creature survives");
+}
+
+/// Focus Fire deals 2 plus your creature/Spacecraft count to a creature.
+#[test]
+fn focus_fire_scales_with_board() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // resolve_targeted adds a source grizzly (1 creature you control) → X = 2 + 1 = 3.
+    resolve_targeted(&mut g, 0, catalog::focus_fire().effect.clone(), &[target]);
+    assert!(g.battlefield_find(target).is_none(), "3 damage kills the 2/2");
+}
+
+/// Terminal Velocity drops a creature from hand onto the battlefield with haste.
+#[test]
+fn terminal_velocity_cheats_creature_from_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let velocity = g.add_card_to_hand(0, catalog::terminal_velocity());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: velocity, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Terminal Velocity");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "creature put onto battlefield");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Melded Moxite sacrifices itself for a tapped Robot.
+#[test]
+fn melded_moxite_sacs_for_robot() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(0, catalog::melded_moxite());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for a Robot");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mox).is_none(), "Moxite sacrificed");
+    let robot = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Robot");
+    assert!(robot.is_some_and(|c| c.tapped), "Robot enters tapped");
+}
+
+/// Squire's Lightblade attaches to a creature on ETB and grants first strike.
+#[test]
+fn squires_lightblade_attaches_and_grants_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve_targeted(&mut g, 0, catalog::squires_lightblade().triggered_abilities[0].effect.clone(), &[bear]);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Auxiliary Boosters mints a Robot and equips it, granting flying.
+#[test]
+fn auxiliary_boosters_makes_and_equips_robot() {
+    let mut g = two_player_game();
+    let boosters = g.add_card_to_hand(0, catalog::auxiliary_boosters());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: boosters, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Auxiliary Boosters");
+    drain_stack(&mut g);
+    let robot = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Robot").map(|c| c.id);
+    assert!(robot.is_some(), "Robot token created");
+    assert!(g.computed_permanent(robot.unwrap()).unwrap().keywords.contains(&Keyword::Flying),
+        "equipped Robot has flying");
+}
+
+/// Thaumaton Torpedo sacrifices to destroy a nonland permanent.
+#[test]
+fn thaumaton_torpedo_destroys_nonland() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let torpedo = g.add_card_to_battlefield(0, catalog::thaumaton_torpedo());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: torpedo, ability_index: 0, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], x_value: None,
+    }).expect("destroy target");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "nonland permanent destroyed");
+    assert!(g.battlefield_find(torpedo).is_none(), "Torpedo sacrificed");
+}
+
+/// Terrasymbiosis draws when you put a +1/+1 counter on your creature.
+#[test]
+fn terrasymbiosis_draws_on_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::terrasymbiosis());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+        card_id: bear, counter_type: CounterType::PlusOnePlusOne, count: 1,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew off the counter");
+}
+
+/// Weapons Manufacturing makes a Munitions token when a nontoken artifact enters.
+#[test]
+fn weapons_manufacturing_mints_munitions() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::weapons_manufacturing());
+    let art = g.add_card_to_battlefield(0, catalog::melded_moxite()); // a nontoken artifact entering
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Munitions"),
+        "Munitions token created"
+    );
+}

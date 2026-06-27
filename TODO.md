@@ -17,11 +17,28 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (18 Spacecraft shipped — `StationBand.triggers` now grants counter-gated
   *triggered* bands too, so Synthesizer Labship `{2+}` animate + Entropic
   Battlecruiser `{1+}` discard-punisher both ship.)
-- **`set_gaps.py "set:eoe"` still lists ~140 cards.** Easy batches remaining:
-  more Lander makers, Warp creatures, Void payoffs, and vanilla/keyword commons.
-  Still-open deferrals: Pulsar Squadron Ace / Possibility Technician need
-  filtered impulse-reveal (top-5 → Spacecraft to hand) and impulse-from-gy-while-
-  Kavu.
+- **`set_gaps.py "set:eoe"` still lists ~85 cards** (the script's `name:`-regex
+  over-reports helper-built cards as missing — Pulsar Squadron Ace now ships via
+  `LookPickToHand{pick_filter: Spacecraft}`, so the "filtered impulse-reveal" note
+  is resolved). Easy batches remaining: more Lander makers, Warp creatures, Void
+  payoffs, vanilla/keyword commons. **Planets** (`LandType::Planet` — Adagia,
+  Evendo, Kavaron, Susur Secundi, Uthros) ship as tapland + tap-for-color +
+  Station; their **12+ charge-counter activated band is dropped** (12 charges is
+  rarely reached; each band differs, and `StationBand` has no activated-ability
+  slot — adding one would let Planets/legendary Spacecraft bands be faithful).
+- **Recently shipped (modern_decks):** Pulsar Squadron Ace, Umbral Collar Zealot,
+  Sunset Saboteur, Station Monitor, Virulent Silencer, Steelswarm Operator, Syr
+  Vondam (Sunstar Exemplar), Starfield Shepherd, Timeline Culler, Tannuk
+  (Memorial Ensign), Xu-Ifit, Monoist Circuit-Feeder, Space-Time Anomaly, Systems
+  Override, Mutinous Massacre, Focus Fire, Scour for Scrap, Terminal Velocity,
+  Melded Moxite, Squire's Lightblade, Auxiliary Boosters, Thaumaton Torpedo,
+  Terrasymbiosis, Weapons Manufacturing. New deferrals from that batch:
+  **Tannuk's "second landfall this turn → draw"** needs a per-source
+  resolution-count predicate; **Timeline Culler's cast-from-graveyard warp**
+  needs `AlternativeCost` to allow a graveyard cast zone; **Syr Vondam's
+  "or is put into exile" branch** is dropped (dies-only); **Steelswarm
+  Operator's** two restricted mana abilities both collapse to `ArtifactOnly`;
+  **Possibility Technician** still wants impulse-from-gy-while-Kavu.
 - **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
   `Value::CastSpellManaSpent` exists but isn't propagated onto ETB triggers, and
   a MV-≤-Value target filter is needed), **Blade of the Swarm** (modal "put an

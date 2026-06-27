@@ -4951,3 +4951,751 @@ pub fn haliya_ascendant_cadet() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Shared helpers ──────────────────────────────────────────────────────────
+
+/// The EOE 2/2 colorless Robot artifact creature token.
+fn robot_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Robot".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+// ── Planets (CR 721 Station lands) ──────────────────────────────────────────
+//
+// "Land — Planet": enters tapped, taps for one color, carries Station. Each
+// Planet's 12+ charge-counter activated band is dropped (12 charges is rarely
+// reached and each band differs); see TODO.md.
+
+fn eoe_planet(name: &'static str, color: crate::mana::Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Planet], ..Default::default() },
+        activated_abilities: vec![super::tap_add(color), station()],
+        triggered_abilities: vec![super::etb_tap()],
+        ..Default::default()
+    }
+}
+
+pub fn adagia_windswept_bastion() -> CardDefinition {
+    eoe_planet("Adagia, Windswept Bastion", crate::mana::Color::White)
+}
+pub fn evendo_waking_haven() -> CardDefinition {
+    eoe_planet("Evendo, Waking Haven", crate::mana::Color::Green)
+}
+pub fn kavaron_memorial_world() -> CardDefinition {
+    eoe_planet("Kavaron, Memorial World", crate::mana::Color::Red)
+}
+pub fn susur_secundi_void_altar() -> CardDefinition {
+    eoe_planet("Susur Secundi, Void Altar", crate::mana::Color::Black)
+}
+pub fn uthros_titanic_godcore() -> CardDefinition {
+    eoe_planet("Uthros, Titanic Godcore", crate::mana::Color::Blue)
+}
+
+// ── Creatures ───────────────────────────────────────────────────────────────
+
+/// Pulsar Squadron Ace — {1}{W} 1/2 Human Pilot. ETB: look at the top five, you
+/// may reveal a Spacecraft and put it into your hand, rest on the bottom. (The
+/// consolation +1/+1 counter when you whiff is dropped.)
+pub fn pulsar_squadron_ace() -> CardDefinition {
+    CardDefinition {
+        name: "Pulsar Squadron Ace",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Umbral Collar Zealot — {1}{B} 3/2 Human Cleric. Sacrifice another creature or
+/// artifact: Surveil 1.
+pub fn umbral_collar_zealot() -> CardDefinition {
+    CardDefinition {
+        name: "Umbral Collar Zealot",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sunset Saboteur — {1}{B} 4/1 Human Rogue. Menace, Ward—Discard a card.
+/// Whenever this attacks, put a +1/+1 counter on target creature an opponent
+/// controls.
+pub fn sunset_saboteur() -> CardDefinition {
+    CardDefinition {
+        name: "Sunset Saboteur",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Menace, Keyword::Ward(WardCost::Discard(1))],
+        triggered_abilities: vec![on_attack(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Station Monitor — {W}{U} 2/2 Lizard Artificer. Whenever you cast your second
+/// spell each turn, create a 1/1 colorless Drone artifact creature token with
+/// flying. (The "can block only flyers" rider on the token is dropped.)
+pub fn station_monitor() -> CardDefinition {
+    let drone = TokenDefinition {
+        name: "Drone".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Station Monitor",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) },
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: drone,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Virulent Silencer — {3} 2/3 Artifact Creature — Robot Assassin. Whenever a
+/// nontoken artifact creature you control deals combat damage to a player, that
+/// player gets two poison counters.
+pub fn virulent_silencer() -> CardDefinition {
+    CardDefinition {
+        name: "Virulent Silencer",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::AddPoison { who: Selector::Target(0), amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Steelswarm Operator — {1}{U} 1/1 Artifact Creature — Robot Soldier. Flying;
+/// two artifact-restricted mana abilities. (Both modeled as `ArtifactOnly`.)
+pub fn steelswarm_operator() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    let restricted = |n: i32| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Restricted(
+                Box::new(ManaPayload::Colors(vec![crate::mana::Color::Blue; n as usize])),
+                crate::mana::SpendRestriction::ArtifactOnly,
+            ),
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Steelswarm Operator",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![restricted(1), restricted(2)],
+        ..Default::default()
+    }
+}
+
+/// Syr Vondam, Sunstar Exemplar — {W}{B} 2/2 Legendary Human Knight. Vigilance,
+/// menace. Whenever another creature you control dies or is exiled, put a +1/+1
+/// counter on Syr Vondam and gain 1 life. When Syr Vondam dies or is exiled with
+/// power 4+, destroy up to one target nonland permanent.
+pub fn syr_vondam_sunstar_exemplar() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Syr Vondam, Sunstar Exemplar",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance, Keyword::Menace],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::OtherThanSource,
+                    }),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::PowerAtLeast(4),
+                    },
+                ),
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Nonland),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Starfield Shepherd — {3}{W}{W} 3/2 Angel. Flying. ETB: search for a basic
+/// Plains or a creature card with mana value 1 or less and put it into your
+/// hand. Warp {1}{W}.
+pub fn starfield_shepherd() -> CardDefinition {
+    CardDefinition {
+        name: "Starfield Shepherd",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand
+                .and(SelectionRequirement::HasLandType(LandType::Plains))
+                .or(SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(1))),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        alternative_cost: Some(warp(cost(&[generic(1), w()]))),
+        ..Default::default()
+    }
+}
+
+/// Timeline Culler — {B}{B} 2/2 Drix Warlock. Haste; Warp—{B}, Pay 2 life. (The
+/// "cast from graveyard via warp" clause is dropped — warp casts from hand.)
+pub fn timeline_culler() -> CardDefinition {
+    let mut warp_cost = warp(cost(&[b()]));
+    warp_cost.life_cost = 2;
+    CardDefinition {
+        name: "Timeline Culler",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drix, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        alternative_cost: Some(warp_cost),
+        ..Default::default()
+    }
+}
+
+/// Tannuk, Memorial Ensign — {1}{R}{G} 2/4 Legendary Kavu Pilot. Landfall —
+/// whenever a land you control enters, deal 1 damage to each opponent. (The
+/// second-landfall-this-turn card draw is dropped — no per-source resolution
+/// counter yet.)
+pub fn tannuk_memorial_ensign() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Tannuk, Memorial Ensign",
+        cost: cost(&[generic(1), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Xu-Ifit, Osteoharmonist — {1}{B}{B} 2/3 Legendary Human Wizard. {T}: Return
+/// target creature card from your graveyard to the battlefield. Activate only as
+/// a sorcery. (The "is a Skeleton with no abilities" rider is dropped.)
+pub fn xu_ifit_osteoharmonist() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Xu-Ifit, Osteoharmonist",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Monoist Circuit-Feeder — {4}{B}{B} 4/4 Artifact Creature — Nautilus. Flying.
+/// ETB: until end of turn, target creature you control gets +X/+0 and target
+/// creature an opponent controls gets -0/-X, where X is the number of artifacts
+/// you control.
+pub fn monoist_circuit_feeder() -> CardDefinition {
+    let artifacts = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::Artifact,
+    };
+    CardDefinition {
+        name: "Monoist Circuit-Feeder",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nautilus], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                power: artifacts(),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                power: Value::Const(0),
+                toughness: Value::Times(Box::new(Value::Const(-1)), Box::new(artifacts())),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+// ── Spells ──────────────────────────────────────────────────────────────────
+
+/// Space-Time Anomaly — {2}{W}{U} Sorcery. Target player mills cards equal to
+/// your life total.
+pub fn space_time_anomaly() -> CardDefinition {
+    CardDefinition {
+        name: "Space-Time Anomaly",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Mill {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::LifeOf(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Systems Override — {2}{R} Sorcery. Gain control of target artifact or creature
+/// until end of turn; untap it; it gains haste. (The Spacecraft charge rider is
+/// dropped.)
+pub fn systems_override() -> CardDefinition {
+    CardDefinition {
+        name: "Systems Override",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mutinous Massacre — {3}{B}{B}{R}{R} Sorcery. Choose odd or even, destroy each
+/// creature with mana value of that parity, then gain control of all surviving
+/// creatures until end of turn, untap them, and they gain haste.
+pub fn mutinous_massacre() -> CardDefinition {
+    let mass_threaten = || {
+        vec![
+            Effect::GainControl {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                up_to: None,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]
+    };
+    let mode = |odd: bool| {
+        let mut seq = vec![Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueParity { odd }),
+            ),
+        }];
+        seq.extend(mass_threaten());
+        Effect::Seq(seq)
+    };
+    CardDefinition {
+        name: "Mutinous Massacre",
+        cost: cost(&[generic(3), b(), b(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN { picks: vec![0], modes: vec![mode(true), mode(false)] },
+        ..Default::default()
+    }
+}
+
+/// Focus Fire — {W} Instant. Deal X damage to target attacking or blocking
+/// creature, where X is 2 plus the number of creatures and/or Spacecraft you
+/// control.
+pub fn focus_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Focus Fire",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+            ),
+            amount: Value::Sum(vec![
+                Value::Const(2),
+                Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                },
+            ]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Scour for Scrap — {3}{U} Instant. Choose one or both — search for an artifact
+/// card and put it into your hand; and/or return target artifact card from your
+/// graveyard to your hand.
+pub fn scour_for_scrap() -> CardDefinition {
+    CardDefinition {
+        name: "Scour for Scrap",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Artifact,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Terminal Velocity — {4}{R}{R} Sorcery. Put an artifact or creature card from
+/// your hand onto the battlefield with haste; sacrifice it at your end step.
+/// (The "deals MV damage to each creature when it leaves" rider is dropped.)
+pub fn terminal_velocity() -> CardDefinition {
+    CardDefinition {
+        name: "Terminal Velocity",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: Value::Const(1),
+            tapped: false,
+            haste: true,
+            sacrifice_eot: true,
+        },
+        ..Default::default()
+    }
+}
+
+// ── Artifacts ───────────────────────────────────────────────────────────────
+
+/// Melded Moxite — {1}{R} Artifact. ETB: you may discard a card; if you do, draw
+/// two. {3}, Sacrifice this: Create a tapped 2/2 colorless Robot artifact
+/// creature token.
+pub fn melded_moxite() -> CardDefinition {
+    let mut tapped_robot = robot_token();
+    tapped_robot.tapped = true;
+    CardDefinition {
+        name: "Melded Moxite",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Discard a card, then draw two".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ])),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: tapped_robot,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Squire's Lightblade — {W} Artifact — Equipment. Flash. ETB: attach to target
+/// creature you control; it gains first strike until end of turn. Equipped
+/// creature gets +1/+0. Equip {3}.
+pub fn squires_lightblade() -> CardDefinition {
+    CardDefinition {
+        name: "Squire's Lightblade",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 0, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Auxiliary Boosters — {4}{W} Artifact — Equipment. ETB: create a 2/2 Robot and
+/// attach this to it. Equipped creature gets +1/+2 and has flying. Equip {3}.
+pub fn auxiliary_boosters() -> CardDefinition {
+    CardDefinition {
+        name: "Auxiliary Boosters",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 2,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: robot_token(),
+            },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Thaumaton Torpedo — {1} Artifact. {6}, {T}, Sacrifice this: Destroy target
+/// nonland permanent. (The "{3} less if you attacked with a Spacecraft" discount
+/// is dropped.)
+pub fn thaumaton_torpedo() -> CardDefinition {
+    CardDefinition {
+        name: "Thaumaton Torpedo",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Nonland),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Enchantments ────────────────────────────────────────────────────────────
+
+/// Terrasymbiosis — {2}{G} Enchantment. Whenever you put one or more +1/+1
+/// counters on a creature you control, you may draw that many cards. Do this
+/// only once each turn.
+pub fn terrasymbiosis() -> CardDefinition {
+    CardDefinition {
+        name: "Terrasymbiosis",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            })
+            .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Weapons Manufacturing — {1}{R} Enchantment. Whenever a nontoken artifact you
+/// control enters, create a colorless artifact token named Munitions with "When
+/// this token leaves the battlefield, it deals 2 damage to any target."
+pub fn weapons_manufacturing() -> CardDefinition {
+    let munitions = TokenDefinition {
+        name: "Munitions".into(),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Weapons Manufacturing",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact.and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: munitions,
+            },
+        }],
+        ..Default::default()
+    }
+}
