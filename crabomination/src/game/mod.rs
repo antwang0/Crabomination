@@ -115,6 +115,9 @@ mod tests_recent26;
 #[path = "../tests/blight.rs"]
 mod tests_blight;
 #[cfg(test)]
+#[path = "../tests/tla.rs"]
+mod tests_tla;
+#[cfg(test)]
 #[path = "../tests/mom.rs"]
 mod tests_mom;
 #[cfg(test)]
