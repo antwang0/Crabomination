@@ -680,6 +680,11 @@ pub enum Keyword {
     /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
     /// you don't lose this mana as steps and phases end (until end of combat)."
     Firebending(u32),
+    /// CR 702.190 — Sneak [cost]. A spell-static alt cast: during your declare
+    /// blockers step you may cast this by paying [cost] and returning an
+    /// unblocked creature you control to its owner's hand. Carried for display;
+    /// the alt-cost itself lives in `CardDefinition.alternative_cost`.
+    Sneak(crate::mana::ManaCost),
     Banding,
     Equip(crate::mana::ManaCost),
     /// CR 702.151 — Reconfigure [cost]. An Equipment-creature attaches to a
@@ -1162,6 +1167,9 @@ pub enum SelectionRequirement {
     /// nonbasic-land targeting filter.
     IsNonbasicLand,
     IsAttacking,
+    /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
+    /// combat state — Sneak's "return an unblocked creature you control".
+    IsUnblocked,
     IsBlocking,
     /// True when the candidate creature was declared as an attacker at any
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless

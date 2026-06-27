@@ -124,6 +124,21 @@ pub fn evoke(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, evoke_sacrifice: true, ..Default::default() }
 }
 
+/// Sneak (CR 702.190) alternative cost: during your declare blockers step
+/// (instant timing via `flash`), cast for `mana_cost` by returning one
+/// unblocked creature you control to its owner's hand. Pair with
+/// `Keyword::Sneak(mana_cost)` for display.
+pub fn sneak(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    use crate::card::SelectionRequirement as R;
+    crate::card::AlternativeCost {
+        mana_cost,
+        flash: true,
+        condition: Some(Predicate::CurrentStepIs(crate::turn_step::TurnStep::DeclareBlockers)),
+        return_to_hand: Some((R::Creature.and(R::IsUnblocked).and(R::ControlledByYou), 1)),
+        ..Default::default()
+    }
+}
+
 /// Impending N—[cost] (CR 702.183): cast for `mana_cost`; the permanent enters
 /// with `n` time counters and isn't a creature until they tick off (one per
 /// controller's upkeep). Pair with `Keyword::Impending(n)` on the card so the

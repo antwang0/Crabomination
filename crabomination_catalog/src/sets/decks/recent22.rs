@@ -1,14 +1,16 @@
-//! A twenty-second wave — Avatar: The Last Airbender (TLA) Firebending
-//! creatures, exercising the new `Keyword::Firebending(n)` (CR 702.189): an
-//! attack-triggered mana ability that adds N {R} surviving until end of combat.
-//! Tests in `crabomination/src/tests/recent22.rs`.
+//! A twenty-second wave — two new keyword mechanics. TLA Firebending
+//! (`Keyword::Firebending(n)`, CR 702.189): an attack-triggered mana ability
+//! adding N {R} that survives until end of combat. TMNT Sneak
+//! (`shortcut::sneak`, CR 702.190): a declare-blockers alt cast that returns an
+//! unblocked attacker. Tests in `crabomination/src/tests/recent22.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     SelectionRequirement, Selector, Subtypes, Supertype, Value,
 };
+use crate::effect::shortcut::sneak;
 use crate::effect::{Duration, Effect, PlayerRef};
-use crate::mana::{cost, generic, r};
+use crate::mana::{cost, generic, r, u};
 
 /// Jeong Jeong the Deserter — {2}{R} 2/3 legendary Human Rebel Ally with
 /// firebending 1. Exhaust — {3}: put a +1/+1 counter on it. (The "next Lesson
@@ -73,6 +75,36 @@ pub fn sozins_comet() -> CardDefinition {
             ),
             keyword: Keyword::Firebending(5),
             duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Donatello's Technique — {2}{U} Sorcery, Sneak {U}. Draw two cards.
+pub fn donatellos_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Donatello's Technique",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Sneak(cost(&[u()]))],
+        alternative_cost: Some(sneak(cost(&[u()]))),
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Jennika's Technique — {2}{R} Instant, Sneak {R}. Deals 2 damage to each
+/// creature.
+pub fn jennikas_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Jennika's Technique",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Sneak(cost(&[r()]))],
+        alternative_cost: Some(sneak(cost(&[r()]))),
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(SelectionRequirement::Creature),
+            amount: Value::Const(2),
         },
         ..Default::default()
     }

@@ -3543,6 +3543,8 @@ static DECKS: &[Factory] = &[
     super::decks::jeong_jeong_the_deserter,
     super::decks::ran_and_shaw,
     super::decks::sozins_comet,
+    super::decks::donatellos_technique,
+    super::decks::jennikas_technique,
     super::decks::solphim_mayhem_dominus,
     super::decks::atraxa_praetors_voice,
     super::decks::deathrite_shaman,

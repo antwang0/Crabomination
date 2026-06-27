@@ -78,3 +78,78 @@ fn sozins_comet_grants_firebending() {
     attack_with(&mut g, bear);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 5, "granted firebending 5 added {{R}}×5");
 }
+
+/// Sneak (CR 702.190): during the declare blockers step you may cast Donatello's
+/// Technique for {U} by returning an unblocked attacker you control to hand.
+#[test]
+fn donatello_sneak_returns_unblocked_attacker_for_cheap() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let don = g.add_card_to_hand(0, catalog::donatellos_technique());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1); // only the {U} Sneak cost
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: don, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sneak-cast Donatello's Technique for {U}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "unblocked attacker returned to hand");
+    // Drew 2 (+2), bear back (+1), Donatello left hand (-1) → net +2.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two and got the attacker back");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0, "only {{U}} was paid");
+}
+
+/// Ran and Shaw's firebending 2 adds {R}{R} on attack.
+#[test]
+fn ran_and_shaw_firebending_two() {
+    let mut g = two_player_game();
+    let rs = g.add_card_to_battlefield(0, catalog::ran_and_shaw());
+    g.clear_sickness(rs);
+    attack_with(&mut g, rs);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "firebending 2 added {{R}}{{R}}");
+}
+
+/// Jennika's Technique deals 2 damage to each creature.
+#[test]
+fn jennikas_technique_sweeps_two() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 dies
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 dies
+    let jt = g.add_card_to_hand(0, catalog::jennikas_technique());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: jt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Jennika's Technique");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(),
+        "both 2/2s died to 2 damage each");
+}
+
+/// Sneak is only legal during your declare blockers step (CR 702.190a).
+#[test]
+fn sneak_rejected_outside_declare_blockers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let don = g.add_card_to_hand(0, catalog::donatellos_technique());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let res = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: don, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(res.is_err(), "Sneak only works during the declare blockers step");
+}

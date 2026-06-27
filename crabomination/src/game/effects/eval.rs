@@ -1446,6 +1446,10 @@ impl GameState {
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+                    R::IsUnblocked => {
+                        self.attacking.iter().any(|a| a.attacker == card.id)
+                            && !self.blocked_attackers.contains(&card.id)
+                    }
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     R::AttackedThisTurn => card.attacked_this_turn,
                     // CR 603.4 — entered this turn (stamped on every ETB).
@@ -1849,7 +1853,7 @@ impl GameState {
             }),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
-            | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
+            | R::IsAttacking | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
