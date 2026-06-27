@@ -290,3 +290,113 @@ pub fn bear_trap() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Frantic Strength — {2}{G} Aura with flash. Enchant creature. Enchanted
+/// creature gets +2/+2 and has trample.
+pub fn frantic_strength() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Frantic Strength",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Trample],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+
+/// Most Valuable Slayer — {3}{R} 2/4 Human Warrior. Whenever you attack, target
+/// attacking creature gets +1/+0 and gains first strike until end of turn.
+pub fn most_valuable_slayer() -> CardDefinition {
+    CardDefinition {
+        name: "Most Valuable Slayer",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::IsAttacking),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Twist Reality — {1}{U}{U} Instant. Choose one — counter target spell; or
+/// manifest dread.
+pub fn twist_reality() -> CardDefinition {
+    CardDefinition {
+        name: "Twist Reality",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::ManifestDread { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Vengeful Possession — {2}{R} Sorcery. Gain control of target creature until
+/// end of turn, untap it, it gains haste. Then you may discard a card; if you
+/// do, draw a card.
+pub fn vengeful_possession() -> CardDefinition {
+    CardDefinition {
+        name: "Vengeful Possession",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::MayDo {
+                description: "Discard a card to draw a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+            },
+        ]),
+        ..Default::default()
+    }
+}

@@ -238,3 +238,101 @@ fn bear_trap_sac_burns_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 took 3 and died");
     assert!(!g.battlefield.iter().any(|c| c.id == trap), "Bear Trap sacrificed");
 }
+
+
+/// Frantic Strength gives the enchanted creature +2/+2 and trample.
+#[test]
+fn frantic_strength_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::frantic_strength());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Frantic Strength");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Trample), "granted trample");
+}
+
+/// Most Valuable Slayer's attack trigger gives an attacking creature +1/+0 and
+/// first strike.
+#[test]
+fn most_valuable_slayer_pumps_attacker() {
+    let mut g = two_player_game();
+    let slayer = g.add_card_to_battlefield(0, catalog::most_valuable_slayer()); // 2/4
+    g.clear_sickness(slayer);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: slayer,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(slayer).unwrap();
+    assert_eq!(cp.power, 3, "attack trigger pumped +1/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "gained first strike");
+}
+
+/// Twist Reality's first mode counters a spell on the stack.
+#[test]
+fn twist_reality_counters_spell() {
+    let mut g = two_player_game();
+    // Opponent casts a spell.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts bolt");
+    // Counter it with Twist Reality (mode 0).
+    let twist = g.add_card_to_hand(0, catalog::twist_reality());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: twist,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    }).expect("cast Twist Reality countering");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "bolt was countered (no damage)");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "countered bolt hits graveyard");
+}
+
+/// Vengeful Possession steals a creature until end of turn and untaps it.
+#[test]
+fn vengeful_possession_steals_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::vengeful_possession());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("cast Vengeful Possession");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.controller, 0, "gained control of the creature");
+    assert!(!g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped, "untapped");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+}
