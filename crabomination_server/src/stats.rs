@@ -227,6 +227,31 @@ impl MatchStats {
         self.observe_duration(d);
         self.observe_format(f);
     }
+    /// Fold a completed match into every counter at once: the match-kind
+    /// tally (`record_bot`/`record_pair`), turn counts, winner/seat bias,
+    /// and — for decisive games — the win life-delta and win-kind buckets.
+    /// Centralizes the recording logic so `run_bot_match` / `run_pair_match`
+    /// stay in lockstep and new stats only land in one place.
+    pub(crate) fn record_outcome(
+        &mut self,
+        outcome: &crabomination::server::MatchOutcome,
+        format: Format,
+        duration: Duration,
+        pair: bool,
+    ) {
+        if pair {
+            self.record_pair(duration, format);
+        } else {
+            self.record_bot(duration, format);
+        }
+        self.observe_turns(outcome.final_turn);
+        self.observe_format_turns(format, outcome.final_turn);
+        self.observe_winner(outcome.winner);
+        if let Some(Some(w)) = outcome.winner {
+            self.observe_win_life_delta(w, &outcome.final_life_totals);
+            self.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
+        }
+    }
     /// Bump the cumulative turn counter — called at match completion
     /// from the record paths if the caller has a final turn number.
     /// Defensive against double-counting since this is invoked exactly

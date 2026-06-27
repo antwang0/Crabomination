@@ -351,14 +351,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.record_bot(duration, format);
-        s.observe_turns(outcome.final_turn);
-        s.observe_format_turns(format, outcome.final_turn);
-        s.observe_winner(outcome.winner);
-        if let Some(Some(w)) = outcome.winner {
-            s.observe_win_life_delta(w, &outcome.final_life_totals);
-            s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
-        }
+        s.record_outcome(&outcome, format, duration, false);
         *s
     };
     eprintln!(
@@ -408,14 +401,7 @@ fn run_pair_match(
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.record_pair(duration, format);
-        s.observe_turns(outcome.final_turn);
-        s.observe_format_turns(format, outcome.final_turn);
-        s.observe_winner(outcome.winner);
-        if let Some(Some(w)) = outcome.winner {
-            s.observe_win_life_delta(w, &outcome.final_life_totals);
-            s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
-        }
+        s.record_outcome(&outcome, format, duration, true);
         *s
     };
     eprintln!(
@@ -852,6 +838,29 @@ mod tests {
         // Another alternate win → bumps to 2.
         s.observe_win_kind(1, &[2, 4], &[]);
         assert_eq!(s.deckout_wins, 2);
+    }
+
+    #[test]
+    pub(crate) fn record_outcome_folds_all_counters_at_once() {
+        use crabomination::server::MatchOutcome;
+        let mut s = MatchStats::default();
+        let outcome = MatchOutcome {
+            final_turn: 9,
+            winner: Some(Some(0)),
+            final_life_totals: vec![14, 0],
+            loss_reasons: vec![None, Some(LossReason::LifeDepleted)],
+            ..Default::default()
+        };
+        s.record_outcome(&outcome, Format::Demo, std::time::Duration::from_secs(30), false);
+        assert_eq!(s.bot_matches, 1, "bot-kind tally bumped");
+        assert_eq!(s.pair_matches, 0);
+        assert_eq!(s.wins, 1, "winner observed");
+        assert_eq!(s.total_turns, 9, "turns folded in");
+        assert_eq!(s.deckout_wins, 0, "life-depletion win is not an alternate win");
+        // The pair path bumps the other tally and accumulates.
+        s.record_outcome(&outcome, Format::Demo, std::time::Duration::from_secs(30), true);
+        assert_eq!(s.pair_matches, 1);
+        assert_eq!(s.total_turns, 18);
     }
 
     #[test]
