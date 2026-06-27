@@ -1335,3 +1335,57 @@ fn sheltered_by_ghosts_buffs_and_exiles() {
     assert!(cp.keywords.contains(&Keyword::Lifelink), "gains lifelink");
     assert!(g.battlefield_find(foe).is_none(), "opponent permanent exiled on ETB");
 }
+
+/// Ragged Playmate makes a small creature unblockable for the turn.
+#[test]
+fn ragged_playmate_grants_unblockable() {
+    let mut g = two_player_game();
+    let rp = g.add_card_to_battlefield(0, catalog::ragged_playmate());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 (power 2)
+    g.clear_sickness(rp);
+    ready(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rp, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Ragged Playmate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+/// Hand That Feeds gets +2/+0 and menace on attack only with delirium active.
+#[test]
+fn hand_that_feeds_delirium_attack_buff() {
+    let mut g = two_player_game();
+    let hand = g.add_card_to_battlefield(0, catalog::hand_that_feeds());
+    g.clear_sickness(hand);
+    // Stock the graveyard with four card types for delirium.
+    for c in [
+        catalog::grizzly_bears(),       // creature
+        catalog::lightning_bolt(),      // instant
+        catalog::island(),             // land
+        catalog::ornithopter(),        // artifact
+    ] {
+        let id = g.next_id();
+        g.players[0].graveyard.push(crate::card::CardInstance::new(id, c, 0));
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hand, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(hand).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0 from delirium");
+    assert!(cp.keywords.contains(&Keyword::Menace), "gains menace");
+}
+
+/// Marauding Dreadship incubates 2 on ETB.
+#[test]
+fn marauding_dreadship_etb_incubates() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::marauding_dreadship());
+    g.fire_self_etb_triggers(ship, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Incubator"), 1, "Incubator token created");
+}

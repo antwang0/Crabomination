@@ -2009,3 +2009,80 @@ pub fn sheltered_by_ghosts() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ragged Playmate — {1}{R} 2/2 Toy artifact creature. {1}, {T}: target
+/// creature with power 2 or less can't be blocked this turn.
+pub fn ragged_playmate() -> CardDefinition {
+    CardDefinition {
+        name: "Ragged Playmate",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+                ),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hand That Feeds — {1}{R} 2/2 Mutant. Delirium — whenever it attacks while
+/// there are four or more card types in your graveyard, it gets +2/+0 and gains
+/// menace until end of turn.
+pub fn hand_that_feeds() -> CardDefinition {
+    CardDefinition {
+        name: "Hand That Feeds",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mutant], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Marauding Dreadship — {2}{R} 4/1 Vehicle with haste. When it enters,
+/// incubate 2. Crew 2.
+pub fn marauding_dreadship() -> CardDefinition {
+    CardDefinition {
+        name: "Marauding Dreadship",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::Crew(2)],
+        triggered_abilities: vec![etb(Effect::Incubate {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
