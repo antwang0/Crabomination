@@ -90,6 +90,45 @@ fn tapestry_warden_ignores_low_toughness() {
     assert_eq!(g.players[1].life, 18, "2/1 unaffected → assigns 2 (power)");
 }
 
+/// Ancient Lumberknot reuses Tapestry Warden's static: a 1/4 it controls (T>P)
+/// assigns 4, attacking unblocked.
+#[test]
+fn ancient_lumberknot_buffs_high_toughness() {
+    let mut g = two_player_game();
+    let knot = g.add_card_to_battlefield(0, catalog::ancient_lumberknot()); // 1/4
+    g.clear_sickness(knot);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: knot,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 16, "1/4 Lumberknot assigns 4 (toughness)");
+}
+
+/// Thrumming Hivepool's lord static grants double strike + haste to Slivers,
+/// and its Affinity for Slivers reduces its {6} cost by {1} per Sliver (so two
+/// Slivers let it cast for {4}).
+#[test]
+fn thrumming_hivepool_affinity_and_lord() {
+    let mut g = two_player_game();
+    let s1 = g.add_card_to_battlefield(0, catalog::muscle_sliver());
+    g.add_card_to_battlefield(0, catalog::muscle_sliver());
+    let pool = g.add_card_to_battlefield(0, catalog::thrumming_hivepool());
+    assert!(
+        g.computed_permanent(s1)
+            .is_some_and(|c| c.keywords.contains(&Keyword::DoubleStrike)
+                && c.keywords.contains(&Keyword::Haste)),
+        "Slivers gain double strike + haste"
+    );
+    // Affinity: {6} reduced by {1} per Sliver (2 on board) → {4} generic.
+    let inst = g.battlefield.iter().find(|c| c.id == pool).unwrap().clone();
+    let reduced = crate::game::actions::cost_reduction_for_spell(&g, 0, &inst, None);
+    assert_eq!(reduced, 2, "Affinity for Slivers gives {{2}} off with two Slivers");
+}
+
 /// Bill the Pony enters with two Food and can sacrifice one to grant the
 /// toughness-damage keyword to a target creature you control until end of turn.
 #[test]

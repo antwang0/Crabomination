@@ -6,8 +6,9 @@
 //! `crabomination/src/tests/recent23.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword,
-    SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, SelectionRequirement, Selector, StaticAbility, StaticEffect,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef};
@@ -63,6 +64,87 @@ pub fn tapestry_warden() -> CardDefinition {
                         .and(SelectionRequirement::ToughnessGreaterThanPower),
                 ),
                 keyword: Keyword::AssignsCombatDamageByToughness,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ancient Lumberknot — {2}{B}{G} 1/4 Treefolk. Each creature you control with
+/// toughness greater than its power assigns combat damage equal to its
+/// toughness rather than its power.
+pub fn ancient_lumberknot() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Lumberknot",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Your creatures with toughness > power assign damage by toughness",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::ToughnessGreaterThanPower),
+                ),
+                keyword: Keyword::AssignsCombatDamageByToughness,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thrumming Hivepool — {6} Artifact with Affinity for Slivers. Slivers you
+/// control have double strike and haste. At the beginning of your upkeep,
+/// create two 1/1 colorless Sliver creature tokens.
+pub fn thrumming_hivepool() -> CardDefinition {
+    let sliver_lord = |keyword| StaticAbility {
+        description: "Slivers you control have double strike and haste",
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::ControlledByYou
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Sliver)),
+            ),
+            keyword,
+        },
+    };
+    CardDefinition {
+        name: "Thrumming Hivepool",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        affinity_filter: Some(
+            SelectionRequirement::ControlledByYou
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Sliver)),
+        ),
+        static_abilities: vec![
+            sliver_lord(Keyword::DoubleStrike),
+            sliver_lord(Keyword::Haste),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Sliver".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Sliver],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
             },
         }],
         ..Default::default()

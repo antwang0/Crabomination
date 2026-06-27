@@ -3549,6 +3549,8 @@ static DECKS: &[Factory] = &[
     super::decks::furyborn_hellkite,
     super::decks::doran_the_siege_tower,
     super::decks::tapestry_warden,
+    super::decks::ancient_lumberknot,
+    super::decks::thrumming_hivepool,
     super::decks::bill_the_pony,
     super::decks::solphim_mayhem_dominus,
     super::decks::atraxa_praetors_voice,
