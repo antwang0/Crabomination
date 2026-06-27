@@ -107,3 +107,54 @@ fn afterburner_expert_exhaust_counters() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ae).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2);
 }
+
+/// Piranha Fly ships with flying and an enters-tapped static.
+#[test]
+fn piranha_fly_flies_enters_tapped() {
+    let def = catalog::piranha_fly();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.static_abilities.iter().any(|s| matches!(
+        s.effect,
+        crate::card::StaticEffect::EntersTapped { .. }
+    )));
+}
+
+/// Ripchain Razorkin sacrifices a land to draw a card.
+#[test]
+fn ripchain_razorkin_sacs_land_to_draw() {
+    let mut g = two_player_game();
+    let rr = g.add_card_to_battlefield(0, catalog::ripchain_razorkin());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.clear_sickness(rr);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Beastrider Vanguard digs three for a permanent card.
+#[test]
+fn beastrider_vanguard_digs_for_permanent() {
+    let mut g = two_player_game();
+    let bv = g.add_card_to_battlefield(0, catalog::beastrider_vanguard());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // a permanent on top
+    g.clear_sickness(bv);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bv, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "took a permanent into hand");
+}

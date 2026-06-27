@@ -191,3 +191,79 @@ pub fn afterburner_expert() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── DSK tail + simple bodies ─────────────────────────────────────────────────
+
+/// Piranha Fly — {1}{U} 2/1 Fish Insect. Flying; enters tapped.
+pub fn piranha_fly() -> CardDefinition {
+    CardDefinition {
+        name: "Piranha Fly",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This creature enters tapped.",
+            effect: crate::card::StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ripchain Razorkin — {3}{R} 5/3 Human Berserker. Reach; {2}{R}, Sacrifice a
+/// land: Draw a card.
+pub fn ripchain_razorkin() -> CardDefinition {
+    CardDefinition {
+        name: "Ripchain Razorkin",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_other_filter: Some((crate::card::SelectionRequirement::Land, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Beastrider Vanguard — {1}{G} 2/2 Human Knight. {4}{G}: look at the top three;
+/// you may reveal a permanent card and put it into your hand, rest on bottom.
+pub fn beastrider_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Beastrider Vanguard",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: Some(crate::card::SelectionRequirement::Permanent),
+                take: None,
+                to_battlefield: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
