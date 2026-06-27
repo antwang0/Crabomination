@@ -6058,3 +6058,90 @@ pub fn pain_for_all() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Starport Security — {W} 1/1 Artifact Creature — Robot Soldier. {3}{W}, {T}:
+/// Tap another target creature. (The "{2} less if you control a +1/+1-countered
+/// creature" discount is dropped.)
+pub fn starport_security() -> CardDefinition {
+    CardDefinition {
+        name: "Starport Security",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            tap_cost: true,
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mm'menon, the Right Hand — {3}{U}{U} 3/4 Legendary Jellyfish Advisor. Flying.
+/// You may look at the top card of your library any time, and cast artifact
+/// spells from the top of your library. (The artifact-restricted mana grant is
+/// dropped.)
+pub fn mmmenon_the_right_hand() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Mm'menon, the Right Hand",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Look at the top card of your library any time.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast artifact spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Artifact },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Memorial Vault — {3}{R} Artifact. {T}, Sacrifice another artifact: Exile the
+/// top X cards of your library, where X is one plus the sacrificed artifact's
+/// mana value. You may play those cards this turn.
+pub fn memorial_vault() -> CardDefinition {
+    CardDefinition {
+        name: "Memorial Vault",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Sum(vec![Value::Const(1), Value::SacrificedManaValue]),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: true,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

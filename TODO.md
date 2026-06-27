@@ -65,6 +65,11 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (`DynamicPt::BasePlusGreatestOtherArtifactMv`), Dark Endurance (target-aware
   cost reduction via `self_cost_reduction_if_target`/`IsBlocking`), Genemorph
   Imago's six-lands 5/5, Fungal Colossus (`SelfCostReducedByDistinctLandNames`),
+  Memorial Vault (`{T}, Sac an artifact: impulse 1 + sacrificed MV` — now ships;
+  `Value::SacrificedManaValue` is stamped for non-creature sac-cost permanents,
+  not just creatures), Starport Security (tap-another; conditional discount
+  dropped), Mm'menon the Right Hand (cast artifacts from library top; restricted
+  mana grant dropped),
   Mental Modulation (`SelfCostReducedDuringYourTurn`) and Anticausal Vestige
   (LTB cheat-into-play via `ManaValueAtMostYourCount`) now ship. Orbital Plunge's
   "if excess damage" now reads real excess (`Predicate::ExcessDamageDealtThisResolution`,

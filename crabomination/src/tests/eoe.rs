@@ -2345,3 +2345,57 @@ fn pain_for_all_pings_for_power() {
     resolve_targeted(&mut g, 0, catalog::pain_for_all().effect.clone(), &[mine, theirs]);
     assert!(g.battlefield_find(theirs).is_none(), "4 damage kills the 2/2");
 }
+
+/// Starport Security taps another target creature.
+#[test]
+fn starport_security_taps_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let sec = g.add_card_to_battlefield(0, catalog::starport_security());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(sec);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sec, ability_index: 0, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap a creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "target creature tapped");
+}
+
+/// Mm'menon, the Right Hand lets you cast artifact spells from the top of library.
+#[test]
+fn mmmenon_right_hand_grants_cast_artifacts_from_top() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mmmenon_the_right_hand());
+    let art = g.add_card_to_library(0, catalog::melded_moxite()); // top of library, an artifact
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: art, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast artifact off the top");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_some(), "artifact cast from library top");
+}
+
+/// Memorial Vault exiles 1 + the sacrificed artifact's mana value off the top.
+#[test]
+fn memorial_vault_exiles_scaled_by_sacrifice() {
+    let mut g = two_player_game();
+    let vault = g.add_card_to_battlefield(0, catalog::memorial_vault());
+    g.add_card_to_battlefield(0, catalog::melded_moxite()); // MV 2 artifact to sacrifice
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    let exile_before = g.exile.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Memorial Vault");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len(), exile_before + 3, "exiled 1 + MV 2 = 3 cards");
+}

@@ -8762,18 +8762,23 @@ impl GameState {
                 .battlefield_find(other_cid)
                 .map(|c| c.controller)
                 .unwrap_or(p);
+            // Stamp the sacrificed permanent's P/T and mana value on the
+            // resolution scratch so downstream `Value::SacrificedManaValue` /
+            // `Value::SacrificedPower` read correctly — for *any* sacrificed
+            // permanent, not just creatures (Memorial Vault — "exile 1 + the
+            // sacrificed artifact's mana value").
+            let snap_pt = self
+                .battlefield_find(other_cid)
+                .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
+            if let Some((p_val, t_val, mv, snap)) = snap_pt {
+                self.sacrificed_power = Some(p_val);
+                self.sacrificed_toughness = Some(t_val);
+                self.sacrificed_mana_value = Some(mv);
+                cost_sac_pt = Some((p_val, t_val));
+                cost_sac_mv = mv;
+                self.died_card_snapshots.insert(other_cid, snap);
+            }
             if is_creature {
-                let snap_pt = self
-                    .battlefield_find(other_cid)
-                    .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
-                if let Some((p_val, t_val, mv, snap)) = snap_pt {
-                    self.sacrificed_power = Some(p_val);
-                    self.sacrificed_toughness = Some(t_val);
-                    self.sacrificed_mana_value = Some(mv);
-                    cost_sac_pt = Some((p_val, t_val));
-                    cost_sac_mv = mv;
-                    self.died_card_snapshots.insert(other_cid, snap);
-                }
                 events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id: other_cid });
             }

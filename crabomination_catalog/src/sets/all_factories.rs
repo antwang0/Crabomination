@@ -4038,6 +4038,9 @@ static EOE: &[Factory] = &[
     super::eoe::hardlight_containment,
     super::eoe::meltstriders_resolve,
     super::eoe::pain_for_all,
+    super::eoe::starport_security,
+    super::eoe::mmmenon_the_right_hand,
+    super::eoe::memorial_vault,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
