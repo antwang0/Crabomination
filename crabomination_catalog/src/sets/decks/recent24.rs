@@ -774,6 +774,111 @@ pub fn cloudspire_skycycle() -> CardDefinition {
     }
 }
 
+/// Thunderhead Gunner — {4}{R} 4/5 Shark Pirate. Reach. Discard a card: draw a
+/// card (sorcery speed, once each turn).
+pub fn thunderhead_gunner() -> CardDefinition {
+    CardDefinition {
+        name: "Thunderhead Gunner",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shark, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            sorcery_speed: true,
+            once_per_turn: true,
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wretched Doll — {1}{B} 3/1 Toy artifact creature. {B}, {T}: surveil 1.
+pub fn wretched_doll() -> CardDefinition {
+    CardDefinition {
+        name: "Wretched Doll",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Molt Tender — {G} 1/1 Insect Druid. {T}: mill a card. {T}, exile a card from
+/// your graveyard: add one mana of any color.
+pub fn molt_tender() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Molt Tender",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                exile_other_filter: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Scrap Compactor — {1} Artifact. {3}, {T}, Sacrifice this: 3 damage to a
+/// creature. {6}, {T}, Sacrifice this: destroy a creature or Vehicle.
+pub fn scrap_compactor() -> CardDefinition {
+    CardDefinition {
+        name: "Scrap Compactor",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: deal(3, target_filtered(SelectionRequirement::Creature)),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(6)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Destroy { what: target_filtered(creature_or_vehicle()) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 // ── Tokens ───────────────────────────────────────────────────────────────────
 
 fn thopter_token() -> TokenDefinition {

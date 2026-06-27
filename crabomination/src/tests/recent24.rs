@@ -403,6 +403,86 @@ fn deathless_pilot_crews_as_though_power_greater() {
     );
 }
 
+/// Thunderhead Gunner loots: discard a card to draw one.
+#[test]
+fn thunderhead_gunner_loots() {
+    let mut g = two_player_game();
+    let tg = g.add_card_to_battlefield(0, catalog::thunderhead_gunner());
+    g.clear_sickness(tg);
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    g.add_card_to_library(0, catalog::forest()); // a card to draw
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate loot");
+    drain_stack(&mut g);
+    // -1 discard, +1 draw → net unchanged, but the drawn card differs.
+    assert_eq!(g.players[0].hand.len(), hand_before, "discard 1, draw 1");
+}
+
+/// Wretched Doll surveils 1.
+#[test]
+fn wretched_doll_surveils() {
+    let mut g = two_player_game();
+    let wd = g.add_card_to_battlefield(0, catalog::wretched_doll());
+    g.clear_sickness(wd);
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate surveil");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wd).is_some(), "Doll stays (surveil resolved)");
+}
+
+/// Molt Tender mills with its first ability.
+#[test]
+fn molt_tender_mills() {
+    let mut g = two_player_game();
+    let mt = g.add_card_to_battlefield(0, catalog::molt_tender());
+    g.clear_sickness(mt);
+    g.add_card_to_library(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let gy_before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate mill");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1, "milled one card");
+}
+
+/// Scrap Compactor's first ability deals 3 to a creature (sacrificing itself).
+#[test]
+fn scrap_compactor_pings_for_three() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let sc = g.add_card_to_battlefield(0, catalog::scrap_compactor());
+    g.clear_sickness(sc);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sc, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate ping");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "3 damage kills the 2/2");
+    assert!(g.battlefield_find(sc).is_none(), "Compactor sacrificed itself");
+}
+
 /// Air Response Unit ships as a 3/3 Vehicle with Crew 1.
 #[test]
 fn air_response_unit_is_crewable_vehicle() {
