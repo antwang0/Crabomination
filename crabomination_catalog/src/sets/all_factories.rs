@@ -3631,6 +3631,8 @@ static DECKS: &[Factory] = &[
     super::decks::enduring_tenacity,
     super::decks::threats_around_every_corner,
     super::decks::insidious_fungus,
+    super::decks::winters_intervention,
+    super::decks::shroudstomper,
     super::decks::air_response_unit,
     super::decks::debris_beetle,
     super::decks::cryptcaller_chariot,

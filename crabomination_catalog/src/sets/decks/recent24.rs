@@ -1722,3 +1722,38 @@ pub fn insidious_fungus() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Winter's Intervention — {1}{B} Instant. 2 damage to target creature; you
+/// gain 2 life.
+pub fn winters_intervention() -> CardDefinition {
+    CardDefinition {
+        name: "Winter's Intervention",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            deal(2, target_filtered(SelectionRequirement::Creature)),
+            gain_life(2),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Shroudstomper — {3}{W}{W}{B}{B} 5/5 Elemental with deathtouch. Whenever it
+/// enters or attacks, each opponent loses 2 life; you gain 2 and draw a card.
+pub fn shroudstomper() -> CardDefinition {
+    let payoff = || Effect::Seq(vec![drain(2), draw(1)]);
+    CardDefinition {
+        name: "Shroudstomper",
+        cost: cost(&[generic(3), w(), w(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            etb(payoff()),
+            crate::effect::shortcut::on_attack(payoff()),
+        ],
+        ..Default::default()
+    }
+}

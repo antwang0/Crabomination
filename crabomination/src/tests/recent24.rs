@@ -379,6 +379,38 @@ fn insidious_fungus_sacs_to_destroy_artifact() {
     assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
 }
 
+/// Winter's Intervention deals 2 to a creature and gains 2 life.
+#[test]
+fn winters_intervention_burns_and_gains() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let wi = g.add_card_to_hand(0, catalog::winters_intervention());
+    ready(&mut g);
+    let life = g.players[0].life;
+    cast_at(&mut g, wi, Target::Permanent(foe));
+    assert!(g.battlefield_find(foe).is_none(), "2 kills the 2/2");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+}
+
+/// Shroudstomper drains and draws on enter.
+#[test]
+fn shroudstomper_etb_drains_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let ss = g.add_card_to_hand(0, catalog::shroudstomper());
+    ready(&mut g);
+    let (foe, life, hand) = (g.players[1].life, g.players[0].life, g.players[0].hand.len());
+    g.perform_action(GameAction::CastSpell {
+        card_id: ss, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Shroudstomper");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe - 2, "opponent lost 2");
+    assert_eq!(g.players[0].life, life + 2, "gained 2");
+    // Hand: -1 (cast Shroudstomper) +1 (drew) = net same.
+    assert_eq!(g.players[0].hand.len(), hand, "drew a card");
+}
+
 /// Patched Plaything enters with two -1/-1 counters only when cast from hand.
 #[test]
 fn patched_plaything_cast_zone_counters() {
