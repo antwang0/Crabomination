@@ -4117,6 +4117,10 @@ static EOE: &[Factory] = &[
     super::eoe::atomic_microsizer,
     super::eoe::dyadrine_synthesis_amalgam,
     super::eoe::zero_point_ballad,
+    super::eoe::scout_for_survivors,
+    super::eoe::weftwalking,
+    super::eoe::pull_through_the_weft,
+    super::eoe::close_encounter,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

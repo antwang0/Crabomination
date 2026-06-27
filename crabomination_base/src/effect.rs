@@ -2786,6 +2786,16 @@ pub enum Effect {
     /// (`Decision::ChooseCards`); picks are accepted greedily until the next
     /// would exceed the cap.
     ReturnGraveyardCreaturesUpToTotalPower { max_total: Value },
+    /// Scout for Survivors — return up to `max_count` creature cards from the
+    /// controller's graveyard with total **mana value** `max_total` or less to
+    /// the battlefield, each with `counters` +1/+1 counters. The controller
+    /// picks the set at resolution; picks are accepted greedily until the next
+    /// would exceed either cap.
+    ReturnGraveyardCreaturesUpToTotalManaValue {
+        max_total: Value,
+        max_count: Value,
+        counters: u32,
+    },
     /// "Tap up to N target permanents; they don't untap during their
     /// controller's next untap step" where N is a runtime `Value`
     /// (Archipelagore — N = `Value::MutateCount`). The controller chooses up

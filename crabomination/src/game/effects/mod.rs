@@ -4016,6 +4016,50 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnGraveyardCreaturesUpToTotalManaValue { max_total, max_count, counters } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_total, ctx).max(0);
+                let count_cap = self.evaluate_value(max_count, ctx).max(0) as usize;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Return up to {count_cap} creatures with total mana value {cap} or less"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: count_cap as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                let mut total = 0i32;
+                let mut returned = 0usize;
+                for cid in chosen {
+                    if returned >= count_cap { break; }
+                    let Some(c) = self.players[p].graveyard.iter().find(|c| c.id == cid) else { continue };
+                    let mv = c.definition.cost.cmc() as i32;
+                    if total + mv > cap { continue; }
+                    total += mv;
+                    returned += 1;
+                    self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                    if *counters > 0 {
+                        let n = self.scaled_counter_count(p, crate::card::CounterType::PlusOnePlusOne, *counters, true);
+                        if let Some(inst) = self.battlefield_find_mut(cid) {
+                            *inst.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += n;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnGraveyardPermanentsDifferentNames => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::effect::ZoneDest;

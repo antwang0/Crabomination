@@ -6884,3 +6884,70 @@ pub fn zero_point_ballad() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Scout for Survivors — {2}{W} Sorcery. Return up to three creature cards with
+/// total mana value 3 or less from your graveyard to the battlefield, each with
+/// a +1/+1 counter.
+pub fn scout_for_survivors() -> CardDefinition {
+    CardDefinition {
+        name: "Scout for Survivors",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ReturnGraveyardCreaturesUpToTotalManaValue {
+            max_total: Value::Const(3),
+            max_count: Value::Const(3),
+            counters: 1,
+        },
+        ..Default::default()
+    }
+}
+
+/// Weftwalking — {4}{U}{U} Enchantment. When it enters, shuffle your hand and
+/// graveyard into your library, then draw seven cards. (The "if you cast it"
+/// gate and the "first spell each player is free" static are dropped.)
+pub fn weftwalking() -> CardDefinition {
+    CardDefinition {
+        name: "Weftwalking",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::You },
+            Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Pull Through the Weft — {3}{G}{G} Sorcery. Return up to two nonland permanent
+/// cards from your graveyard to your hand. (The "then up to two land cards to
+/// the battlefield tapped" half is dropped — no graveyard-land-to-battlefield
+/// primitive.)
+pub fn pull_through_the_weft() -> CardDefinition {
+    CardDefinition {
+        name: "Pull Through the Weft",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ReturnGraveyardCardsToHand {
+            filter: SelectionRequirement::PermanentCard.and(SelectionRequirement::Nonland),
+            max: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Close Encounter — {1}{G} Instant. Close Encounter deals damage equal to the
+/// greatest power among creatures you control to target creature. (The "choose
+/// a creature you control or a warped card in exile as an additional cost" is
+/// approximated as your highest-power creature.)
+pub fn close_encounter() -> CardDefinition {
+    CardDefinition {
+        name: "Close Encounter",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+        },
+        ..Default::default()
+    }
+}

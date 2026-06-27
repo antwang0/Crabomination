@@ -28,6 +28,15 @@ fn kill(g: &mut GameState, id: CardId) {
     drain_stack(g);
 }
 
+/// Put a fresh card straight into player 0's graveyard (test fixture).
+fn to_gy(g: &mut GameState, def: crate::card::CardDefinition) -> CardId {
+    let id = g.add_card_to_hand(0, def);
+    let i = g.players[0].hand.iter().position(|c| c.id == id).unwrap();
+    let c = g.players[0].hand.remove(i);
+    g.players[0].graveyard.push(c);
+    id
+}
+
 /// Warp: cast Bygone Colossus for its {3} warp cost. It enters as a 9/9, and at
 /// the next end step it's exiled with a `WhileExiled` may-play so it can be
 /// recast from exile.
@@ -2965,4 +2974,67 @@ fn zero_point_ballad_destroys_small_toughness_and_loses_life() {
     assert!(g.battlefield_find(bear).is_none(), "2-toughness creature destroyed");
     assert!(g.battlefield_find(giant).is_some(), "3-toughness creature survives");
     assert_eq!(g.players[0].life, life0 - 2, "you lose X life");
+}
+
+/// Scout for Survivors returns cheap creatures from the graveyard with counters.
+#[test]
+fn scout_for_survivors_reanimates_with_counters() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2
+    let i1 = g.players[0].hand.iter().position(|c| c.id == bear).unwrap();
+    let bc = g.players[0].hand.remove(i1);
+    g.players[0].graveyard.push(bc);
+    let id = g.add_card_to_hand(0, catalog::scout_for_survivors());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    cast(&mut g, id);
+    let b = g.battlefield_find(bear).expect("bear reanimated");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "enters with a +1/+1 counter");
+}
+
+/// Weftwalking's ETB shuffles your hand and graveyard away and draws seven.
+#[test]
+fn weftwalking_wheels_into_seven() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::forest());
+    to_gy(&mut g, catalog::island());
+    for _ in 0..10 { g.add_card_to_library(0, catalog::plains()); }
+    let id = g.add_card_to_hand(0, catalog::weftwalking());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), 7, "drew a fresh seven");
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
+}
+
+/// Pull Through the Weft returns up to two nonland permanent cards to hand.
+#[test]
+fn pull_through_the_weft_returns_perms_to_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = to_gy(&mut g, catalog::grizzly_bears());
+    let b = to_gy(&mut g, catalog::hill_giant());
+    g.add_card_to_battlefield(0, catalog::forest()); // a land also in gy shouldn't be returnable
+    let id = g.add_card_to_hand(0, catalog::pull_through_the_weft());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b),
+        "both nonland permanents returned to hand");
+}
+
+/// Close Encounter deals damage equal to your greatest creature's power.
+#[test]
+fn close_encounter_deals_greatest_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3 — greatest power 3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::close_encounter());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, crate::game::types::Target::Permanent(foe));
+    assert!(g.battlefield_find(foe).is_none(), "2/2 took 3 damage and died");
 }
