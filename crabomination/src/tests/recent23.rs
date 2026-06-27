@@ -166,3 +166,75 @@ fn bill_the_pony_etb_food_and_grant() {
         .count();
     assert_eq!(foods_after, 1, "one Food sacrificed");
 }
+
+/// Bedhead Beastie is a 5/6 with menace and Mountaincycling {2}.
+#[test]
+fn bedhead_beastie_keywords() {
+    let d = catalog::bedhead_beastie();
+    assert_eq!((d.power, d.toughness), (5, 6));
+    assert!(d.keywords.contains(&Keyword::Menace));
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Typecycling(_))));
+}
+
+/// Daggermaw Megalodon is a 5/7 with vigilance and Islandcycling {2}.
+#[test]
+fn daggermaw_megalodon_keywords() {
+    let d = catalog::daggermaw_megalodon();
+    assert_eq!((d.power, d.toughness), (5, 7));
+    assert!(d.keywords.contains(&Keyword::Vigilance));
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Typecycling(_))));
+}
+
+/// Boilerbilges Ripper sacrifices another creature on ETB to deal 2 to any
+/// target (auto-decider sacrifices the fodder and pings the opponent).
+#[test]
+fn boilerbilges_ripper_sac_pings() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.move_card_to_battlefield_for_test(0, catalog::boilerbilges_ripper());
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
+    assert_eq!(g.players[1].life, 18, "dealt 2 to opponent");
+}
+
+/// Bashful Beastie manifests dread when it dies (a face-down 2/2 enters).
+#[test]
+fn bashful_beastie_dies_manifest_dread() {
+    let mut g = two_player_game();
+    let beastie = g.add_card_to_battlefield(0, catalog::bashful_beastie());
+    // Seed library so manifest dread has cards to look at.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut evs = g.remove_to_graveyard_with_triggers(beastie);
+    evs.push(GameEvent::CreatureDied { card_id: beastie });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.face_down),
+        "manifest dread put a face-down creature onto the battlefield"
+    );
+}
+
+/// Bear Trap has flash and can sacrifice itself to deal 3 to a creature.
+#[test]
+fn bear_trap_sac_burns_creature() {
+    let mut g = two_player_game();
+    let trap = g.add_card_to_battlefield(0, catalog::bear_trap());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trap,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("activate Bear Trap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 took 3 and died");
+    assert!(!g.battlefield.iter().any(|c| c.id == trap), "Bear Trap sacrificed");
+}

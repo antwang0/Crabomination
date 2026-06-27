@@ -1,18 +1,19 @@
-//! A twenty-third wave built around `Keyword::AssignsCombatDamageByToughness`
-//! (CR 510.1c — "assigns combat damage equal to its toughness rather than its
-//! power"): Doran, the Siege Tower (all creatures, unconditional), Tapestry
-//! Warden (your creatures with toughness > power), and Bill the Pony (a
-//! sacrifice-a-Food temporary grant). Tests in
-//! `crabomination/src/tests/recent23.rs`.
+//! A twenty-third wave. The headline mechanic is
+//! `Keyword::AssignsCombatDamageByToughness` (CR 510.1c — "assigns combat
+//! damage equal to its toughness rather than its power"): Doran, the Siege
+//! Tower (all creatures), Tapestry Warden / Ancient Lumberknot (your creatures
+//! with toughness > power), Bill the Pony (a sacrifice-a-Food temporary grant).
+//! Plus Thrumming Hivepool (Affinity for Slivers) and a clutch of DSK staples
+//! on existing primitives. Tests in `crabomination/src/tests/recent23.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, SelectionRequirement, Selector, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    EventScope, EventSpec, Keyword, LandType, SelectionRequirement, Selector, StaticAbility,
+    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{deal, etb, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{b, cost, g, generic, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Doran, the Siege Tower — {W}{B}{G} 0/5 legendary Treefolk Shaman. Each
 /// creature assigns combat damage equal to its toughness rather than its power.
@@ -184,6 +185,106 @@ pub fn bill_the_pony() -> CardDefinition {
                 keyword: Keyword::AssignsCombatDamageByToughness,
                 duration: Duration::EndOfTurn,
             },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bedhead Beastie — {4}{R}{R} 5/6 Beast with menace and Mountaincycling {2}.
+pub fn bedhead_beastie() -> CardDefinition {
+    CardDefinition {
+        name: "Bedhead Beastie",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Typecycling(Box::new((
+                cost(&[generic(2)]),
+                SelectionRequirement::HasLandType(LandType::Mountain),
+            ))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Daggermaw Megalodon — {4}{U}{U} 5/7 Shark with vigilance and Islandcycling {2}.
+pub fn daggermaw_megalodon() -> CardDefinition {
+    CardDefinition {
+        name: "Daggermaw Megalodon",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Shark], ..Default::default() },
+        power: 5,
+        toughness: 7,
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Typecycling(Box::new((
+                cost(&[generic(2)]),
+                SelectionRequirement::HasLandType(LandType::Island),
+            ))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Boilerbilges Ripper — {4}{R} 4/4 Human Assassin. When it enters, you may
+/// sacrifice another creature or enchantment; if you do, it deals 2 damage to
+/// any target.
+pub fn boilerbilges_ripper() -> CardDefinition {
+    CardDefinition {
+        name: "Boilerbilges Ripper",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice another creature or enchantment? (deal 2 to any target)".into(),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Enchantment)
+                .and(SelectionRequirement::OtherThanSource),
+            count: Value::Const(1),
+            then: Box::new(deal(2, target_any())),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bashful Beastie — {4}{G} 5/4 Beast. When it dies, manifest dread.
+pub fn bashful_beastie() -> CardDefinition {
+    CardDefinition {
+        name: "Bashful Beastie",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![on_dies(Effect::ManifestDread { who: PlayerRef::You })],
+        ..Default::default()
+    }
+}
+
+/// Bear Trap — {1} Artifact with flash. {3}, {T}, Sacrifice this: it deals 3
+/// damage to target creature.
+pub fn bear_trap() -> CardDefinition {
+    CardDefinition {
+        name: "Bear Trap",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: deal(3, target_filtered(SelectionRequirement::Creature)),
             ..Default::default()
         }],
         ..Default::default()
