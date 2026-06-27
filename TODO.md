@@ -582,6 +582,14 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Auto-targeter doesn't see `SelectionRequirement::Not(Land)`.** A
+  `target_filtered(Not(Box::new(Land)).and(ControlledByOpponent))` ETB exile
+  silently fizzles under the bot/auto-target path, while the canonical
+  `SelectionRequirement::Nonland` form is targeted correctly (caught wiring
+  Sheltered by Ghosts). The auto-target candidate scan should treat
+  `Not(Land)` as `Nonland`, or card defs should always prefer `Nonland`. Audit
+  catalogs for `Not(Box::new(SelectionRequirement::Land))` in target filters.
+
 - ⏳ **Flash-loyalty client affordance.** Engine ships `CardDefinition.flash_loyalty`
   (CR 606.3b — The Wandering Emperor activates loyalty at instant speed the turn
   it enters). The client's loyalty-activation affordance should surface those
