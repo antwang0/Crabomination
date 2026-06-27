@@ -2520,6 +2520,145 @@ fn consult_the_star_charts_grabs_by_lands() {
     assert_eq!(g.players[0].hand.len(), hand, "put one card into hand");
 }
 
+/// Survey Mechan's {10}, Sac ability deals 3 to a target and draws three.
+#[test]
+fn survey_mechan_sac_burn_and_draw() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let mech = g.add_card_to_battlefield(0, catalog::survey_mechan());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(10);
+    let life1 = g.players[1].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mech, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Survey Mechan");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 3, "dealt 3 damage");
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+    assert!(g.battlefield_find(mech).is_none(), "sacrificed itself");
+}
+
+/// Loading Zone doubles counters placed on your permanents — Blade of the Swarm's
+/// ETB two counters become four.
+#[test]
+fn loading_zone_doubles_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::loading_zone());
+    let blade = g.add_card_to_hand(0, catalog::blade_of_the_swarm());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blade of the Swarm");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::PlusOnePlusOne), 4,
+        "2 counters doubled to 4");
+}
+
+/// Sami grants your instant/sorcery spells affinity for artifacts.
+#[test]
+fn sami_grants_affinity_for_artifacts() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    g.add_card_to_battlefield(0, catalog::sami_wildcat_captain());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 0, "no artifacts → no discount");
+    g.add_card_to_battlefield(0, catalog::memorial_vault());
+    g.add_card_to_battlefield(0, catalog::memorial_vault());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 2, "{{2}} off for two artifacts");
+}
+
+/// Annul counters an artifact spell on the stack.
+#[test]
+fn annul_counters_an_artifact_spell() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let vault = g.add_card_to_hand(1, catalog::memorial_vault()); // {3}{R} artifact
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: vault, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts the artifact");
+    let annul = g.add_card_to_hand(0, catalog::annul());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: annul, target: Some(Target::Permanent(vault)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Annul on the artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vault).is_none(), "artifact spell countered, never resolved");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == vault), "countered to graveyard");
+}
+
+/// Divert Disaster counters a spell whose controller can't pay {2}.
+#[test]
+fn divert_disaster_counters_when_unpaid() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1); // exactly the bolt cost, no spare
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    let divert = g.add_card_to_hand(0, catalog::divert_disaster());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: divert, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Divert Disaster");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt countered (unpaid), no damage");
+}
+
+/// Mightform Harmonizer's landfall doubles a creature's power until end of turn.
+#[test]
+fn mightform_harmonizer_landfall_doubles_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mightform_harmonizer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "power doubled 2 → 4 on landfall");
+}
+
+/// Blade of the Swarm's ETB (mode 0, the only legal mode with no exiled warp
+/// card) puts two +1/+1 counters on it.
+#[test]
+fn blade_of_the_swarm_etb_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let blade = g.add_card_to_hand(0, catalog::blade_of_the_swarm());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blade of the Swarm");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "ETB added two +1/+1 counters");
+}
+
 /// Tractor Beam steals control of the enchanted creature, taps it, and keeps it
 /// tapped through its (new) controller's untap step. Control reverts when the
 /// Aura leaves.

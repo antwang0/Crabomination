@@ -6315,6 +6315,180 @@ pub fn perigee_beckoner() -> CardDefinition {
     }
 }
 
+/// Survey Mechan — {4} 1/3 Robot, flying, hexproof. {10}, Sacrifice this: it
+/// deals 3 damage to any target and you draw three cards. (The distinct-land-
+/// name activation discount and the "target player" routing are approximated.)
+pub fn survey_mechan() -> CardDefinition {
+    CardDefinition {
+        name: "Survey Mechan",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Hexproof],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(10)]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Loading Zone — {3}{G} Enchantment. Counters put on permanents you control are
+/// doubled. Warp {G}. (Restriction to creatures/Spacecraft/Planets approximated
+/// to all your counters.)
+pub fn loading_zone() -> CardDefinition {
+    CardDefinition {
+        name: "Loading Zone",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If counters would be put on a permanent you control, double them.",
+            effect: StaticEffect::DoubleCounters,
+        }],
+        alternative_cost: Some(warp(cost(&[g()]))),
+        ..Default::default()
+    }
+}
+
+/// Sami, Wildcat Captain — {4}{R}{W} 4/4 Human Artificer Rogue with double strike
+/// and vigilance. Your instant/sorcery spells have affinity for artifacts. (The
+/// "all spells" breadth is approximated to instants and sorceries.)
+pub fn sami_wildcat_captain() -> CardDefinition {
+    CardDefinition {
+        name: "Sami, Wildcat Captain",
+        cost: cost(&[generic(4), r(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Artificer,
+                CreatureType::Rogue,
+            ],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::DoubleStrike, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast have affinity for artifacts.",
+            effect: StaticEffect::GrantAffinityToISSpells {
+                permanent_filter: SelectionRequirement::Artifact
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Annul — {U} Instant. Counter target artifact or enchantment spell.
+pub fn annul() -> CardDefinition {
+    CardDefinition {
+        name: "Annul",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Artifact)
+                        .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                ),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Mightform Harmonizer — {2}{G}{G} 4/4 Insect Druid. Landfall — double the power
+/// of target creature you control until end of turn. Warp {2}{G}.
+pub fn mightform_harmonizer() -> CardDefinition {
+    CardDefinition {
+        name: "Mightform Harmonizer",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::DoublePower {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                times: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        alternative_cost: Some(warp(cost(&[generic(2), g()]))),
+        ..Default::default()
+    }
+}
+
+/// Divert Disaster — {1}{U} Instant. Counter target spell unless its controller
+/// pays {2}. (The "if they pay, you create a Lander" rider is dropped.)
+pub fn divert_disaster() -> CardDefinition {
+    CardDefinition {
+        name: "Divert Disaster",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+            exile: false,
+            extra_generic: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Blade of the Swarm — {3}{B} 3/1 Insect Assassin. ETB: choose one — put two
+/// +1/+1 counters on this; or put target exiled card with warp on the bottom of
+/// its owner's library.
+pub fn blade_of_the_swarm() -> CardDefinition {
+    CardDefinition {
+        name: "Blade of the Swarm",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Warped.and(SelectionRequirement::InExile),
+                ),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Consult the Star Charts — {1}{U} Instant, Kicker {1}{U}. Look at the top X
 /// cards of your library, where X is the number of lands you control; put one
 /// into your hand (two if kicked) and the rest on the bottom.

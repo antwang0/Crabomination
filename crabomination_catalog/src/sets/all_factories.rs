@@ -4098,6 +4098,13 @@ static EOE: &[Factory] = &[
     super::eoe::starfield_vocalist,
     super::eoe::quantum_riddler,
     super::eoe::perigee_beckoner,
+    super::eoe::survey_mechan,
+    super::eoe::loading_zone,
+    super::eoe::sami_wildcat_captain,
+    super::eoe::annul,
+    super::eoe::mightform_harmonizer,
+    super::eoe::divert_disaster,
+    super::eoe::blade_of_the_swarm,
     super::eoe::consult_the_star_charts,
 ];
 static FEM: &[Factory] = &[
