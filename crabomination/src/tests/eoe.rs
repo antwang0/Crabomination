@@ -2900,3 +2900,69 @@ fn eternity_elevator_taps_for_ccc() {
     }).expect("tap for CCC");
     assert_eq!(g.players[0].mana_pool.total(), 3, "added 3 colorless");
 }
+
+/// Atomic Microsizer: when the equipped creature attacks, the target becomes a
+/// 1/1 and can't be blocked this turn.
+#[test]
+fn atomic_microsizer_shrinks_and_unblocks_target() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let equip = g.add_card_to_battlefield(0, catalog::atomic_microsizer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    let ogre = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    // Equip the bear.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: equip, target: bear }).expect("equip the bear");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+0 from the equipment");
+    g.step = TurnStep::DeclareAttackers;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Bool(true)],
+    ));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    let o = g.computed_permanent(ogre).unwrap();
+    assert_eq!((o.power, o.toughness), (1, 1), "target shrunk to 1/1");
+    assert!(o.keywords.contains(&Keyword::Unblockable), "target can't be blocked");
+}
+
+/// Dyadrine enters with +1/+1 counters equal to the mana spent to cast it.
+#[test]
+fn dyadrine_enters_with_counters_equal_to_mana_spent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dyadrine_synthesis_amalgam());
+    // Pay {3}{G}{W} → X = 3, total mana spent = 5.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Dyadrine for X=3");
+    drain_stack(&mut g);
+    let d = g.battlefield_find(id).unwrap();
+    assert_eq!(d.counter_count(CounterType::PlusOnePlusOne), 5, "counters = mana spent (5)");
+    assert_eq!(g.computed_permanent(id).unwrap().power, 5, "0/1 + 5 counters = 5/6");
+}
+
+/// Zero Point Ballad destroys creatures with toughness ≤ X and you lose X life.
+#[test]
+fn zero_point_ballad_destroys_small_toughness_and_loses_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let id = g.add_card_to_hand(0, catalog::zero_point_ballad());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Zero Point Ballad for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2-toughness creature destroyed");
+    assert!(g.battlefield_find(giant).is_some(), "3-toughness creature survives");
+    assert_eq!(g.players[0].life, life0 - 2, "you lose X life");
+}

@@ -6800,3 +6800,87 @@ pub fn tannuk_steadfast_second() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Atomic Microsizer — {U} Artifact — Equipment. Equipped creature gets +1/+0.
+/// Whenever equipped creature attacks, choose up to one target creature: it
+/// can't be blocked this turn and has base power and toughness 1/1 until end of
+/// turn. Equip {2}.
+pub fn atomic_microsizer() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Atomic Microsizer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    filter: SelectionRequirement::Creature,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Unblockable,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::SetBasePT {
+                            what: Selector::Target(0),
+                            power: Value::Const(1),
+                            toughness: Value::Const(1),
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dyadrine, Synthesis Amalgam — {X}{G}{W} Legendary Artifact Creature —
+/// Construct 0/1. Trample. Enters with +1/+1 counters equal to the mana spent
+/// to cast it. (The "remove a counter from each of two creatures: draw + Robot"
+/// attack rider is dropped.)
+pub fn dyadrine_synthesis_amalgam() -> CardDefinition {
+    CardDefinition {
+        name: "Dyadrine, Synthesis Amalgam",
+        cost: cost(&[x(), g(), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::CastSpellManaSpent)),
+        ..Default::default()
+    }
+}
+
+/// Zero Point Ballad — {X}{B} Sorcery. Destroy all creatures with toughness X
+/// or less. You lose X life. (The "if X is 6+, reanimate one" rider is dropped.)
+pub fn zero_point_ballad() -> CardDefinition {
+    CardDefinition {
+        name: "Zero Point Ballad",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                    then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
