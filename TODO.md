@@ -57,14 +57,14 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   "or is put into exile" branch** is dropped (dies-only); **Steelswarm
   Operator's** two restricted mana abilities both collapse to `ArtifactOnly`;
   **Possibility Technician** still wants impulse-from-gy-while-Kavu.
-- **Astelli Reclaimer** (reanimate noncreature/nonland with MV ≤ mana spent —
-  `Value::CastSpellManaSpent` exists but isn't propagated onto ETB triggers, and
-  a MV-≤-Value target filter is needed), **Blade of the Swarm** (modal "put an
-  exiled warp card on the bottom"), **Sothera, the Supervoid** (each-opponent
-  exile-a-creature on friendly death). Emissary Escort
-  (`DynamicPt::BasePlusGreatestOtherArtifactMv`), Dark Endurance (target-aware
-  cost reduction via `self_cost_reduction_if_target`/`IsBlocking`), Genemorph
-  Imago's six-lands 5/5, Fungal Colossus (`SelfCostReducedByDistinctLandNames`),
+- **Astelli Reclaimer** ✅ — `CardInstance.cast_mana_spent` stamped at
+  resolution; `Value::CastSpellManaSpent` + `SelectionRequirement::Mana-
+  ValueAtMostCastManaSpent` read it on ETB. **Blade of the Swarm** ✅ (modal ETB:
+  counters / put exiled warp card on owner's library bottom). Still open:
+  **Sothera, the Supervoid** (each-opponent exile-a-creature on friendly death +
+  end-step reanimate — wants an `EachPlayerExilesChosen` primitive). Emissary
+  Escort ✅, Fungal Colossus ✅ (both already shipped — the notes were stale).
+  Dark Endurance ✅, Genemorph Imago ✅,
   Memorial Vault (`{T}, Sac an artifact: impulse 1 + sacrificed MV` — now ships;
   `Value::SacrificedManaValue` is stamped for non-creature sac-cost permanents,
   not just creatures), Starport Security (tap-another; conditional discount
@@ -78,10 +78,10 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   Containment (enchant-artifact O-Ring), Cryoshatter (−5/−0 +
   destroy-on-tap/damage), Meltstrider's Resolve (ETB fight) and Pain for All
   (ETB ping = power) use the standard Aura shape (`Attach` + `equipped_bonus`).
-  Remaining EOE auras: **Tractor Beam** (control-steal — needs a
-  `GainControlWhileSourceRemains` aura host), **Chorale of the Void** (attack →
-  reanimate from defender's graveyard), **Moonlit Meditation** (token-doubling
-  replacement). **Territorial Bruntar** /
+  Remaining EOE auras: **Tractor Beam** ✅ (control-steal: ETB tap +
+  `GainControlWhileSourceRemains` + `PreventUntap{AttachedTo(This)}`),
+  **Chorale of the Void** (attack → reanimate from defender's graveyard),
+  **Moonlit Meditation** (token-doubling replacement). **Territorial Bruntar** /
   Possibility Technician need filtered impulse-dig (exile-top-
   until-nonland). **Haliya, Ascendant Cadet** ships without
   its "counter-creatures deal combat damage → draw" rider (needs a
@@ -90,6 +90,15 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   excess-damage piece. **Equip-bonus *triggered* abilities on attack** (Atomic
   Microsizer) and Survey Mechan's distinct-land-name *activation* discount are
   unwired.
+- **New deferrals (this run).** Shipped batch 2 carries approximations worth a
+  later pass: **Sothera, the Supervoid** still unbuilt (wants an
+  `Effect::EachPlayerExilesChosen` + an end-step "if a player has no creatures"
+  mass-reanimate); **Quantum Riddler** drops the "draw +1 while hand ≤1" draw
+  replacement; **Survey Mechan**'s {10} activation has no distinct-land-name
+  discount and routes the draw to you (not "target player … loses 3 life");
+  **Sami, Wildcat Captain**'s affinity is approximated to instant/sorcery spells
+  (the static can't grant it to creature/artifact spells); **Loading Zone**'s
+  counter-doubling isn't restricted to creatures/Spacecraft/Planets.
 - Approximations in the shipped batches: All-Fates Stalker drops the "up to one
   non-Assassin" rider; Elegy Acolyte's combat trigger fires per-creature; Tidal
   Terror omits tap-two-to-be-unblockable; Larval Scoutlander's sacrifice option
@@ -2113,6 +2122,22 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.80a / 702.90e / 702.2c — wither / infect / deathtouch on damage
 - ✅ CR 702.78 — Conspire (tap-two-creatures additional cost → copy spell)
 - ✅ CR 702.177 — Exhaust (activated ability usable only once per game)
+- ✅ CR 702.189 — Firebending. `Keyword::Firebending(n)`; an attack-triggered
+  mana ability adding n {R} that survives step/phase mana emptying until end of
+  combat (`Player.firebending_kept_red`, re-seeded by `empty_mana_pools`,
+  cleared at the end-of-combat empty). `decks::recent22`: Jeong Jeong the
+  Deserter, Ran and Shaw, Sozin's Comet (grants firebending 5).
+- ✅ CR 702.190 — Sneak. `Keyword::Sneak(cost)` + `shortcut::sneak`
+  (`AlternativeCost`: flash timing gated on `CurrentStepIs(DeclareBlockers)`,
+  `return_to_hand` an unblocked attacker). `SelectionRequirement::IsUnblocked`.
+  Server `alt_cost_available` greys it out without a returnable attacker.
+  `decks::recent22`: Donatello's Technique, Jennika's Technique.
+- ✅ CR 702.54 — Bloodthirst. `Keyword::Bloodthirst(n)` display variant added
+  over the existing `shortcut::bloodthirst` ETB-counter trigger
+  (`Predicate::PlayerDamagedThisTurn`). Retrofitted onto the shipped cards;
+  `decks::recent22` adds Bloodrage Vampire, Furyborn Hellkite.
+- ✅ CR 702.55 — Haunt (already shipped: `Effect::HauntCreature` +
+  `DelayedKind::WhenHauntedCreatureDies`; GPT creatures, tests in gpt.rs).
 - ✅ CR 711 — Flip cards (whole CHK cycle; `flip_when_has_keyword` CR 603.8
   state-flip, `DamagedBySourceThisTurn` death-watch, two-target aura-move)
 - ✅ CR 601.2c — two-target activated abilities (`ActivateAbility.additional_targets`
@@ -2402,9 +2427,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   their own behavior). `Effect::Attach` is now in `primary_target_filter` so
   slot 0 picks the Equipment. Cards: Kor Outfitter (ETB), Brass Squire ({T}).
   Tests in `tests/modern.rs`.
-- ⏳ **Missing keyword mechanics:** Haunt (CR 702.55), Sunburst-on-noncreature
-  charge counters (the +1/+1 creature path ships via `Value::ConvergedValue`).
-  (Ripple ✅ — `shortcut::ripple`/`Effect::Ripple`, the Coldsnap Surging cycle.)
+- ⏳ **Missing keyword mechanics:** Sunburst-on-noncreature charge counters (the
+  +1/+1 creature path ships via `Value::ConvergedValue`). (Haunt ✅ —
+  `Effect::HauntCreature`; Ripple ✅ — `shortcut::ripple`/`Effect::Ripple`.)
 - ✅ **Auto-targeter maximizes "up to N" triggered abilities** (CR 115.1c) —
   `GameState::auto_extra_targets_for` fills slots 1.. with distinct legal picks
   for an `Effect::ApplyToTargets` on a triggered ability; wired into both the

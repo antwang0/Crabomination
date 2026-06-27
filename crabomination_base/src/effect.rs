@@ -528,9 +528,6 @@ pub enum Value {
     /// to each player equal to the number of nonbasic lands that player
     /// controls."
     NonbasicLandCountControlledBy(PlayerRef),
-    /// Number of lands controlled by the resolved player (Consult the Star
-    /// Charts' "top X cards, where X is the number of lands you control").
-    LandCountControlledBy(PlayerRef),
     /// Number of loyalty counters on the first permanent the selector
     /// resolves to. Used by Strixhaven's **Confront the Past** mode 2
     /// ("Confront the Past deals damage to target planeswalker equal to

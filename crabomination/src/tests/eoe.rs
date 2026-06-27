@@ -2457,25 +2457,24 @@ fn icetill_explorer_landfall_mills() {
 }
 
 /// Starfield Vocalist (Panharmonicon) doubles your permanent-ETB triggers: with
-/// it in play, Quantum Riddler's ETB draws two instead of one.
+/// it in play, Blade of the Swarm's ETB resolves twice → four +1/+1 counters.
 #[test]
-fn starfield_vocalist_doubles_etb_draw() {
+fn starfield_vocalist_doubles_etb_trigger() {
+    use crate::card::CounterType;
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::starfield_vocalist());
-    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
-    let riddler = g.add_card_to_hand(0, catalog::quantum_riddler());
+    let blade = g.add_card_to_hand(0, catalog::blade_of_the_swarm());
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
-    let hand = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: riddler, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast Quantum Riddler");
+        card_id: blade, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blade of the Swarm");
     drain_stack(&mut g);
-    // Riddler left hand (-1), ETB drew 2× = +2 → net +1.
-    assert_eq!(g.players[0].hand.len(), hand + 1, "ETB draw fired twice");
+    assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::PlusOnePlusOne), 4,
+        "ETB (2 counters) fired twice → 4 counters");
 }
 
 /// Perigee Beckoner's ETB gives another creature you control +2/+0.
