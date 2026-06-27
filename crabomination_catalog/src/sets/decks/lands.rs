@@ -2036,3 +2036,59 @@ pub fn fountainport() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Duskmourn (DSK) "Gloomlake" painlands ────────────────────────────────────
+//
+// "This land enters tapped unless a player has 13 or less life." Modeled like
+// the check-lands: a SelfSource ETB trigger taps the land unless some player
+// is at 13 or fewer life (CR 614 — the post-ETB life totals are stable).
+
+/// A DSK painland: `{T}: Add {a} or {b}`; enters tapped unless a player has 13
+/// or less life.
+fn dsk_painland(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(a), tap_add(b)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::PlayerLifeAtMost { who: PlayerRef::EachPlayer, life: 13 },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn abandoned_campground() -> CardDefinition {
+    dsk_painland("Abandoned Campground", Color::White, Color::Blue)
+}
+pub fn bleeding_woods() -> CardDefinition {
+    dsk_painland("Bleeding Woods", Color::Red, Color::Green)
+}
+pub fn etched_cornfield() -> CardDefinition {
+    dsk_painland("Etched Cornfield", Color::Green, Color::White)
+}
+pub fn lakeside_shack() -> CardDefinition {
+    dsk_painland("Lakeside Shack", Color::Green, Color::Blue)
+}
+pub fn murky_sewer() -> CardDefinition {
+    dsk_painland("Murky Sewer", Color::Blue, Color::Black)
+}
+pub fn neglected_manor() -> CardDefinition {
+    dsk_painland("Neglected Manor", Color::White, Color::Black)
+}
+pub fn peculiar_lighthouse() -> CardDefinition {
+    dsk_painland("Peculiar Lighthouse", Color::Blue, Color::Red)
+}
+pub fn raucous_carnival() -> CardDefinition {
+    dsk_painland("Raucous Carnival", Color::Red, Color::White)
+}
+pub fn razortrap_gorge() -> CardDefinition {
+    dsk_painland("Razortrap Gorge", Color::Black, Color::Red)
+}
+pub fn strangled_cemetery() -> CardDefinition {
+    dsk_painland("Strangled Cemetery", Color::Black, Color::Green)
+}

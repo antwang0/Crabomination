@@ -5076,6 +5076,41 @@ fn checkland_cycle_definitions() {
     }
 }
 
+/// DSK painland: enters tapped at high life, untapped once a player is at 13
+/// or less.
+#[test]
+fn dsk_painland_taps_unless_a_player_is_low() {
+    let mut g = two_player_game();
+    // Both at 20 → Razortrap Gorge enters tapped.
+    let tapped = g.add_card_to_hand(0, catalog::razortrap_gorge());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(tapped)).expect("plays");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tapped).unwrap().tapped, "high life → tapped");
+    // Drop the opponent to 13 → the next one enters untapped.
+    g.players[1].life = 13;
+    g.players[0].lands_played_this_turn = 0;
+    let untapped = g.add_card_to_hand(0, catalog::razortrap_gorge());
+    g.perform_action(GameAction::PlayLand(untapped)).expect("plays");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(untapped).unwrap().tapped, "a player at 13 → untapped");
+}
+
+/// The full ten-card DSK painland cycle exists with two mana abilities each.
+#[test]
+fn dsk_painland_cycle_definitions() {
+    for def in [
+        catalog::abandoned_campground(), catalog::bleeding_woods(),
+        catalog::etched_cornfield(), catalog::lakeside_shack(),
+        catalog::murky_sewer(), catalog::neglected_manor(),
+        catalog::peculiar_lighthouse(), catalog::raucous_carnival(),
+        catalog::razortrap_gorge(), catalog::strangled_cemetery(),
+    ] {
+        assert!(def.is_land(), "{} is a land", def.name);
+        assert_eq!(def.activated_abilities.len(), 2, "{} taps for two colors", def.name);
+    }
+}
+
 #[test]
 fn ancient_den_taps_for_white_and_is_an_artifact() {
     let mut g = two_player_game();
