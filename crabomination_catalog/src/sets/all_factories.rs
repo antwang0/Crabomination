@@ -4094,6 +4094,11 @@ static EOE: &[Factory] = &[
     super::eoe::mmmenon_the_right_hand,
     super::eoe::memorial_vault,
     super::eoe::astelli_reclaimer,
+    super::eoe::icetill_explorer,
+    super::eoe::starfield_vocalist,
+    super::eoe::quantum_riddler,
+    super::eoe::perigee_beckoner,
+    super::eoe::consult_the_star_charts,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

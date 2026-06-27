@@ -6205,3 +6205,144 @@ pub fn astelli_reclaimer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Icetill Explorer — {2}{G}{G} 2/4 Insect Scout. Extra land each turn, may play
+/// lands from your graveyard, and landfall mills a card.
+pub fn icetill_explorer() -> CardDefinition {
+    CardDefinition {
+        name: "Icetill Explorer",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may play an additional land on each of your turns.",
+                effect: StaticEffect::ExtraLandPerTurn,
+            },
+            StaticAbility {
+                description: "You may play lands from your graveyard.",
+                effect: StaticEffect::MayPlayLandsFromGraveyard,
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Starfield Vocalist — {3}{U} 3/4 Human Bard. If a permanent entering causes one
+/// of your permanents' triggered abilities to trigger, it triggers an additional
+/// time (Panharmonicon). Warp {1}{U}.
+pub fn starfield_vocalist() -> CardDefinition {
+    CardDefinition {
+        name: "Starfield Vocalist",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Your permanent-ETB triggered abilities trigger an additional time.",
+            effect: StaticEffect::DoubleControllerEtbTriggers,
+        }],
+        alternative_cost: Some(warp(cost(&[generic(1), u()]))),
+        ..Default::default()
+    }
+}
+
+/// Quantum Riddler — {3}{U}{U} 4/6 Sphinx, flying. ETB draw a card. Warp {1}{U}.
+/// (The "draw an extra card while you have ≤1 card in hand" replacement is
+/// dropped.)
+pub fn quantum_riddler() -> CardDefinition {
+    CardDefinition {
+        name: "Quantum Riddler",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        alternative_cost: Some(warp(cost(&[generic(1), u()]))),
+        ..Default::default()
+    }
+}
+
+/// Perigee Beckoner — {4}{B} 4/5 Horror. ETB: another target creature you control
+/// gets +2/+0 until end of turn. Warp {2}{B}. (The granted "dies → return tapped"
+/// rider is dropped.)
+pub fn perigee_beckoner() -> CardDefinition {
+    CardDefinition {
+        name: "Perigee Beckoner",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            },
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        alternative_cost: Some(warp(cost(&[generic(2), b()]))),
+        ..Default::default()
+    }
+}
+
+/// Consult the Star Charts — {1}{U} Instant, Kicker {1}{U}. Look at the top X
+/// cards of your library, where X is the number of lands you control; put one
+/// into your hand (two if kicked) and the rest on the bottom.
+pub fn consult_the_star_charts() -> CardDefinition {
+    CardDefinition {
+        name: "Consult the Star Charts",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::LandCountControlledBy(PlayerRef::You),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: Some(Value::Const(2)),
+                to_battlefield: false,
+            }),
+            else_: Box::new(Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::LandCountControlledBy(PlayerRef::You),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: Some(Value::Const(1)),
+                to_battlefield: false,
+            }),
+        },
+        ..Default::default()
+    }
+}

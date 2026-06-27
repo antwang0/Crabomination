@@ -546,6 +546,15 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::LandCountControlledBy(p) => self
+                .resolve_player(p, ctx)
+                .map(|seat| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && c.definition.is_land())
+                        .count() as i32
+                })
+                .unwrap_or(0),
             Value::SnowPermanentCountControlledBy(p) => self
                 .resolve_player(p, ctx)
                 .map(|seat| {

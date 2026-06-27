@@ -2439,6 +2439,87 @@ fn astelli_reclaimer_skips_overcost_permanent() {
     );
 }
 
+/// Icetill Explorer mills a card whenever a land you control enters (landfall).
+#[test]
+fn icetill_explorer_landfall_mills() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::icetill_explorer());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let lib = g.players[0].library.len();
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "landfall milled a card");
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "milled card hit the graveyard");
+}
+
+/// Starfield Vocalist (Panharmonicon) doubles your permanent-ETB triggers: with
+/// it in play, Quantum Riddler's ETB draws two instead of one.
+#[test]
+fn starfield_vocalist_doubles_etb_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::starfield_vocalist());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let riddler = g.add_card_to_hand(0, catalog::quantum_riddler());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: riddler, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Quantum Riddler");
+    drain_stack(&mut g);
+    // Riddler left hand (-1), ETB drew 2× = +2 → net +1.
+    assert_eq!(g.players[0].hand.len(), hand + 1, "ETB draw fired twice");
+}
+
+/// Perigee Beckoner's ETB gives another creature you control +2/+0.
+#[test]
+fn perigee_beckoner_pumps_another_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let beck = g.add_card_to_hand(0, catalog::perigee_beckoner());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: beck, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Perigee Beckoner");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2), "+2/+0 on the bear");
+}
+
+/// Consult the Star Charts looks at top X (= lands you control) and grabs one
+/// card (two if kicked).
+#[test]
+fn consult_the_star_charts_grabs_by_lands() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); } // X = 3
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let consult = g.add_card_to_hand(0, catalog::consult_the_star_charts());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: consult, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Consult the Star Charts");
+    drain_stack(&mut g);
+    // Consult left hand (-1), one card to hand (+1) → net 0.
+    assert_eq!(g.players[0].hand.len(), hand, "put one card into hand");
+}
+
 /// Tractor Beam steals control of the enchanted creature, taps it, and keeps it
 /// tapped through its (new) controller's untap step. Control reverts when the
 /// Aura leaves.
