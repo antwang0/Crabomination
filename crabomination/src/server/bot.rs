@@ -530,6 +530,25 @@ impl Bot for RandomBot {
     }
 }
 
+/// The combat-damage value an attacker on the battlefield actually assigns:
+/// its computed toughness when it has `AssignsCombatDamageByToughness` (Doran,
+/// the Siege Tower; CR 510.1c), otherwise its computed power. Falls back to the
+/// raw `CardInstance` value when no computed view is available. Used by the
+/// block planner so a Doran board's high-toughness attackers are scored at
+/// their real threat.
+fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
+    use crate::card::Keyword;
+    if let Some(cp) = state.computed_permanent(id) {
+        if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+            cp.toughness
+        } else {
+            cp.power
+        }
+    } else {
+        state.battlefield_find(id).map(|c| c.power()).unwrap_or(0)
+    }
+}
+
 /// Instant-speed response layer: when an opponent's spell sits on top of
 /// the stack and it's worth answering (it targets the bot's stuff / the
 /// bot itself, or it's expensive), cast a counterspell from hand at it.
@@ -2836,7 +2855,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .map(|a| {
                     (
                         atk.attacker,
-                        a.power(),
+                        attacker_damage_value(state, atk.attacker),
                         a.toughness(),
                         a.has_keyword(&Keyword::Flying),
                         a.has_keyword(&Keyword::Deathtouch),
@@ -2852,8 +2871,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         .attacking()
         .iter()
         .filter(|atk| atk.target == AttackTarget::Player(seat))
-        .filter_map(|atk| state.battlefield.iter().find(|c| c.id == atk.attacker))
-        .map(|a| a.power())
+        .map(|atk| attacker_damage_value(state, atk.attacker))
         .sum();
     // Planeswalker defense (CR 306.7): for each planeswalker we control that
     // is being attacked, if the attackers aimed at it would deal lethal

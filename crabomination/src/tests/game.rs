@@ -6173,6 +6173,28 @@ fn soul_conduit_activation_exchanges_life_totals() {
     assert_eq!(g.players[1].life, 4, "opponent takes P0's previous total");
 }
 
+/// CR 119.7 — exchanging life totals routes through the life funnel, so a
+/// "can't gain life" lock on the player who *would* gain blocks their half of
+/// the swap while the other player still loses.
+#[test]
+fn cr_119_7_exchange_life_totals_respects_cant_gain_life() {
+    use crate::effect::{Effect, Selector};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    // P0 controls "your opponents can't gain life"; P1 (opponent) is at 5 and
+    // would gain 25 from the swap — but can't.
+    g.add_card_to_battlefield(0, catalog::witherbloom_lifeglobe_b143());
+    g.set_life(0, 30);
+    g.set_life(1, 5);
+    let ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    g.resolve_effect(
+        &Effect::ExchangeLifeTotals { a: Selector::You, b: Selector::Target(0) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].life, 5, "P0 takes P1's previous total (a loss — allowed)");
+    assert_eq!(g.players[1].life, 5, "P1 can't gain life — its half of the swap is blocked");
+}
+
 #[test]
 fn cr_702_15_landwalk_unblockable_only_when_defender_has_land_type() {
     use crate::card::{Keyword, LandType};
