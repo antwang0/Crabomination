@@ -424,3 +424,69 @@ fn chitin_gravestalker_graveyard_affinity() {
     let reduced = crate::game::actions::cost_reduction_for_spell(&g, 0, &inst, None);
     assert_eq!(reduced, 2, "two matching gy cards give {{2}} off");
 }
+
+/// Unnerving Grasp bounces a target permanent and manifests dread.
+#[test]
+fn unnerving_grasp_bounces_and_manifests() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::unnerving_grasp());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unnerving Grasp");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear returned to hand");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.face_down),
+        "manifest dread put a face-down creature onto the battlefield");
+}
+
+/// Fanged Flames deals 4 and exiles the creature instead of letting it die.
+#[test]
+fn fanged_flames_exiles_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::fanged_flames());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fanged Flames");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "lethal creature was exiled, not killed");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Splitskin Doll draws, then discards when you control no other small creature.
+#[test]
+fn splitskin_doll_discards_without_small_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    let hand_before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::splitskin_doll());
+    drain_stack(&mut g);
+    // Drew 1, then discarded 1 (no other power-≤2 creature) → net hand unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before, "draw then discard nets zero");
+}
+
+/// With another small creature out, Splitskin Doll keeps the drawn card.
+#[test]
+fn splitskin_doll_keeps_card_with_small_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::goblin_piker()); // 2/1, power ≤2
+    let hand_before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::splitskin_doll());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew and kept (no discard)");
+}

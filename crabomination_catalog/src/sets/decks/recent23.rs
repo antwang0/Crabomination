@@ -549,3 +549,83 @@ pub fn chitin_gravestalker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Unnerving Grasp — {2}{U} Sorcery. Return up to one target nonland permanent
+/// to its owner's hand. Manifest dread.
+pub fn unnerving_grasp() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Unnerving Grasp",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Nonland,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                }),
+            },
+            Effect::ManifestDread { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fanged Flames — {1}{R} Sorcery with devoid. Deals 4 damage to target creature
+/// or planeswalker. If it would die this turn, exile it instead.
+pub fn fanged_flames() -> CardDefinition {
+    CardDefinition {
+        name: "Fanged Flames",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
+        // Install the exile replacement before the damage so the lethal-damage
+        // SBA is caught (CR 614).
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            deal(4, Selector::Target(0)),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Splitskin Doll — {1}{W} 2/1 artifact Toy. When it enters, draw a card. Then
+/// discard a card unless you control another creature with power 2 or less.
+pub fn splitskin_doll() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Splitskin Doll",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtMost(2))
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                }),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

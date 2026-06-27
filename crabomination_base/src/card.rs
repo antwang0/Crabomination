@@ -174,6 +174,8 @@ pub enum CreatureType {
     Spellshaper,
     // Streets of New Capenna "Villain" (Kingpin's Enforcers).
     Villain,
+    // Duskmourn "Toy" artifact-creature subtype (Splitskin Doll, Patched Plaything).
+    Toy,
 }
 
 /// Land subtypes (basic land types + others).
