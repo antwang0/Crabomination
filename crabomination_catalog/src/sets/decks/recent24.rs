@@ -1,7 +1,8 @@
 //! A twenty-fourth wave — Aetherdrift (DFT) staples on existing primitives:
 //! Vehicles + Crew, Mount/Vehicle anthems, cycling burn/removal, discard-count
 //! triggers (`EventKind::CardDiscarded`), modal removal, distribute-counters,
-//! and an exile-top "play it this turn" enchantment. Tests in
+//! and an exile-top "play it this turn" enchantment — plus a small Duskmourn
+//! (DSK) tail of enchantment-creature staples. Tests in
 //! `crabomination/src/tests/recent24.rs`.
 
 use crate::card::{
@@ -981,7 +982,217 @@ pub fn reckless_velocitaur() -> CardDefinition {
     }
 }
 
+// ── Duskmourn (DSK) tail ─────────────────────────────────────────────────────
+
+/// Emerge from the Cocoon — {4}{W} Sorcery. Return a creature card from your
+/// graveyard to the battlefield; gain 3 life.
+pub fn emerge_from_the_cocoon() -> CardDefinition {
+    CardDefinition {
+        name: "Emerge from the Cocoon",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::InYourGraveyard),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            gain_life(3),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Enter the Enigma — {U} Sorcery. Target creature can't be blocked this turn;
+/// draw a card.
+pub fn enter_the_enigma() -> CardDefinition {
+    CardDefinition {
+        name: "Enter the Enigma",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            draw(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Exorcise — {1}{W} Sorcery. Exile target artifact, enchantment, or creature
+/// with power 4 or greater.
+pub fn exorcise() -> CardDefinition {
+    CardDefinition {
+        name: "Exorcise",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtLeast(4))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fear of Lost Teeth — {B} 1/1 Nightmare. When it dies, it deals 1 damage to
+/// any target and you gain 1 life.
+pub fn fear_of_lost_teeth() -> CardDefinition {
+    CardDefinition {
+        name: "Fear of Lost Teeth",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            deal(1, crate::effect::shortcut::target_any()),
+            gain_life(1),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Friendly Teddy — {2} 2/2 Bear Toy artifact creature. When it dies, each
+/// player draws a card.
+pub fn friendly_teddy() -> CardDefinition {
+    CardDefinition {
+        name: "Friendly Teddy",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear, CreatureType::Toy],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Draw {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Give In to Violence — {1}{B} Instant. Target creature gets +2/+2 and gains
+/// lifelink until end of turn.
+pub fn give_in_to_violence() -> CardDefinition {
+    CardDefinition {
+        name: "Give In to Violence",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            pump_target(2, 2),
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Grasping Longneck — {2}{G} 4/2 Horror. Reach. When it dies, you gain 2 life.
+pub fn grasping_longneck() -> CardDefinition {
+    CardDefinition {
+        name: "Grasping Longneck",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(gain_life(2))],
+        ..Default::default()
+    }
+}
+
+/// Horrid Vigor — {1}{G} Instant. Target creature gains deathtouch and
+/// indestructible until end of turn.
+pub fn horrid_vigor() -> CardDefinition {
+    CardDefinition {
+        name: "Horrid Vigor",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Glimmerburst — {3}{U} Instant. Draw two cards; create a 1/1 white Glimmer
+/// enchantment creature token.
+pub fn glimmerburst() -> CardDefinition {
+    CardDefinition {
+        name: "Glimmerburst",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            draw(2),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: glimmer_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Friendly Ghost — {3}{W} 2/4 Spirit. Flying. When it enters, target creature
+/// gets +2/+4 until end of turn.
+pub fn friendly_ghost() -> CardDefinition {
+    CardDefinition {
+        name: "Friendly Ghost",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
 // ── Tokens ───────────────────────────────────────────────────────────────────
+
+fn glimmer_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Glimmer".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Glimmer], ..Default::default() },
+        ..Default::default()
+    }
+}
 
 fn pilot_token() -> TokenDefinition {
     TokenDefinition {

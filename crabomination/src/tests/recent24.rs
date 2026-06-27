@@ -571,6 +571,146 @@ fn crew_trigger_silent_outside_main_phase() {
     );
 }
 
+// ── Duskmourn (DSK) tail ─────────────────────────────────────────────────────
+
+/// Emerge from the Cocoon reanimates a creature from the graveyard.
+#[test]
+fn emerge_from_the_cocoon_reanimates() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let e = g.add_card_to_hand(0, catalog::emerge_from_the_cocoon());
+    ready(&mut g);
+    let life = g.players[0].life;
+    cast_at(&mut g, e, Target::Permanent(dead));
+    assert!(g.battlefield_find(dead).is_some(), "Bears reanimated to the battlefield");
+    assert_eq!(g.players[0].life, life + 3, "gained 3");
+}
+
+/// Enter the Enigma makes a creature unblockable and draws.
+#[test]
+fn enter_the_enigma_unblockable_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let e = g.add_card_to_hand(0, catalog::enter_the_enigma());
+    ready(&mut g);
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, e, Target::Permanent(bear));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert_eq!(g.players[0].hand.len(), hand, "spell left hand (-1) and drew (+1)");
+}
+
+/// Exorcise exiles a power-4+ creature.
+#[test]
+fn exorcise_exiles_big_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let ex = g.add_card_to_hand(0, catalog::exorcise());
+    ready(&mut g);
+    cast_at(&mut g, ex, Target::Permanent(big));
+    assert!(g.battlefield_find(big).is_none(), "4/4 exiled");
+}
+
+/// Fear of Lost Teeth pings on death and gains a life.
+#[test]
+fn fear_of_lost_teeth_dies_pings() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_battlefield(0, catalog::fear_of_lost_teeth());
+    g.battlefield_find_mut(f).unwrap().damage = 1; // lethal vs 1 toughness
+    let life = g.players[0].life;
+    let foe_life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1");
+    assert_eq!(g.players[1].life, foe_life - 1, "pinged the opponent");
+}
+
+/// Friendly Teddy draws for each player on death.
+#[test]
+fn friendly_teddy_dies_each_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    let t = g.add_card_to_battlefield(0, catalog::friendly_teddy());
+    g.battlefield_find_mut(t).unwrap().damage = 2;
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 + 1);
+    assert_eq!(g.players[1].hand.len(), h1 + 1);
+}
+
+/// Give In to Violence pumps +2/+2 and grants lifelink.
+#[test]
+fn give_in_to_violence_pumps_lifelink() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let giv = g.add_card_to_hand(0, catalog::give_in_to_violence());
+    ready(&mut g);
+    cast_at(&mut g, giv, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Grasping Longneck gains 2 life when it dies; it has reach.
+#[test]
+fn grasping_longneck_reach_and_dies_gain() {
+    let mut g = two_player_game();
+    let gl = g.add_card_to_battlefield(0, catalog::grasping_longneck());
+    assert!(g.computed_permanent(gl).unwrap().keywords.contains(&Keyword::Reach));
+    g.battlefield_find_mut(gl).unwrap().damage = 2; // lethal vs 2 toughness
+    let life = g.players[0].life;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Horrid Vigor grants deathtouch and indestructible.
+#[test]
+fn horrid_vigor_grants_deathtouch_indestructible() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hv = g.add_card_to_hand(0, catalog::horrid_vigor());
+    ready(&mut g);
+    cast_at(&mut g, hv, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Deathtouch));
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Glimmerburst draws two and makes a Glimmer token.
+#[test]
+fn glimmerburst_draws_and_makes_glimmer() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let gb = g.add_card_to_hand(0, catalog::glimmerburst());
+    ready(&mut g);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: gb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "-1 cast, +2 drawn");
+    assert_eq!(count_named(&g, 0, "Glimmer"), 1);
+}
+
+/// Friendly Ghost flies and pumps a creature +2/+4 on ETB.
+#[test]
+fn friendly_ghost_etb_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let fg = g.add_card_to_battlefield(0, catalog::friendly_ghost());
+    assert!(g.computed_permanent(fg).unwrap().keywords.contains(&Keyword::Flying));
+    g.fire_self_etb_triggers(fg, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 6), "+2/+4");
+}
+
 /// Air Response Unit ships as a 3/3 Vehicle with Crew 1.
 #[test]
 fn air_response_unit_is_crewable_vehicle() {
