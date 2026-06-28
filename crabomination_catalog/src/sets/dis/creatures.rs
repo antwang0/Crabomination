@@ -23,58 +23,6 @@ pub fn azorius_first_wing() -> CardDefinition {
     }
 }
 
-/// Pride of the Clouds — {W}{U} 1/1 Elemental Cat with flying. Gets +1/+1 for
-/// each other flyer (approximated as flyers you control). Forecast — {2}{W}{U}
-/// from hand, once each turn in your upkeep: create a 1/1 white-and-blue Bird
-/// with flying.
-pub fn pride_of_the_clouds() -> CardDefinition {
-    use crate::card::{DynamicPt, TokenDefinition};
-    use crate::effect::{PlayerRef, Predicate};
-    use crate::mana::Color;
-    use crate::game::types::TurnStep;
-    CardDefinition {
-        name: "Pride of the Clouds",
-        cost: cost(&[w(), u()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental, CreatureType::Cat],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        dynamic_pt: Some(DynamicPt::BasePlusOtherFlyersControlled { base: 1 }),
-        // CR 702.56 — Forecast: hand-activated, once each turn, only in your
-        // upkeep (gated via the `condition` predicate; the per-turn budget
-        // rides the hand once-per-turn path).
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(2), w(), u()]),
-            from_hand: true,
-            once_per_turn: true,
-            condition: Some(Predicate::All(vec![
-                Predicate::IsTurnOf(PlayerRef::You),
-                Predicate::CurrentStepIs(TurnStep::Upkeep),
-            ])),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: TokenDefinition {
-                    name: "Bird".into(),
-                    power: 1,
-                    toughness: 1,
-                    colors: vec![Color::White, Color::Blue],
-                    card_types: vec![CardType::Creature],
-                    subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
-                    keywords: vec![Keyword::Flying],
-                    ..Default::default()
-                },
-            },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Aquastrand Spider — {1}{G/U} 0/0 Spider, Reach, Graft 2.
 pub fn aquastrand_spider() -> CardDefinition {
     CardDefinition {
