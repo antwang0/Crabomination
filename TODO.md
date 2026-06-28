@@ -37,12 +37,13 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 
 ## Discovered follow-ups — this run (recent25/26, blight)
 
-- **Ward-cost side effects don't fire triggers.** `WardCost::Blight` /
-  `SacrificeCreature` / `Discard` payments mutate state and push events inline
-  during ward resolution, but those events aren't run back through the trigger
-  gatherer — so Auntie Ool's own `CounterAdded` payoff doesn't fire off *her*
-  Ward—Blight (it does fire off any normal blight). Route ward-payment events
-  through the standard post-resolution trigger sweep.
+- ✅ **Ward-cost side effects fire triggers, with `TriggerSource` bound.** The
+  ward-payment `CounterAdded`/sacrifice events *were* reaching the dispatcher;
+  the real bug was `event_subject` having no `CounterAdded` arm, so
+  `Selector::TriggerSource` was unbound on every counter-added trigger (filters
+  over an empty selector pass vacuously). Auntie Ool's Ward—Blight off an
+  opponent's creature silently *drew for her* instead of draining the opponent.
+  Fixed by binding `CounterAdded`'s subject to the counter-receiving permanent.
 - **Territorial Bruntar (EOE)** wants an "exile from top until a nonland card;
   you may cast it this turn" effect (impulse-until-nonland with a pay-cost
   may-play, *not* Cascade's free-cast). Would also unblock similar landfall

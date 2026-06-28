@@ -506,6 +506,11 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::ColorlessManaAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // Bind `Selector::TriggerSource` to the permanent that received the
+        // counters, so "whenever one or more counters are put on a creature, …"
+        // payoffs can introspect it / its controller (Auntie Ool's draw-or-drain
+        // off her own Ward—Blight; CR 122 / 603.6).
+        GameEvent::CounterAdded { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         // CR 701.54 — the Ring-bearer chosen this temptation is the subject,
         // so "whenever you choose a Ring-bearer" payoffs can reference it.
         GameEvent::RingTempted { bearer, player, .. } => bearer

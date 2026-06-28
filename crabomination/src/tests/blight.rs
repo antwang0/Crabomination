@@ -34,6 +34,9 @@ fn cr_701_68_ward_blight_paid_with_own_creature() {
     let wc = g.battlefield_find(wall).expect("wall survives blight");
     assert_eq!(wc.counters.get(&CounterType::MinusOneMinusOne).copied().unwrap_or(0), 2, "two -1/-1 counters");
     assert!(g.battlefield_find(auntie).is_some(), "Auntie survives the 3-damage bolt");
+    // Auntie's payoff fires off the ward-payment counters: the counters land on
+    // a creature P0 doesn't control → its controller (P1) loses 1 life.
+    assert_eq!(g.players[1].life, p1_life - 1, "ward-payment counters fired Auntie's payoff");
 }
 
 /// Ward—Blight is unpayable with no creature → the spell is countered.
