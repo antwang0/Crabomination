@@ -1573,3 +1573,79 @@ pub fn amalia_benavides_aguirre() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Jadelight Spelunker — {X}{G} 1/1 Merfolk Scout. When it enters, it explores
+/// X times.
+pub fn jadelight_spelunker() -> CardDefinition {
+    CardDefinition {
+        name: "Jadelight Spelunker",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk, CreatureType::Scout], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Repeat {
+            count: Value::XFromCost,
+            body: Box::new(Effect::Explore { who: Selector::This }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Staggering Size — {1}{G} Instant. Target creature gets +3/+3 and gains
+/// trample until end of turn.
+pub fn staggering_size() -> CardDefinition {
+    CardDefinition {
+        name: "Staggering Size",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Compass Gnome — {2} 2/1 Gnome Artifact Creature. ETB: you may search your
+/// library for a basic land or Cave card and put it on top.
+pub fn compass_gnome() -> CardDefinition {
+    CardDefinition {
+        name: "Compass Gnome",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasSupertype(Supertype::Basic)
+                .and(SelectionRequirement::Land)
+                .or(SelectionRequirement::HasLandType(LandType::Cave)),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gargantuan Leech — {7}{B} 5/5 with lifelink. Costs {1} less for each Cave
+/// you control (the "each Cave in your graveyard" half is approximated via
+/// affinity, which counts only battlefield Caves).
+pub fn gargantuan_leech() -> CardDefinition {
+    CardDefinition {
+        name: "Gargantuan Leech",
+        cost: cost(&[generic(7), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Leech], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Lifelink],
+        affinity_filter: Some(SelectionRequirement::HasLandType(LandType::Cave)),
+        ..Default::default()
+    }
+}

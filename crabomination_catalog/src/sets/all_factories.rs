@@ -4419,6 +4419,10 @@ static LCI: &[Factory] = &[
     super::lci::captain_storm_cosmium_raider,
     super::lci::bedrock_tortoise,
     super::lci::amalia_benavides_aguirre,
+    super::lci::jadelight_spelunker,
+    super::lci::staggering_size,
+    super::lci::compass_gnome,
+    super::lci::gargantuan_leech,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -454,3 +454,74 @@ fn amalia_explores_on_lifegain_and_wraths_at_20() {
     assert!(g.battlefield_find(victim).is_none(), "other creatures destroyed at power 20");
     assert!(g.battlefield_find(amalia).is_some(), "Amalia survives her own wrath");
 }
+
+/// Jadelight Spelunker explores X times on ETB (X nonland reveals → X counters).
+#[test]
+fn jadelight_spelunker_explores_x_times() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let js = g.add_card_to_hand(0, catalog::jadelight_spelunker());
+    for _ in 0..2 { let id = g.next_id(); g.players[0].add_to_library_top(id, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: js, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast with X=2");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(js).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(c, 2, "explored twice → two +1/+1 counters");
+}
+
+/// Staggering Size pumps a creature +3/+3 and grants trample.
+#[test]
+fn staggering_size_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::staggering_size());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
+    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+}
+
+/// Compass Gnome searches a Cave onto the top of the library on ETB.
+#[test]
+fn compass_gnome_tutors_cave_to_top() {
+    let cave_id;
+    let mut g = two_player_game();
+    cave_id = g.add_card_to_library(0, catalog::captivating_cave());
+    g.move_card_to_battlefield_for_test(0, catalog::compass_gnome());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(cave_id), "Cave placed on top");
+}
+
+/// Gargantuan Leech's affinity for Caves reduces its cost by {1} per Cave.
+#[test]
+fn gargantuan_leech_affinity_for_caves() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::captivating_cave());
+    g.add_card_to_battlefield(0, catalog::promising_vein());
+    let leech = g.add_card_to_hand(0, catalog::gargantuan_leech());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // {7}{B} - 2 Caves = {5}{B}.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: leech, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at the Cave-reduced cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == leech), "Leech resolved");
+}
