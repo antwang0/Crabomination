@@ -354,3 +354,84 @@ fn breathe_your_last_gains_life_per_color() {
     assert!(g.battlefield_find(victim).is_none(), "destroyed");
     assert_eq!(g.players[0].life, life_before + 2, "gained 1 life per color (G/W = 2)");
 }
+
+// ── Comp-rules coverage exercised by this batch ──────────────────────────────
+
+/// CR 105.2c — colorless is not a color. Breathe Your Last gains 0 life when
+/// it destroys a colorless (devoid) creature.
+#[test]
+fn cr_105_2c_colorless_counts_zero_colors() {
+    let mut g = two_player_game();
+    // Snapping Voidcraw is devoid → colorless.
+    let victim = g.add_card_to_battlefield(1, catalog::snapping_voidcraw());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::breathe_your_last());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "destroyed");
+    assert_eq!(g.players[0].life, life_before, "colorless → 0 colors → 0 life");
+}
+
+/// CR 702.77 — Reinforce N. Fowl Strike can be discarded from hand to put two
+/// +1/+1 counters on a creature instead of being cast.
+#[test]
+fn cr_702_77_fowl_strike_reinforce() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fowl_strike());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Reinforce {
+        card_id: id, target: Target::Permanent(target),
+    }).expect("reinforce 2");
+    assert_eq!(
+        g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "Reinforce 2 puts two +1/+1 counters",
+    );
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Fowl Strike was discarded");
+}
+
+/// CR 702.77 — Fowl Strike's cast mode destroys a flyer (and only a flyer).
+#[test]
+fn fowl_strike_destroys_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::fowl_strike());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(flyer)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Fowl Strike at a flyer");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "flyer destroyed");
+}
+
+/// CR 122.1 — a keyword counter grants its keyword and persists on the
+/// permanent (Gift of the Viper's deathtouch + reach counters).
+#[test]
+fn cr_122_1_keyword_counter_grants_keyword() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::gift_of_the_viper());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Keyword counters are stored distinctly from the granted keyword.
+    let inst = g.battlefield_find(bear).unwrap();
+    assert_eq!(inst.keyword_counters.get(&Keyword::Deathtouch).copied().unwrap_or(0), 1,
+        "one deathtouch counter");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Deathtouch), "counter grants the keyword");
+}

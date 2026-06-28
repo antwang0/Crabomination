@@ -4500,6 +4500,7 @@ static MH3: &[Factory] = &[
     super::mh3::unfathomable_truths,
     super::mh3::phyrexian_ironworks,
     super::mh3::breathe_your_last,
+    super::mh3::fowl_strike,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

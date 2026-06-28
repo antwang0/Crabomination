@@ -583,3 +583,20 @@ pub fn breathe_your_last() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fowl Strike — {1}{G} Instant. Destroy target creature with flying.
+/// Reinforce 2—{2}{G}.
+pub fn fowl_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Fowl Strike",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Reinforce(2, cost(&[generic(2), g()]))],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+        },
+        ..Default::default()
+    }
+}
