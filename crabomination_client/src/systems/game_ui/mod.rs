@@ -1958,14 +1958,18 @@ pub fn update_combat_preview_panel(
         let new_life = p.life - dmg + gain;
         let who = if seat == cv.your_seat { "You".to_string() } else { player_name(cv, seat) };
         let note = if gain > 0 { format!("  (+{gain} lifelink)") } else { String::new() };
-        let color = if new_life < p.life {
+        // Flag a projected death (CR 104.3a — life ≤ 0 loses) so the player
+        // sees a lethal swing at a glance instead of decoding a negative total.
+        let lethal = new_life <= 0;
+        let color = if lethal || new_life < p.life {
             theme::TEXT_DANGER
         } else if new_life > p.life {
             theme::TEXT_GOOD
         } else {
             theme::TEXT_BODY
         };
-        rows.push((format!("{who}:  {} → {}{}", p.life, new_life, note), color));
+        let lethal_tag = if lethal { "  ☠ LETHAL" } else { "" };
+        rows.push((format!("{who}:  {} → {}{}{}", p.life, new_life, note, lethal_tag), color));
     }
 
     // One row per attacked planeswalker projected to lose loyalty.

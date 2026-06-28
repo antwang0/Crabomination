@@ -353,6 +353,47 @@ fn combat_preview_first_strike_attacker_survives_lethal_blocker() {
         "first strike kills the blocker before it deals damage; attacker survives");
 }
 
+#[test]
+fn combat_preview_double_strike_unblocked_counts_twice() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // 2/2 double strike, unblocked → 4 to the face (CR 702.4).
+    let mut ds = body("Duelist", 2, 2, vec![]);
+    ds.keywords = vec![Keyword::DoubleStrike];
+    let atk = g.add_card_to_battlefield(0, ds);
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
+    assert_eq!(prev.damage_to_players, vec![(1, 4)], "double strike unblocked → 2× power");
+}
+
+#[test]
+fn combat_preview_double_strike_trample_overflows_twice() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // 4/4 double strike + trample into a 2/2: first strike kills the blocker
+    // (4−2=2 overflow), second strike tramples the full 4 → 6 to the face.
+    let mut ds = body("Crasher", 4, 4, vec![]);
+    ds.keywords = vec![Keyword::DoubleStrike, Keyword::Trample];
+    let atk = g.add_card_to_battlefield(0, ds);
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
+    assert_eq!(prev.damage_to_players, vec![(1, 6)], "2 first-strike overflow + 4 regular");
+}
+
 // ── CR 702.135 Afterlife ─────────────────────────────────────────────────────
 
 #[test]

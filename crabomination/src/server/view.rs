@@ -191,26 +191,32 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             .collect();
         let a_power = a.power.max(0);
         let lifelink = kw(a, &Keyword::Lifelink);
+        // CR 702.4 — a double striker deals its combat damage twice (the
+        // first-strike step *and* the regular step), so unblocked face damage,
+        // trample overflow, and lifelink all count it twice.
+        let strikes = if kw(a, &Keyword::DoubleStrike) { 2 } else { 1 };
         if blockers.is_empty() {
             // CR 510.1c — a blocked attacker whose blockers all left combat
             // stays blocked: no face damage without trample.
             if state.blocked_attackers().contains(&atk.attacker) && !kw(a, &Keyword::Trample) {
                 continue;
             }
-            // Unblocked: full damage to the defending player or planeswalker.
+            // Unblocked: full damage to the defending player or planeswalker
+            // (×2 for double strike).
+            let face = a_power * strikes;
             match atk.target {
                 AttackTarget::Player(p) => {
-                    *dmg.entry(p).or_insert(0) += a_power;
+                    *dmg.entry(p).or_insert(0) += face;
                 }
                 AttackTarget::Planeswalker(pw) => {
-                    *pw_dmg.entry(pw).or_insert(0) += a_power;
+                    *pw_dmg.entry(pw).or_insert(0) += face;
                 }
                 // Battle damage removes defense counters, not life — the board
                 // view shows the live counter total, so nothing to predict here.
                 AttackTarget::Battle(_) => {}
             }
-            if lifelink && a_power > 0 {
-                *lifegain.entry(a.controller).or_insert(0) += a_power;
+            if lifelink && face > 0 {
+                *lifegain.entry(a.controller).or_insert(0) += face;
             }
         } else {
             // Blocked: attacker assigns lethal to blockers in id order;
@@ -256,20 +262,30 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                     .map(|b| if kw(a, &Keyword::Deathtouch) { 1 } else { b.toughness.max(0) })
                     .sum();
                 let overflow = (a_power - assign_to_block).max(0);
-                if overflow > 0 {
+                // Double strike (CR 702.4): a second damage step. If the first
+                // strike killed every blocker, the whole power tramples through;
+                // otherwise the survivors soak the same lethal again.
+                let second_overflow = if strikes == 2 {
+                    if killed.len() == blockers.len() { a_power } else { overflow }
+                } else {
+                    0
+                };
+                let total_overflow = overflow + second_overflow;
+                if total_overflow > 0 {
                     match atk.target {
                         AttackTarget::Player(p) => {
-                            *dmg.entry(p).or_insert(0) += overflow;
+                            *dmg.entry(p).or_insert(0) += total_overflow;
                         }
                         AttackTarget::Planeswalker(pw) => {
-                            *pw_dmg.entry(pw).or_insert(0) += overflow;
+                            *pw_dmg.entry(pw).or_insert(0) += total_overflow;
                         }
                         AttackTarget::Battle(_) => {}
                     }
                 }
             }
             if lifelink {
-                *lifegain.entry(a.controller).or_insert(0) += a_power;
+                // A double striker deals (and so lifelinks for) its power twice.
+                *lifegain.entry(a.controller).or_insert(0) += a_power * strikes;
             }
             // Blockers with lifelink gain their controller life for the
             // damage they deal to the attacker (a first-struck-dead blocker
