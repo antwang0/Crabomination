@@ -3198,3 +3198,33 @@ fn gishath_reveals_and_drops_dinosaurs() {
     assert!(g.players[0].library.iter().any(|c| c.id == bear), "non-Dinosaur bottomed back into library");
     assert_eq!(g.players[0].library.last().unwrap().id, bear, "bear is on the bottom");
 }
+
+/// The Mycotyrant's P/T count your Fungi/Saprolings, and its end step makes one
+/// Fungus per descend this turn.
+#[test]
+fn the_mycotyrant_cda_and_end_step_fungi() {
+    use crate::card::{CreatureType, Subtypes, TokenDefinition, CardType};
+    let mut g = two_player_game();
+    let myco = g.add_card_to_battlefield(0, catalog::the_mycotyrant());
+    // Just itself (a Fungus) → 1/1.
+    assert_eq!(g.computed_permanent(myco).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    // Add a Saproling token → 2/2.
+    let sap = TokenDefinition {
+        name: "Saproling".into(), power: 1, toughness: 1, card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        ..Default::default()
+    };
+    g.add_token_to_battlefield(0, &sap);
+    assert_eq!(g.computed_permanent(myco).map(|c| (c.power, c.toughness)), Some((2, 2)));
+    // Descend twice, then the end-step trigger makes two Fungus tokens.
+    for _ in 0..2 {
+        let id = g.next_id();
+        g.players[0].send_to_graveyard(crate::card::CardInstance::new(id, catalog::grizzly_bears(), 0));
+    }
+    g.active_player_idx = 0;
+    let fungi_before = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Fungus").count();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let fungi_after = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Fungus").count();
+    assert_eq!(fungi_after - fungi_before, 2, "two descends → two Fungus tokens");
+}

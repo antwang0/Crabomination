@@ -2346,7 +2346,7 @@ pub struct EquipScale {
 ///
 /// Stored on `CardDefinition.dynamic_pt`; adding a new dynamic-P/T card
 /// sets that field (no engine-side table).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DynamicPt {
     /// Power = N, toughness = N+1 where N is the count of distinct card
     /// types across every player's graveyard. Tarmogoyf, Cosmogoyf.
@@ -2367,6 +2367,9 @@ pub enum DynamicPt {
     /// cards in the controller's graveyard, toughness = `base_t` + that count.
     /// Souls of the Lost (*/*+1 → base_p 0, base_t 1).
     PermanentCardsInControllerGraveyard { base_p: i32, base_t: i32 },
+    /// Power = toughness = the number of creatures the controller controls
+    /// that have any of `types`. The Mycotyrant (Fungi and/or Saprolings).
+    CreaturesYouControlWithTypes { types: Vec<CreatureType> },
     /// Power = toughness = `base` + the number of *other* creatures the
     /// controller controls that have flying. Skycat Sovereign (base 1/1).
     /// Reads printed flying (granted flying isn't counted).

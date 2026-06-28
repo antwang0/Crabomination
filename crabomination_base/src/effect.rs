@@ -534,6 +534,9 @@ pub enum Value {
     /// always read the spell's controller instead of the iterated
     /// player.
     PermanentCountControlledBy(PlayerRef),
+    /// CR 700.11 — how many times the controller descended this turn (permanent
+    /// cards put into their graveyard). The Mycotyrant's end-step token count.
+    TimesDescendedThisTurn,
     /// Number of creatures controlled by the resolved player. Sibling of
     /// `PermanentCountControlledBy` filtered to creatures. Powers
     /// Biorhythm's "each player's life total becomes the number of

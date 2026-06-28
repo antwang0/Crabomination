@@ -4499,7 +4499,7 @@ impl GameState {
             .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
             .sum();
         for card in &self.battlefield {
-            let Some(formula) = card.definition.dynamic_pt else { continue };
+            let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
             let (power, toughness) = match formula {
                 crate::card::DynamicPt::DistinctTypesInAllGraveyards => {
                     (goyf_n, goyf_n + 1)
@@ -4539,6 +4539,14 @@ impl GameState {
                     let n = self.players[card.controller].graveyard.iter()
                         .filter(|c| c.definition.is_permanent()).count() as i32;
                     (base_p + n, base_t + n)
+                }
+                crate::card::DynamicPt::CreaturesYouControlWithTypes { types } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.is_creature()
+                            && c.definition.subtypes.creature_types.iter().any(|t| types.contains(t))
+                    }).count() as i32;
+                    (n, n)
                 }
                 crate::card::DynamicPt::BasePlusOtherFlyersControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {

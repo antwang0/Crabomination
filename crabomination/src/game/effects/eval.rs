@@ -588,6 +588,11 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::TimesDescendedThisTurn => self
+                .players
+                .get(ctx.controller)
+                .map(|pl| pl.descend_count_this_turn as i32)
+                .unwrap_or(0),
             Value::NonbasicLandCountControlledBy(p) => self
                 .resolve_player(p, ctx)
                 .map(|seat| {

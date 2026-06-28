@@ -5463,3 +5463,45 @@ pub fn gishath_suns_avatar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Mycotyrant — {1}{B}{G} Legendary Elder Fungus with trample. Its P/T equal
+/// the number of Fungi and/or Saprolings you control. At your end step, create X
+/// 1/1 black Fungus tokens that can't block, X = times you descended this turn.
+pub fn the_mycotyrant() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let fungus = TokenDefinition {
+        name: "Fungus".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        keywords: vec![Keyword::CantBlock],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Mycotyrant",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fungus],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        dynamic_pt: Some(DynamicPt::CreaturesYouControlWithTypes {
+            types: vec![CreatureType::Fungus, CreatureType::Saproling],
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::TimesDescendedThisTurn,
+                definition: fungus,
+            },
+        }],
+        ..Default::default()
+    }
+}

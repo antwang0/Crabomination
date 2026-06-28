@@ -276,6 +276,11 @@ pub struct Player {
     /// riders (Deep Goblin Skulltaker, Child of the Volcano).
     #[serde(default)]
     pub descended_this_turn: bool,
+    /// CR 700.11 — how many times this player descended this turn (a permanent
+    /// card hitting the graveyard). Reset at untap. Powers "X = the number of
+    /// times you descended this turn" (The Mycotyrant).
+    #[serde(default)]
+    pub descend_count_this_turn: u32,
     /// Number of instant or sorcery spells this player has cast on the
     /// current turn. Reset to 0 in `do_untap`. Refines
     /// `spells_cast_this_turn` (which counts every spell type) so cards
@@ -555,6 +560,7 @@ impl Player {
             dealt_combat_damage_to_player_this_turn: false,
             committed_crime_this_turn: false,
             descended_this_turn: false,
+            descend_count_this_turn: 0,
             silenced_this_turn: false,
             warped_spell_this_turn: false,
             searched_library_this_turn: false,
@@ -658,6 +664,7 @@ impl Player {
         // CR 700.11 — descending requires a *permanent* card hitting the gy.
         if card.definition.is_permanent() {
             self.descended_this_turn = true;
+            self.descend_count_this_turn += 1;
         }
         self.graveyard.push(card);
     }
