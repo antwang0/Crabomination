@@ -1642,6 +1642,30 @@ impl GameState {
                 }
             }
         }
+        // CR 502.3 — "untap this during each other player's untap step"
+        // (Thousand Moons Infantry). On someone else's untap step, untap each
+        // such permanent its controller didn't already untap above (Stun
+        // counters still interpose). Summoning sickness is untouched — it only
+        // clears on the controller's own turn boundary.
+        for card in &mut self.battlefield {
+            if untappers.contains(&card.controller) {
+                continue;
+            }
+            if !card
+                .definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::UntapSelfEachUntapStep))
+            {
+                continue;
+            }
+            if card.counter_count(CounterType::Stun) > 0 {
+                card.remove_counters(CounterType::Stun, 1);
+            } else if card.tapped {
+                untapped_now.push(card.id);
+                card.tapped = false;
+            }
+        }
         // CR 701.38 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
         // creature so the must-attack requirement lifts.

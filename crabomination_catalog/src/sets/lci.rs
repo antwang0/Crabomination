@@ -4677,3 +4677,21 @@ pub fn squirming_emergence() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thousand Moons Infantry — {2}{W} 2/4 Human Soldier. Untap this creature
+/// during each other player's untap step.
+pub fn thousand_moons_infantry() -> CardDefinition {
+    CardDefinition {
+        name: "Thousand Moons Infantry",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Untap this creature during each other player's untap step.",
+            effect: StaticEffect::UntapSelfEachUntapStep,
+        }],
+        ..Default::default()
+    }
+}

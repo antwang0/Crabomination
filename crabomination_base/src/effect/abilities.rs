@@ -990,6 +990,11 @@ pub enum StaticEffect {
     /// the controller's permanents untap alongside the active player's (subject
     /// to the same Stun / `PreventUntap` / exert gates). No layer effect.
     UntapAllYoursEachUntapStep,
+    /// CR 502.3 — "Untap this permanent during each other player's untap step."
+    /// The source untaps itself on every untap step it doesn't already untap on
+    /// (i.e. whenever the active player is someone else). Thousand Moons
+    /// Infantry. Consulted by `do_untap` in a follow-up pass.
+    UntapSelfEachUntapStep,
     /// CR 614 — "If a nontoken creature an opponent controls would die, exile
     /// it instead." Consulted in `remove_from_battlefield_to_graveyard`: an
     /// opponent's nontoken creature bound for a graveyard from the battlefield

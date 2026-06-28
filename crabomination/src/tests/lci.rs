@@ -2574,3 +2574,20 @@ fn squirming_emergence_caps_by_graveyard_permanents() {
     cast_at(&mut g, se, Target::Permanent(bear));
     assert!(g.battlefield_find(bear).is_some(), "MV-2 bear reanimated under cap 2");
 }
+
+/// Thousand Moons Infantry untaps during another player's untap step.
+#[test]
+fn thousand_moons_infantry_untaps_on_opponent_untap() {
+    let mut g = two_player_game();
+    let inf = g.add_card_to_battlefield(0, catalog::thousand_moons_infantry());
+    g.battlefield_find_mut(inf).unwrap().tapped = true;
+    // Opponent's untap step: their active player index, our Infantry untaps.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.battlefield_find(inf).unwrap().tapped, "untapped on opponent's untap step");
+    // A vanilla creature you control would NOT untap on the opponent's turn.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "vanilla stays tapped on opponent's untap");
+}

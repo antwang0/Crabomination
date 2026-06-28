@@ -10606,6 +10606,9 @@ fn static_effect_to_effects(
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep
+            // UntapSelfEachUntapStep (Thousand Moons Infantry) — consulted by
+            // `do_untap`; no layer effect.
+            | StaticEffect::UntapSelfEachUntapStep
             // ExileDyingOpponentCreatures (Valentin) — consulted in
             // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::ExileDyingOpponentCreatures { .. }
