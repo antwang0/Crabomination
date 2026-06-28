@@ -115,6 +115,9 @@ mod tests_recent26;
 #[path = "../tests/lci_craft.rs"]
 mod tests_lci_craft;
 #[cfg(test)]
+#[path = "../tests/lci.rs"]
+mod tests_lci;
+#[cfg(test)]
 #[path = "../tests/blight.rs"]
 mod tests_blight;
 #[cfg(test)]
@@ -4521,6 +4524,11 @@ impl GameState {
                     let n = self.players[card.controller].graveyard.iter()
                         .filter(|c| c.definition.is_creature()).count() as i32;
                     (base + n, base + n)
+                }
+                crate::card::DynamicPt::PermanentCardsInControllerGraveyard { base_p, base_t } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| c.definition.is_permanent()).count() as i32;
+                    (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::BasePlusOtherFlyersControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {

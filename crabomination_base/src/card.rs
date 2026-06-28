@@ -109,6 +109,8 @@ pub enum CreatureType {
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
     Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum,
+    // The Lost Caverns of Ixalan (2023).
+    Capybara,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
     // Ravnica Weird (Turn // Burn's 0/1).
@@ -2343,6 +2345,10 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of creature cards in the
     /// controller's graveyard. Fiend Artisan (base 1/1).
     BasePlusCreaturesInControllerGraveyard { base: i32 },
+    /// Fathomless descent (LCI) — power = `base_p` + the number of permanent
+    /// cards in the controller's graveyard, toughness = `base_t` + that count.
+    /// Souls of the Lost (*/*+1 → base_p 0, base_t 1).
+    PermanentCardsInControllerGraveyard { base_p: i32, base_t: i32 },
     /// Power = toughness = `base` + the number of *other* creatures the
     /// controller controls that have flying. Skycat Sovereign (base 1/1).
     /// Reads printed flying (granted flying isn't counted).

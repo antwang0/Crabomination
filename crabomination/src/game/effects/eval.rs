@@ -1288,6 +1288,15 @@ impl GameState {
                 }
                 kinds.len() >= 4
             }
+            Predicate::DescendActive { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count()
+                    >= *count as usize
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

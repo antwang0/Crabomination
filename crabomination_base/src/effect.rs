@@ -1061,6 +1061,10 @@ pub enum Predicate {
     /// by scanning the graveyard's `definition.card_types`. Used by Unholy
     /// Heat, Dragon's Rage Channeler, etc.
     DeliriumActive { who: PlayerRef },
+    /// Descend N (LCI ability word) — `who` has `count` or more permanent
+    /// cards in their graveyard. Gates "Descend 4 —" P/T pumps and ETB riders
+    /// (Frilled Cave-Wurm, Basking Capybara, Coati Scavenger).
+    DescendActive { who: PlayerRef, count: u32 },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

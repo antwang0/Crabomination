@@ -4369,6 +4369,18 @@ static LCI: &[Factory] = &[
     super::lci::oteclan_landmark,
     super::lci::dire_flail,
     super::lci::clay_fired_bricks,
+    super::lci::souls_of_the_lost,
+    super::lci::acolyte_of_aclazotz,
+    super::lci::cavern_stomper,
+    super::lci::goldfury_strider,
+    super::lci::frilled_cave_wurm,
+    super::lci::basking_capybara,
+    super::lci::coati_scavenger,
+    super::lci::bitter_triumph,
+    super::lci::kinjallis_dawnrunner,
+    super::lci::rampaging_ceratops,
+    super::lci::mineshaft_spider,
+    super::lci::poison_dart_frog,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

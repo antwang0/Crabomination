@@ -2,12 +2,12 @@
 //! (CR 701.57) keyword action.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement, Selector, Subtypes,
-    TriggeredAbility, Value,
+    ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
+    CreatureType, DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType,
+    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{craft, drain, etb, on_attack, on_dies, target_filtered};
-use crate::effect::{Effect, PlayerRef, ZoneDest};
+use crate::effect::shortcut::{craft, drain, etb, on_attack, on_dies, pump_target, target_filtered};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::effects::{map_token, treasure_token};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 use crate::game::types::TurnStep;
@@ -420,6 +420,273 @@ pub fn clay_fired_bricks() -> CardDefinition {
         ]))],
         activated_abilities: vec![craft(cost(&[generic(5), w(), w()]), SelectionRequirement::Artifact, 1)],
         back_face: Some(Box::new(kiln)),
+        ..Default::default()
+    }
+}
+
+// ── More LCI staples (Descend / fathomless descent) ─────────────────────────
+
+/// Souls of the Lost — {1}{B} Spirit. Additional cost: discard a card (the "or
+/// sacrifice a permanent" alternative is approximated as discard). Fathomless
+/// descent — its P/T is */*+1 = permanent cards in your graveyard.
+pub fn souls_of_the_lost() -> CardDefinition {
+    CardDefinition {
+        name: "Souls of the Lost",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        dynamic_pt: Some(DynamicPt::PermanentCardsInControllerGraveyard { base_p: 0, base_t: 1 }),
+        ..Default::default()
+    }
+}
+
+/// Acolyte of Aclazotz — {2}{B} 1/4 Vampire Cleric. {T}, Sacrifice another
+/// creature or artifact: each opponent loses 1 life and you gain 1 life.
+pub fn acolyte_of_aclazotz() -> CardDefinition {
+    CardDefinition {
+        name: "Acolyte of Aclazotz",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                1,
+            )),
+            effect: drain(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cavern Stomper — {4}{G}{G} 7/7 Dinosaur. ETB scry 2. {3}{G}: this can't be
+/// blocked by creatures with power 2 or less this turn.
+pub fn cavern_stomper() -> CardDefinition {
+    CardDefinition {
+        name: "Cavern Stomper",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::CantBeBlockedByPowerAtMost(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goldfury Strider — {4}{R} 3/5 Golem with trample. Tap two untapped artifacts
+/// and/or creatures you control: target creature gets +2/+0 until end of turn.
+/// Activate only as a sorcery.
+pub fn goldfury_strider() -> CardDefinition {
+    CardDefinition {
+        name: "Goldfury Strider",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            tap_n_filter: Some((
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::ControlledByYou),
+                2,
+            )),
+            effect: pump_target(2, 0),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── LCI Descend / explore commons ───────────────────────────────────────────
+
+/// Frilled Cave-Wurm — {3}{U} 2/5 Salamander Wurm. Descend 4 — gets +2/+0
+/// while you have 4+ permanent cards in your graveyard.
+pub fn frilled_cave_wurm() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Frilled Cave-Wurm",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Salamander, CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Descend 4 — gets +2/+0 while you have 4+ permanent cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Basking Capybara — {1}{G} 1/3 Capybara. Descend 4 — gets +3/+0 while you
+/// have 4+ permanent cards in your graveyard.
+pub fn basking_capybara() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Basking Capybara",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Capybara], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Descend 4 — gets +3/+0 while you have 4+ permanent cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+                power: 3,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Coati Scavenger — {2}{G} 3/2 Raccoon. Descend 4 — ETB, if you have 4+
+/// permanent cards in your graveyard, return target permanent card from your
+/// graveyard to your hand.
+pub fn coati_scavenger() -> CardDefinition {
+    CardDefinition {
+        name: "Coati Scavenger",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Raccoon], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+            then: Box::new(Effect::Move {
+                what: target_filtered(SelectionRequirement::PermanentCard),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bitter Triumph — {1}{B} Instant. Additional cost: discard a card (the "or
+/// pay 3 life" alternative is approximated as discard). Destroy target creature
+/// or planeswalker.
+pub fn bitter_triumph() -> CardDefinition {
+    CardDefinition {
+        name: "Bitter Triumph",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kinjalli's Dawnrunner — {2}{W} 1/1 Human Scout with double strike. ETB: it
+/// explores.
+pub fn kinjallis_dawnrunner() -> CardDefinition {
+    CardDefinition {
+        name: "Kinjalli's Dawnrunner",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![etb(Effect::Explore { who: Selector::This })],
+        ..Default::default()
+    }
+}
+
+/// Rampaging Ceratops — {4}{R} 5/4 Dinosaur. Can't be blocked except by three
+/// or more creatures.
+pub fn rampaging_ceratops() -> CardDefinition {
+    CardDefinition {
+        name: "Rampaging Ceratops",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+        ..Default::default()
+    }
+}
+
+/// Mineshaft Spider — {3}{G} 3/4 Spider with reach. ETB: you may mill two cards.
+pub fn mineshaft_spider() -> CardDefinition {
+    CardDefinition {
+        name: "Mineshaft Spider",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Mill two cards?".into(),
+            body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Poison Dart Frog — {1}{G} 1/1 Frog with reach. {T}: add one mana of any
+/// color. {2}: this creature gains deathtouch until end of turn.
+pub fn poison_dart_frog() -> CardDefinition {
+    CardDefinition {
+        name: "Poison Dart Frog",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Frog], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![
+            crate::sets::tap_add_any_color(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
