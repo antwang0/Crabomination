@@ -1082,3 +1082,119 @@ pub fn greedy_freebooter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── LCI Gnome / artifact commons ────────────────────────────────────────────
+
+/// Cartographer's Companion — {3} 2/1 Artifact Creature — Gnome. ETB: create a
+/// Map token.
+pub fn cartographers_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Cartographer's Companion",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: map_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Market Gnome — {W} 0/3 Artifact Creature — Gnome. When it dies, gain 1 life
+/// and draw a card. (The duplicate "exiled while crafting" trigger is omitted.)
+pub fn market_gnome() -> CardDefinition {
+    CardDefinition {
+        name: "Market Gnome",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 0,
+        toughness: 3,
+        triggered_abilities: vec![on_dies(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Adaptive Gemguard — {3}{W} 3/3 Artifact Creature — Gnome. Tap two untapped
+/// artifacts and/or creatures you control: put a +1/+1 counter on this. Sorcery
+/// speed.
+pub fn adaptive_gemguard() -> CardDefinition {
+    CardDefinition {
+        name: "Adaptive Gemguard",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            tap_n_filter: Some((
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::ControlledByYou),
+                2,
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dinotomaton — {3}{R} 4/3 Artifact Creature — Dinosaur Gnome with menace.
+/// ETB: target creature you control gains menace until end of turn.
+pub fn dinotomaton() -> CardDefinition {
+    CardDefinition {
+        name: "Dinotomaton",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Gnome],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+            keyword: Keyword::Menace,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Oltec Archaeologists — {4}{W} 4/4 Human Artificer Scout. ETB, choose one —
+/// return target artifact card from your graveyard to your hand; or scry 3.
+pub fn oltec_archaeologists() -> CardDefinition {
+    CardDefinition {
+        name: "Oltec Archaeologists",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Artifact),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+        ]))],
+        ..Default::default()
+    }
+}

@@ -248,3 +248,36 @@ fn deep_goblin_skulltaker_end_step_descend_counter() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(gob).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
 }
+
+/// Dinotomaton's ETB grants a creature you control menace.
+#[test]
+fn dinotomaton_etb_grants_menace() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dino = g.add_card_to_hand(0, catalog::dinotomaton());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dino, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace));
+}
+
+/// Market Gnome draws a card and gains life when it dies.
+#[test]
+fn market_gnome_death_value() {
+    let mut g = two_player_game();
+    let gnome = g.add_card_to_battlefield(0, catalog::market_gnome());
+    let nid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(nid, catalog::grizzly_bears(), 0));
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.remove_to_graveyard_with_triggers(gnome);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life");
+}

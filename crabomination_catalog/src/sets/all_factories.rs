@@ -4398,6 +4398,11 @@ static LCI: &[Factory] = &[
     super::lci::screaming_phantom,
     super::lci::deathcap_marionette,
     super::lci::greedy_freebooter,
+    super::lci::cartographers_companion,
+    super::lci::market_gnome,
+    super::lci::adaptive_gemguard,
+    super::lci::dinotomaton,
+    super::lci::oltec_archaeologists,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
