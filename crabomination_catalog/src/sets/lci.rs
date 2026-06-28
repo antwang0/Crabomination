@@ -2987,3 +2987,116 @@ pub fn glorifier_of_suffering() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wary Thespian — {1}{G} 3/1 Cat Druid. When it enters or dies, surveil 1.
+pub fn wary_thespian() -> CardDefinition {
+    CardDefinition {
+        name: "Wary Thespian",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }),
+            on_dies(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Huatli's Final Strike — {2}{G} Instant. Target creature you control gets
+/// +1/+0, then deals damage equal to its power to target creature an opponent
+/// controls.
+pub fn huatlis_final_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Huatli's Final Strike",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ghalta, Stampede Tyrant — {5}{G}{G}{G} 12/12 legendary Elder Dinosaur with
+/// trample. ETB: put any number of creature cards from your hand onto the
+/// battlefield.
+pub fn ghalta_stampede_tyrant() -> CardDefinition {
+    CardDefinition {
+        name: "Ghalta, Stampede Tyrant",
+        cost: cost(&[generic(5), g(), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 12,
+        toughness: 12,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            count: Value::Const(99),
+            tapped: false,
+            haste: false,
+            sacrifice_eot: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Deeproot Pilgrimage — {1}{U} Enchantment. Whenever one or more nontoken
+/// Merfolk you control become tapped, create a 1/1 blue Merfolk with hexproof.
+pub fn deeproot_pilgrimage() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let token = TokenDefinition {
+        name: "Merfolk".into(),
+        colors: vec![Color::Blue],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Hexproof],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Deeproot Pilgrimage",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::NotToken),
+                },
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: token,
+            },
+        }],
+        ..Default::default()
+    }
+}

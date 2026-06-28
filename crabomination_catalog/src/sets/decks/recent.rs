@@ -4696,15 +4696,21 @@ pub fn inti_seneschal_of_the_sun() -> CardDefinition {
                     description: "Discard a card to grow a target attacking creature".into(),
                     body: Box::new(Effect::Seq(vec![
                         Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                        Effect::AddCounter {
-                            what: target_filtered(SelectionRequirement::IsAttacking),
-                            kind: CounterType::PlusOnePlusOne,
-                            amount: Value::Const(1),
-                        },
-                        Effect::GrantKeyword {
-                            what: Selector::Target(0),
-                            keyword: Keyword::Trample,
-                            duration: Duration::EndOfTurn,
+                        // CR 603.7 — the counter's target is chosen on the
+                        // reflexive "when you do", after the discard, not up front.
+                        Effect::Reflexive {
+                            body: Box::new(Effect::Seq(vec![
+                                Effect::AddCounter {
+                                    what: target_filtered(SelectionRequirement::IsAttacking),
+                                    kind: CounterType::PlusOnePlusOne,
+                                    amount: Value::Const(1),
+                                },
+                                Effect::GrantKeyword {
+                                    what: Selector::Target(0),
+                                    keyword: Keyword::Trample,
+                                    duration: Duration::EndOfTurn,
+                                },
+                            ])),
                         },
                     ])),
                 },

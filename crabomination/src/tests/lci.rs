@@ -1399,3 +1399,65 @@ fn glorifier_sacrifice_then_support_two() {
         .map(|c| c.counter_count(CounterType::PlusOnePlusOne) as i32).sum();
     assert_eq!(counters, 2, "support 2 placed two +1/+1 counters");
 }
+
+/// Wary Thespian surveils on enter and on death (no-panic coverage).
+#[test]
+fn wary_thespian_surveils_enter_and_die() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let wt = g.move_card_to_battlefield_for_test(0, catalog::wary_thespian());
+    drain_stack(&mut g);
+    g.add_card_to_library(0, catalog::forest());
+    g.remove_to_graveyard_with_triggers(wt);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wt).is_none(), "died");
+}
+
+/// Huatli's Final Strike pumps your creature +1/+0 and bites an opponent's.
+#[test]
+fn huatlis_final_strike_pumps_and_bites() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/2
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::huatlis_final_strike());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(prey)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "bitten for 3 (2+1) → dead");
+}
+
+/// Ghalta's ETB cheats creature cards out of hand onto the battlefield.
+#[test]
+fn ghalta_drops_creatures_from_hand() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::lightning_bolt()); // noncreature stays
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.move_card_to_battlefield_for_test(0, catalog::ghalta_stampede_tyrant());
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(after - before, 3, "Ghalta + two creature cards entered; the bolt stayed in hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"));
+}
+
+/// Deeproot Pilgrimage mints a Merfolk when your nontoken Merfolk taps.
+#[test]
+fn deeproot_pilgrimage_on_merfolk_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::deeproot_pilgrimage());
+    let scout = g.add_card_to_battlefield(0, catalog::cenote_scout()); // Merfolk
+    g.battlefield_find_mut(scout).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: scout }]);
+    drain_stack(&mut g);
+    let merfolk = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Merfolk").count();
+    assert_eq!(merfolk, 1, "tapping a Merfolk minted a Merfolk token");
+}
