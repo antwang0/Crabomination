@@ -3413,6 +3413,58 @@ pub fn kindled_heroism() -> CardDefinition {
     }
 }
 
+/// Dusk Rose Reliquary — {W} Artifact, Ward {2}. Additional cost: sacrifice an
+/// artifact or creature. ETB: exile target artifact or creature an opponent
+/// controls until this leaves.
+pub fn dusk_rose_reliquary() -> CardDefinition {
+    use crate::card::{AdditionalCastCost, ExileReturnZone, WardCost};
+    CardDefinition {
+        name: "Dusk Rose Reliquary",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                (SelectionRequirement::Artifact.or(SelectionRequirement::Creature))
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Digsite Conservator — {2} 2/1 artifact Gnome. Sacrifice it: exile up to four
+/// target cards from a single graveyard (sorcery speed). When it dies, you may
+/// pay {4}; if you do, discover 4.
+pub fn digsite_conservator() -> CardDefinition {
+    CardDefinition {
+        name: "Digsite Conservator",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(4) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_dies(Effect::MayPay {
+            description: "Pay {4}: discover 4".into(),
+            mana_cost: cost(&[generic(4)]),
+            body: Box::new(Effect::Discover { n: Value::Const(4), filter: None }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Malamet Battle Glyph — {G} Sorcery. Choose a creature you control and one you
 /// don't; if yours entered this turn, put a +1/+1 counter on it; then they fight.
 pub fn malamet_battle_glyph() -> CardDefinition {

@@ -4499,6 +4499,8 @@ static LCI: &[Factory] = &[
     super::lci::malamet_battle_glyph,
     super::lci::volatile_wanderglyph,
     super::lci::deconstruction_hammer,
+    super::lci::dusk_rose_reliquary,
+    super::lci::digsite_conservator,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -1560,7 +1560,15 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                 {
                     out.insert(slot as u8);
                 }
-                for v in m.values() {
+                for (k, v) in m {
+                    // A `CreateToken`'s embedded `TokenDefinition` ("definition"/
+                    // "token") carries the *token's own* ability targets, chosen
+                    // when that ability is activated — not cast-time targets of
+                    // the spell. Don't count them (e.g. a Map token's "target
+                    // creature you control explores" inside Fanatical Offering).
+                    if k == "definition" || k == "token" {
+                        continue;
+                    }
                     collect_slots(v, out);
                 }
             }

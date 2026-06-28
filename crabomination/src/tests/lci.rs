@@ -1690,6 +1690,52 @@ fn volcanic_geyser_deals_x() {
     assert!(g.battlefield_find(prey).is_none(), "X=2 killed the 2/2");
 }
 
+/// Dusk Rose Reliquary sacrifices a permanent and exiles an opponent's creature
+/// until it leaves; the exile returns when the Reliquary is destroyed.
+#[test]
+fn dusk_rose_reliquary_exiles_until_leaves() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dusk_rose_reliquary());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast (sacrifices fodder)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed as additional cost");
+    assert!(g.exile.iter().any(|c| c.id == victim), "opponent's creature exiled");
+    // Destroy the Reliquary → the exiled creature returns.
+    let reliquary = g.battlefield.iter().find(|c| c.definition.name == "Dusk Rose Reliquary").unwrap().id;
+    g.remove_to_graveyard_with_triggers(reliquary);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "exiled creature returned when the Reliquary left");
+}
+
+/// Digsite Conservator's sac ability exiles cards from a graveyard.
+#[test]
+fn digsite_conservator_exiles_graveyard() {
+    let mut g = two_player_game();
+    let mut ids = vec![];
+    for _ in 0..3 { ids.push(g.add_card_to_graveyard(1, catalog::grizzly_bears())); }
+    let dig = g.add_card_to_battlefield(0, catalog::digsite_conservator());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(ids)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dig, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac to exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dig).is_none(), "sacrificed");
+    assert!(g.players[1].graveyard.len() < gy_before, "exiled cards from the opponent's graveyard");
+}
+
 /// Malamet Battle Glyph: a freshly-entered creature gets a counter, then fights.
 #[test]
 fn malamet_battle_glyph_buffs_fresh_then_fights() {
