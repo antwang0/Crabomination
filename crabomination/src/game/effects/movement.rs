@@ -884,6 +884,9 @@ impl GameState {
                 if card.definition.is_creature() {
                     self.players[p].creatures_entered_this_turn.push(card.id);
                 }
+                if card.definition.is_artifact() {
+                    self.players[p].artifacts_entered_this_turn += 1;
+                }
                 // A permanent entering the battlefield from another zone is
                 // a brand-new object (rule 400.7) — clear residual damage,
                 // pump bonuses, and attachment.

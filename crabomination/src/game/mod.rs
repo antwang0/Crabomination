@@ -3231,6 +3231,9 @@ impl GameState {
         if inst.definition.is_creature() {
             self.players[ctrl].creatures_entered_this_turn.push(id);
         }
+        if inst.definition.is_artifact() {
+            self.players[ctrl].artifacts_entered_this_turn += 1;
+        }
         self.battlefield.push(inst);
         // CR 707.2 — a token minted from a clone-y definition (Vizier of
         // Many Faces' embalm token) applies its `enters_as_copy` replacement

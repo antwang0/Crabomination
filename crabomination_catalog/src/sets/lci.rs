@@ -4762,3 +4762,79 @@ pub fn hurl_into_history() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Poetic Ingenuity — {2}{R} Enchantment. Whenever one or more Dinosaurs you
+/// control attack, create that many Treasures. Whenever you cast an artifact
+/// spell, create a 3/1 red Dinosaur token (once each turn).
+pub fn poetic_ingenuity() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let dino = TokenDefinition {
+        name: "Dinosaur".into(),
+        colors: vec![Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Poetic Ingenuity",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            // Fires once per attacking Dinosaur → that many Treasures.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                    },
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Artifact,
+                    })
+                    .once_per_turn(),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: dino },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Akal Pakal, First Among Equals — {2}{U} 1/5 Legendary Human Advisor. At the
+/// beginning of each player's end step, if an artifact entered under your
+/// control this turn, look at the top two cards; put one into your hand and the
+/// other into your graveyard.
+pub fn akal_pakal_first_among_equals() -> CardDefinition {
+    CardDefinition {
+        name: "Akal Pakal, First Among Equals",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Advisor], ..Default::default() },
+        power: 1,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::ArtifactEnteredThisTurn { who: PlayerRef::You }),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: Some(Value::Const(1)),
+                to_battlefield: false,
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -1075,6 +1075,9 @@ pub enum Predicate {
     /// their graveyard from anywhere). Gates "if you descended this turn" riders
     /// (Deep Goblin Skulltaker, Child of the Volcano).
     DescendedThisTurn { who: PlayerRef },
+    /// "If an artifact entered the battlefield under `who`'s control this turn"
+    /// (Akal Pakal). Reads `Player.artifacts_entered_this_turn`.
+    ArtifactEnteredThisTurn { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

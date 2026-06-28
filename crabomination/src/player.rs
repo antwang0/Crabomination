@@ -158,6 +158,12 @@ pub struct Player {
     /// Last turn's `creatures_entered_this_turn` (see above).
     #[serde(default)]
     pub creatures_entered_last_turn: Vec<crate::card::CardId>,
+    /// CR 603 — count of artifacts that entered under this player's control
+    /// this turn. Drives "if an artifact entered the battlefield under your
+    /// control this turn" intervening-`if` gates (Akal Pakal). Reset at the
+    /// active player's turn boundary.
+    #[serde(default)]
+    pub artifacts_entered_this_turn: u32,
     /// Number of times an "Nth time this turn" landfall ability this player
     /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
     /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
@@ -534,6 +540,7 @@ impl Player {
             zuberas_died_this_turn: 0,
             creatures_entered_this_turn: Vec::new(),
             creatures_entered_last_turn: Vec::new(),
+            artifacts_entered_this_turn: 0,
             escalating_resolutions_this_turn: 0,
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,

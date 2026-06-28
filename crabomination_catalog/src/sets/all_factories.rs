@@ -4543,6 +4543,8 @@ static LCI: &[Factory] = &[
     super::lci::magmatic_galleon,
     super::lci::relics_roar,
     super::lci::hurl_into_history,
+    super::lci::poetic_ingenuity,
+    super::lci::akal_pakal_first_among_equals,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

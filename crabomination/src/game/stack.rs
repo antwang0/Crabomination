@@ -1980,6 +1980,7 @@ impl GameState {
         // at each upkeep, so the rotation is per game turn, not per player).
         for pl in &mut self.players {
             pl.creatures_entered_last_turn = std::mem::take(&mut pl.creatures_entered_this_turn);
+            pl.artifacts_entered_this_turn = 0;
         }
         // CR 500.7 — extra turns. If the active player banked an extra
         // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead

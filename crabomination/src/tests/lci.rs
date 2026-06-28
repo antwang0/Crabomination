@@ -2652,3 +2652,45 @@ fn hurl_into_history_counters_and_discovers() {
     assert!(g.battlefield_find(spell).is_none(), "creature spell countered");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "countered spell in graveyard");
 }
+
+/// Poetic Ingenuity mints a Treasure per attacking Dinosaur.
+#[test]
+fn poetic_ingenuity_treasures_on_dino_attack() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::poetic_ingenuity());
+    let d1 = g.add_card_to_battlefield(0, catalog::scytheclaw_raptor());
+    let d2 = g.add_card_to_battlefield(0, catalog::seismic_monstrosaur());
+    g.clear_sickness(d1);
+    g.clear_sickness(d2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: d1, target: AttackTarget::Player(1) },
+        Attack { attacker: d2, target: AttackTarget::Player(1) },
+    ])).expect("attack with two Dinosaurs");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 2, "two attacking Dinosaurs → two Treasures");
+}
+
+/// Akal Pakal digs at end step only if an artifact entered this turn.
+#[test]
+fn akal_pakal_digs_after_artifact_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::akal_pakal_first_among_equals());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    // No artifact entered yet → end step does nothing.
+    let hand0 = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0, "no artifact this turn → no dig");
+    // An artifact enters under our control this turn.
+    g.move_card_to_battlefield_for_test(0, catalog::buried_treasure());
+    let hand1 = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand1 + 1, "artifact entered → dig one to hand");
+}
