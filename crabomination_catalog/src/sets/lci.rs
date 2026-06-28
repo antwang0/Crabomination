@@ -3388,6 +3388,97 @@ pub fn etalis_favor() -> CardDefinition {
     }
 }
 
+/// Kindled Heroism — {R} Instant. Target creature gets +1/+0 and gains first
+/// strike until end of turn. Scry 1.
+pub fn kindled_heroism() -> CardDefinition {
+    CardDefinition {
+        name: "Kindled Heroism",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cosmium Blast — {1}{W} Instant. Deal 4 damage to target attacking or
+/// blocking creature.
+pub fn cosmium_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Cosmium Blast",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(
+                    SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                ),
+            ),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Thousand Moons Crackshot — {1}{W} 2/2 Human Soldier. Whenever it attacks, you
+/// may pay {2}{W}; when you do, tap target creature (reflexive, CR 603.7).
+pub fn thousand_moons_crackshot() -> CardDefinition {
+    CardDefinition {
+        name: "Thousand Moons Crackshot",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "Pay {2}{W}: tap target creature".into(),
+            mana_cost: cost(&[generic(2), w()]),
+            body: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                }),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fanatical Offering — {1}{B} Instant. Additional cost: sacrifice an artifact or
+/// creature. Draw two cards and create a Map token.
+pub fn fanatical_offering() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Fanatical Offering",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: map_token() },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Volcanic Geyser — {X}{R}{R} Instant. Deal X damage to any target.
 pub fn volcanic_geyser() -> CardDefinition {
     CardDefinition {

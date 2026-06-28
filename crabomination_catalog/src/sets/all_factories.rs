@@ -4492,6 +4492,10 @@ static LCI: &[Factory] = &[
     super::lci::etalis_favor,
     super::lci::volcanic_geyser,
     super::lci::akawalli_the_seething_tower,
+    super::lci::kindled_heroism,
+    super::lci::cosmium_blast,
+    super::lci::thousand_moons_crackshot,
+    super::lci::fanatical_offering,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

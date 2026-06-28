@@ -1690,6 +1690,92 @@ fn volcanic_geyser_deals_x() {
     assert!(g.battlefield_find(prey).is_none(), "X=2 killed the 2/2");
 }
 
+/// Kindled Heroism pumps +1/+0, grants first strike, and scries.
+#[test]
+fn kindled_heroism_pumps_and_scries() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::kindled_heroism());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Cosmium Blast deals 4 to an attacking creature.
+#[test]
+fn cosmium_blast_hits_attacker() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: atk, target: crate::game::types::AttackTarget::Player(0),
+    }])).expect("attack");
+    let spell = g.add_card_to_hand(0, catalog::cosmium_blast());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(atk)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none(), "4 damage killed the attacker");
+}
+
+/// Thousand Moons Crackshot's attack reflexively taps a creature after {2}{W}.
+#[test]
+fn thousand_moons_crackshot_taps_on_attack() {
+    let mut g = two_player_game();
+    // Add prey first so the reflexive Tap's auto-target (first legal creature)
+    // lands on it rather than the attacker.
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let crack = g.add_card_to_battlefield(0, catalog::thousand_moons_crackshot());
+    g.clear_sickness(crack);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: crack, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).unwrap().tapped, "reflexive tap landed after {{2}}{{W}}");
+}
+
+/// Fanatical Offering sacrifices a permanent, draws two, and makes a Map.
+#[test]
+fn fanatical_offering_sac_draw_map() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::fanatical_offering());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast (sacrifices fodder)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed as additional cost");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "spent spell, drew 2 → net +1");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Map"), "Map token");
+}
+
 /// Akawalli gets +2/+2 and trample once you've descended 4.
 #[test]
 fn akawalli_descend_4_buff() {
