@@ -3,13 +3,13 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
-    CreatureType, DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType,
-    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
+    CreatureType, DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType, StaticAbility,
+    StaticEffect, SelectionRequirement, Selector, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{craft, drain, etb, on_attack, on_dies, pump_target, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::effects::{map_token, treasure_token};
-use crate::mana::{b, cost, g, generic, r, u, w, x};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
 use crate::game::types::TurnStep;
 
 /// Geological Appraiser — {2}{R}{R} 3/2 Human Artificer. "When this enters,
@@ -1195,6 +1195,186 @@ pub fn oltec_archaeologists() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
         ]))],
+        ..Default::default()
+    }
+}
+
+// ── Caves (LandType::Cave) and Caves-matter payoffs ─────────────────────────
+
+/// `{T}: Add` the given mana pool — the basic tap ability shared by the Caves.
+fn cave_tap(pool: ManaPayload) -> ActivatedAbility {
+    ActivatedAbility { tap_cost: true, effect: Effect::AddMana { who: PlayerRef::You, pool }, ..Default::default() }
+}
+
+/// Captivating Cave — Land — Cave. {T}: Add {C}. {1}, {T}: Add one mana of any
+/// color. {4}, {T}, Sacrifice: put two +1/+1 counters on target creature
+/// (sorcery speed).
+pub fn captivating_cave() -> CardDefinition {
+    CardDefinition {
+        name: "Captivating Cave",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![
+            cave_tap(ManaPayload::Colorless(Value::Const(1))),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                sorcery_speed: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Volatile Fault — Land — Cave. {T}: Add {C}. {1}, {T}, Sacrifice: destroy
+/// target nonbasic land an opponent controls (the "may search for a basic"
+/// rider is dropped).
+pub fn volatile_fault() -> CardDefinition {
+    CardDefinition {
+        name: "Volatile Fault",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![
+            cave_tap(ManaPayload::Colorless(Value::Const(1))),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::IsNonbasicLand
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Promising Vein — Land — Cave. {T}: Add {C}. {1}, {T}, Sacrifice: search your
+/// library for a basic land, put it onto the battlefield tapped.
+pub fn promising_vein() -> CardDefinition {
+    CardDefinition {
+        name: "Promising Vein",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![
+            cave_tap(ManaPayload::Colorless(Value::Const(1))),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasSupertype(Supertype::Basic)
+                        .and(SelectionRequirement::Land),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Forgotten Monument — Land — Cave. {T}: Add {C}. Other Caves you control have
+/// "{T}, Pay 1 life: Add one mana of any color."
+pub fn forgotten_monument() -> CardDefinition {
+    CardDefinition {
+        name: "Forgotten Monument",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![cave_tap(ManaPayload::Colorless(Value::Const(1)))],
+        static_abilities: vec![StaticAbility {
+            description: "Other Caves you control have \"{T}, Pay 1 life: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(LandType::Cave)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    life_cost: 1,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The "Hidden" Cave cycle — enters tapped, {T}: Add one color, {4}{color}, {T},
+/// Sacrifice: Discover 4 (sorcery speed).
+fn hidden_cave(name: &'static str, color: Color, color_cost: ManaCost) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![
+            cave_tap(ManaPayload::OfColor(color, Value::Const(1))),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                sorcery_speed: true,
+                mana_cost: color_cost,
+                effect: Effect::Discover { n: Value::Const(4), filter: None },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+pub fn hidden_courtyard() -> CardDefinition { hidden_cave("Hidden Courtyard", Color::White, cost(&[generic(4), w()])) }
+pub fn hidden_cataract() -> CardDefinition { hidden_cave("Hidden Cataract", Color::Blue, cost(&[generic(4), u()])) }
+pub fn hidden_necropolis() -> CardDefinition { hidden_cave("Hidden Necropolis", Color::Black, cost(&[generic(4), b()])) }
+pub fn hidden_volcano() -> CardDefinition { hidden_cave("Hidden Volcano", Color::Red, cost(&[generic(4), r()])) }
+pub fn hidden_nursery() -> CardDefinition { hidden_cave("Hidden Nursery", Color::Green, cost(&[generic(4), g()])) }
+
+/// Spelunking — {2}{G} Enchantment. ETB: draw a card, then you may put a land
+/// from your hand onto the battlefield (the "gain 4 if it's a Cave" rider is
+/// dropped). Lands you control enter untapped.
+pub fn spelunking() -> CardDefinition {
+    CardDefinition {
+        name: "Spelunking",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control enter the battlefield untapped.",
+            effect: StaticEffect::LandsEnterUntapped,
+        }],
         ..Default::default()
     }
 }

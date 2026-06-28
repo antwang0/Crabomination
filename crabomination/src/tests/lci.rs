@@ -281,3 +281,63 @@ fn market_gnome_death_value() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
     assert_eq!(g.players[0].life, life + 1, "gained 1 life");
 }
+
+// ── Caves (LandType::Cave) ──────────────────────────────────────────────────
+
+/// A Hidden Cave enters tapped and taps for its color.
+#[test]
+fn hidden_cave_enters_tapped_then_taps_for_color() {
+    let mut g = two_player_game();
+    let cave = g.move_card_to_battlefield_for_test(0, catalog::hidden_cataract());
+    assert!(g.battlefield_find(cave).unwrap().tapped, "Hidden Cataract enters tapped");
+    g.battlefield.iter_mut().find(|c| c.id == cave).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cave, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for blue");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "adds blue");
+}
+
+/// Volatile Fault sacrifices itself to destroy a nonbasic land an opponent
+/// controls.
+#[test]
+fn volatile_fault_destroys_opponent_nonbasic_land() {
+    let mut g = two_player_game();
+    let fault = g.add_card_to_battlefield(0, catalog::volatile_fault());
+    let victim = g.add_card_to_battlefield(1, catalog::captivating_cave());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fault, ability_index: 1, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent's nonbasic land destroyed");
+    assert!(g.battlefield_find(fault).is_none(), "Volatile Fault sacrificed as a cost");
+}
+
+/// Spelunking makes lands you control enter untapped, overriding an
+/// enters-tapped static.
+#[test]
+fn spelunking_overrides_enters_tapped() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spelunking());
+    let cave = g.move_card_to_battlefield_for_test(0, catalog::hidden_cataract());
+    assert!(!g.battlefield_find(cave).unwrap().tapped, "Spelunking → land enters untapped");
+}
+
+/// Forgotten Monument grants other Caves you control a pay-1-life any-color
+/// mana ability (surfaced as a virtual activated ability past the printed set).
+#[test]
+fn forgotten_monument_grants_other_caves_any_color_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forgotten_monument());
+    let other = g.add_card_to_battlefield(0, catalog::captivating_cave());
+    g.players[0].life = 20;
+    // Captivating Cave has 3 printed abilities; the granted ability is index 3.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: other, ability_index: 3, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("granted mana ability");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced 1 mana of any color");
+    assert_eq!(g.players[0].life, 19, "paid 1 life");
+}

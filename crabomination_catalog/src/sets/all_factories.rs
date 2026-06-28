@@ -4403,6 +4403,16 @@ static LCI: &[Factory] = &[
     super::lci::adaptive_gemguard,
     super::lci::dinotomaton,
     super::lci::oltec_archaeologists,
+    super::lci::captivating_cave,
+    super::lci::volatile_fault,
+    super::lci::promising_vein,
+    super::lci::forgotten_monument,
+    super::lci::hidden_courtyard,
+    super::lci::hidden_cataract,
+    super::lci::hidden_necropolis,
+    super::lci::hidden_volcano,
+    super::lci::hidden_nursery,
+    super::lci::spelunking,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

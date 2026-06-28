@@ -155,6 +155,10 @@ pub enum StaticEffect {
     LoseKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
     EntersTapped { applies_to: Selector },
+    /// "Lands you control enter the battlefield untapped" (Spelunking, Amulet
+    /// of Vigor-adjacent). An enters-untapped replacement that overrides any
+    /// enters-tapped static for lands the source's controller controls.
+    LandsEnterUntapped,
     /// "Lethal damage dealt to matching creatures is determined by their power
     /// rather than their toughness" (Zilortha, Strength Incarnate / Mountain
     /// Goat). The SBA reads `power` as the lethal threshold for any creature

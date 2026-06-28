@@ -10363,6 +10363,7 @@ fn static_effect_to_effects(
                 }
             }
             StaticEffect::EntersTapped { .. }
+            | StaticEffect::LandsEnterUntapped
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

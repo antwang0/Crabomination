@@ -190,6 +190,8 @@ pub enum LandType {
     Omenpath,
     // Edge of Eternities — "Land — Planet" (Station-bearing utility lands).
     Planet,
+    // Lost Caverns of Ixalan — "Land — Cave" (Caves-matter payoffs).
+    Cave,
 }
 
 /// Artifact subtypes.

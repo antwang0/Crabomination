@@ -1440,6 +1440,22 @@ impl GameState {
                 break;
             }
         }
+        // CR 614 — an "enters untapped" replacement (Spelunking) overrides the
+        // enters-tapped effects for lands the static-source's controller owns.
+        if should_tap && self.battlefield[idx].definition.is_land() {
+            let entrant_controller = self.battlefield[idx].controller;
+            let overridden = self.battlefield.iter().any(|src| {
+                src.controller == entrant_controller
+                    && src
+                        .definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::LandsEnterUntapped))
+            });
+            if overridden {
+                should_tap = false;
+            }
+        }
         if should_tap {
             self.battlefield[idx].tapped = true;
         }
