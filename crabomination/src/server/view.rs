@@ -454,11 +454,8 @@ fn project_player(
         life: player.life,
         poison_counters: player.poison_counters,
         energy: player.energy,
-<<<<<<< HEAD
         speed: player.speed,
-=======
         rad_counters: player.rad_counters,
->>>>>>> 5c07094 (Server: SlotManager tests (connection-cap accounting). UI: surface rad counters in player HUD (wire + chip).)
         mana_pool: player.mana_pool.clone(),
         library: LibraryView {
             size: player.library.len(),

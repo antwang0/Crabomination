@@ -503,17 +503,14 @@ pub struct PlayerView {
     /// client HUD can show an energy chip alongside life/poison.
     #[serde(default)]
     pub energy: u32,
-<<<<<<< HEAD
     /// CR 702.179 — this player's speed (0–4). Surfaced so the client HUD can
     /// show a speed chip for "Start your engines!" decks.
     #[serde(default)]
     pub speed: u32,
-=======
     /// CR 122 rad counters this player has — each mills a card and may add a
     /// poison counter at the start of their turn. Surfaced for a HUD chip.
     #[serde(default)]
     pub rad_counters: u32,
->>>>>>> 5c07094 (Server: SlotManager tests (connection-cap accounting). UI: surface rad counters in player HUD (wire + chip).)
     pub mana_pool: ManaPool,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
