@@ -98,8 +98,8 @@ fn main() {
                 Err(reason) => {
                     let s = slots.snapshot();
                     eprintln!(
-                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip, {ips} distinct IPs)",
-                        s.current, s.peak, s.refused_global, s.refused_per_ip, ips = s.distinct_ips,
+                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip, {ips} distinct IPs, max {max}/IP)",
+                        s.current, s.peak, s.refused_global, s.refused_per_ip, ips = s.distinct_ips, max = s.max_per_ip,
                     );
                     let _ = stream.shutdown(std::net::Shutdown::Both);
                     continue;
@@ -274,8 +274,8 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
             Err(reason) => {
                 let s = slots.snapshot();
                 eprintln!(
-                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip, {ips} distinct IPs)",
-                    s.current, s.peak, s.refused_global, s.refused_per_ip, ips = s.distinct_ips,
+                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip, {ips} distinct IPs, max {max}/IP)",
+                    s.current, s.peak, s.refused_global, s.refused_per_ip, ips = s.distinct_ips, max = s.max_per_ip,
                 );
                 let _ = stream.shutdown(std::net::Shutdown::Both);
                 continue;

@@ -53,6 +53,10 @@ pub(crate) struct SlotSnapshot {
     /// `current` it separates "one IP holding many slots" (possible abuse)
     /// from "many IPs each holding a few" (healthy load).
     pub(crate) distinct_ips: usize,
+    /// Largest number of slots any single IP currently holds. A value
+    /// approaching `current` while `distinct_ips` stays low is the clearest
+    /// single-source-abuse signal — sharper than `distinct_ips` alone.
+    pub(crate) max_per_ip: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -106,6 +110,7 @@ impl SlotManager {
             refused_global: state.refused_global,
             refused_per_ip: state.refused_per_ip,
             distinct_ips: state.per_ip.len(),
+            max_per_ip: state.per_ip.values().copied().max().unwrap_or(0),
         }
     }
 }
@@ -176,6 +181,18 @@ mod tests {
         }
         // After release the IP can acquire again (entry was cleaned up, not stuck at 1).
         let _b = mgr.try_acquire(ip(1)).expect("ip reusable after release");
+    }
+
+    #[test]
+    fn snapshot_max_per_ip_tracks_busiest_address() {
+        let mgr = SlotManager::new(0, 0);
+        let _a = mgr.try_acquire(ip(1)).expect("ip1 #1");
+        let _b = mgr.try_acquire(ip(1)).expect("ip1 #2");
+        let _c = mgr.try_acquire(ip(2)).expect("ip2 #1");
+        let s = mgr.snapshot();
+        assert_eq!(s.distinct_ips, 2);
+        assert_eq!(s.max_per_ip, 2, "ip1 holds the most slots");
+        assert_eq!(s.current, 3);
     }
 
     #[test]
