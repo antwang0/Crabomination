@@ -1065,6 +1065,10 @@ pub enum Predicate {
     /// cards in their graveyard. Gates "Descend 4 —" P/T pumps and ETB riders
     /// (Frilled Cave-Wurm, Basking Capybara, Coati Scavenger).
     DescendActive { who: PlayerRef, count: u32 },
+    /// CR 700.11 — `who` has descended this turn (a permanent card was put into
+    /// their graveyard from anywhere). Gates "if you descended this turn" riders
+    /// (Deep Goblin Skulltaker, Child of the Volcano).
+    DescendedThisTurn { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

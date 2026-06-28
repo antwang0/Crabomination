@@ -1297,6 +1297,9 @@ impl GameState {
                     .count()
                     >= *count as usize
             }
+            Predicate::DescendedThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].descended_this_turn),
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

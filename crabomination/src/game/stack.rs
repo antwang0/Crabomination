@@ -1702,6 +1702,7 @@ impl GameState {
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
+            pl.descended_this_turn = false;
             pl.discarded_this_turn.clear();
             pl.permanents_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.

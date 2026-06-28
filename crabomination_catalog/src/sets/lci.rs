@@ -910,3 +910,175 @@ pub fn miners_guidewing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── LCI Descend payoffs / commons ───────────────────────────────────────────
+
+/// "At the beginning of your end step, if you descended this turn (CR 700.11),
+/// put a +1/+1 counter on this creature."
+fn end_step_descended_counter() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+            .with_filter(Predicate::DescendedThisTurn { who: PlayerRef::You }),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+    }
+}
+
+/// Deep Goblin Skulltaker — {2}{B} 2/2 Goblin Warrior with menace. End step, if
+/// you descended this turn, put a +1/+1 counter on it.
+pub fn deep_goblin_skulltaker() -> CardDefinition {
+    CardDefinition {
+        name: "Deep Goblin Skulltaker",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![end_step_descended_counter()],
+        ..Default::default()
+    }
+}
+
+/// Child of the Volcano — {3}{R} 3/3 Elemental with trample. End step, if you
+/// descended this turn, put a +1/+1 counter on it.
+pub fn child_of_the_volcano() -> CardDefinition {
+    CardDefinition {
+        name: "Child of the Volcano",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![end_step_descended_counter()],
+        ..Default::default()
+    }
+}
+
+/// Echo of Dusk — {1}{B} 2/2 Vampire Spirit. Descend 4 — gets +1/+1 and has
+/// lifelink while you have 4+ permanent cards in your graveyard.
+pub fn echo_of_dusk() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Echo of Dusk",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Descend 4 — +1/+1 and lifelink while you have 4+ permanent cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Lifelink],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Colossadactyl — {2}{G}{G} 4/5 Dinosaur with reach and trample.
+pub fn colossadactyl() -> CardDefinition {
+    CardDefinition {
+        name: "Colossadactyl",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Hermitic Nautilus — {1}{U} 1/4 Artifact Creature — Nautilus with vigilance.
+/// {1}{U}: this creature gets +3/-3 until end of turn.
+pub fn hermitic_nautilus() -> CardDefinition {
+    CardDefinition {
+        name: "Hermitic Nautilus",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nautilus], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Screaming Phantom — {2}{B} 2/2 Spirit with flying. Attacks → mill a card.
+pub fn screaming_phantom() -> CardDefinition {
+    CardDefinition {
+        name: "Screaming Phantom",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::Mill { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Deathcap Marionette — {1}{B} 1/1 Fungus with deathtouch. ETB: you may mill
+/// two cards.
+pub fn deathcap_marionette() -> CardDefinition {
+    CardDefinition {
+        name: "Deathcap Marionette",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Mill two cards?".into(),
+            body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Greedy Freebooter — {B} 1/1 Human Pirate. When it dies, scry 1 and create a
+/// Treasure token.
+pub fn greedy_freebooter() -> CardDefinition {
+    CardDefinition {
+        name: "Greedy Freebooter",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: treasure_token() },
+        ]))],
+        ..Default::default()
+    }
+}

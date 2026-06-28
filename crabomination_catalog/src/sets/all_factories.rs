@@ -4390,6 +4390,14 @@ static LCI: &[Factory] = &[
     super::lci::vitos_inquisitor,
     super::lci::oltec_cloud_guard,
     super::lci::miners_guidewing,
+    super::lci::deep_goblin_skulltaker,
+    super::lci::child_of_the_volcano,
+    super::lci::echo_of_dusk,
+    super::lci::colossadactyl,
+    super::lci::hermitic_nautilus,
+    super::lci::screaming_phantom,
+    super::lci::deathcap_marionette,
+    super::lci::greedy_freebooter,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -183,3 +183,51 @@ fn miners_guidewing_dies_triggers_explore() {
         "explore put a +1/+1 counter",
     );
 }
+
+/// Echo of Dusk gains +1/+1 and lifelink at descend 4.
+#[test]
+fn echo_of_dusk_descend_4_lifelink() {
+    let mut g = two_player_game();
+    let echo = g.add_card_to_battlefield(0, catalog::echo_of_dusk());
+    assert_eq!(g.computed_permanent(echo).unwrap().power, 2, "base 2/2 below descend 4");
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let cp = g.computed_permanent(echo).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "descend 4 → +1/+1");
+    assert!(cp.keywords.contains(&Keyword::Lifelink), "descend 4 → lifelink");
+}
+
+/// CR 700.11 — a permanent card hitting the graveyard sets descended_this_turn;
+/// a noncreature spell card does not.
+#[test]
+fn descended_this_turn_tracks_permanent_cards() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.players[0].descended_this_turn);
+    // Milling an instant doesn't count as descending.
+    let nid = g.next_id();
+    g.players[0].send_to_graveyard(crate::card::CardInstance::new(nid, catalog::lightning_bolt(), 0));
+    assert!(!g.players[0].descended_this_turn, "instant card → not descended");
+    // A creature dying does.
+    g.remove_to_graveyard_with_triggers(bear);
+    assert!(g.players[0].descended_this_turn, "permanent card → descended");
+}
+
+/// Hermitic Nautilus pumps +3/-3 with its {1}{U} ability.
+#[test]
+fn hermitic_nautilus_pumps() {
+    let mut g = two_player_game();
+    let naut = g.add_card_to_battlefield(0, catalog::hermitic_nautilus());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: naut, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(naut).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 1), "1/4 +3/-3 → 4/1");
+}
