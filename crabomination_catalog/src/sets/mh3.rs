@@ -95,32 +95,6 @@ pub fn serum_visionary() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Wing It — {1}{W} Instant. Target creature gets +2/+2, gains a flying
-/// counter, then scry 1.
-pub fn wing_it() -> CardDefinition {
-    CardDefinition {
-        name: "Wing It",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::AddKeywordCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::Flying,
-                amount: Value::Const(1),
-            },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-        ]),
-        ..Default::default()
-    }
-}
-
 /// Gift of the Viper — {G} Instant. Put a +1/+1, a reach, and a deathtouch
 /// counter on target creature, then untap it.
 pub fn gift_of_the_viper() -> CardDefinition {
@@ -290,33 +264,6 @@ pub fn consuming_corruption() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Fanged Flames — {1}{R} Sorcery (devoid). Deals 4 damage to target creature
-/// or planeswalker; if it would die this turn, exile it instead.
-pub fn fanged_flames() -> CardDefinition {
-    CardDefinition {
-        name: "Fanged Flames",
-        cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Devoid],
-        // Install the "exile if it would die" replacement before the damage.
-        effect: Effect::Seq(vec![
-            Effect::ExileIfWouldDieThisTurn {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-            },
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(4),
-            },
-        ]),
-        ..Default::default()
-    }
-}
-
 /// Solstice Zealot — {2}{W} 2/3 Rhino Cleric. ETB: get {E}{E}. "{T}, Pay {E}:
 /// Tap target creature."
 pub fn solstice_zealot() -> CardDefinition {
@@ -369,30 +316,6 @@ pub fn tempest_harvester() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Warren Soultrader — {2}{B} 3/3 Zombie Goblin Wizard. "Pay 1 life,
-/// Sacrifice another creature: Create a Treasure token."
-pub fn warren_soultrader() -> CardDefinition {
-    CardDefinition {
-        name: "Warren Soultrader",
-        cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Goblin, CreatureType::Wizard],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 3,
-        activated_abilities: vec![ActivatedAbility {
-            life_cost: 1,
-            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: mint_treasures(1),
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Snapping Voidcraw — {1}{G}{U} 1/3 Eldrazi Turtle (devoid). "{T}: Add
 /// {C}{C}." and "{3}{C}, {T}: Draw a card."
 pub fn snapping_voidcraw() -> CardDefinition {
@@ -600,26 +523,6 @@ pub fn fowl_strike() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Aerie Auxiliary — {3}{W} 3/3 Bird Soldier with flying. ETB: support 2.
-pub fn aerie_auxiliary() -> CardDefinition {
-    use crate::effect::shortcut::support;
-    CardDefinition {
-        name: "Aerie Auxiliary",
-        cost: cost(&[generic(3), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 3,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(support(2))],
-        ..Default::default()
-    }
-}
-
 /// Scurrilous Sentry — {3}{B} 2/3 Human Knight Rogue with menace. Connives
 /// whenever it enters or attacks.
 pub fn scurrilous_sentry() -> CardDefinition {
@@ -674,39 +577,6 @@ pub fn titans_vanguard() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Wither and Bloom — {1}{B} Instant. Target creature gets -3/-3. "{1}{B},
-/// Exile this card from your graveyard: Put a +1/+1 counter on target
-/// creature you control. Activate only as a sorcery."
-pub fn wither_and_bloom() -> CardDefinition {
-    CardDefinition {
-        name: "Wither and Bloom",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(-3),
-            toughness: Value::Const(-3),
-            duration: Duration::EndOfTurn,
-        },
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(1), b()]),
-            from_graveyard: true,
-            exile_self_cost: true,
-            sorcery_speed: true,
-            effect: Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Thriving Skyclaw — {2}{R}{R} 3/2 Cat Dragon with flying. ETB: get
 /// {E}{E}{E}. Whenever it attacks, you may pay {E}{E}{E} to grow it.
 pub fn thriving_skyclaw() -> CardDefinition {
@@ -738,46 +608,6 @@ pub fn thriving_skyclaw() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Hexgold Slith — {1}{W} 2/1 Slith. ETB: get {E}{E}. On attack, may pay
-/// {E}{E} for first strike. Combat damage to a player grows it.
-pub fn hexgold_slith() -> CardDefinition {
-    CardDefinition {
-        name: "Hexgold Slith",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Slith],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 1,
-        triggered_abilities: vec![
-            etb(Effect::AddEnergy(Value::Const(2))),
-            on_attack(Effect::MayDo {
-                description: "pay {E}{E} for first strike".into(),
-                body: Box::new(Effect::PayEnergy {
-                    amount: 2,
-                    then: Box::new(Effect::GrantKeyword {
-                        what: Selector::This,
-                        keyword: Keyword::FirstStrike,
-                        duration: Duration::EndOfTurn,
-                    }),
-                }),
-            }),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-            },
-        ],
-        ..Default::default()
-    }
-}
-
 /// Skittering Precursor — {2}{R} 3/3 Eldrazi Drone (devoid) with menace.
 /// Whenever you sacrifice a nontoken permanent, create an Eldrazi Spawn.
 pub fn skittering_precursor() -> CardDefinition {

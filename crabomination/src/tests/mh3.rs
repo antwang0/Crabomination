@@ -79,26 +79,6 @@ fn serum_visionary_etb_draws() {
     // -1 cast + 1 ETB draw = net same hand size.
     assert_eq!(g.players[0].hand.len(), before, "drew a card from the ETB");
 }
-
-/// Wing It pumps the target and grants a flying counter.
-#[test]
-fn wing_it_pumps_and_grants_flying() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::wing_it());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
-        mode: None, x_value: None,
-    }).expect("cast Wing It");
-    drain_stack(&mut g);
-    let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(cp.keywords.contains(&Keyword::Flying), "flying counter grants flying");
-}
-
 /// Gift of the Viper stacks three counters and untaps the target.
 #[test]
 fn gift_of_the_viper_counters_and_untap() {
@@ -170,26 +150,6 @@ fn consuming_corruption_scales_with_swamps() {
     assert!(g.battlefield_find(victim).is_none(), "3 damage killed the 2/2");
     assert_eq!(g.players[0].life, life_before + 3, "gained life = swamps");
 }
-
-/// Fanged Flames deals 4 and exiles the creature if it would die.
-#[test]
-fn fanged_flames_exiles_dying_creature() {
-    let mut g = two_player_game();
-    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::fanged_flames());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.active_player_idx = 0;
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
-        mode: None, x_value: None,
-    }).expect("cast Fanged Flames");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(victim).is_none(), "destroyed");
-    assert!(g.players[1].graveyard.iter().all(|c| c.id != victim), "exiled, not in graveyard");
-    assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of dying");
-}
-
 /// Solstice Zealot makes energy on ETB and spends it to tap a creature.
 #[test]
 fn solstice_zealot_energy_taps_creature() {
@@ -226,25 +186,6 @@ fn tempest_harvester_energy_loots() {
     // Drew one, discarded one → net hand size unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before, "drew then discarded");
 }
-
-/// Warren Soultrader sacrifices a creature to make a Treasure.
-#[test]
-fn warren_soultrader_sacs_for_treasure() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::warren_soultrader());
-    g.clear_sickness(id);
-    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("activate sac-for-treasure");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the other creature");
-    assert!(
-        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
-        "made a Treasure token",
-    );
-}
-
 /// Snapping Voidcraw taps for {C}{C}.
 #[test]
 fn snapping_voidcraw_taps_for_two_colorless() {
@@ -435,24 +376,6 @@ fn cr_122_1_keyword_counter_grants_keyword() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Deathtouch), "counter grants the keyword");
 }
-
-/// Aerie Auxiliary supports 2 on ETB (counters on two other creatures).
-#[test]
-fn aerie_auxiliary_supports_two() {
-    let mut g = two_player_game();
-    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::aerie_auxiliary());
-    cast_creature(&mut g, id);
-    let total: u32 = [a, b]
-        .iter()
-        .map(|c| g.battlefield_find(*c).unwrap().counter_count(CounterType::PlusOnePlusOne))
-        .sum();
-    // Triggered support auto-targets one other creature (the full multi-target
-    // spread is the dedicated support test's job); confirm the ETB fires.
-    assert!(total >= 1, "support placed a +1/+1 counter on another creature");
-}
-
 /// Titans' Vanguard grows colorless creatures on cast (and is itself devoid).
 #[test]
 fn titans_vanguard_pumps_colorless_on_cast() {
@@ -468,24 +391,6 @@ fn titans_vanguard_pumps_colorless_on_cast() {
         "colorless creature got a +1/+1 counter on cast",
     );
 }
-
-/// Wither and Bloom shrinks a creature by -3/-3.
-#[test]
-fn wither_and_bloom_shrinks_target() {
-    let mut g = two_player_game();
-    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::wither_and_bloom());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
-        mode: None, x_value: None,
-    }).expect("cast");
-    drain_stack(&mut g);
-    // 2/2 with -3/-3 dies as a 0-or-less-toughness SBA.
-    assert!(g.battlefield_find(victim).is_none(), "-3/-3 killed the 2/2");
-}
-
 /// Thriving Skyclaw makes three energy on ETB.
 #[test]
 fn thriving_skyclaw_etb_energy() {
@@ -519,32 +424,6 @@ fn flare_of_denial_alt_cost_sacrifice() {
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the blue creature");
     assert!(g.battlefield_find(spell).is_none(), "countered the spell");
 }
-
-/// Hexgold Slith grows when it deals combat damage to a player.
-#[test]
-fn hexgold_slith_grows_on_combat_damage() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::hexgold_slith());
-    g.clear_sickness(id);
-    g.active_player_idx = 0;
-    while g.step != TurnStep::DeclareAttackers {
-        g.perform_action(GameAction::PassPriority).expect("advance");
-    }
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: id, target: AttackTarget::Player(1),
-    }])).expect("attack");
-    drain_stack(&mut g);
-    while g.step != TurnStep::CombatDamage {
-        g.perform_action(GameAction::PassPriority).expect("advance to damage");
-    }
-    drain_stack(&mut g);
-    assert_eq!(
-        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne),
-        1,
-        "combat damage to a player put a +1/+1 counter",
-    );
-}
-
 /// Skittering Precursor mints an Eldrazi Spawn when you sacrifice a nontoken.
 #[test]
 fn skittering_precursor_spawns_on_sacrifice() {
