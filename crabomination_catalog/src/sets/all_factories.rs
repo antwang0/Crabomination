@@ -4468,6 +4468,8 @@ static LCI: &[Factory] = &[
     super::lci::attentive_sunscribe,
     super::lci::self_reflection,
     super::lci::canonized_in_blood,
+    super::lci::earthshaker_dreadmaw,
+    super::lci::threefold_thunderhulk,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

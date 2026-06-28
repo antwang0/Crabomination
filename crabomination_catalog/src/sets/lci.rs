@@ -2797,3 +2797,69 @@ pub fn canonized_in_blood() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Earthshaker Dreadmaw — {4}{G}{G} 6/6 Dinosaur, trample. When this enters,
+/// draw a card for each other Dinosaur you control.
+pub fn earthshaker_dreadmaw() -> CardDefinition {
+    CardDefinition {
+        name: "Earthshaker Dreadmaw",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou.and(SelectionRequirement::OtherThanSource),
+                )),
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Threefold Thunderhulk — {7} 0/0 Artifact Creature — Gnome. Enters with three
+/// +1/+1 counters. When it enters or attacks, create a number of 1/1 colorless
+/// Gnome artifact creature tokens equal to its power. {2}, Sacrifice another
+/// artifact: put a +1/+1 counter on it.
+pub fn threefold_thunderhulk() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let gnome = TokenDefinition {
+        name: "Gnome".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        ..Default::default()
+    };
+    let make_gnomes = move || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::PowerOf(Box::new(Selector::This)),
+        definition: gnome.clone(),
+    };
+    CardDefinition {
+        name: "Threefold Thunderhulk",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        triggered_abilities: vec![etb(make_gnomes()), on_attack(make_gnomes())],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

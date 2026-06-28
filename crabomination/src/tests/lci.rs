@@ -1289,3 +1289,27 @@ fn canonized_in_blood_descend_counter() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "counter added");
 }
+
+/// Earthshaker Dreadmaw draws for each other Dinosaur you control.
+#[test]
+fn earthshaker_dreadmaw_draws_per_dino() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nurturing_bristleback()); // a Dino
+    g.add_card_to_battlefield(0, catalog::river_herald_guide()); // not a Dino
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let hand0 = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::earthshaker_dreadmaw());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew 1 for the one other Dinosaur");
+}
+
+/// Threefold Thunderhulk enters as a 3/3 and mints Gnomes equal to its power.
+#[test]
+fn threefold_thunderhulk_mints_gnomes() {
+    let mut g = two_player_game();
+    let hulk = g.move_card_to_battlefield_for_test(0, catalog::threefold_thunderhulk());
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(hulk).unwrap().power, 3, "0/0 + three counters = 3/3");
+    let gnomes = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Gnome").count();
+    assert_eq!(gnomes, 3, "minted Gnomes equal to power");
+}
