@@ -519,3 +519,79 @@ fn flare_of_denial_alt_cost_sacrifice() {
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the blue creature");
     assert!(g.battlefield_find(spell).is_none(), "countered the spell");
 }
+
+/// Hexgold Slith grows when it deals combat damage to a player.
+#[test]
+fn hexgold_slith_grows_on_combat_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hexgold_slith());
+    g.clear_sickness(id);
+    g.active_player_idx = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("advance to damage");
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "combat damage to a player put a +1/+1 counter",
+    );
+}
+
+/// Skittering Precursor mints an Eldrazi Spawn when you sacrifice a nontoken.
+#[test]
+fn skittering_precursor_spawns_on_sacrifice() {
+    let mut g = two_player_game();
+    let _id = g.add_card_to_battlefield(0, catalog::skittering_precursor());
+    // A sac outlet: Warren Soultrader eats a creature for a Treasure.
+    let trader = g.add_card_to_battlefield(0, catalog::warren_soultrader());
+    g.clear_sickness(trader);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trader, ability_index: 0, target: None, x_value: None,
+    }).expect("sacrifice a creature");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Eldrazi Spawn"),
+        "sacrificing a nontoken permanent made an Eldrazi Spawn",
+    );
+}
+
+/// Fetid Gargantua adapts to a 6/6 (two +1/+1 counters).
+#[test]
+fn fetid_gargantua_adapts() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_battlefield(0, catalog::fetid_gargantua());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("adapt 2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Dreadmobile sacrifices another permanent to grow itself.
+#[test]
+fn dreadmobile_sacs_to_grow() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dreadmobile());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("sac to grow");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

@@ -738,3 +738,194 @@ pub fn thriving_skyclaw() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hexgold Slith — {1}{W} 2/1 Slith. ETB: get {E}{E}. On attack, may pay
+/// {E}{E} for first strike. Combat damage to a player grows it.
+pub fn hexgold_slith() -> CardDefinition {
+    CardDefinition {
+        name: "Hexgold Slith",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Slith],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::MayDo {
+                description: "pay {E}{E} for first strike".into(),
+                body: Box::new(Effect::PayEnergy {
+                    amount: 2,
+                    then: Box::new(Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::FirstStrike,
+                        duration: Duration::EndOfTurn,
+                    }),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Skittering Precursor — {2}{R} 3/3 Eldrazi Drone (devoid) with menace.
+/// Whenever you sacrifice a nontoken permanent, create an Eldrazi Spawn.
+pub fn skittering_precursor() -> CardDefinition {
+    CardDefinition {
+        name: "Skittering Precursor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid, Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::eldrazi_spawn_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fetid Gargantua — {4}{B} 4/4 Horror. "{2}{B}: Adapt 2." Whenever one or
+/// more +1/+1 counters are put on it, you may draw two cards and lose 2 life.
+pub fn fetid_gargantua() -> CardDefinition {
+    use crate::effect::shortcut::adapt;
+    CardDefinition {
+        name: "Fetid Gargantua",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::SelfSource,
+            ),
+            effect: Effect::MayDo {
+                description: "draw two cards and lose 2 life".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conduit Goblin — {R}{W} 2/2 Goblin Warrior. ETB: get {E}{E}. At the
+/// beginning of combat on your turn, you may pay {E} to give another target
+/// creature you control +1/+0 and haste.
+pub fn conduit_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Conduit Goblin",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::MayDo {
+                    description: "pay {E} to give another creature +1/+0 and haste".into(),
+                    body: Box::new(Effect::PayEnergy {
+                        amount: 1,
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::PumpPT {
+                                what: target_filtered(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou)
+                                        .and(SelectionRequirement::OtherThanSource),
+                                ),
+                                power: Value::Const(1),
+                                toughness: Value::Const(0),
+                                duration: Duration::EndOfTurn,
+                            },
+                            Effect::GrantKeyword {
+                                what: target_filtered(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou)
+                                        .and(SelectionRequirement::OtherThanSource),
+                                ),
+                                keyword: Keyword::Haste,
+                                duration: Duration::EndOfTurn,
+                            },
+                        ])),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dreadmobile — {2}{B} Vehicle 3/3 with menace. "{1}, Sacrifice another
+/// artifact or creature: Put a +1/+1 counter on this Vehicle." Crew 1.
+pub fn dreadmobile() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Dreadmobile",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace, Keyword::Crew(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                1,
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

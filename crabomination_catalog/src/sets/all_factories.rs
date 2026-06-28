@@ -4506,6 +4506,11 @@ static MH3: &[Factory] = &[
     super::mh3::titans_vanguard,
     super::mh3::wither_and_bloom,
     super::mh3::thriving_skyclaw,
+    super::mh3::hexgold_slith,
+    super::mh3::skittering_precursor,
+    super::mh3::fetid_gargantua,
+    super::mh3::conduit_goblin,
+    super::mh3::dreadmobile,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
