@@ -2509,3 +2509,147 @@ fn corpses_of_the_lost_lords_and_makes_token() {
     assert_eq!(cp.power, 3, "+1/+0 lord");
     assert!(cp.keywords.contains(&Keyword::Haste), "haste from lord");
 }
+
+/// Malamet War Scribe pumps your team +2/+1 on ETB.
+#[test]
+fn malamet_war_scribe_team_pump() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let scribe = g.add_card_to_hand(0, catalog::malamet_war_scribe());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: scribe, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 until EOT");
+}
+
+/// Ironpaw Aspirant puts a +1/+1 counter on a creature on ETB.
+#[test]
+fn ironpaw_aspirant_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cat = g.add_card_to_hand(0, catalog::ironpaw_aspirant());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cat, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
+}
+
+/// In the Presence of Ages digs four and keeps matching cards.
+#[test]
+fn in_the_presence_of_ages_digs() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::in_the_presence_of_ages());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 spell + 2 kept (a creature and a land) = net +1; library emptied.
+    assert_eq!(g.players[0].hand.len(), before + 1, "kept the creature and the land");
+    assert!(g.players[0].library.is_empty());
+}
+
+/// Council of Echoes bounces a nonland permanent at descend 4.
+#[test]
+fn council_of_echoes_descend_bounce() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // descend 4
+    let council = g.add_card_to_hand(0, catalog::council_of_echoes());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: council, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "to owner's hand");
+}
+
+/// Waylaying Pirates taps and stuns an opponent's permanent when you have an
+/// artifact.
+#[test]
+fn waylaying_pirates_taps_and_stuns() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ornithopter()); // an artifact you control
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pirate = g.add_card_to_hand(0, catalog::waylaying_pirates());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pirate, target: Some(Target::Permanent(prey)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(prey).unwrap();
+    assert!(p.tapped, "tapped");
+    assert_eq!(p.counters.get(&CounterType::Stun).copied().unwrap_or(0), 1, "stunned");
+}
+
+/// Malamet Scythe flashes in and attaches itself, granting +2/+2.
+#[test]
+fn malamet_scythe_attaches_on_etb() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let scythe = g.add_card_to_hand(0, catalog::malamet_scythe());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let id = g.perform_action(GameAction::CastSpell {
+        card_id: scythe, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).map(|_| scythe).unwrap_or(scythe);
+    let _ = id;
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 from the attached Scythe");
+}
+
+/// Calamitous Cave-In deals damage equal to your Cave count to each creature.
+#[test]
+fn calamitous_cave_in_scales_with_caves() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::captivating_cave()); // a Cave (battlefield)
+    g.add_card_to_graveyard(0, catalog::captivating_cave()); // a Cave card in graveyard
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::calamitous_cave_in());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // 1 Cave on battlefield + 1 Cave in graveyard = 2 damage → kills the 2/2.
+    assert!(g.battlefield_find(bear).is_none(), "2 damage from 2 Caves killed the 2/2");
+}

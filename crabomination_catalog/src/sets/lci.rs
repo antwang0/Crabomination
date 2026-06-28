@@ -4045,6 +4045,188 @@ pub fn ixallis_lorekeeper() -> CardDefinition {
     }
 }
 
+/// Malamet War Scribe — {3}{W}{W} 4/3 Cat Warrior. ETB: creatures you control
+/// get +2/+1 until end of turn.
+pub fn malamet_war_scribe() -> CardDefinition {
+    let mine = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Malamet War Scribe",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Warrior], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: mine(),
+            power: Value::Const(2),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ironpaw Aspirant — {1}{W} 1/2 Cat Warrior. ETB: put a +1/+1 counter on
+/// target creature.
+pub fn ironpaw_aspirant() -> CardDefinition {
+    CardDefinition {
+        name: "Ironpaw Aspirant",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Warrior], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// In the Presence of Ages — {2}{G} Instant. Reveal the top four cards; put a
+/// creature and/or a land from among them into your hand, rest to graveyard.
+/// (Modeled as taking up to two of the matching cards.)
+pub fn in_the_presence_of_ages() -> CardDefinition {
+    CardDefinition {
+        name: "In the Presence of Ages",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: true,
+            pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
+            take: Some(Value::Const(2)),
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Council of Echoes — {4}{U}{U} 4/4 Spirit Advisor with flying. Descend 4 —
+/// ETB, if you have 4+ permanent cards in your graveyard, return up to one
+/// target nonland permanent (other than this) to its owner's hand.
+pub fn council_of_echoes() -> CardDefinition {
+    CardDefinition {
+        name: "Council of Echoes",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit, CreatureType::Advisor], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+            then: Box::new(Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Waylaying Pirates — {3}{U} 3/3 Human Pirate. ETB: if you control an artifact,
+/// tap target artifact or creature an opponent controls and stun it.
+pub fn waylaying_pirates() -> CardDefinition {
+    CardDefinition {
+        name: "Waylaying Pirates",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Pirate], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Malamet Scythe — {2}{G} Equipment with flash. ETB: attach to target creature
+/// you control. Equipped creature gets +2/+2. Equip {4}.
+pub fn malamet_scythe() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Malamet Scythe",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 2, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Calamitous Cave-In — {3}{R} Sorcery. Deal X damage to each creature and each
+/// planeswalker, where X is the number of Caves you control plus Cave cards in
+/// your graveyard.
+pub fn calamitous_cave_in() -> CardDefinition {
+    use crate::card::Zone;
+    let cave_count = || Value::Sum(vec![
+        Value::CountMatching {
+            sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+            filter: SelectionRequirement::HasLandType(LandType::Cave),
+        },
+        Value::CountMatching {
+            sel: Box::new(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Any,
+            }),
+            filter: SelectionRequirement::HasLandType(LandType::Cave),
+        },
+    ]);
+    let zap = || Effect::ForEach {
+        selector: Selector::EachPermanent(SelectionRequirement::Creature),
+        body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: cave_count() }),
+    };
+    let zap_pw = || Effect::ForEach {
+        selector: Selector::EachPermanent(SelectionRequirement::Planeswalker),
+        body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: cave_count() }),
+    };
+    CardDefinition {
+        name: "Calamitous Cave-In",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![zap(), zap_pw()]),
+        ..Default::default()
+    }
+}
+
 /// Scytheclaw Raptor — {2}{R} 4/3 Dinosaur. Whenever a player casts a spell on
 /// a turn that isn't theirs, deal 4 damage to them.
 pub fn scytheclaw_raptor() -> CardDefinition {
@@ -4440,12 +4622,13 @@ pub fn unlucky_drop() -> CardDefinition {
     }
 }
 
-/// Hidden Grotto — Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of
-/// any color.
+/// Hidden Grotto — Cave Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one
+/// mana of any color.
 pub fn hidden_grotto() -> CardDefinition {
     CardDefinition {
         name: "Hidden Grotto",
         card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
         triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) })],
         activated_abilities: vec![
             ActivatedAbility {
