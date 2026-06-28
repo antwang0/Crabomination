@@ -319,6 +319,11 @@ Each a small targeted feature; sweep batch by batch.
   + `EventKind::DayNightChanged` "day becomes night / night becomes day"
   triggers — Brimstone Vandal); ✅ Coven (`Predicate::CovenActive` — 3+ creatures
   with different powers; HUD "✸ coven" chip);
+  ✅ **Descend** (LCI — `SelectionRequirement::ControllerDescend(n)` +
+  `Predicate::{DescendActive,DescendedThisTurn}` count permanent cards in the
+  graveyard / "descended this turn" per CR 700.11; `DynamicPt::
+  PermanentCardsInControllerGraveyard` for fathomless descent; PlayerView
+  `descend_count` + HUD "⛏ descend N" chip; `sets::lci` batch);
   ✅ **Speed / "Start your engines!"** (CR 702.179 — `Player.speed` 0–4,
   `Keyword::StartYourEngines`, life-loss increment, `Predicate::SpeedAtLeast`
   for "Max speed —"; DFT batch in `decks::recent`); ✅ Ring-bearer (CR 701.54,

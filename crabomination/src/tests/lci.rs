@@ -231,3 +231,20 @@ fn hermitic_nautilus_pumps() {
     let cp = g.computed_permanent(naut).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 1), "1/4 +3/-3 → 4/1");
 }
+
+/// Deep Goblin Skulltaker grows at end step only if you descended this turn.
+#[test]
+fn deep_goblin_skulltaker_end_step_descend_counter() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::deep_goblin_skulltaker());
+    g.active_player_idx = 0;
+    // No descend yet → end step adds nothing.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gob).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0);
+    // Descend this turn, then the next end step adds a +1/+1 counter.
+    g.players[0].descended_this_turn = true;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gob).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
+}

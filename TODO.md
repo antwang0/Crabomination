@@ -8,6 +8,28 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — LCI / Craft / Descend (`sets::lci`)
+
+Shipped this run: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),
+Descend (`SelectionRequirement::ControllerDescend`, `Predicate::{DescendActive,
+DescendedThisTurn}`, `DynamicPt::PermanentCardsInControllerGraveyard`, HUD chip).
+38 LCI cards added. Deferred from the set:
+- **Cave land subtype** — `LandType` has no `Cave`, so the LCI Cave lands
+  (Captivating Cave, Hidden Cataract, …) and "Caves you control" payoffs are
+  unimplemented. Add `LandType::Cave` (+ type-line audit entries) to unblock.
+- **Battle cry** isn't a real `Keyword` yet — Sanguine Evangelist and the
+  Thousand Moons soldiers that use it are deferred; model it as an on-attack
+  "each other attacking creature +1/+0" trigger or a first-class keyword.
+- **Craft "or pay 3 life" / "discard or sac" choices** are approximated as a
+  flat discard (Bitter Triumph, Souls of the Lost) — needs a real either-cost
+  `AdditionalCastCost` mode. Craft's per-object UI exile-choice is auto-picked.
+- **Bonehoard Dracosaur, Quintorius Kand, Tarrian's Journal, the remaining
+  craft DFCs** (Sunbird Standard's color-count CDA, exiled-card recast) need
+  bespoke effects; deferred.
+- **"Descended this turn" reset** is at untap; double-check end-step descend
+  payoffs see the flag (they fire in the same turn's end step — verified for
+  Deep Goblin Skulltaker).
+
 ## Discovered follow-ups — this run (recent25/26, blight)
 
 - **Ward-cost side effects don't fire triggers.** `WardCost::Blight` /
