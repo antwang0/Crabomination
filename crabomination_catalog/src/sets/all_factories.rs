@@ -3665,6 +3665,8 @@ static DECKS: &[Factory] = &[
     super::decks::living_phone,
     super::decks::demonic_counsel,
     super::decks::jibbirik_omnivore,
+    super::decks::fear_of_exposure,
+    super::decks::vicious_clown,
     super::decks::caelorna_coral_tyrant,
     super::decks::gilded_ghoda,
     super::decks::brightfield_mustang,

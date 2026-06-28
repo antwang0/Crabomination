@@ -267,3 +267,54 @@ pub fn beastrider_vanguard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fear of Exposure — {2}{G} 5/4 Enchantment Creature — Nightmare with trample.
+/// Additional cost: tap two untapped creatures and/or lands you control.
+pub fn fear_of_exposure() -> CardDefinition {
+    CardDefinition {
+        name: "Fear of Exposure",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::TapPermanents {
+            filter: crate::card::SelectionRequirement::Creature
+                .or(crate::card::SelectionRequirement::Land),
+            count: 2,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vicious Clown — {2}{R} 2/3 Human Clown. Whenever another creature you control
+/// with power 2 or less enters, this creature gets +2/+0 until end of turn.
+pub fn vicious_clown() -> CardDefinition {
+    CardDefinition {
+        name: "Vicious Clown",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Clown],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: crate::card::SelectionRequirement::Creature
+                        .and(crate::card::SelectionRequirement::PowerAtMost(2)),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -158,3 +158,42 @@ fn beastrider_vanguard_digs_for_permanent() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "took a permanent into hand");
 }
+
+/// Fear of Exposure's additional cost taps two of your creatures/lands.
+#[test]
+fn fear_of_exposure_taps_two_to_cast() {
+    let mut g = two_player_game();
+    let fear = g.add_card_to_hand(0, catalog::fear_of_exposure());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fear of Exposure");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fear).is_some(), "Fear of Exposure resolved onto the battlefield");
+    assert_eq!(
+        [a, b].iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count(),
+        2, "two creatures tapped for the additional cost",
+    );
+}
+
+/// Vicious Clown pumps itself when a small creature you control enters.
+#[test]
+fn vicious_clown_pumps_on_small_creature_etb() {
+    let mut g = two_player_game();
+    let clown = g.add_card_to_battlefield(0, catalog::vicious_clown());
+    // A 2/2 (power ≤ 2) entering pumps the Clown +2/+0.
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: small }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(clown).unwrap().power, 4, "Clown pumped to 4 power");
+    // A big creature (power > 2) does not trigger the pump.
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: big }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(clown).unwrap().power, 4, "big creature did not pump further");
+}
