@@ -754,6 +754,39 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     (LevelBand can't grant the `{T}: add {G}{G}` / Elf-lord ability — needs
     ability-granting level bands).
 
+- ⏳ **MH3 batch shipped** (`catalog::sets::mh3`, tests `tests/mh3.rs`, 36
+  cards): energy (Solstice Zealot, Tempest Harvester, Roil Cartographer,
+  Solar Transformer, Phyrexian Ironworks, Hexgold Slith, Thriving Skyclaw,
+  Conduit Goblin, Smelted Chargebug, Inspired Inventor), devoid/Eldrazi
+  (Fanged Flames, Snapping Voidcraw, Unfathomable Truths, Titans' Vanguard,
+  Skittering Precursor), plus Accursed Marauder, Faithful Watchdog, Wing It,
+  Gift of the Viper, Mogg Mob, Retrofitted Transmogrant, Consuming Corruption
+  (`Value::ColorCountOf` powers Breathe Your Last), Fowl Strike (Reinforce),
+  Aerie Auxiliary, Scurrilous Sentry, Wither and Bloom, Fetid Gargantua,
+  Dreadmobile (Vehicle/Crew), Proud Pack-Rhino, Warren Soultrader,
+  Horrid Shadowspinner, Sarpadian Simulacrum, Serum Visionary, Nightshade
+  Dryad, Null Elemental Blast. **Deferred — each wants one primitive:**
+  Modular N / Fabricate N keywords (Arcbound Condor, Marionette Apprentice);
+  exalted counter type (Emissary of Soulfire); colorless-or-abilities spend
+  restriction (Sage of the Unknowable); continuous base-P/T anthem static
+  (Kudo, King Among Bears); put-N-from-hand-on-top (Brainsurge); untap-count
+  restriction static (Winter Moon); countered-spell-controller token mint
+  (Strix Serenade); cast-or-cycle trigger (Drownyard Lurker). Also: the
+  triggered-modal `AddCounter(Shield)` isn't auto-targeted (preference fn
+  only auto-picks +1/+1) — a UI seat must pick the target.
+
+- ✅ **THB batch shipped** (`catalog::sets::thb`, tests `tests/thb.rs`):
+  Heliod's Intervention (`Effect::DestroyTargets` X-target destroy),
+  Shark Typhoon (`TokenDefinition.dynamic_pt` mint rider + X-cycling via
+  `GameAction::Cycle { x_value }`), Nyxbloom Ancient
+  (`StaticEffect::ManaProductionTripled` — multiplier composes with Mana
+  Reflection), Polukranos, Unchained (`Value::IfPred` escape counters +
+  `StaticEffect::PreventDamageByRemovingCounters`), Elspeth Conquers Death
+  (`Effect::SpellTaxUntilYourNextTurn` + reanimate chapter), plus Dream
+  Trawler, Arasta, Daxos (`DynamicPt::DevotionToToughness`), Tymaret Calls
+  the Dead, Thirst for Meaning, Shatter the Sky, Alseid, Mire Triton,
+  Aphemia, Phoenix of Ash, Underworld Rage-Hound, Nessian Boar
+  (`Predicate::TriggerBlocksSource`), Mystic Repeal, Ox of Agonas.
 - ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
   - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
     bot heuristic that takes the first eligible candidate would make
@@ -2317,11 +2350,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   colorless/devoid counts 0 per 105.2c) ✅ — Breathe Your Last; tests
   `cr_105_2c_colorless_counts_zero_colors`, `breathe_your_last_gains_life_per_color`.
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). (AutoDecider now flips a real random coin; scripted tests stay deterministic.)
-<<<<<<< HEAD
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g) ✅ (`CounterType::Defense`, CR 310). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half is still approximated.
-=======
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅. Keyword counters (122.1c — distinct `keyword_counters` map granting the keyword via layers) ✅; test `cr_122_1_keyword_counter_grants_keyword` (Gift of the Viper).
->>>>>>> 5c07094 (Server: SlotManager tests (connection-cap accounting). UI: surface rad counters in player HUD (wire + chip).)
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g) ✅ (`CounterType::Defense`, CR 310). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half is still approximated. Keyword counters granting the keyword via layers ✅; test `cr_122_1_keyword_counter_grants_keyword` (Gift of the Viper).
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
   surfaced via `LibraryView.known_top` + a HUD chip; Courser, Oracle of Mul
