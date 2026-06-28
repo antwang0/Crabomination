@@ -1675,3 +1675,80 @@ pub fn terror_tide() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dusk Legion Duelist — {1}{W} 2/2 Vampire Soldier with vigilance. Whenever
+/// one or more +1/+1 counters are put on it, draw a card (once each turn).
+pub fn dusk_legion_duelist() -> CardDefinition {
+    CardDefinition {
+        name: "Dusk Legion Duelist",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::SelfSource,
+            ).once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Over the Edge — {1}{G} Sorcery. Choose one — destroy target artifact or
+/// enchantment; or target creature you control explores, then explores again.
+pub fn over_the_edge() -> CardDefinition {
+    CardDefinition {
+        name: "Over the Edge",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment)),
+            },
+            Effect::Seq(vec![
+                Effect::Explore {
+                    who: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
+                Effect::Explore { who: Selector::Target(0) },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pugnacious Hammerskull — {2}{G} 6/6 Dinosaur. Whenever it attacks while you
+/// control no other Dinosaur, put a stun counter on it.
+pub fn pugnacious_hammerskull() -> CardDefinition {
+    CardDefinition {
+        name: "Pugnacious Hammerskull",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dinosaur)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                )))),
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

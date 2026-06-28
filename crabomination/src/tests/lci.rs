@@ -547,3 +547,53 @@ fn terror_tide_mass_minus_x() {
     // 2/2 - 2/2 = 0/0 → both die as a state-based action.
     assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(foe).is_none(), "both shrank to 0/0 and died");
 }
+
+/// Dusk Legion Duelist draws when +1/+1 counters land on it (once per turn).
+#[test]
+fn dusk_legion_duelist_draws_on_counter() {
+    let mut g = two_player_game();
+    let duelist = g.add_card_to_battlefield(0, catalog::dusk_legion_duelist());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    g.battlefield_find_mut(duelist).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+        card_id: duelist, counter_type: CounterType::PlusOnePlusOne, count: 1,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew off the counter trigger");
+}
+
+/// Over the Edge (mode 0) destroys a target artifact.
+#[test]
+fn over_the_edge_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let spell = g.add_card_to_hand(0, catalog::over_the_edge());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(art)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Pugnacious Hammerskull stuns itself when it attacks as your only Dinosaur.
+#[test]
+fn pugnacious_hammerskull_stuns_when_alone() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::pugnacious_hammerskull());
+    g.clear_sickness(dino);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: dino, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dino).unwrap().counter_count(crate::card::CounterType::Stun), 1, "stunned (no other Dino)");
+}

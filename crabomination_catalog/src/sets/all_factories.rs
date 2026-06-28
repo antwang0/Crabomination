@@ -4424,6 +4424,9 @@ static LCI: &[Factory] = &[
     super::lci::compass_gnome,
     super::lci::gargantuan_leech,
     super::lci::terror_tide,
+    super::lci::dusk_legion_duelist,
+    super::lci::over_the_edge,
+    super::lci::pugnacious_hammerskull,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
