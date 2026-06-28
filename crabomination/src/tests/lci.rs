@@ -1628,6 +1628,19 @@ fn hidden_grotto_etb_surveils() {
     assert!(g.battlefield_find(grotto).is_some(), "land entered and surveiled");
 }
 
+/// Glimpse the Core's modal entries render non-empty labels (Search/Move) for
+/// the client mode-picker (effect_short_text coverage).
+#[test]
+fn glimpse_the_core_modal_labels_render() {
+    use crate::effect::Effect;
+    let def = catalog::glimpse_the_core();
+    let Effect::ChooseMode(modes) = &def.effect else { panic!("modal") };
+    for m in modes {
+        assert!(!m.effect_short_text().is_empty(), "every mode renders a label");
+    }
+    assert!(modes[0].effect_short_text().contains("search"), "mode 0 = library tutor");
+}
+
 /// Hulking Bugbear is a 3/3 with haste.
 #[test]
 fn hulking_bugbear_has_haste() {

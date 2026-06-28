@@ -1237,8 +1237,19 @@ impl Effect {
             | Effect::MayPay { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
+            | Effect::Reflexive { body }
             | Effect::ForEach { body, .. } => body.effect_short_text(),
             Effect::Process { then, .. } => then.effect_short_text(),
+            // Library tutor / dig — surfaced so modal pickers (Glimpse the Core,
+            // the Confluence cycle) render a real label instead of a blank row.
+            Effect::Search { to, .. } => {
+                use crate::effect::ZoneDest;
+                match to {
+                    ZoneDest::Battlefield { .. } => "search your library for a card and put it onto the battlefield".into(),
+                    ZoneDest::Hand(_) => "search your library for a card and put it into your hand".into(),
+                    _ => "search your library for a card".into(),
+                }
+            }
             _ => String::new(),
         }
     }
