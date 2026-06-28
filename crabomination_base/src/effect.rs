@@ -1402,6 +1402,11 @@ pub enum EventKind {
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
     Explored,
+    /// CR 701.57 — the controller performed a discover (Curator of Sun's
+    /// Creation's "whenever you discover" payoff). The discovering player is
+    /// the event subject; matched to `GameEvent::Discovered`. The discover
+    /// value is exposed via `Value::TriggerEventAmount`.
+    Discovered,
     /// CR 701.31 — a permanent became monstrous (Fleecemane Lion, Nessian
     /// Wilds Ravager "when this becomes monstrous" triggers). The permanent
     /// is the event subject; matched to `GameEvent::BecameMonstrous`.

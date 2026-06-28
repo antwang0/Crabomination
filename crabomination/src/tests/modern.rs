@@ -5938,29 +5938,34 @@ fn sac_cost_failure_to_pay_mana_keeps_source_on_battlefield() {
 // ── Cube cards (round 4) ─────────────────────────────────────────────────────
 
 #[test]
-fn sentinel_attack_creates_a_citizen_token() {
+fn sentinel_makes_a_map_on_enters_and_attack() {
     let mut g = two_player_game();
-    let sentinel = g.add_card_to_battlefield(0, catalog::sentinel_of_the_nameless_city());
-    g.clear_sickness(sentinel);
-    // Move to declare-attackers and declare an attack.
-    g.step = TurnStep::DeclareAttackers;
+    // Cast it so the ETB trigger fires (add_card_to_battlefield skips ETBs).
+    let sentinel = g.add_card_to_hand(0, catalog::sentinel_of_the_nameless_city());
+    g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let bf_before = g.battlefield.len();
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sentinel, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Map").count(),
+        1, "ETB made a Map",
+    );
+    g.clear_sickness(sentinel);
+    g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: sentinel,
         target: AttackTarget::Player(1),
-    }]))
-    .expect("Sentinel can attack");
+    }])).expect("Sentinel can attack");
     drain_stack(&mut g);
-    // Token created.
-    assert_eq!(g.battlefield.len(), bf_before + 1);
-    let token = g.battlefield.iter().find(|c| c.definition.name == "Citizen");
-    assert!(token.is_some(), "Citizen token created from attack trigger");
-    let token = token.unwrap();
-    assert!(token.is_token);
-    assert_eq!(token.power(), 1);
-    assert_eq!(token.toughness(), 1);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Map").count(),
+        2, "attack made a second Map",
+    );
 }
 
 #[test]

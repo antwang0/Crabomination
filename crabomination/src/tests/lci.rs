@@ -2073,19 +2073,6 @@ fn chart_a_course_draws_two_discards_without_attack() {
     assert_eq!(g.players[0].hand.len(), before, "drew 2, discarded 1");
 }
 
-/// Marauding Brinefang can be islandcycled to fetch an Island.
-#[test]
-fn marauding_brinefang_islandcycles() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    g.add_card_to_library(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::marauding_brinefang());
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Landcycle { card_id: id }).expect("islandcycle");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded");
-    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Island"), "fetched Island");
-}
-
 /// Resplendent Angel makes a 4/4 Angel at end step after gaining 5+ life.
 #[test]
 fn resplendent_angel_makes_angel_after_lifegain() {
@@ -2104,32 +2091,6 @@ fn resplendent_angel_makes_angel_after_lifegain() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Angel" && c.is_token),
         "4/4 Angel token created after gaining 5 life");
-}
-
-/// Sentinel of the Nameless City makes a Map on ETB and on attack.
-#[test]
-fn sentinel_nameless_city_maps_on_etb_and_attack() {
-    let mut g = two_player_game();
-    let sentinel = g.add_card_to_hand(0, catalog::sentinel_of_the_nameless_city());
-    g.active_player_idx = 0;
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: sentinel, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast");
-    drain_stack(&mut g);
-    let maps_after_etb = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Map").count();
-    assert_eq!(maps_after_etb, 1, "ETB made a Map");
-    g.clear_sickness(sentinel);
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
-        attacker: sentinel, target: crate::game::types::AttackTarget::Player(1),
-    }])).expect("attack");
-    drain_stack(&mut g);
-    let maps_after_attack = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Map").count();
-    assert_eq!(maps_after_attack, 2, "attack made a second Map");
 }
 
 /// Bedevil destroys a planeswalker.
@@ -2353,4 +2314,25 @@ fn unlucky_drop_bounces_to_library() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "left the battlefield");
     assert!(g.players[1].library.iter().any(|c| c.id == bear), "went to owner's library");
+}
+
+/// Curator of Sun's Creation re-discovers once per turn (CR 701.57 + the new
+/// Discovered event).
+#[test]
+fn curator_of_suns_creation_rediscovers() {
+    use crate::effect::{Effect, Value};
+    let mut g = two_player_game();
+    let curator = g.add_card_to_battlefield(0, catalog::curator_of_suns_creation());
+    // Four cheap nonland cards on top so each discover hits immediately.
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.active_player_idx = 0;
+    let hand_before = g.players[0].hand.len();
+    // AutoDecider declines the "cast for free" prompt → discovered card to hand.
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(curator);
+    let events = g.resolve_effect(&Effect::Discover { n: Value::Const(3), filter: None }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    // Initial discover + Curator's re-discover = two cards to hand.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "discovered twice");
 }

@@ -65,6 +65,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
+        (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
         (EventKind::Mutated, GameEvent::Mutated { .. }) => true,
@@ -405,6 +406,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CardPutIntoGraveyard { player, .. }
         | GameEvent::CardCycled { player, .. }
         | GameEvent::EnergyGained { player, .. }
+        | GameEvent::Discovered { player, .. }
         | GameEvent::Expended { player, .. }
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
@@ -499,6 +501,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::EnergyGained { player, .. }
+        | GameEvent::Discovered { player, .. }
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }

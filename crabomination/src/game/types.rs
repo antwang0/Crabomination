@@ -1418,6 +1418,10 @@ pub enum GameEvent {
     /// permanent; `controller` is its controller (whose library was
     /// revealed).
     Explored { card_id: CardId, controller: usize },
+    /// CR 701.57 — `player` performed a discover for `value` (Curator of
+    /// Sun's Creation's "whenever you discover" payoff reads `value` via
+    /// `Value::TriggerEventAmount`).
+    Discovered { player: usize, value: u32 },
     /// CR 701.31 — a permanent became monstrous.
     BecameMonstrous { card_id: CardId },
     /// CR 712 — a permanent transformed to its other face.

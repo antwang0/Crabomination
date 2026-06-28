@@ -10144,6 +10144,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::PoisonAdded { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::CounterAdded { count, .. } => *count,
+        GameEvent::Discovered { value, .. } => *value,
         GameEvent::Expended { total, .. } => *total,
         // CR 706.4 — the greatest result rolled, for "roll a 5 or higher"
         // result-gated triggers (`Predicate::DieResultAtLeast`).

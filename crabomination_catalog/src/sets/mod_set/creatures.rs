@@ -449,13 +449,16 @@ pub fn loran_of_the_third_path() -> CardDefinition {
     }
 }
 
-/// Sentinel of the Nameless City — {2}{G}, 3/4 Plant Warrior with Vigilance
-/// and Ward {2}. Whenever this creature attacks, create a 1/1 green Citizen
-/// creature token. Ward {2} is now wired (it's globally enforced at
-/// targeting time per CR 702.21) and the Plant subtype is restored
-/// (`CreatureType::Plant` is enumerated).
+/// Sentinel of the Nameless City — {2}{G} 3/4 Merfolk Warrior Scout with
+/// vigilance. Whenever this creature enters or attacks, create a Map token.
 pub fn sentinel_of_the_nameless_city() -> CardDefinition {
-    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::{etb, on_attack};
+    use crate::game::effects::map_token;
+    let make_map = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: map_token(),
+    };
     CardDefinition {
         name: "Sentinel of the Nameless City",
         cost: cost(&[generic(2), g()]),
@@ -467,27 +470,7 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: TokenDefinition {
-                    name: "Citizen".into(),
-                    power: 1,
-                    toughness: 1,
-                    keywords: vec![],
-                    card_types: vec![CardType::Creature],
-                    colors: vec![crate::mana::Color::Green],
-                    supertypes: vec![],
-                    subtypes: Subtypes::default(),
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
-                    static_abilities: vec![],
-                    ..Default::default()
-                },
-            },
-        }],
+        triggered_abilities: vec![etb(make_map()), on_attack(make_map())],
         ..Default::default()
     }
 }

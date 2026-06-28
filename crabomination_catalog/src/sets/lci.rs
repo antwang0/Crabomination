@@ -3847,25 +3847,6 @@ pub fn chart_a_course() -> CardDefinition {
     }
 }
 
-/// Marauding Brinefang — {5}{U}{U} 6/7 Dinosaur with ward {3} and islandcycling
-/// {2}.
-pub fn marauding_brinefang() -> CardDefinition {
-    use crate::card::WardCost;
-    CardDefinition {
-        name: "Marauding Brinefang",
-        cost: cost(&[generic(5), u(), u()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
-        power: 6,
-        toughness: 7,
-        keywords: vec![
-            Keyword::Ward(WardCost::Mana(cost(&[generic(3)]))),
-            Keyword::Landcycling(cost(&[generic(2)]), LandType::Island),
-        ],
-        ..Default::default()
-    }
-}
-
 /// Resplendent Angel — {1}{W}{W} 3/3 Angel with flying. At each end step, if you
 /// gained 5+ life this turn, make a 4/4 white Angel with flying and vigilance.
 /// {3}{W}{W}{W}: pump +2/+2 and gain flying/vigilance/lifelink until end of turn.
@@ -3910,26 +3891,6 @@ pub fn resplendent_angel() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..Default::default()
-    }
-}
-
-/// Sentinel of the Nameless City — {2}{G} 3/4 Merfolk Warrior Scout with
-/// vigilance. Whenever it enters or attacks, create a Map token.
-pub fn sentinel_of_the_nameless_city() -> CardDefinition {
-    let make_map = || Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: map_token() };
-    CardDefinition {
-        name: "Sentinel of the Nameless City",
-        cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk, CreatureType::Warrior, CreatureType::Scout],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 4,
-        keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(make_map()), on_attack(make_map())],
         ..Default::default()
     }
 }
@@ -4105,6 +4066,27 @@ pub fn ixallis_lorekeeper() -> CardDefinition {
                 ),
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Curator of Sun's Creation — {3}{R} 3/3 Human Artificer. Whenever you
+/// discover, discover again for the same value. Triggers only once each turn.
+pub fn curator_of_suns_creation() -> CardDefinition {
+    CardDefinition {
+        name: "Curator of Sun's Creation",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Discovered, EventScope::YourControl).once_per_turn(),
+            effect: Effect::Discover { n: Value::TriggerEventAmount, filter: None },
         }],
         ..Default::default()
     }

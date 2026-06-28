@@ -11061,6 +11061,9 @@ impl GameState {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let p = ctx.controller;
                 let cap = self.evaluate_value(n, ctx).max(0) as u32;
+                // CR 701.57 — the discover itself is an event; "whenever you
+                // discover" payoffs (Curator of Sun's Creation) fire off this.
+                events.push(GameEvent::Discovered { player: p, value: cap });
                 let mut exiled: Vec<crate::card::CardId> = Vec::new();
                 let mut hit: Option<crate::card::CardId> = None;
                 while !self.players[p].library.is_empty() {
