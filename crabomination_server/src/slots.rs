@@ -40,6 +40,11 @@ pub(crate) struct SlotState {
     /// distinct from `refused_global` so a single abusive IP hammering the
     /// per-IP cap reads differently from genuine global saturation.
     refused_per_ip: u64,
+    /// Cumulative connections accepted (lifetime). The denominator the
+    /// refusal counters lacked: `refused / (accepted + refused)` is the
+    /// pressure ratio, so operators can tell "a few refusals against heavy
+    /// healthy traffic" from "refusing most of what arrives".
+    accepted: u64,
 }
 
 /// Point-in-time view of the slot accounting, for operator telemetry.
@@ -57,6 +62,22 @@ pub(crate) struct SlotSnapshot {
     /// approaching `current` while `distinct_ips` stays low is the clearest
     /// single-source-abuse signal — sharper than `distinct_ips` alone.
     pub(crate) max_per_ip: usize,
+    /// Lifetime accepted-connection count — the denominator for
+    /// [`refusal_rate_pct`](Self::refusal_rate_pct).
+    pub(crate) accepted: u64,
+}
+
+impl SlotSnapshot {
+    /// Percentage of all connection *attempts* (accepted + refused) that
+    /// were turned away. 0 when nothing has arrived yet. A rising rate is
+    /// the single clearest "the server is under-provisioned or under
+    /// attack" signal — refusal counts alone don't show whether 100
+    /// refusals is a blip against heavy traffic or near-total rejection.
+    pub(crate) fn refusal_rate_pct(&self) -> u64 {
+        let refused = self.refused_global.saturating_add(self.refused_per_ip);
+        let attempts = self.accepted.saturating_add(refused);
+        refused.saturating_mul(100).checked_div(attempts).unwrap_or(0)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -93,6 +114,7 @@ impl SlotManager {
         }
         state.total += 1;
         state.peak = state.peak.max(state.total);
+        state.accepted += 1;
         *state.per_ip.entry(addr).or_insert(0) += 1;
         Ok(SlotGuard {
             inner: Arc::clone(&self.inner),
@@ -111,6 +133,7 @@ impl SlotManager {
             refused_per_ip: state.refused_per_ip,
             distinct_ips: state.per_ip.len(),
             max_per_ip: state.per_ip.values().copied().max().unwrap_or(0),
+            accepted: state.accepted,
         }
     }
 }
@@ -193,6 +216,26 @@ mod tests {
         assert_eq!(s.distinct_ips, 2);
         assert_eq!(s.max_per_ip, 2, "ip1 holds the most slots");
         assert_eq!(s.current, 3);
+    }
+
+    #[test]
+    fn refusal_rate_tracks_accepts_and_refusals() {
+        let mgr = SlotManager::new(2, 0);
+        let _a = mgr.try_acquire(ip(1)).expect("accept 1");
+        let _b = mgr.try_acquire(ip(2)).expect("accept 2");
+        // Two more attempts bounce off the full global cap.
+        assert!(mgr.try_acquire(ip(3)).is_err());
+        assert!(mgr.try_acquire(ip(4)).is_err());
+        let s = mgr.snapshot();
+        assert_eq!(s.accepted, 2, "two accepted");
+        assert_eq!(s.refused_global, 2, "two refused");
+        // 2 refused / 4 attempts = 50%.
+        assert_eq!(s.refusal_rate_pct(), 50);
+    }
+
+    #[test]
+    fn refusal_rate_is_zero_with_no_traffic() {
+        assert_eq!(SlotManager::new(0, 0).snapshot().refusal_rate_pct(), 0);
     }
 
     #[test]
