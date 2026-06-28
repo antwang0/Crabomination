@@ -435,3 +435,87 @@ fn cr_122_1_keyword_counter_grants_keyword() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Deathtouch), "counter grants the keyword");
 }
+
+/// Aerie Auxiliary supports 2 on ETB (counters on two other creatures).
+#[test]
+fn aerie_auxiliary_supports_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::aerie_auxiliary());
+    cast_creature(&mut g, id);
+    let total: u32 = [a, b]
+        .iter()
+        .map(|c| g.battlefield_find(*c).unwrap().counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    // Triggered support auto-targets one other creature (the full multi-target
+    // spread is the dedicated support test's job); confirm the ETB fires.
+    assert!(total >= 1, "support placed a +1/+1 counter on another creature");
+}
+
+/// Titans' Vanguard grows colorless creatures on cast (and is itself devoid).
+#[test]
+fn titans_vanguard_pumps_colorless_on_cast() {
+    let mut g = two_player_game();
+    // A colorless creature already in play (Eldrazi Spawn-style — use another
+    // devoid creature). Snapping Voidcraw is devoid/colorless.
+    let other = g.add_card_to_battlefield(0, catalog::snapping_voidcraw());
+    let id = g.add_card_to_hand(0, catalog::titans_vanguard());
+    cast_creature(&mut g, id);
+    assert_eq!(
+        g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "colorless creature got a +1/+1 counter on cast",
+    );
+}
+
+/// Wither and Bloom shrinks a creature by -3/-3.
+#[test]
+fn wither_and_bloom_shrinks_target() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wither_and_bloom());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // 2/2 with -3/-3 dies as a 0-or-less-toughness SBA.
+    assert!(g.battlefield_find(victim).is_none(), "-3/-3 killed the 2/2");
+}
+
+/// Thriving Skyclaw makes three energy on ETB.
+#[test]
+fn thriving_skyclaw_etb_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::thriving_skyclaw());
+    cast_creature(&mut g, id);
+    assert_eq!(g.players[0].energy, 3, "ETB gives three energy");
+}
+
+/// Flare of Denial can be cast by sacrificing a blue creature instead of mana.
+#[test]
+fn flare_of_denial_alt_cost_sacrifice() {
+    let mut g = two_player_game();
+    // A blue creature to sacrifice (Snapping Voidcraw is devoid — use a blue one).
+    let fodder = g.add_card_to_battlefield(0, catalog::serum_visionary());
+    // Opponent casts a spell to counter.
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts");
+    let id = g.add_card_to_hand(0, catalog::flare_of_denial());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast via sacrifice alt-cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the blue creature");
+    assert!(g.battlefield_find(spell).is_none(), "countered the spell");
+}

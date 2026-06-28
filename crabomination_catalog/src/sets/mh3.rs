@@ -600,3 +600,141 @@ pub fn fowl_strike() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aerie Auxiliary — {3}{W} 3/3 Bird Soldier with flying. ETB: support 2.
+pub fn aerie_auxiliary() -> CardDefinition {
+    use crate::effect::shortcut::support;
+    CardDefinition {
+        name: "Aerie Auxiliary",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(support(2))],
+        ..Default::default()
+    }
+}
+
+/// Scurrilous Sentry — {3}{B} 2/3 Human Knight Rogue with menace. Connives
+/// whenever it enters or attacks.
+pub fn scurrilous_sentry() -> CardDefinition {
+    use crate::effect::shortcut::connive;
+    CardDefinition {
+        name: "Scurrilous Sentry",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(connive(1)), on_attack(connive(1))],
+        ..Default::default()
+    }
+}
+
+/// Titans' Vanguard — {3}{R}{G} 5/5 Eldrazi (devoid) with trample. When you
+/// cast it and whenever it attacks, put a +1/+1 counter on each colorless
+/// creature you control.
+pub fn titans_vanguard() -> CardDefinition {
+    let pump = || Effect::AddCounter {
+        what: Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::Colorless)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Titans' Vanguard",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Devoid, Keyword::Trample],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: pump(),
+            },
+            on_attack(pump()),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wither and Bloom — {1}{B} Instant. Target creature gets -3/-3. "{1}{B},
+/// Exile this card from your graveyard: Put a +1/+1 counter on target
+/// creature you control. Activate only as a sorcery."
+pub fn wither_and_bloom() -> CardDefinition {
+    CardDefinition {
+        name: "Wither and Bloom",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thriving Skyclaw — {2}{R}{R} 3/2 Cat Dragon with flying. ETB: get
+/// {E}{E}{E}. Whenever it attacks, you may pay {E}{E}{E} to grow it.
+pub fn thriving_skyclaw() -> CardDefinition {
+    CardDefinition {
+        name: "Thriving Skyclaw",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(3))),
+            on_attack(Effect::MayDo {
+                description: "pay {E}{E}{E} to put a +1/+1 counter on it".into(),
+                body: Box::new(Effect::PayEnergy {
+                    amount: 3,
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                }),
+            }),
+        ],
+        ..Default::default()
+    }
+}

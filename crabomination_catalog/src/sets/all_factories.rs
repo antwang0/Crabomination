@@ -4501,6 +4501,11 @@ static MH3: &[Factory] = &[
     super::mh3::phyrexian_ironworks,
     super::mh3::breathe_your_last,
     super::mh3::fowl_strike,
+    super::mh3::aerie_auxiliary,
+    super::mh3::scurrilous_sentry,
+    super::mh3::titans_vanguard,
+    super::mh3::wither_and_bloom,
+    super::mh3::thriving_skyclaw,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
