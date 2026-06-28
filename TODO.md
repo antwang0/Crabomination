@@ -22,6 +22,17 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **Bonehoard Dracosaur, Quintorius Kand, Tarrian's Journal, the remaining
   craft DFCs** (Sunbird Standard's color-count CDA, exiled-card recast) need
   bespoke effects; deferred.
+- **Itzquinth, Firstborn of Gishath** needs a *reflexive targeted trigger*:
+  "you may pay {2}. When you do, target Dinosaur you control deals damage = its
+  power to another target creature." Modeling it as `MayPay { body: <two-target
+  bite> }` fails — trigger-target selection validates the nested body's two
+  targets up front and the auto-targeter can't fill them, so the MayPay never
+  fires. The fix is a `MayPay` whose `body` is a *reflexive triggered ability*
+  whose targets are chosen when it goes on the stack after payment (CR 603.7 /
+  "when you do"). Card dropped this run pending that primitive.
+- **Molten Collapse / Abuelo's Awakening** deferred: Molten Collapse needs a
+  descend-gated "choose both" modal (conditional extra mode with per-mode
+  targets); Abuelo's Awakening needs reanimate-as-1/1-flying-Spirit + X counters.
 - **"Descended this turn" reset** is at untap; double-check end-step descend
   payoffs see the flag (they fire in the same turn's end step — verified for
   Deep Goblin Skulltaker).

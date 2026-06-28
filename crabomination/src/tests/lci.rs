@@ -3,6 +3,7 @@
 
 use crate::catalog;
 use crate::card::{CounterType, Keyword};
+use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;
 use crate::mana::Color;
 
@@ -633,4 +634,434 @@ fn sunshot_militia_taps_two_to_ping() {
     }).expect("tap-two ability");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, start - 1, "each opponent took 1");
+}
+
+// ── LCI batch (modern_decks): new commons & uncommons ────────────────────────
+
+use crate::game::{Attack, AttackTarget, Target};
+
+/// Helper: pass priority until the given step.
+fn to_step(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+}
+
+/// Acrobatic Leap pumps +1/+3, grants flying, and untaps the target.
+#[test]
+fn acrobatic_leap_pumps_and_untaps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::acrobatic_leap());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 5), "+1/+3");
+    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+}
+
+/// Petrify makes the enchanted creature unable to attack or block.
+#[test]
+fn petrify_locks_down_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::petrify());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::CantAttack) && cp.keywords.contains(&Keyword::CantBlock), "locked");
+}
+
+/// Ray of Ruin exiles the target creature.
+#[test]
+fn ray_of_ruin_exiles() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::ray_of_ruin());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none() && g.exile.iter().any(|c| c.id == foe), "exiled");
+}
+
+/// Scampering Surveyor tutors a basic land onto the battlefield tapped.
+#[test]
+fn scampering_surveyor_ramps_tapped() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.move_card_to_battlefield_for_test(0, catalog::scampering_surveyor());
+    drain_stack(&mut g);
+    let forest = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Forest");
+    assert!(forest.is_some_and(|c| c.tapped), "Forest entered tapped");
+}
+
+/// Seeker of Sunlight explores when its activated ability resolves.
+#[test]
+fn seeker_of_sunlight_explores() {
+    let mut g = two_player_game();
+    let seeker = g.add_card_to_battlefield(0, catalog::seeker_of_sunlight());
+    g.add_card_to_library(0, catalog::forest()); // land → to hand
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "explored land to hand");
+}
+
+/// Mischievous Pup bounces another permanent you control on entry.
+#[test]
+fn mischievous_pup_bounces_own() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::mischievous_pup());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == other), "bounced to hand");
+}
+
+/// Nurturing Bristleback makes a 3/3 Dinosaur token on entry.
+#[test]
+fn nurturing_bristleback_makes_dino() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::nurturing_bristleback());
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Dinosaur" && c.is_token);
+    assert!(tok.is_some_and(|c| (c.definition.power, c.definition.toughness) == (3, 3)), "3/3 Dino token");
+}
+
+/// Soaring Sandwing gains 3 life on entry.
+#[test]
+fn soaring_sandwing_gains_life() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.move_card_to_battlefield_for_test(0, catalog::soaring_sandwing());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3");
+}
+
+/// Rampaging Spiketail pumps a creature you control and grants indestructible.
+#[test]
+fn rampaging_spiketail_pumps_and_shields() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::rampaging_spiketail());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible");
+}
+
+/// Tinker's Tote makes two Gnomes and can sacrifice for 3 life.
+#[test]
+fn tinkers_tote_gnomes_and_sac() {
+    let mut g = two_player_game();
+    let tote = g.move_card_to_battlefield_for_test(0, catalog::tinkers_tote());
+    drain_stack(&mut g);
+    let gnomes = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Gnome").count();
+    assert_eq!(gnomes, 2, "two Gnomes");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].life = 20;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tote, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3 from sac");
+    assert!(g.battlefield_find(tote).is_none(), "sacrificed");
+}
+
+/// Primordial Gnawer discovers 3 when it dies.
+#[test]
+fn primordial_gnawer_discovers_on_death() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // MV 1 ≤ 3
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // decline free cast → to hand
+    let gnawer = g.add_card_to_battlefield(0, catalog::primordial_gnawer());
+    g.remove_to_graveyard_with_triggers(gnawer);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "discovered card to hand");
+}
+
+/// Mephitic Draught draws and loses 1 life on entry and on death.
+#[test]
+fn mephitic_draught_etb_and_death() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].life = 20;
+    let draught = g.move_card_to_battlefield_for_test(0, catalog::mephitic_draught());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "lost 1 on ETB");
+    g.remove_to_graveyard_with_triggers(draught);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "lost 1 on death");
+}
+
+/// Staunch Crewmate digs four and takes an artifact/Pirate.
+#[test]
+fn staunch_crewmate_digs() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let art = g.add_card_to_library(0, catalog::ornithopter()); // top, an artifact
+    g.move_card_to_battlefield_for_test(0, catalog::staunch_crewmate());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == art), "took the artifact");
+}
+
+/// Malamet Brawler grants trample to a target attacker.
+#[test]
+fn malamet_brawler_grants_trample() {
+    let mut g = two_player_game();
+    let brawler = g.add_card_to_battlefield(0, catalog::malamet_brawler());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(brawler);
+    g.clear_sickness(ally);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: brawler, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Trample), "ally gained trample");
+}
+
+/// Malamet Veteran adds a counter when attacking with descend 4 active.
+#[test]
+fn malamet_veteran_descend_counter() {
+    let mut g = two_player_game();
+    let vet = g.add_card_to_battlefield(0, catalog::malamet_veteran());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // descend 4
+    g.clear_sickness(vet);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: vet, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "counter added");
+}
+
+/// Enterprising Scallywag makes a Treasure at end step if you descended.
+#[test]
+fn enterprising_scallywag_treasure_on_descend() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::enterprising_scallywag());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].descended_this_turn = true;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "made a Treasure");
+}
+
+/// Careening Mine Cart makes a Treasure when it attacks (crewed).
+#[test]
+fn careening_mine_cart_treasure_on_attack() {
+    let mut g = two_player_game();
+    let cart = g.add_card_to_battlefield(0, catalog::careening_mine_cart());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(cart);
+    g.clear_sickness(bear);
+    g.perform_action(GameAction::Crew { vehicle: cart, crew_creatures: vec![bear] }).expect("crew");
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: cart, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "made a Treasure");
+}
+
+/// Brazen Blademaster pumps when attacking with two+ artifacts.
+#[test]
+fn brazen_blademaster_artifact_pump() {
+    let mut g = two_player_game();
+    let bm = g.add_card_to_battlefield(0, catalog::brazen_blademaster());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.clear_sickness(bm);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bm, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bm).unwrap().power, 4, "+2/+1 from two artifacts");
+}
+
+/// Burning Sun Cavalry pumps on attack while you control a Dinosaur.
+#[test]
+fn burning_sun_cavalry_dino_pump() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::burning_sun_cavalry());
+    g.add_card_to_battlefield(0, catalog::nurturing_bristleback()); // a Dinosaur
+    g.clear_sickness(knight);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: knight, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 3, "+1/+1 with a Dino");
+}
+
+/// Hotfoot Gnome grants haste to another creature.
+#[test]
+fn hotfoot_gnome_grants_haste() {
+    let mut g = two_player_game();
+    let gnome = g.add_card_to_battlefield(0, catalog::hotfoot_gnome());
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gnome);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gnome, ability_index: 0, target: Some(Target::Permanent(fresh)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fresh).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Fungal Fortitude gives +2/+0 and returns the creature tapped when it dies.
+#[test]
+fn fungal_fortitude_returns_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::fungal_fortitude());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+2/+0");
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Grizzly Bears");
+    assert!(back.is_some_and(|c| c.tapped), "returned tapped");
+}
+
+/// Armored Kincaller gains 3 life when you control another Dinosaur.
+#[test]
+fn armored_kincaller_gains_life_with_dino() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.add_card_to_battlefield(0, catalog::nurturing_bristleback()); // a Dinosaur
+    g.move_card_to_battlefield_for_test(0, catalog::armored_kincaller());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3 with another Dino");
+}
+
+
+/// Brackish Blunder bounces; a tapped target also yields a Map.
+#[test]
+fn brackish_blunder_map_when_tapped() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::brackish_blunder());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe), "bounced");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Map"), "Map for tapped target");
+}
+
+/// Bloodthorn Flail equips for +2/+1.
+#[test]
+fn bloodthorn_flail_equips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let flail = g.add_card_to_battlefield(0, catalog::bloodthorn_flail());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: flail, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1");
+}
+
+/// Diamond Pick-Axe is indestructible and its bearer makes Treasure on attack.
+#[test]
+fn diamond_pick_axe_treasure_on_attack() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let axe = g.add_card_to_battlefield(0, catalog::diamond_pick_axe());
+    assert!(g.computed_permanent(axe).unwrap().keywords.contains(&Keyword::Indestructible));
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: axe, target: bear }).expect("equip");
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "made a Treasure");
+}
+
+/// Pirate Hat's bearer loots when it attacks.
+#[test]
+fn pirate_hat_loots_on_attack() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hat = g.add_card_to_battlefield(0, catalog::pirate_hat());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: hat, target: bear }).expect("equip");
+    let hand_before = g.players[0].hand.len();
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    // Loot = draw 1, discard 1 → net hand size unchanged, but the drawn Island is in hand.
+    assert_eq!(g.players[0].hand.len(), hand_before, "loot is net-zero");
 }

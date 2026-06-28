@@ -209,6 +209,17 @@ fn geological_appraiser_discovers_and_casts() {
     assert!(g.battlefield_find(bears).is_some(), "discovered creature cast for free");
 }
 
+/// "If you cast it" — Geological Appraiser put directly onto the battlefield
+/// (not cast) does not discover (CR 603.x, SourceWasCast gate).
+#[test]
+fn geological_appraiser_no_discover_when_not_cast() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::geological_appraiser());
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == bears), "no discover: library top untouched");
+}
+
 /// Declining the free cast puts the discovered card into hand instead.
 #[test]
 fn discover_decline_puts_card_in_hand() {
