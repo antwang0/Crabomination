@@ -815,6 +815,22 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn draw_pct_is_share_of_all_matches() {
+        // 2 draws out of 4 total → 50% (vs decisive_pct, which is over resolved).
+        let mut s = MatchStats { bot_matches: 4, ..Default::default() };
+        s.observe_winner(Some(Some(0)));
+        s.observe_winner(Some(None));
+        s.observe_winner(Some(None));
+        s.observe_winner(None); // inconclusive
+        assert_eq!(s.draws, 2);
+        assert_eq!(s.draw_pct(), 50);
+        // decisive_pct counts only resolved (1 win + 2 draws) → 1/3 = 33%.
+        assert_eq!(s.decisive_pct(), 33);
+        // Empty stats → 0, no divide-by-zero.
+        assert_eq!(MatchStats::default().draw_pct(), 0);
+    }
+
+    #[test]
     pub(crate) fn decisive_pct_zero_before_any_resolution() {
         let s = MatchStats::default();
         assert_eq!(s.decisive_pct(), 0);

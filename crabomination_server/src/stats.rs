@@ -322,6 +322,15 @@ impl MatchStats {
         if total == 0 { return 0; }
         self.inconclusive.saturating_mul(100) / total
     }
+    /// Percentage of *all* completed matches that ended in a draw. Distinct
+    /// from `decisive_pct` (which is wins/(wins+draws), ignoring inconclusive
+    /// games): this is over the full denominator, so a creeping bot-vs-bot
+    /// stalemate regression shows up here even as `inconclusive_pct` stays low.
+    pub(crate) fn draw_pct(&self) -> u64 {
+        let total = self.total_matches();
+        if total == 0 { return 0; }
+        self.draws.saturating_mul(100) / total
+    }
     /// Share of decisive (non-draw) wins taken by the player on the play
     /// (seat 0), as a percentage. A value far from 50 over a long bot ladder
     /// flags turn-order bias in the active-player heuristic — the
@@ -768,6 +777,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             " wins={} draws={} decisive={}%",
             s.wins, s.draws, s.decisive_pct()
         ));
+        // Draw rate over *all* matches — a stalemate-regression gauge that the
+        // resolved-only `decisive_pct` can't show. Only when draws exist.
+        if s.draws > 0 {
+            out.push_str(&format!(" draw_rate={}%", s.draw_pct()));
+        }
         // Alternate-win split: how many of those wins closed via
         // something other than lethal face damage (deckout / poison /
         // mill / win-the-game). Only rendered when at least one such
