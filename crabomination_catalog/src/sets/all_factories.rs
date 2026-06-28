@@ -4023,6 +4023,7 @@ static DECKS: &[Factory] = &[
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
+    super::dis::pride_of_the_clouds,
     super::dis::aquastrand_spider,
     super::dis::plaxcaster_frogling,
     super::dis::cytoplast_root_kin,

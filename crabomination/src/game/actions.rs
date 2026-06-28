@@ -8056,6 +8056,16 @@ impl GameState {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
+        // CR 702.56 — Forecast / other hand-activated "once each turn"
+        // abilities (the card stays in hand). The hand instance's
+        // per-turn budget rides the global `triggered_once_per_turn_used`
+        // set, which is cleared at turn cleanup.
+        if source_in_hand
+            && ability.once_per_turn
+            && self.triggered_once_per_turn_used.contains(&(card_id, ability_index))
+        {
+            return Err(GameError::AbilityAlreadyUsedThisTurn);
+        }
 
         // CR 702.177 — Exhaust: an exhaust ability can be activated only once
         // per game. `exhausted_abilities` (never cleared at turn start) records
@@ -8715,9 +8725,14 @@ impl GameState {
         // queueing — all of which are guaranteed to commit if we get here.)
         if ability.once_per_turn
             && !source_in_gy
+            && !source_in_hand
             && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             card.once_per_turn_used.push(ability_index);
+        }
+        // CR 702.56 — record a hand (Forecast) once-per-turn activation.
+        if ability.once_per_turn && source_in_hand {
+            self.triggered_once_per_turn_used.insert((card_id, ability_index));
         }
         // CR 702.177 — record the exhaust activation (never cleared this game).
         if ability.exhaust

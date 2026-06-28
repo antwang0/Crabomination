@@ -11,6 +11,9 @@ state-corrupting in ordinary play.
 ## Discovered follow-ups — LCI / Craft / Descend (`sets::lci`)
 
 Shipped: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),
+the **Discovered event** (CR 701.57 — `GameEvent::Discovered` / `EventKind::
+Discovered`, value via `Value::TriggerEventAmount`) wiring "whenever you
+discover" payoffs (Curator of Sun's Creation re-discovers once per turn),
 Descend (`SelectionRequirement::ControllerDescend`, `Predicate::{DescendActive,
 DescendedThisTurn}`, `DynamicPt::PermanentCardsInControllerGraveyard`, HUD chip),
 `LandType::Cave` + the 10-card Cave subset (Captivating Cave, Volatile Fault,

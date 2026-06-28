@@ -5060,3 +5060,84 @@ fn cr_701_57_discover_digs_and_casts() {
         || g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears");
     assert!(found, "discovered card moved out of the library (cast or to hand)");
 }
+
+/// CR 702.56 — Forecast: a hand-activated ability usable only during the
+/// owner's upkeep, only once each turn. Pride of the Clouds mints a Bird.
+#[test]
+fn cr_702_56_forecast_once_per_turn_in_upkeep() {
+    let mut g = two_player_game();
+    let pride = g.add_card_to_hand(0, catalog::pride_of_the_clouds());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Outside the upkeep the forecast condition fails.
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: pride, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "forecast can't fire outside upkeep");
+    // In your upkeep it resolves; the card stays in hand.
+    g.step = TurnStep::Upkeep;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pride, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("forecast in upkeep");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == pride), "forecast card stays in hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird").count(), 1, "made a Bird");
+    // Second activation the same turn is rejected (once each turn).
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: pride, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "once each turn");
+}
+
+/// CR 701.40 — Explore via a Map token: sacrifice the Map to explore a
+/// creature; a land reveal goes to hand.
+#[test]
+fn cr_701_40_map_token_explore() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // A Map maker: cast Spyglass Siren (ETB makes a Map).
+    let siren = g.add_card_to_hand(0, catalog::spyglass_siren());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: siren, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast siren");
+    drain_stack(&mut g);
+    let map = g.battlefield.iter().find(|c| c.definition.name == "Map").map(|c| c.id).expect("Map token");
+    g.add_card_to_library(0, catalog::forest()); // land on top → explore to hand
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: map, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).expect("sac Map to explore");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(map).is_none(), "Map sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "explored land to hand");
+}
+
+/// CR 510.1c / 702.2e — a trample + deathtouch attacker assigns only 1 (lethal
+/// under deathtouch) to the blocker and tramples the rest to the player.
+#[test]
+fn cr_510_1c_deathtouch_trample_assigns_one() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::pest_reaper_b120()); // 4/4 trample+deathtouch
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.block_map.insert(blocker, attacker);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    let life_before = g.players[1].life;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).is_none(), "blocker dies to deathtouch");
+    assert_eq!(g.players[1].life, life_before - 3, "1 lethal to blocker, 3 trample over");
+}
