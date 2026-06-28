@@ -5015,3 +5015,61 @@ pub fn queens_bay_paladin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Uchbenbak, the Great Mistake — {3}{U}{B} 6/4 Legendary Skeleton Horror with
+/// vigilance and menace. Descend 8 — {4}{U}{B}: return this from your graveyard
+/// to the battlefield with a finality counter (sorcery speed, 8+ permanent cards
+/// in your graveyard).
+pub fn uchbenbak_the_great_mistake() -> CardDefinition {
+    CardDefinition {
+        name: "Uchbenbak, the Great Mistake",
+        cost: cost(&[generic(3), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton, CreatureType::Horror], ..Default::default() },
+        power: 6,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), u(), b()]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            condition: Some(Predicate::DescendActive { who: PlayerRef::You, count: 8 }),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::Finality,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shipwreck Sentry — {1}{U} 3/3 Human Pirate with defender. It can attack as
+/// though it didn't have defender while an artifact entered under your control
+/// this turn.
+pub fn shipwreck_sentry() -> CardDefinition {
+    CardDefinition {
+        name: "Shipwreck Sentry",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Pirate], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![StaticAbility {
+            description: "Can attack as though it didn't have defender while an artifact entered under your control this turn.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile {
+                condition: Predicate::ArtifactEnteredThisTurn { who: PlayerRef::You },
+            },
+        }],
+        ..Default::default()
+    }
+}

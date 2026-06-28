@@ -2820,3 +2820,53 @@ fn queens_bay_paladin_reanimates_vampire() {
     assert!(r.counters.get(&CounterType::Finality).copied().unwrap_or(0) >= 1, "finality counter");
     assert_eq!(g.players[0].life, life_before - 5, "lost life equal to its mana value (5)");
 }
+
+/// Uchbenbak returns itself from the graveyard only at descend 8.
+#[test]
+fn uchbenbak_returns_at_descend_8() {
+    let mut g = two_player_game();
+    let uch = g.add_card_to_graveyard(0, catalog::uchbenbak_the_great_mistake());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    // Fewer than 8 permanent cards in graveyard → illegal.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: uch, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(res.is_err(), "needs descend 8");
+    // Top up the graveyard to 8 permanent cards (incl. Uchbenbak).
+    for _ in 0..7 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: uch, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("return at descend 8");
+    drain_stack(&mut g);
+    let r = g.battlefield_find(uch).expect("returned to battlefield");
+    assert!(r.counters.get(&CounterType::Finality).copied().unwrap_or(0) >= 1, "with a finality counter");
+}
+
+/// Shipwreck Sentry can attack only after an artifact entered this turn.
+#[test]
+fn shipwreck_sentry_attacks_after_artifact() {
+    let mut g = two_player_game();
+    let sentry = g.add_card_to_battlefield(0, catalog::shipwreck_sentry());
+    g.clear_sickness(sentry);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    // No artifact entered → defender blocks the attack.
+    let res = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sentry, target: AttackTarget::Player(1),
+    }]));
+    assert!(res.is_err(), "defender can't attack without an artifact ETB");
+    // An artifact enters → it can now attack.
+    g.move_card_to_battlefield_for_test(0, catalog::buried_treasure());
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sentry, target: AttackTarget::Player(1),
+    }])).expect("can attack after artifact ETB");
+}
