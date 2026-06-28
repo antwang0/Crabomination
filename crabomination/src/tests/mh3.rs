@@ -226,3 +226,112 @@ fn tempest_harvester_energy_loots() {
     // Drew one, discarded one → net hand size unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before, "drew then discarded");
 }
+
+/// Warren Soultrader sacrifices a creature to make a Treasure.
+#[test]
+fn warren_soultrader_sacs_for_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::warren_soultrader());
+    g.clear_sickness(id);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("activate sac-for-treasure");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the other creature");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "made a Treasure token",
+    );
+}
+
+/// Snapping Voidcraw taps for {C}{C}.
+#[test]
+fn snapping_voidcraw_taps_for_two_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::snapping_voidcraw());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for CC");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "{{C}}{{C}}");
+}
+
+/// Solar Transformer enters tapped and produces three energy.
+#[test]
+fn solar_transformer_enters_tapped_with_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::solar_transformer());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped");
+    assert_eq!(g.players[0].energy, 3, "ETB gives three energy");
+}
+
+/// Roil Cartographer gains energy whenever a land you control enters.
+#[test]
+fn roil_cartographer_landfall_energy() {
+    let mut g = two_player_game();
+    let _id = g.add_card_to_battlefield(0, catalog::roil_cartographer());
+    let land = g.add_card_to_hand(0, catalog::island());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 1, "landfall gave one energy");
+}
+
+/// Horrid Shadowspinner has lifelink and the on-attack loot trigger.
+#[test]
+fn horrid_shadowspinner_has_lifelink() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::horrid_shadowspinner());
+    let cp = g.computed_permanent(id).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Unfathomable Truths draws three and mints an Eldrazi Spawn.
+#[test]
+fn unfathomable_truths_draws_and_spawns() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::unfathomable_truths());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 cast + 3 draws = before + 2.
+    assert_eq!(g.players[0].hand.len(), before + 2, "drew three");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Eldrazi Spawn"),
+        "made an Eldrazi Spawn token",
+    );
+}
+
+/// Phyrexian Ironworks spends energy to mint a 3/3 Golem.
+#[test]
+fn phyrexian_ironworks_makes_golem() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::phyrexian_ironworks());
+    g.clear_sickness(id);
+    g.players[0].energy = 3;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("make golem");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "spent three energy");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Phyrexian Golem"),
+        "minted a Golem",
+    );
+}

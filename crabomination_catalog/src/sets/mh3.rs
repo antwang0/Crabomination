@@ -3,12 +3,15 @@
 //! (energy, devoid, divided damage, keyword counters, modal spells).
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
-    SelectionRequirement, Selector, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility,
+    Value,
 };
-use crate::effect::shortcut::{add_any_one_color, add_colorless, etb, target_filtered};
+use crate::effect::shortcut::{
+    add_any_one_color, add_colorless, etb, mint_treasures, on_attack, target_filtered,
+};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{b, colorless, cost, g, generic, r, u, w};
 
 /// Accursed Marauder — {1}{B} 2/1 Zombie Warrior. ETB: each player sacrifices
 /// a nontoken creature of their choice.
@@ -361,6 +364,198 @@ pub fn tempest_harvester() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
             ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warren Soultrader — {2}{B} 3/3 Zombie Goblin Wizard. "Pay 1 life,
+/// Sacrifice another creature: Create a Treasure token."
+pub fn warren_soultrader() -> CardDefinition {
+    CardDefinition {
+        name: "Warren Soultrader",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Goblin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: mint_treasures(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Snapping Voidcraw — {1}{G}{U} 1/3 Eldrazi Turtle (devoid). "{T}: Add
+/// {C}{C}." and "{3}{C}, {T}: Draw a card."
+pub fn snapping_voidcraw() -> CardDefinition {
+    CardDefinition {
+        name: "Snapping Voidcraw",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Turtle],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![
+            ActivatedAbility { tap_cost: true, effect: add_colorless(2), ..Default::default() },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), colorless(1)]),
+                tap_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Solar Transformer — {2} Artifact. Enters tapped; ETB get {E}{E}{E}.
+/// "{T}: Add {C}." and "{T}, Pay {E}: Add one mana of any color."
+pub fn solar_transformer() -> CardDefinition {
+    CardDefinition {
+        name: "Solar Transformer",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            super::etb_tap(),
+            etb(Effect::AddEnergy(Value::Const(3))),
+        ],
+        activated_abilities: vec![
+            ActivatedAbility { tap_cost: true, effect: add_colorless(1), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                energy_cost: 1,
+                effect: add_any_one_color(1),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Roil Cartographer — {1}{U} 1/3 Merfolk Rogue. Landfall: get {E}. "{T}, Pay
+/// six {E}: Draw three cards."
+pub fn roil_cartographer() -> CardDefinition {
+    CardDefinition {
+        name: "Roil Cartographer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::AddEnergy(Value::Const(1)),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            energy_cost: 6,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Horrid Shadowspinner — {1}{U}{B} 2/3 Horror with lifelink. "Whenever this
+/// attacks, you may draw cards equal to its power. If you do, discard that
+/// many cards."
+pub fn horrid_shadowspinner() -> CardDefinition {
+    let power = Value::PowerOf(Box::new(Selector::This));
+    CardDefinition {
+        name: "Horrid Shadowspinner",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![on_attack(Effect::MayDo {
+            description: "draw cards equal to its power, then discard that many".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: power.clone() },
+                Effect::Discard { who: Selector::You, amount: power, random: false },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Unfathomable Truths — {4}{U} Instant (devoid). Draw three cards and create
+/// a 0/1 colorless Eldrazi Spawn token.
+pub fn unfathomable_truths() -> CardDefinition {
+    CardDefinition {
+        name: "Unfathomable Truths",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Devoid],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::eldrazi_spawn_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// 3/3 colorless Phyrexian Golem artifact creature token.
+fn phyrexian_golem_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Phyrexian Golem".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Ironworks — {2}{R} Artifact. "Whenever you attack, you get {E}."
+/// "{T}, Pay {E}{E}{E}: Create a 3/3 Phyrexian Golem. Activate only as a
+/// sorcery." The energy trigger rides `Attacks/YourControl` (per attacker,
+/// the standard "whenever you attack" approximation).
+pub fn phyrexian_ironworks() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Ironworks",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::AddEnergy(Value::Const(1)),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            energy_cost: 3,
+            sorcery_speed: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: phyrexian_golem_token(),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -4492,6 +4492,13 @@ static MH3: &[Factory] = &[
     super::mh3::fanged_flames,
     super::mh3::solstice_zealot,
     super::mh3::tempest_harvester,
+    super::mh3::warren_soultrader,
+    super::mh3::snapping_voidcraw,
+    super::mh3::solar_transformer,
+    super::mh3::roil_cartographer,
+    super::mh3::horrid_shadowspinner,
+    super::mh3::unfathomable_truths,
+    super::mh3::phyrexian_ironworks,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
