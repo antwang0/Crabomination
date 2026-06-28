@@ -597,3 +597,40 @@ fn pugnacious_hammerskull_stuns_when_alone() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(dino).unwrap().counter_count(crate::card::CounterType::Stun), 1, "stunned (no other Dino)");
 }
+
+/// Sentry of the Underworld regenerates for {W}{B} and 3 life.
+#[test]
+fn sentry_of_the_underworld_regenerates() {
+    let mut g = two_player_game();
+    let sentry = g.add_card_to_battlefield(0, catalog::sentry_of_the_underworld());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].life = 20;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sentry, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("regenerate ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "paid 3 life");
+    assert_eq!(g.battlefield_find(sentry).unwrap().regeneration_shields, 1, "stamped a regen shield");
+}
+
+/// Sunshot Militia taps two helpers to ping each opponent.
+#[test]
+fn sunshot_militia_taps_two_to_ping() {
+    let mut g = two_player_game();
+    let militia = g.add_card_to_battlefield(0, catalog::sunshot_militia());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let start = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: militia, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap-two ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, start - 1, "each opponent took 1");
+}

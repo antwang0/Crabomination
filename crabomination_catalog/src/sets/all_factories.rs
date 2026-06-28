@@ -4427,6 +4427,8 @@ static LCI: &[Factory] = &[
     super::lci::dusk_legion_duelist,
     super::lci::over_the_edge,
     super::lci::pugnacious_hammerskull,
+    super::lci::sentry_of_the_underworld,
+    super::lci::sunshot_militia,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

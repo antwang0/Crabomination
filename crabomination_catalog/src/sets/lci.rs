@@ -1752,3 +1752,47 @@ pub fn pugnacious_hammerskull() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sentry of the Underworld — {3}{W}{B} 3/3 Griffin Skeleton with flying and
+/// vigilance. {W}{B}, Pay 3 life: Regenerate it.
+pub fn sentry_of_the_underworld() -> CardDefinition {
+    CardDefinition {
+        name: "Sentry of the Underworld",
+        cost: cost(&[generic(3), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin, CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), b()]),
+            life_cost: 3,
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sunshot Militia — {1}{R} 1/3 Human Soldier. Tap two untapped artifacts
+/// and/or creatures you control: deal 1 damage to each opponent (sorcery speed).
+pub fn sunshot_militia() -> CardDefinition {
+    CardDefinition {
+        name: "Sunshot Militia",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            tap_n_filter: Some((SelectionRequirement::Artifact.or(SelectionRequirement::Creature), 2)),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
