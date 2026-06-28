@@ -1419,8 +1419,10 @@ pub enum GameEvent {
     PermanentPhasedIn { card_id: CardId },
     /// CR 701.40 — a permanent explored. `card_id` is the exploring
     /// permanent; `controller` is its controller (whose library was
-    /// revealed).
-    Explored { card_id: CardId, controller: usize },
+    /// revealed). `explored_land` is true when the revealed top card was a
+    /// land (Nicanzil filters land vs nonland explores; surfaced through
+    /// `event_amount_for` as 1/0).
+    Explored { card_id: CardId, controller: usize, explored_land: bool },
     /// CR 701.57 — `player` performed a discover for `value` (Curator of
     /// Sun's Creation's "whenever you discover" payoff reads `value` via
     /// `Value::TriggerEventAmount`).

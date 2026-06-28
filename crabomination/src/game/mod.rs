@@ -9944,6 +9944,8 @@ impl GameState {
                 .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.definition.cost.cmc()))
                 .unwrap_or(0),
             GameEvent::CardCycled { x, .. } => *x,
+            // Nicanzil: 1 when a land was explored, 0 for a nonland.
+            GameEvent::Explored { explored_land, .. } => *explored_land as u32,
             _ => event_amount(ev),
         }
     }

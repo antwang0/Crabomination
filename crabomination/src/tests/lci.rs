@@ -2921,3 +2921,38 @@ fn deepfathom_echo_explores_and_copies() {
     assert!(cp.keywords.contains(&Keyword::Flying), "copied Serra Angel's flying");
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
 }
+
+/// Nicanzil grows when a creature explores a nonland, and ramps on a land explore.
+#[test]
+fn nicanzil_land_and_nonland_explores() {
+    let mut g = two_player_game();
+    let nic = g.add_card_to_battlefield(0, catalog::nicanzil_current_conductor());
+    let scout = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    fn explore(g: &mut GameState, scout: CardId) {
+        let ctx = crate::game::effects::EffectContext::for_ability(scout, 0, None);
+        let evs = g.resolve_effect(&crate::effect::Effect::Explore { who: crate::effect::Selector::This }, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+    }
+    // Nonland on top → explore gives Nicanzil a +1/+1 counter.
+    let nid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(nid, catalog::lightning_bolt(), 0));
+    explore(&mut g, scout);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(nic).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "nonland explore → +1/+1 on Nicanzil",
+    );
+    // Land on top + a land in hand → explore lets us put the hand land in tapped.
+    let lid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(lid, catalog::forest(), 0));
+    let hand_forest = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![hand_forest]),
+    ]));
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    explore(&mut g, scout);
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 1, "land explore → put a hand land onto the battlefield");
+}

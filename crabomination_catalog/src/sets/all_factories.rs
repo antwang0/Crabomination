@@ -4554,6 +4554,7 @@ static LCI: &[Factory] = &[
     super::lci::shipwreck_sentry,
     super::lci::sage_of_days,
     super::lci::deepfathom_echo,
+    super::lci::nicanzil_current_conductor,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

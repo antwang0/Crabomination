@@ -2988,7 +2988,11 @@ impl GameState {
                             self.permanents_gained_counter_this_turn.insert(cid);
                         }
                     }
-                    events.push(GameEvent::Explored { card_id: cid, controller });
+                    events.push(GameEvent::Explored {
+                        card_id: cid,
+                        controller,
+                        explored_land: is_land == Some(true),
+                    });
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);

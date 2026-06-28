@@ -1987,7 +1987,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PermanentPhasedIn { card_id } => {
                 GameEventWire::PermanentPhasedIn { card_id: *card_id }
             }
-            GameEvent::Explored { card_id, controller } => {
+            GameEvent::Explored { card_id, controller, .. } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
             }
             GameEvent::Discovered { player, value } => {

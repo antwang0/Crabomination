@@ -5126,3 +5126,48 @@ pub fn deepfathom_echo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nicanzil, Current Conductor — {G}{U} 2/3 Legendary Merfolk Scout. Whenever a
+/// creature you control explores a land card, you may put a land from your hand
+/// onto the battlefield tapped. Whenever one explores a nonland card, put a
+/// +1/+1 counter on Nicanzil.
+pub fn nicanzil_current_conductor() -> CardDefinition {
+    CardDefinition {
+        name: "Nicanzil, Current Conductor",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk, CreatureType::Scout], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Explored, EventScope::YourControl).with_filter(
+                    Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(1)),
+                ),
+                effect: Effect::MayDo {
+                    description: "put a land from your hand onto the battlefield tapped".into(),
+                    body: Box::new(Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Land,
+                        count: Value::Const(1),
+                        tapped: true,
+                        haste: false,
+                        sacrifice_eot: false,
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Explored, EventScope::YourControl).with_filter(
+                    Predicate::ValueAtMost(Value::TriggerEventAmount, Value::Const(0)),
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
