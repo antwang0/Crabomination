@@ -1313,3 +1313,44 @@ fn threefold_thunderhulk_mints_gnomes() {
     let gnomes = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Gnome").count();
     assert_eq!(gnomes, 3, "minted Gnomes equal to power");
 }
+
+/// Tectonic Hazard pings each opponent and their creatures for 1.
+#[test]
+fn tectonic_hazard_pings_opponent_board() {
+    let mut g = two_player_game();
+    let x1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::tectonic_hazard());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].life = 20;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent took 1");
+    assert_eq!(g.battlefield_find(x1).unwrap().damage, 1, "opponent creature took 1");
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "your creature untouched");
+}
+
+/// Soulcoil Viper reanimates a graveyard creature with a finality counter.
+#[test]
+fn soulcoil_viper_reanimates_with_finality() {
+    let mut g = two_player_game();
+    let viper = g.add_card_to_battlefield(0, catalog::soulcoil_viper());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.clear_sickness(viper);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: viper, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(dead).expect("reanimated");
+    assert_eq!(back.counter_count(CounterType::Finality), 1, "entered with a finality counter");
+    assert!(g.battlefield_find(viper).is_none(), "viper sacrificed");
+}

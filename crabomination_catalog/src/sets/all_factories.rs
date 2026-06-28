@@ -4470,6 +4470,8 @@ static LCI: &[Factory] = &[
     super::lci::canonized_in_blood,
     super::lci::earthshaker_dreadmaw,
     super::lci::threefold_thunderhulk,
+    super::lci::tectonic_hazard,
+    super::lci::soulcoil_viper,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -2863,3 +2863,59 @@ pub fn threefold_thunderhulk() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tectonic Hazard — {R} Sorcery. Deals 1 damage to each opponent and each
+/// creature they control.
+pub fn tectonic_hazard() -> CardDefinition {
+    CardDefinition {
+        name: "Tectonic Hazard",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Soulcoil Viper — {2}{B} 2/3 Snake. {B}, {T}, Sacrifice this creature: return
+/// target creature card from your graveyard to the battlefield with a finality
+/// counter on it (sorcery speed).
+pub fn soulcoil_viper() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Soulcoil Viper",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Finality,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
