@@ -79,6 +79,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Crime => (Color::srgba(0.34, 0.12, 0.10, 1.0), theme::TEXT_PRIMARY),
         // EOE Void — a deep starless violet for the Edge-of-Eternities payoffs.
         StatChipKind::Void => (Color::srgba(0.18, 0.10, 0.30, 1.0), theme::TEXT_PRIMARY),
+        // LCI Descend — a cavern earth-brown that deepens as the graveyard fills.
+        StatChipKind::Descend => (Color::srgba(0.26, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -108,6 +110,7 @@ pub(super) enum StatChipKind {
     Ring,
     Crime,
     Void,
+    Descend,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -646,6 +649,16 @@ pub fn update_player_stats_chips(
         // Void-matters payoffs are online.
         if p.void_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Void, "✦ void".to_string());
+        }
+        // LCI Descend — show the permanent-card-in-graveyard count once it's
+        // non-zero, so descend-4 / descend-8 thresholds are easy to track.
+        if p.descend_count > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Descend,
+                format!("\u{26CF} descend {}", p.descend_count),
+            );
         }
         // CR 701.54 The Ring — show the temptation level once the Ring has
         // tempted this player at least once.

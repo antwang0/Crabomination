@@ -523,6 +523,11 @@ fn project_player(
         commander_damage_taken,
         team,
         coven_active,
+        descend_count: state.players[player_seat]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_permanent())
+            .count() as u32,
         committed_crime_this_turn: state.players[player_seat].committed_crime_this_turn,
         ring_temptations: player.ring_temptations,
         ring_bearer: state.effective_ring_bearer(player_seat),

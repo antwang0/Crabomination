@@ -665,6 +665,12 @@ pub struct PlayerView {
     /// snapshot back-compat.
     #[serde(default)]
     pub committed_crime_this_turn: bool,
+    /// LCI Descend — the number of permanent cards in this player's graveyard.
+    /// Surfaced so the client can show a "Descend N" chip and light up the
+    /// descend-N / fathomless-descent payoffs. `#[serde(default)]` for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub descend_count: u32,
     /// CR 701.54 — how many times the Ring has tempted this player (0–4).
     /// `0` means The Ring is dormant; the client shows a "The Ring ×N" chip
     /// otherwise. `#[serde(default)]` for snapshot back-compat.
