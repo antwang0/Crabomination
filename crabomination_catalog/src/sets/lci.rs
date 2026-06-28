@@ -5171,3 +5171,26 @@ pub fn nicanzil_current_conductor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sovereign Okinec Ahau — {2}{G}{W} 3/4 Legendary Cat Noble, Ward {2}. Whenever
+/// it attacks, for each creature you control with power greater than its base
+/// power, put that many +1/+1 counters on it (the difference).
+pub fn sovereign_okinec_ahau() -> CardDefinition {
+    CardDefinition {
+        name: "Sovereign Okinec Ahau",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![on_attack(Effect::AddCountersForPowerOverBase {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        })],
+        ..Default::default()
+    }
+}

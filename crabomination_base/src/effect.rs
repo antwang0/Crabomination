@@ -2687,6 +2687,10 @@ pub enum Effect {
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// For each permanent matching `filter` whose current power exceeds its
+    /// base power, put that many +1/+1 counters on it (the per-permanent
+    /// difference). Sovereign Okinec Ahau's attack trigger (CR 122).
+    AddCountersForPowerOverBase { filter: SelectionRequirement },
     /// CR 701.63 — *endure N*: the controller of `target` either puts N
     /// +1/+1 counters on it, or creates an N/N white Spirit creature token.
     /// The choice is the controller's (AutoDecider keeps the counters so the

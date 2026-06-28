@@ -5272,6 +5272,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddCountersForPowerOverBase { filter } => {
+                // CR 122.1 — Solemnity locks counter placement entirely.
+                if self.counters_locked() { return Ok(()); }
+                let ids: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    let Some(c) = self.battlefield_find(cid) else { continue };
+                    // Base power = printed/CDA base plus any SetBasePower
+                    // (perm_power_bonus); pumps + counters are "above base".
+                    let base = c.definition.base_power() + c.perm_power_bonus;
+                    let diff = (c.power() - base).max(0);
+                    if diff == 0 { continue; }
+                    let ctrl = c.controller;
+                    let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, diff as u32, true);
+                    if n == 0 { continue; }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.add_counters(CounterType::PlusOnePlusOne, n);
+                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: n });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::DoubleCountersOnEach { what, kind } => {
                 // CR 122.1 — Solemnity locks counter placement entirely.
                 if self.counters_locked() { return Ok(()); }

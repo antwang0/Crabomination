@@ -2922,6 +2922,38 @@ fn deepfathom_echo_explores_and_copies() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
 }
 
+/// Sovereign Okinec Ahau's attack puts +1/+1 counters on each creature you
+/// control equal to how far its power exceeds its base power; a base-stats
+/// creature is untouched.
+#[test]
+fn sovereign_okinec_ahau_counters_power_over_base() {
+    let mut g = two_player_game();
+    let okinec = g.add_card_to_battlefield(0, catalog::sovereign_okinec_ahau());
+    g.battlefield_find_mut(okinec).unwrap().summoning_sick = false;
+    // Pumped bear: 2/2 base with one +1/+1 counter → power 3, diff 1.
+    let pumped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(pumped).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    // Vanilla bear at base stats → diff 0, no new counters.
+    let vanilla = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: okinec, target: AttackTarget::Player(1) }])
+        .expect("Okinec attacks");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(pumped).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2, "pumped creature gained the 1-counter difference",
+    );
+    assert_eq!(
+        g.battlefield_find(vanilla).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        0, "base-stats creature untouched",
+    );
+    assert_eq!(
+        g.battlefield_find(okinec).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        0, "Okinec at base power gains nothing",
+    );
+}
+
 /// Nicanzil grows when a creature explores a nonland, and ramps on a land explore.
 #[test]
 fn nicanzil_land_and_nonland_explores() {

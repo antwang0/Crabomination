@@ -487,6 +487,8 @@ impl Effect {
                 sel_has_target(what) || value_has_target(amount)
             }
             Effect::AddRandomMissingCounter { what, .. } => sel_has_target(what),
+            // Untargeted fan-out over creatures you control (Okinec Ahau).
+            Effect::AddCountersForPowerOverBase { .. } => false,
             Effect::MoveAllCounters { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
