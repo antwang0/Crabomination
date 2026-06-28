@@ -7667,6 +7667,43 @@ impl GameState {
                     eligible,
                     take,
                     to_battlefield: *to_battlefield,
+                    keep_on_top: false,
+                };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::LookTopKeepOneRestToGraveyard { count } => {
+                use crate::decision::Decision;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top_ids: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top_ids.is_empty() {
+                    return Ok(());
+                }
+                let candidates: Vec<(crate::card::CardId, String)> = top_ids
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let decision = Decision::SearchLibrary { player: p, candidates, eligible: None };
+                let pending = PendingEffectState::ImpulsePending {
+                    player: p,
+                    revealed: top_ids,
+                    rest_to_graveyard: true,
+                    eligible: None,
+                    take: 1,
+                    to_battlefield: false,
+                    keep_on_top: true,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

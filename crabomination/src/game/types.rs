@@ -1141,6 +1141,9 @@ pub enum PendingEffectState {
         /// Company).
         #[serde(default)]
         to_battlefield: bool,
+        /// Picks stay on top of the library (Sage of Days).
+        #[serde(default)]
+        keep_on_top: bool,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the

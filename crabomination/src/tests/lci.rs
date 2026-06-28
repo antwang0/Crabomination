@@ -2870,3 +2870,29 @@ fn shipwreck_sentry_attacks_after_artifact() {
         attacker: sentry, target: AttackTarget::Player(1),
     }])).expect("can attack after artifact ETB");
 }
+
+/// Sage of Days keeps one of the top three on top and mills the other two.
+#[test]
+fn sage_of_days_keeps_one_mills_two() {
+    let mut g = two_player_game();
+    // Seed three known cards on top.
+    let keep = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(keep, catalog::grizzly_bears(), 0));
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let sage = g.add_card_to_hand(0, catalog::sage_of_days());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let gy_before = g.players[0].graveyard.len();
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sage, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Two of the top three milled; one stays on top → library shrinks by 2.
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "two cards milled");
+    assert_eq!(g.players[0].library.len(), lib_before - 2, "one kept on top");
+}

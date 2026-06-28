@@ -8861,7 +8861,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, keep_on_top } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -8903,7 +8903,13 @@ impl GameState {
                     }
                 }
                 let mut events = vec![];
+                // Sage of Days: the pick stays on top of the library (it isn't
+                // removed here), and the milling loop below clears the rest, so
+                // the kept card rises to the top.
                 for &pick in &picks {
+                    if keep_on_top {
+                        continue;
+                    }
                     if let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
                         let card = self.players[player].library.remove(pos);
                         if to_battlefield {

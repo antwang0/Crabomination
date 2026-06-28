@@ -2220,6 +2220,11 @@ pub enum Effect {
         #[serde(default)]
         to_battlefield: bool,
     },
+    /// "Look at the top `count` cards; put one back on top and the rest into
+    /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
+    /// picker) keeps one revealed card on top; the rest are milled. Shares the
+    /// `ImpulsePending` machinery with `keep_on_top: true`.
+    LookTopKeepOneRestToGraveyard { count: Value },
     /// Remove all counters from the selected permanent; the controller's
     /// next spell this turn costs {1} less per counter removed (Mutated
     /// Cultist's cast trigger — the "or opponent" half is dropped).

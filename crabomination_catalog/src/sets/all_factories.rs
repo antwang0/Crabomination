@@ -4552,6 +4552,7 @@ static LCI: &[Factory] = &[
     super::lci::queens_bay_paladin,
     super::lci::uchbenbak_the_great_mistake,
     super::lci::shipwreck_sentry,
+    super::lci::sage_of_days,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

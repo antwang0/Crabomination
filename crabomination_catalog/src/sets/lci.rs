@@ -5073,3 +5073,18 @@ pub fn shipwreck_sentry() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sage of Days — {2}{U} 3/2 Human Wizard. ETB: look at the top three cards;
+/// put one back on top and the rest into your graveyard.
+pub fn sage_of_days() -> CardDefinition {
+    CardDefinition {
+        name: "Sage of Days",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::LookTopKeepOneRestToGraveyard { count: Value::Const(3) })],
+        ..Default::default()
+    }
+}
