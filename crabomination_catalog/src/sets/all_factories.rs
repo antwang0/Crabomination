@@ -4488,6 +4488,10 @@ static LCI: &[Factory] = &[
     super::lci::idol_of_the_deep_king,
     super::lci::calamitous_tide,
     super::lci::hidden_grotto,
+    super::lci::hulking_bugbear,
+    super::lci::etalis_favor,
+    super::lci::volcanic_geyser,
+    super::lci::akawalli_the_seething_tower,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

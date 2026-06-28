@@ -1627,3 +1627,64 @@ fn hidden_grotto_etb_surveils() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(grotto).is_some(), "land entered and surveiled");
 }
+
+/// Hulking Bugbear is a 3/3 with haste.
+#[test]
+fn hulking_bugbear_has_haste() {
+    let mut g = two_player_game();
+    let b = g.add_card_to_battlefield(0, catalog::hulking_bugbear());
+    let cp = g.computed_permanent(b).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Haste));
+}
+
+/// Etali's Favor attaches, discovers, and pumps the enchanted creature +1/+1.
+#[test]
+fn etalis_favor_attaches_and_pumps() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // discover fodder
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::etalis_favor());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Aura");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Volcanic Geyser deals X to any target.
+#[test]
+fn volcanic_geyser_deals_x() {
+    let mut g = two_player_game();
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::volcanic_geyser());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 4); // {2}{R}{R} → X=2
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(prey)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "X=2 killed the 2/2");
+}
+
+/// Akawalli gets +2/+2 and trample once you've descended 4.
+#[test]
+fn akawalli_descend_4_buff() {
+    let mut g = two_player_game();
+    let aka = g.add_card_to_battlefield(0, catalog::akawalli_the_seething_tower());
+    assert_eq!(g.computed_permanent(aka).unwrap().power, 3, "base 3/3 with empty graveyard");
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // descend 4
+    let cp = g.computed_permanent(aka).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "descend 4 → +2/+2");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}

@@ -3350,6 +3350,87 @@ pub fn calamitous_tide() -> CardDefinition {
     }
 }
 
+/// Hulking Bugbear — {1}{R}{R} 3/3 Goblin with haste.
+pub fn hulking_bugbear() -> CardDefinition {
+    CardDefinition {
+        name: "Hulking Bugbear",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Etali's Favor — {2}{R} Aura. Enchant a creature you control; ETB discover 3;
+/// enchanted creature gets +1/+1 and has trample.
+pub fn etalis_favor() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Etali's Favor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Trample], ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Discover { n: Value::Const(3), filter: None })],
+        ..Default::default()
+    }
+}
+
+/// Volcanic Geyser — {X}{R}{R} Instant. Deal X damage to any target.
+pub fn volcanic_geyser() -> CardDefinition {
+    CardDefinition {
+        name: "Volcanic Geyser",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Akawalli, the Seething Tower — {1}{B}{G} 3/3 Fungus. Descend 4 — +2/+2 and
+/// trample while you have 4+ permanent cards in your graveyard.
+pub fn akawalli_the_seething_tower() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Akawalli, the Seething Tower",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Descend 4 — +2/+2 and trample while you have 4+ permanent cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hidden Grotto — Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of
 /// any color.
 pub fn hidden_grotto() -> CardDefinition {
