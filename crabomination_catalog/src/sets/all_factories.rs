@@ -4563,6 +4563,7 @@ static LCI: &[Factory] = &[
     super::lci::chimil_the_inner_sun,
     super::lci::abuelo_ancestral_echo,
     super::lci::palanis_hatcher,
+    super::lci::gishath_suns_avatar,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

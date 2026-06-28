@@ -5434,3 +5434,32 @@ pub fn palanis_hatcher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gishath, Sun's Avatar — {5}{R}{G}{W} 7/6 Legendary Dinosaur Avatar with
+/// vigilance, trample, haste. Combat damage to a player: reveal that many cards,
+/// put the Dinosaur creatures among them onto the battlefield, rest on bottom.
+pub fn gishath_suns_avatar() -> CardDefinition {
+    CardDefinition {
+        name: "Gishath, Sun's Avatar",
+        cost: cost(&[generic(5), r(), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::RevealTopNPutMatchingToBattlefield {
+                who: PlayerRef::You,
+                count: Value::TriggerEventAmount,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Dinosaur)),
+            },
+        }],
+        ..Default::default()
+    }
+}

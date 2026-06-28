@@ -3436,6 +3436,11 @@ pub enum Effect {
     /// onto the battlefield under its owner's control (firing ETB). Otherwise
     /// it stays on top. Chaos Warp.
     RevealTopPutPermanentOntoBattlefield { who: PlayerRef },
+    /// Reveal the top `count` cards; put every card matching `filter` onto the
+    /// battlefield under `who`'s control, the rest on the bottom of the library.
+    /// Gishath, Sun's Avatar's combat-damage trigger (reveal = damage dealt,
+    /// filter = Dinosaur creature card). "Any number" is auto-take-all.
+    RevealTopNPutMatchingToBattlefield { who: PlayerRef, count: Value, filter: SelectionRequirement },
 
     /// Reveal the top card of `who`'s library; if it's a land, put it onto the
     /// battlefield (untapped). Otherwise put it into their hand. Coiling

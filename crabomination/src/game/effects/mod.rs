@@ -9014,6 +9014,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopNPutMatchingToBattlefield { who, count, filter } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                for p in self.resolve_players(who, ctx) {
+                    let top_ids: Vec<CardId> =
+                        self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                    let mut to_bf = Vec::new();
+                    let mut to_bottom = Vec::new();
+                    for cid in &top_ids {
+                        let Some(card) = self.players[p].library.iter().find(|c| c.id == *cid) else { continue };
+                        events.push(GameEvent::TopCardRevealed {
+                            player: p, card_name: card.definition.name, is_land: card.definition.is_land(),
+                        });
+                        if self.evaluate_requirement_on_card(filter, card, p) {
+                            to_bf.push(*cid);
+                        } else {
+                            to_bottom.push(*cid);
+                        }
+                    }
+                    for cid in to_bf {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            ctx, events,
+                        );
+                    }
+                    for cid in to_bottom {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Bottom },
+                            ctx, events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RevealTopPutPermanentMvElseHand { who, max_mv } => {
                 let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
                 for p in self.resolve_players(who, ctx) {

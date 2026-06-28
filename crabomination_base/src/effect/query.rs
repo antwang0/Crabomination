@@ -555,6 +555,7 @@ impl Effect {
             | Effect::RevealTopCard { who }
             | Effect::RevealTopLandToBattlefieldElseHand { who }
             | Effect::RevealTopPutPermanentMvElseHand { who, .. }
+            | Effect::RevealTopNPutMatchingToBattlefield { who, .. }
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }

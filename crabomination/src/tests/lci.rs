@@ -3174,3 +3174,27 @@ fn palanis_hatcher_eggs_and_combat_token() {
         1, "made a 3/3 Dinosaur token",
     );
 }
+
+/// Gishath reveals N off the top, puts the Dinosaurs onto the battlefield and
+/// bottoms the rest.
+#[test]
+fn gishath_reveals_and_drops_dinosaurs() {
+    let mut g = two_player_game();
+    let _gishath = g.add_card_to_battlefield(0, catalog::gishath_suns_avatar());
+    let dino_a = g.add_card_to_library(0, catalog::huatlis_snubhorn());
+    let dino_b = g.add_card_to_library(0, catalog::huatlis_snubhorn());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(_gishath, 0, None);
+    let evs = g.resolve_effect(&crate::effect::Effect::RevealTopNPutMatchingToBattlefield {
+        who: crate::effect::PlayerRef::You,
+        count: crate::card::Value::Const(3),
+        filter: crate::card::SelectionRequirement::Creature
+            .and(crate::card::SelectionRequirement::HasCreatureType(crate::card::CreatureType::Dinosaur)),
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dino_a).is_some(), "first Dinosaur entered");
+    assert!(g.battlefield_find(dino_b).is_some(), "second Dinosaur entered");
+    assert!(g.players[0].library.iter().any(|c| c.id == bear), "non-Dinosaur bottomed back into library");
+    assert_eq!(g.players[0].library.last().unwrap().id, bear, "bear is on the bottom");
+}
