@@ -1634,8 +1634,7 @@ pub fn compass_gnome() -> CardDefinition {
 }
 
 /// Gargantuan Leech — {7}{B} 5/5 with lifelink. Costs {1} less for each Cave
-/// you control (the "each Cave in your graveyard" half is approximated via
-/// affinity, which counts only battlefield Caves).
+/// you control and each Cave card in your graveyard.
 pub fn gargantuan_leech() -> CardDefinition {
     CardDefinition {
         name: "Gargantuan Leech",
@@ -1645,7 +1644,11 @@ pub fn gargantuan_leech() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Lifelink],
-        affinity_filter: Some(SelectionRequirement::HasLandType(LandType::Cave)),
+        affinity_filter: Some(
+            SelectionRequirement::HasLandType(LandType::Cave)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        affinity_graveyard_filter: Some(SelectionRequirement::HasLandType(LandType::Cave)),
         ..Default::default()
     }
 }

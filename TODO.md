@@ -16,10 +16,6 @@ DescendedThisTurn}`, `DynamicPt::PermanentCardsInControllerGraveyard`, HUD chip)
 `LandType::Cave` + the 10-card Cave subset (Captivating Cave, Volatile Fault,
 Promising Vein, Forgotten Monument's grant, the 5 Hidden Discover caves,
 Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
-- **Gargantuan Leech** uses `affinity_filter` for Caves you control; its "each
-  Cave card in your graveyard" half is dropped (affinity counts only battlefield
-  permanents). Wants a count-based `SelfCostReducedPer { filter, per }` that also
-  reads the graveyard.
 - **Craft "or pay 3 life" / "discard or sac" choices** are approximated as a
   flat discard (Bitter Triumph, Souls of the Lost) — needs a real either-cost
   `AdditionalCastCost` mode. Craft's per-object UI exile-choice is auto-picked.

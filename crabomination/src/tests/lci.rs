@@ -511,13 +511,14 @@ fn gargantuan_leech_affinity_for_caves() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::captivating_cave());
     g.add_card_to_battlefield(0, catalog::promising_vein());
+    g.add_card_to_graveyard(0, catalog::volatile_fault()); // a Cave in the graveyard
     let leech = g.add_card_to_hand(0, catalog::gargantuan_leech());
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    // {7}{B} - 2 Caves = {5}{B}.
+    // {7}{B} - (2 battlefield + 1 graveyard Caves) = {4}{B}.
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
         card_id: leech, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast at the Cave-reduced cost");
