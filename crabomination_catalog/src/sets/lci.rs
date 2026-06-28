@@ -4110,6 +4110,103 @@ pub fn ixallis_lorekeeper() -> CardDefinition {
     }
 }
 
+/// Helping Hand — {W} Sorcery. Return target creature card with mana value 3 or
+/// less from your graveyard to the battlefield tapped.
+pub fn helping_hand() -> CardDefinition {
+    CardDefinition {
+        name: "Helping Hand",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        ..Default::default()
+    }
+}
+
+/// Rumbling Rockslide — {3}{R} Sorcery. Deal damage to target creature equal to
+/// the number of lands you control.
+pub fn rumbling_rockslide() -> CardDefinition {
+    CardDefinition {
+        name: "Rumbling Rockslide",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Runaway Boulder — {6} Artifact with flash and cycling {2}. When it enters, it
+/// deals 6 damage to target creature an opponent controls.
+pub fn runaway_boulder() -> CardDefinition {
+    CardDefinition {
+        name: "Runaway Boulder",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash, Keyword::Cycling(cost(&[generic(2)]))],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent)),
+            amount: Value::Const(6),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Another Chance — {2}{B} Instant. You may mill two cards, then return up to
+/// two creature cards from your graveyard to your hand.
+pub fn another_chance() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Another Chance",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::MayDo {
+                description: "Mill two cards?".into(),
+                body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+            },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(2),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Unlucky Drop — {3}{U} Instant. Target artifact or creature's owner puts it on
+/// their choice of the top or bottom of their library.
+pub fn unlucky_drop() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Unlucky Drop",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::OwnerChoice },
+        },
+        ..Default::default()
+    }
+}
+
 /// Hidden Grotto — Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of
 /// any color.
 pub fn hidden_grotto() -> CardDefinition {

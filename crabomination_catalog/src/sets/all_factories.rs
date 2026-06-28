@@ -4521,6 +4521,11 @@ static LCI: &[Factory] = &[
     super::lci::confounding_riddle,
     super::lci::oaken_siren,
     super::lci::ixallis_lorekeeper,
+    super::lci::helping_hand,
+    super::lci::rumbling_rockslide,
+    super::lci::runaway_boulder,
+    super::lci::another_chance,
+    super::lci::unlucky_drop,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

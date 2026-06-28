@@ -2257,3 +2257,100 @@ fn ixallis_lorekeeper_taps_for_dino_mana() {
     assert!(g.battlefield_find(keeper).unwrap().tapped, "tapped for mana");
     assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "produced one restricted mana");
 }
+
+/// Helping Hand reanimates a small creature from the graveyard, tapped.
+#[test]
+fn helping_hand_reanimates_tapped() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::helping_hand());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let perm = g.battlefield_find(bear).expect("reanimated to battlefield");
+    assert_eq!(perm.controller, 0);
+    assert!(perm.tapped, "enters tapped");
+}
+
+/// Rumbling Rockslide deals damage equal to lands you control.
+#[test]
+fn rumbling_rockslide_scales_with_lands() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::mountain()); }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::rumbling_rockslide());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "3 damage from 3 lands killed the 2/2");
+}
+
+/// Runaway Boulder's ETB deals 6 to an opponent's creature.
+#[test]
+fn runaway_boulder_etb_burns() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let boulder = g.add_card_to_hand(0, catalog::runaway_boulder());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: boulder, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "6 damage killed it");
+}
+
+/// Another Chance returns up to two creature cards from the graveyard to hand.
+#[test]
+fn another_chance_returns_two_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // non-creature, ignored
+    let spell = g.add_card_to_hand(0, catalog::another_chance());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Decline the optional mill.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a), "first creature returned");
+    assert!(g.players[0].hand.iter().any(|c| c.id == b), "second creature returned");
+}
+
+/// Unlucky Drop puts a creature onto its owner's library (defaults to bottom).
+#[test]
+fn unlucky_drop_bounces_to_library() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::unlucky_drop());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "left the battlefield");
+    assert!(g.players[1].library.iter().any(|c| c.id == bear), "went to owner's library");
+}
