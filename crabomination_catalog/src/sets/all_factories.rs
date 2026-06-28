@@ -4418,6 +4418,7 @@ static LCI: &[Factory] = &[
     super::lci::bartolome_del_presidio,
     super::lci::captain_storm_cosmium_raider,
     super::lci::bedrock_tortoise,
+    super::lci::amalia_benavides_aguirre,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

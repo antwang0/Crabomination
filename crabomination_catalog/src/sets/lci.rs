@@ -1535,3 +1535,41 @@ pub fn bedrock_tortoise() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Amalia Benavides Aguirre — {W}{B} 2/2 Vampire Scout, Ward—Pay 3 life.
+/// Whenever you gain life, Amalia explores; then if her power is exactly 20,
+/// destroy all other creatures.
+pub fn amalia_benavides_aguirre() -> CardDefinition {
+    CardDefinition {
+        name: "Amalia Benavides Aguirre",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Ward(crate::card::WardCost::Life(3))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Explore { who: Selector::This },
+                Effect::If {
+                    cond: Predicate::ValueEquals(
+                        Value::PowerOf(Box::new(Selector::This)),
+                        Value::Const(20),
+                    ),
+                    then: Box::new(Effect::Destroy {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                        ),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

@@ -427,3 +427,30 @@ fn bedrock_tortoise_turn_hexproof_and_toughness_damage() {
     // The 0/6 tortoise (T>P) assigns combat damage by toughness.
     assert!(g.computed_permanent(tortoise).unwrap().keywords.contains(&Keyword::AssignsCombatDamageByToughness));
 }
+
+/// Amalia explores on lifegain; at exactly 20 power she wraths the board.
+#[test]
+fn amalia_explores_on_lifegain_and_wraths_at_20() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let amalia = g.add_card_to_battlefield(0, catalog::amalia_benavides_aguirre());
+    // 17 +1/+1 counters → base 2 + 17 = 19 power.
+    g.battlefield_find_mut(amalia).unwrap().add_counters(CounterType::PlusOnePlusOne, 17);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Two nonlands on top: Revitalize draws one, the explore reveals the other.
+    for _ in 0..2 { let id = g.next_id(); g.players[0].add_to_library_top(id, catalog::grizzly_bears()); }
+    let revit = g.add_card_to_hand(0, catalog::revitalize());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: revit, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Revitalize");
+    drain_stack(&mut g);
+    // Explore pushed Amalia to power 20, wrathing the board.
+    assert_eq!(g.computed_permanent(amalia).unwrap().power, 20, "explore counter → power 20");
+    assert!(g.battlefield_find(victim).is_none(), "other creatures destroyed at power 20");
+    assert!(g.battlefield_find(amalia).is_some(), "Amalia survives her own wrath");
+}
