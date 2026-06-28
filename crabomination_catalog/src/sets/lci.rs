@@ -4908,3 +4908,110 @@ pub fn anim_pakal_thousandth_moon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cavernous Maw — Land — Cave. {T}: Add {C}. {2}: becomes a 3/3 Elemental
+/// until end of turn (still a Cave land), but only if the number of other Caves
+/// you control plus Cave cards in your graveyard is three or greater.
+pub fn cavernous_maw() -> CardDefinition {
+    let cave_count = || Value::Sum(vec![
+        Value::CountMatching {
+            sel: Box::new(Selector::EachPermanent(
+                SelectionRequirement::HasLandType(LandType::Cave)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            )),
+            filter: SelectionRequirement::Any,
+        },
+        Value::CardsInGraveyardMatching {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasLandType(LandType::Cave),
+        },
+    ]);
+    CardDefinition {
+        name: "Cavernous Maw",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![
+            cave_tap(ManaPayload::Colorless(Value::Const(1))),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                condition: Some(Predicate::ValueAtLeast(cave_count(), Value::Const(3))),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Zoetic Glyph — {2}{U} Aura. Enchant artifact. Enchanted artifact is a Golem
+/// creature with base power and toughness 5/4 in addition to its other types.
+/// When this Aura is put into a graveyard from the battlefield, discover 3.
+pub fn zoetic_glyph() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Zoetic Glyph",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Artifact) },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((5, 4)),
+            set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
+            set_creature_types: Some(vec![CreatureType::Golem]),
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Discover { n: Value::Const(3), filter: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Queen's Bay Paladin — {3}{B}{B} 5/4 Vampire Knight. Whenever it enters or
+/// attacks, return up to one target Vampire card from your graveyard to the
+/// battlefield with a finality counter on it; you lose life equal to its mana
+/// value.
+pub fn queens_bay_paladin() -> CardDefinition {
+    let reanimate = || Effect::ApplyToTargets {
+        max_targets: 1,
+        filter: SelectionRequirement::InGraveyard
+            .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire)),
+        effect: Box::new(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter {
+                what: Selector::LastMoved,
+                kind: CounterType::Finality,
+                amount: Value::Const(1),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+        ])),
+    };
+    CardDefinition {
+        name: "Queen's Bay Paladin",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire, CreatureType::Knight], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![etb(reanimate()), on_attack(reanimate())],
+        ..Default::default()
+    }
+}

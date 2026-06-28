@@ -2752,3 +2752,71 @@ fn anim_pakal_mints_gnomes_on_attack() {
     assert_eq!(gnomes.len(), 1, "one Gnome token for one counter");
     assert!(g.attacking_ids().contains(&gnomes[0]), "Gnome is attacking");
 }
+
+/// Cavernous Maw animates into a 3/3 only with three+ Caves (board + graveyard).
+#[test]
+fn cavernous_maw_needs_three_caves() {
+    let mut g = two_player_game();
+    let maw = g.add_card_to_battlefield(0, catalog::cavernous_maw());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // No other Caves → activation is illegal.
+    g.players[0].mana_pool.add_colorless(2);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: maw, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(res.is_err(), "needs 3 Caves to animate");
+    // Two more Caves on board + one in graveyard = 3.
+    g.add_card_to_battlefield(0, catalog::hidden_cataract());
+    g.add_card_to_battlefield(0, catalog::hidden_courtyard());
+    g.add_card_to_graveyard(0, catalog::hidden_volcano());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: maw, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(maw).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "3/3 Elemental");
+    assert!(cp.card_types.contains(&crate::card::CardType::Land), "still a land");
+}
+
+/// Zoetic Glyph turns an artifact into a 5/4 Golem (still an artifact).
+#[test]
+fn zoetic_glyph_animates_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(0, catalog::buried_treasure());
+    let aura = g.add_card_to_hand(0, catalog::zoetic_glyph());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, aura, Target::Permanent(art));
+    let cp = g.computed_permanent(art).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4), "now a 5/4");
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&crate::card::CardType::Artifact), "still an artifact");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Golem), "Golem");
+}
+
+/// Queen's Bay Paladin reanimates a Vampire with a finality counter and pays life.
+#[test]
+fn queens_bay_paladin_reanimates_vampire() {
+    let mut g = two_player_game();
+    let vamp = g.add_card_to_graveyard(0, catalog::queens_bay_paladin()); // MV 5 Vampire
+    let qbp = g.add_card_to_hand(0, catalog::queens_bay_paladin());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: qbp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let r = g.battlefield_find(vamp).expect("vampire reanimated");
+    assert!(r.counters.get(&CounterType::Finality).copied().unwrap_or(0) >= 1, "finality counter");
+    assert_eq!(g.players[0].life, life_before - 5, "lost life equal to its mana value (5)");
+}

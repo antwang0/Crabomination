@@ -4547,6 +4547,9 @@ static LCI: &[Factory] = &[
     super::lci::akal_pakal_first_among_equals,
     super::lci::kutzil_malamet_exemplar,
     super::lci::anim_pakal_thousandth_moon,
+    super::lci::cavernous_maw,
+    super::lci::zoetic_glyph,
+    super::lci::queens_bay_paladin,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
