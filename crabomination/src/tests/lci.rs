@@ -2320,3 +2320,213 @@ fn calamitous_cave_in_scales_with_caves() {
     // 1 Cave on battlefield + 1 Cave in graveyard = 2 damage → kills the 2/2.
     assert!(g.battlefield_find(bear).is_none(), "2 damage from 2 Caves killed the 2/2");
 }
+
+// ── New LCI batch (commons/uncommons riding existing primitives) ─────────────
+
+/// Out of Air counters a creature spell on the stack.
+#[test]
+fn out_of_air_counters_creature_spell() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    let ooa = g.add_card_to_hand(0, catalog::out_of_air());
+    // Reduced by {2} because it targets a creature spell → only {U}{U} left.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, ooa, Target::Permanent(spell));
+    assert!(g.battlefield_find(spell).is_none(), "creature spell countered");
+}
+
+/// Malicious Eclipse gives -2/-2 and exiles an opponent's dying creature.
+#[test]
+fn malicious_eclipse_sweeps_and_exiles_opponent_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let me = g.add_card_to_hand(0, catalog::malicious_eclipse());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: me, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "2/2 died to -2/-2");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != foe), "exiled, not in graveyard");
+    assert!(g.exile.iter().any(|c| c.id == foe), "opponent's creature exiled instead");
+}
+
+/// Disturbed Slumber animates a land into a 4/4 must-be-blocked Dinosaur.
+#[test]
+fn disturbed_slumber_animates_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ds = g.add_card_to_hand(0, catalog::disturbed_slumber());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, ds, Target::Permanent(land));
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.card_types.contains(&crate::card::CardType::Land), "still a land");
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+}
+
+/// Dauntless Dismantler: opponents' artifacts enter tapped.
+#[test]
+fn dauntless_dismantler_taps_opponent_artifacts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dauntless_dismantler());
+    let art = g.move_card_to_battlefield_for_test(1, catalog::buried_treasure());
+    assert!(g.battlefield_find(art).unwrap().tapped, "opponent artifact entered tapped");
+    // Your own artifact is unaffected.
+    let mine = g.move_card_to_battlefield_for_test(0, catalog::buried_treasure());
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "your artifact enters untapped");
+}
+
+/// Dauntless Dismantler's sac ability destroys each artifact with mana value X.
+#[test]
+fn dauntless_dismantler_destroys_artifacts_by_mv() {
+    let mut g = two_player_game();
+    let dd = g.add_card_to_battlefield(0, catalog::dauntless_dismantler());
+    let a2 = g.add_card_to_battlefield(1, catalog::buried_treasure()); // MV 2
+    let a0 = g.add_card_to_battlefield(1, catalog::orazca_puzzle_door()); // MV 1
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4); // {X}{X}{W} with X=2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dd, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2),
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a2).is_none(), "MV-2 artifact destroyed");
+    assert!(g.battlefield_find(a0).is_some(), "MV-1 artifact survives");
+}
+
+/// Disruptor Wanderglyph exiles an opponent's graveyard card when it attacks.
+#[test]
+fn disruptor_wanderglyph_attack_exiles_gy() {
+    let mut g = two_player_game();
+    let glyph = g.add_card_to_battlefield(0, catalog::disruptor_wanderglyph());
+    g.clear_sickness(glyph);
+    let gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: glyph,
+        target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != gy), "opponent gy card exiled");
+}
+
+/// Orazca Puzzle-Door: one card to hand, one to graveyard.
+#[test]
+fn orazca_puzzle_door_digs_two() {
+    let mut g = two_player_game();
+    let door = g.add_card_to_battlefield(0, catalog::orazca_puzzle_door());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: door, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one card to hand");
+    // The Puzzle-Door itself is sacrificed (to graveyard) plus one dug card.
+    assert!(g.players[0].graveyard.len() >= gy_before + 1, "one dug card to graveyard");
+}
+
+/// Eaten by Piranhas turns a creature into a vanilla 1/1 black Skeleton.
+#[test]
+fn eaten_by_piranhas_shrinks_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer
+    let aura = g.add_card_to_hand(0, catalog::eaten_by_piranhas());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, aura, Target::Permanent(foe));
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "now 1/1");
+    assert!(cp.keywords.is_empty(), "lost all abilities (flying)");
+    assert!(cp.colors.contains(&Color::Black), "is black");
+}
+
+/// Tendril of the Mycotyrant animates a land into a 7/7 Fungus via seven counters.
+#[test]
+fn tendril_animates_land_seven_seven() {
+    let mut g = two_player_game();
+    let tendril = g.add_card_to_battlefield(0, catalog::tendril_of_the_mycotyrant());
+    g.clear_sickness(tendril);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tendril, ability_index: 0, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "0/0 base + seven +1/+1 counters");
+    assert!(cp.card_types.contains(&crate::card::CardType::Land), "still a land");
+}
+
+/// Explorer's Cache enters with two +1/+1 counters and grows on counter-creature death.
+#[test]
+fn explorers_cache_grows_on_death() {
+    let mut g = two_player_game();
+    let cache = g.move_card_to_battlefield_for_test(0, catalog::explorers_cache());
+    assert_eq!(
+        g.battlefield_find(cache).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        2, "enters with two +1/+1 counters",
+    );
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(bear).unwrap().damage = 3; // lethal vs 3/3 (2/2 + counter)
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(cache).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        3, "gained a counter when a counter-bearing creature died",
+    );
+}
+
+/// Sunfire Torch grants +1/+0 to the equipped creature.
+#[test]
+fn sunfire_torch_buffs_equipped() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let torch = g.add_card_to_battlefield(0, catalog::sunfire_torch());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1); // Equip {1}
+    g.perform_action(GameAction::Equip { equipment: torch, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+0 from Sunfire Torch");
+}

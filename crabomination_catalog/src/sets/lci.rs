@@ -4244,3 +4244,384 @@ pub fn hidden_grotto() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Out of Air — {2}{U}{U} Instant. Costs {2} less if it targets a creature
+/// spell. Counter target spell.
+pub fn out_of_air() -> CardDefinition {
+    CardDefinition {
+        name: "Out of Air",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Creature),
+            2,
+        )),
+        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+        ..Default::default()
+    }
+}
+
+/// Malicious Eclipse — {1}{B}{B} Sorcery. All creatures get -2/-2 until end of
+/// turn; opponents' creatures that would die this turn are exiled instead.
+pub fn malicious_eclipse() -> CardDefinition {
+    CardDefinition {
+        name: "Malicious Eclipse",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::PumpPT {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sinuous Benthisaur — {5}{U} 4/4 Dinosaur. ETB: look at the top X cards, where
+/// X is Caves you control plus Cave cards in your graveyard; put two into your
+/// hand and the rest into your graveyard.
+pub fn sinuous_benthisaur() -> CardDefinition {
+    CardDefinition {
+        name: "Sinuous Benthisaur",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Sum(vec![
+                Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::HasLandType(LandType::Cave)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::Any,
+                },
+                Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasLandType(LandType::Cave),
+                },
+            ]),
+            rest_to_graveyard: true,
+            pick_filter: None,
+            take: Some(Value::Const(2)),
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Disturbed Slumber — {1}{G} Instant. Until end of turn, target land you
+/// control becomes a 4/4 Dinosaur with reach and haste that must be blocked.
+pub fn disturbed_slumber() -> CardDefinition {
+    CardDefinition {
+        name: "Disturbed Slumber",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeCreature {
+            what: target_filtered(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            creature_types: vec![CreatureType::Dinosaur],
+            keywords: vec![Keyword::Reach, Keyword::Haste, Keyword::MustBeBlocked],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Buried Treasure — {2} Artifact — Treasure. {T}, Sacrifice: add one mana of
+/// any color. {5}, Exile this from your graveyard (sorcery speed): Discover 5.
+pub fn buried_treasure() -> CardDefinition {
+    CardDefinition {
+        name: "Buried Treasure",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Treasure], ..Default::default() },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                from_graveyard: true,
+                exile_self_cost: true,
+                sorcery_speed: true,
+                effect: Effect::Discover { n: Value::Const(5), filter: None },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sunfire Torch — {R} Equipment. Equipped creature gets +1/+0 and has
+/// "Whenever this creature attacks, you may sacrifice Sunfire Torch. When you
+/// do, this creature deals 2 damage to any target." Equip {1}.
+pub fn sunfire_torch() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Sunfire Torch",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+                description: "you may sacrifice Sunfire Torch".into(),
+                filter: SelectionRequirement::HasName("Sunfire Torch".into()),
+                count: Value::Const(1),
+                then: Box::new(Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                }),
+                else_: None,
+            })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Hunter's Blowgun — {1} Equipment. Equipped creature gets +1/+1 and has
+/// deathtouch during your turn, otherwise reach. (Modeled as granting both.)
+pub fn hunters_blowgun() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Hunter's Blowgun",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Deathtouch, Keyword::Reach],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dauntless Dismantler — {1}{W} 1/4 Human Artificer. Artifacts your opponents
+/// control enter tapped. {X}{X}{W}, Sacrifice this: destroy each artifact with
+/// mana value X.
+pub fn dauntless_dismantler() -> CardDefinition {
+    CardDefinition {
+        name: "Dauntless Dismantler",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Artificer], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Artifacts your opponents control enter tapped.",
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), x(), w()]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ManaValueExactlyXFromCost),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Disruptor Wanderglyph — {4} 3/4 Golem. Whenever it attacks, exile target
+/// card from an opponent's graveyard.
+pub fn disruptor_wanderglyph() -> CardDefinition {
+    CardDefinition {
+        name: "Disruptor Wanderglyph",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::Move {
+            what: target_filtered(SelectionRequirement::InOpponentGraveyard),
+            to: ZoneDest::Exile,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Orazca Puzzle-Door — {U} Artifact. {1}, {T}, Sacrifice: look at the top two
+/// cards, put one into your hand and the other into your graveyard.
+pub fn orazca_puzzle_door() -> CardDefinition {
+    CardDefinition {
+        name: "Orazca Puzzle-Door",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: Some(Value::Const(1)),
+                to_battlefield: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eaten by Piranhas — {1}{U} Aura, Flash. Enchant creature. Enchanted creature
+/// loses all abilities and is a black Skeleton creature with base P/T 1/1.
+pub fn eaten_by_piranhas() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Eaten by Piranhas",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            set_card_types: Some(vec![CardType::Creature]),
+            set_creature_types: Some(vec![CreatureType::Skeleton]),
+            set_colors: Some(vec![Color::Black]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Tendril of the Mycotyrant — {1}{G} 2/2 Fungus Wizard. {5}{G}{G}: put seven
+/// +1/+1 counters on target noncreature land you control; it becomes a 0/0
+/// Fungus with haste (still a land).
+pub fn tendril_of_the_mycotyrant() -> CardDefinition {
+    CardDefinition {
+        name: "Tendril of the Mycotyrant",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus, CreatureType::Wizard], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), g(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::BecomeCreature {
+                    what: target_filtered(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::Noncreature),
+                    ),
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    creature_types: vec![CreatureType::Fungus],
+                    keywords: vec![Keyword::Haste],
+                    duration: Duration::Permanent,
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(7),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pit of Offerings — Land — Cave. Enters tapped. ETB exile up to three target
+/// cards from graveyards. {T}: Add {C}. (The "any of the exiled cards' colors"
+/// mana mode is approximated as colorless.)
+pub fn pit_of_offerings() -> CardDefinition {
+    CardDefinition {
+        name: "Pit of Offerings",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 3,
+            filter: SelectionRequirement::InGraveyard,
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Explorer's Cache — {1}{G} Artifact. Enters with two +1/+1 counters. When a
+/// creature you control with a +1/+1 counter dies, put a +1/+1 counter on this.
+/// {T}: Move a +1/+1 counter from this onto target creature (sorcery speed).
+pub fn explorers_cache() -> CardDefinition {
+    CardDefinition {
+        name: "Explorer's Cache",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::MoveCounter {
+                from: Selector::This,
+                to: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

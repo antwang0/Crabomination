@@ -11877,12 +11877,17 @@ impl GameState {
             }
 
             Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
-            Selector::EachPermanent(filter) => self
-                .battlefield
-                .iter()
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
-                .map(|c| EntityRef::Permanent(c.id))
-                .collect(),
+            Selector::EachPermanent(filter) => {
+                // Concretize `{X}`-from-cost filters against the paid X so
+                // "destroy each artifact with mana value X" (Dauntless
+                // Dismantler) and similar sweeps read the activation's X.
+                let filter = filter.resolve_x(ctx.x_value);
+                self.battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
 
             Selector::ControlledBy { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
