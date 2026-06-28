@@ -47,6 +47,12 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **"Descended this turn" reset** is at untap; double-check end-step descend
   payoffs see the flag (they fire in the same turn's end step — verified for
   Deep Goblin Skulltaker).
+- **Cross-module name dedup** — many LCI commons are reprints already living in
+  `decks::modern` / `decks::recent*` under the same `pub fn` name. When adding
+  set cards, grep the *whole* catalog (`pub fn <name>(`), not just the set
+  module — duplicate glob re-exports compile (warning only) but bloat the
+  registry. An `audit_stubs`-style check that flags two factories with the same
+  `name:` string would catch this automatically.
 
 ## Discovered follow-ups — this run (recent25/26, blight)
 
