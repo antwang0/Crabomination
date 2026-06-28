@@ -544,6 +544,7 @@ fn project_player(
             .iter()
             .filter(|c| c.definition.is_permanent())
             .count() as u32,
+        descended_this_turn_count: state.players[player_seat].descend_count_this_turn,
         committed_crime_this_turn: state.players[player_seat].committed_crime_this_turn,
         ring_temptations: player.ring_temptations,
         ring_bearer: state.effective_ring_bearer(player_seat),

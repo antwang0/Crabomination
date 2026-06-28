@@ -818,11 +818,18 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
         {
             Some(body)
         }
+        // A reflexive tap-cost trigger (Caparocti Sunborn) surfaces the same
+        // `OptionalTrigger` prompt; its `then` payoff is what the bot screens.
+        Effect::MayTap { description, then, .. } if description == desc => Some(then),
         Effect::MayDo { body, .. }
         | Effect::MayPay { body, .. }
+        | Effect::MayTap { then: body, .. }
         | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
         Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
-        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+        Effect::ChooseMode(v)
+        | Effect::ChooseN { modes: v, .. }
+        | Effect::Escalate { modes: v, .. }
+        | Effect::EscalatingThisTurn { modes: v } => {
             v.iter().find_map(|e| find_maydo_body(e, desc))
         }
         Effect::If { then, else_, .. } => {
@@ -857,7 +864,10 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
         Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
         Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
-        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+        Effect::ChooseMode(v)
+        | Effect::ChooseN { modes: v, .. }
+        | Effect::Escalate { modes: v, .. }
+        | Effect::EscalatingThisTurn { modes: v } => {
             v.iter().any(effect_imposes_self_cost)
         }
         Effect::If { then, else_, .. } => {

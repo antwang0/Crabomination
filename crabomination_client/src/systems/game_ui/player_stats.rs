@@ -651,14 +651,19 @@ pub fn update_player_stats_chips(
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Void, "✦ void".to_string());
         }
         // LCI Descend — show the permanent-card-in-graveyard count once it's
-        // non-zero, so descend-4 / descend-8 thresholds are easy to track.
+        // non-zero, so descend-4 / descend-8 thresholds are easy to track. When
+        // the player has descended this turn, append the per-turn count too, so
+        // CR 700.11 per-turn payoffs (The Mycotyrant) are legible at a glance.
         if p.descend_count > 0 {
-            spawn_stat_chip(
-                row,
-                &ui_fonts,
-                StatChipKind::Descend,
-                format!("\u{26CF} descend {}", p.descend_count),
-            );
+            let label = if p.descended_this_turn_count > 0 {
+                format!(
+                    "\u{26CF} descend {} (+{} turn)",
+                    p.descend_count, p.descended_this_turn_count
+                )
+            } else {
+                format!("\u{26CF} descend {}", p.descend_count)
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Descend, label);
         }
         // CR 701.54 The Ring — show the temptation level once the Ring has
         // tempted this player at least once.

@@ -671,6 +671,12 @@ pub struct PlayerView {
     /// back-compat.
     #[serde(default)]
     pub descend_count: u32,
+    /// CR 700.11 — how many times this player descended *this turn* (permanent
+    /// cards entering their graveyard). Distinct from `descend_count` (a
+    /// graveyard total); lets the client show a "descended N×" pulse for
+    /// per-turn payoffs (The Mycotyrant). `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub descended_this_turn_count: u32,
     /// CR 701.54 — how many times the Ring has tempted this player (0–4).
     /// `0` means The Ring is dormant; the client shows a "The Ring ×N" chip
     /// otherwise. `#[serde(default)]` for snapshot back-compat.

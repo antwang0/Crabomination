@@ -3228,3 +3228,19 @@ fn the_mycotyrant_cda_and_end_step_fungi() {
     let fungi_after = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Fungus").count();
     assert_eq!(fungi_after - fungi_before, 2, "two descends → two Fungus tokens");
 }
+
+/// The server view surfaces the per-turn descend count (CR 700.11) so the
+/// client HUD can show a per-turn pulse alongside the graveyard total.
+#[test]
+fn view_surfaces_descended_this_turn_count() {
+    let mut g = two_player_game();
+    let v0 = crate::server::view::project(&g, 0);
+    assert_eq!(v0.players[0].descended_this_turn_count, 0);
+    for _ in 0..3 {
+        let id = g.next_id();
+        g.players[0].send_to_graveyard(crate::card::CardInstance::new(id, catalog::grizzly_bears(), 0));
+    }
+    let v1 = crate::server::view::project(&g, 0);
+    assert_eq!(v1.players[0].descended_this_turn_count, 3, "three permanent cards → descended 3×");
+    assert_eq!(v1.players[0].descend_count, 3, "graveyard total also three");
+}

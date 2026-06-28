@@ -38530,6 +38530,15 @@ fn bot_declines_self_costly_static_reflexive() {
         !optional_trigger_beneficial(&g, reaper, "Pay {2}: lose 5 life."),
         "bot declines a self-costly static reflexive"
     );
+
+    // A reflexive tap-cost trigger (Caparocti's "tap two → discover 3") is pure
+    // upside once it's already attacking, so the bot accepts it.
+    let cap = g.add_card_to_battlefield(0, catalog::caparocti_sunborn());
+    assert!(
+        optional_trigger_beneficial(
+            &g, cap, "tap two untapped artifacts and/or creatures you control"),
+        "bot accepts the tap-to-discover MayTap trigger",
+    );
 }
 
 /// Cacophony Scamp's dies-trigger deals its *last-known* (counter-boosted)

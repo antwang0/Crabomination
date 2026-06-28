@@ -202,6 +202,7 @@ mod tests {
                 team: 0,
                 coven_active: false,
                 descend_count: 0,
+                descended_this_turn_count: 0,
                 committed_crime_this_turn: false,
                 ring_temptations: 0,
                 ring_bearer: None,
