@@ -171,6 +171,7 @@ mod tests {
                 life: 20,
                 poison_counters: 0,
                 energy: 0,
+                rad_counters: 0,
                 mana_pool: ManaPool::default(),
                 library: LibraryView::default(),
                 graveyard: vec![],
