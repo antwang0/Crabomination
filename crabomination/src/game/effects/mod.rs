@@ -1389,6 +1389,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Reflexive { body } => {
+                // CR 603.7 — a "when you do" reflexive payoff. Its targets are
+                // chosen now (after the gating cost was paid), not at the outer
+                // trigger. Auto-target the body fresh and thread the picks
+                // through a derived context, mirroring the descend/forage path.
+                let (slot0, additional) =
+                    self.auto_targets_for_effect_all_slots(body, ctx.controller, None);
+                let mut body_ctx = ctx.clone();
+                body_ctx.targets = slot0.into_iter().chain(additional).collect();
+                self.run_effect(body, &body_ctx, events)?;
+                Ok(())
+            }
+
             Effect::MaySacrifice {
                 description,
                 filter,

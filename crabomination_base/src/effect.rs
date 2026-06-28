@@ -1796,6 +1796,16 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// Reflexive "when you do" payoff (CR 603.7). Wrap a *targeted* body that
+    /// should choose its targets **after** the gating cost is paid — e.g. the
+    /// inner half of `MayPay { body: Reflexive(<targeted bite>) }` (Itzquinth)
+    /// or `MaySacrifice { then: Reflexive(<targeted support>) }` (Glorifier of
+    /// Suffering). The wrapper is opaque to the cast/trigger-time target walk
+    /// (it isn't listed in `target_filter_for_slot` / `requires_target`), so the
+    /// outer trigger doesn't try to pre-validate the nested targets; at
+    /// resolution the body is auto-targeted fresh and run.
+    Reflexive { body: Box<Effect> },
+
     /// "You may sacrifice [count] [filter]. If you do, [then]." — the
     /// reflexive sacrifice cost (Bloodcrazed Socialite's attack +2/+2,
     /// Gut, True Soul Zealot's attack-sac → Skeleton). Asks the controller

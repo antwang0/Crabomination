@@ -1354,3 +1354,48 @@ fn soulcoil_viper_reanimates_with_finality() {
     assert_eq!(back.counter_count(CounterType::Finality), 1, "entered with a finality counter");
     assert!(g.battlefield_find(viper).is_none(), "viper sacrificed");
 }
+
+/// Itzquinth's ETB: pay {2}, then the reflexive bite chooses its two targets at
+/// resolution and a Dinosaur you control deals its power to another creature.
+#[test]
+fn itzquinth_reflexive_bite_after_paying() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let itz = g.add_card_to_battlefield(0, catalog::itzquinth_firstborn_of_gishath()); // 2/3 Dino
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 opponent
+    g.players[0].mana_pool.add(Color::Red, 2); // pay {2} (generic)
+    g.fire_self_etb_triggers(itz, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "bit for 2 — opponent creature died");
+    assert!(g.battlefield_find(itz).is_some(), "Itzquinth still in play");
+}
+
+/// Declining Itzquinth's {2} skips the reflexive bite entirely.
+#[test]
+fn itzquinth_declined_no_bite() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let itz = g.add_card_to_battlefield(0, catalog::itzquinth_firstborn_of_gishath());
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(itz, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_some(), "no payment → no bite");
+}
+
+/// Glorifier of Suffering: sacrifice another creature, then support 2 puts a
+/// +1/+1 counter on each of up to two creatures (chosen after the sacrifice).
+#[test]
+fn glorifier_sacrifice_then_support_two() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let glor = g.add_card_to_battlefield(0, catalog::glorifier_of_suffering());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let keeper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(glor, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none() || g.battlefield_find(keeper).is_none(),
+        "one creature was sacrificed");
+    let counters: i32 = g.battlefield.iter().filter(|c| c.controller == 0)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne) as i32).sum();
+    assert_eq!(counters, 2, "support 2 placed two +1/+1 counters");
+}

@@ -2919,3 +2919,71 @@ pub fn soulcoil_viper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Itzquinth, Firstborn of Gishath — {R}{G} 2/3 legendary Dinosaur, haste. ETB:
+/// you may pay {2}; when you do, a Dinosaur you control bites another creature.
+/// The bite is a `Reflexive` payoff so its two targets are chosen after the {2}
+/// is paid (CR 603.7), not pre-validated at the ETB trigger.
+pub fn itzquinth_firstborn_of_gishath() -> CardDefinition {
+    CardDefinition {
+        name: "Itzquinth, Firstborn of Gishath",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::MayPay {
+            description: "Pay {2}: a Dinosaur you control deals damage = its power \
+                to another target creature".into(),
+            mana_cost: cost(&[generic(2)]),
+            body: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::DealDamageEqualToPower {
+                    source: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur)
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature,
+                    },
+                }),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Glorifier of Suffering — {2}{W} 3/2 Vampire Soldier. ETB: you may sacrifice
+/// another creature or artifact; when you do, support 2 (a `Reflexive` payoff so
+/// the two +1/+1-counter targets are chosen after the sacrifice).
+pub fn glorifier_of_suffering() -> CardDefinition {
+    CardDefinition {
+        name: "Glorifier of Suffering",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice another creature or artifact: support 2".into(),
+            filter: (SelectionRequirement::Creature.or(SelectionRequirement::Artifact))
+                .and(SelectionRequirement::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::SupportCounters {
+                    filter: SelectionRequirement::Creature,
+                    max_targets: 2,
+                }),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}

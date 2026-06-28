@@ -22,16 +22,12 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **Bonehoard Dracosaur, Quintorius Kand, Tarrian's Journal, the remaining
   craft DFCs** (Sunbird Standard's color-count CDA, exiled-card recast) need
   bespoke effects; deferred.
-- **Itzquinth, Firstborn of Gishath** needs a *reflexive targeted trigger*:
-  "you may pay {2}. When you do, target Dinosaur you control deals damage = its
-  power to another target creature." Modeling it as `MayPay { body: <two-target
-  bite> }` fails — trigger-target selection validates the nested body's two
-  targets up front and the auto-targeter can't fill them, so the MayPay never
-  fires. The fix is a `MayPay` whose `body` is a *reflexive triggered ability*
-  whose targets are chosen when it goes on the stack after payment (CR 603.7 /
-  "when you do"). Itzquinth and **Glorifier of Suffering** (`MaySacrifice` → a
-  targeted `SupportCounters`) both dropped this run — the nested reflexive body's
-  targets aren't auto-selected, so the payoff fizzles.
+- ✅ **Reflexive targeted "when you do" triggers** (CR 603.7) — `Effect::Reflexive
+  { body }` wraps a targeted payoff that's opaque to the cast/trigger-time target
+  walk and auto-targets its body fresh at resolution. Composes with `MayPay`
+  (Itzquinth, Firstborn of Gishath — pay {2}, then a Dinosaur bites another
+  creature) and `MaySacrifice` (Glorifier of Suffering — sac a creature/artifact,
+  then support 2). Both shipped in `sets::lci` with tests.
 - **Molten Collapse / Abuelo's Awakening** deferred: Molten Collapse needs a
   descend-gated "choose both" modal (conditional extra mode with per-mode
   targets); Abuelo's Awakening needs reanimate-as-1/1-flying-Spirit + X counters.

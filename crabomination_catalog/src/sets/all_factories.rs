@@ -4472,6 +4472,8 @@ static LCI: &[Factory] = &[
     super::lci::threefold_thunderhulk,
     super::lci::tectonic_hazard,
     super::lci::soulcoil_viper,
+    super::lci::itzquinth_firstborn_of_gishath,
+    super::lci::glorifier_of_suffering,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

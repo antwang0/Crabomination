@@ -152,6 +152,9 @@ impl Effect {
         }
         match self {
             Effect::Noop => false,
+            // CR 603.7 — a reflexive payoff is opaque to cast-time target
+            // validation; its body's targets are chosen when it resolves.
+            Effect::Reflexive { .. } => false,
             // CR 701.54 — untargeted; the Ring-bearer is chosen at resolution.
             Effect::RingTempts { .. } => false,
             Effect::SacrificeAtEndOfCombat { .. } => false,
