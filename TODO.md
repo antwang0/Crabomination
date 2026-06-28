@@ -25,17 +25,38 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **Bonehoard Dracosaur, Quintorius Kand, Tarrian's Journal, the remaining
   craft DFCs** (Sunbird Standard's color-count CDA, exiled-card recast) need
   bespoke effects; deferred.
-- **LCI cards still ⏳** (need bespoke primitives): Starving Revenant
-  (surveil-2-then-draw/lose-per-card-put-on-top), Bat Colony (Cave-mana-spent
-  count), Song of Stupefaction (graveyard-count EquipScale), Intrepid
-  Paleontologist (cast Dinosaurs from exile-with-source), Cosmium Confluence /
-  Wail of the Forgotten (repeatable/descend modal). Shipped:
-  `Effect::AddCountersForPowerOverBase` (Okinec),
-  `Effect::SacrificeOthersThenReanimate` (Bringer of the Last Gift),
-  `AdditionalCastCost::TapPermanents` (Guardian of the Great Door),
-  `Effect::MayTap` (Caparocti Sunborn), `Effect::EscalatingThisTurn` +
-  `ability_resolutions_this_turn` (Vito), Nicanzil, Sage of Days, Deepfathom
-  Echo. Easy LCI commons sit in `sets::lci` with tests in `tests::lci`.
+- **LCI cards still ⏳** (each needs the noted bespoke primitive — the LCI
+  remainder is a hard legendary/artifact tail):
+  - Starving Revenant — surveil-2 then draw/lose-3 per card kept on top.
+  - The Skullspore Nexus — **batched** "one or more nontoken creatures die →
+    token whose base P/T = their *total* power" (per-creature `CreatureDied`
+    can't sum; needs CR 603.3e batch grouping). Cost-reduction-by-greatest-power
+    and the {2},{T} double-power activated half are ready (`Value::
+    GreatestPowerYouControl`, `Effect::DoublePower`).
+  - The Belligerent / Bonehoard Dracosaur — a turn-scoped "you may play lands /
+    cast spells from the top of your library this turn" player grant
+    (`StaticEffect::PlayFromLibraryTop` exists but only as a permanent static).
+  - Quintorius Kand — planeswalker; +1/−3 trivial, the −6 needs
+    "exile any number from your gy, add {R} each, may-play this turn".
+  - The Ancient One — a descend-N can't-attack/block static (parallel to
+    `CantAttackOrBlockUnlessDelirium`) + loot-then-mill-by-discarded-MV rider.
+  - Zoyowa's Justice / Wail of the Forgotten / Cosmium Confluence — player-scoped
+    Discover (`Discover` is always controller-only) and choose-N-with-repeats.
+  - Bat Colony (Cave-mana-spent count), Song of Stupefaction (gy-count
+    EquipScale), Intrepid Paleontologist (cast Dinosaurs from exile-with-source),
+    Roaming Throne (chosen-type trigger-doubling), The Millennium Calendar
+    (time-counter engine), Saheeli (token-copy + add-a-card-type rider).
+  - Shipped this run: `Effect::AddCountersForPowerOverBase` (Okinec),
+    `Effect::SacrificeOthersThenReanimate` (Bringer of the Last Gift),
+    `AdditionalCastCost::TapPermanents` (Guardian of the Great Door; reused by
+    Fear of Exposure), `Effect::MayTap` (Caparocti), `Effect::EscalatingThisTurn`
+    + `ability_resolutions_this_turn` (Vito), `Effect::
+    RevealTopNPutMatchingToBattlefield` (Gishath), `DynamicPt::
+    CreaturesYouControlWithTypes` + `Value::TimesDescendedThisTurn` +
+    `Player.descend_count_this_turn` (The Mycotyrant; surfaced in `PlayerView.
+    descended_this_turn_count`), plus Chimil, Abuelo, Palani's Hatcher.
+  - A 23-card BLB/FIN/DSK commons batch (no new primitives) lives in
+    `sets::decks::recent27` (+ Fear of Exposure / Vicious Clown in `recent26`).
 - ✅ **Reflexive targeted "when you do" triggers** (CR 603.7) — `Effect::Reflexive
   { body }` wraps a targeted payoff that's opaque to the cast/trigger-time target
   walk and auto-targets its body fresh at resolution. Composes with `MayPay`
