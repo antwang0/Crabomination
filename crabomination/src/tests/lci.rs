@@ -2452,7 +2452,7 @@ fn orazca_puzzle_door_digs_two() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "one card to hand");
     // The Puzzle-Door itself is sacrificed (to graveyard) plus one dug card.
-    assert!(g.players[0].graveyard.len() >= gy_before + 1, "one dug card to graveyard");
+    assert!(g.players[0].graveyard.len() > gy_before, "one dug card to graveyard");
 }
 
 /// Eaten by Piranhas turns a creature into a vanilla 1/1 black Skeleton.
