@@ -4513,6 +4513,14 @@ static LCI: &[Factory] = &[
     super::lci::chart_a_course,
     super::lci::marauding_brinefang,
     super::lci::resplendent_angel,
+    super::lci::sentinel_of_the_nameless_city,
+    super::lci::bedevil,
+    super::lci::stinging_cave_crawler,
+    super::lci::cogwork_wrestler,
+    super::lci::envoy_of_okinec_ahau,
+    super::lci::confounding_riddle,
+    super::lci::oaken_siren,
+    super::lci::ixallis_lorekeeper,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -3914,6 +3914,202 @@ pub fn resplendent_angel() -> CardDefinition {
     }
 }
 
+/// Sentinel of the Nameless City — {2}{G} 3/4 Merfolk Warrior Scout with
+/// vigilance. Whenever it enters or attacks, create a Map token.
+pub fn sentinel_of_the_nameless_city() -> CardDefinition {
+    let make_map = || Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: map_token() };
+    CardDefinition {
+        name: "Sentinel of the Nameless City",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Warrior, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(make_map()), on_attack(make_map())],
+        ..Default::default()
+    }
+}
+
+/// Bedevil — {B}{B}{R} Instant. Destroy target artifact, creature, or
+/// planeswalker.
+pub fn bedevil() -> CardDefinition {
+    CardDefinition {
+        name: "Bedevil",
+        cost: cost(&[b(), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Stinging Cave Crawler — {2}{B} 1/3 Insect Horror with deathtouch. Descend 4 —
+/// when it attacks with 4+ permanent cards in your graveyard, draw a card and
+/// lose 1 life.
+pub fn stinging_cave_crawler() -> CardDefinition {
+    CardDefinition {
+        name: "Stinging Cave Crawler",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![on_attack(Effect::If {
+            cond: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+            then: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cogwork Wrestler — {U} 1/2 Gnome artifact creature with flash. When it
+/// enters, target creature an opponent controls gets -2/-0 until end of turn.
+pub fn cogwork_wrestler() -> CardDefinition {
+    CardDefinition {
+        name: "Cogwork Wrestler",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent)),
+            power: Value::Const(-2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Envoy of Okinec Ahau — {2}{W} 3/3 Cat Advisor. {4}{W}: Create a 1/1
+/// colorless Gnome artifact creature token.
+pub fn envoy_of_okinec_ahau() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Envoy of Okinec Ahau",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Advisor], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Gnome".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Confounding Riddle — {2}{U} Instant. Choose one — dig four and put one into
+/// hand (rest to graveyard); or counter target spell unless its controller
+/// pays {4}.
+pub fn confounding_riddle() -> CardDefinition {
+    CardDefinition {
+        name: "Confounding Riddle",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+            },
+            Effect::CounterUnlessPaid {
+                what: crate::effect::shortcut::target(),
+                mana_cost: cost(&[generic(4)]),
+                exile: false,
+                extra_generic: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Oaken Siren — {1}{U} 1/2 Siren Pirate artifact creature with flying and
+/// vigilance. {T}: Add {U}, spendable only on artifact spells/abilities.
+pub fn oaken_siren() -> CardDefinition {
+    CardDefinition {
+        name: "Oaken Siren",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Siren, CreatureType::Pirate], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::OfColor(Color::Blue, Value::Const(1))),
+                    crate::mana::SpendRestriction::ArtifactOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ixalli's Lorekeeper — {G} 1/1 Human Druid. {T}: Add one mana of any color,
+/// spendable only on Dinosaur spells/abilities.
+pub fn ixallis_lorekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Ixalli's Lorekeeper",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Druid], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                    crate::mana::SpendRestriction::CreatureOfType(CreatureType::Dinosaur),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hidden Grotto — Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of
 /// any color.
 pub fn hidden_grotto() -> CardDefinition {

@@ -2105,3 +2105,155 @@ fn resplendent_angel_makes_angel_after_lifegain() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Angel" && c.is_token),
         "4/4 Angel token created after gaining 5 life");
 }
+
+/// Sentinel of the Nameless City makes a Map on ETB and on attack.
+#[test]
+fn sentinel_nameless_city_maps_on_etb_and_attack() {
+    let mut g = two_player_game();
+    let sentinel = g.add_card_to_hand(0, catalog::sentinel_of_the_nameless_city());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sentinel, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let maps_after_etb = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Map").count();
+    assert_eq!(maps_after_etb, 1, "ETB made a Map");
+    g.clear_sickness(sentinel);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: sentinel, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let maps_after_attack = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Map").count();
+    assert_eq!(maps_after_attack, 2, "attack made a second Map");
+}
+
+/// Bedevil destroys a planeswalker.
+#[test]
+fn bedevil_destroys_planeswalker() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    let spell = g.add_card_to_hand(0, catalog::bedevil());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(pw)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pw).is_none(), "planeswalker destroyed");
+}
+
+/// Stinging Cave Crawler draws and loses 1 when attacking at descend 4.
+#[test]
+fn stinging_cave_crawler_descend_draw() {
+    let mut g = two_player_game();
+    let crawler = g.add_card_to_battlefield(0, catalog::stinging_cave_crawler());
+    g.clear_sickness(crawler);
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: crawler, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    assert_eq!(g.players[0].life, life_before - 1, "lost 1 life");
+}
+
+/// Cogwork Wrestler's ETB shrinks an opponent's creature by -2/-0.
+#[test]
+fn cogwork_wrestler_shrinks_opp_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wrestler = g.add_card_to_hand(0, catalog::cogwork_wrestler());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrestler, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 0, "2/2 became 0/2");
+}
+
+/// Envoy of Okinec Ahau mints a 1/1 Gnome for {4}{W}.
+#[test]
+fn envoy_okinec_ahau_makes_gnome() {
+    let mut g = two_player_game();
+    let envoy = g.add_card_to_battlefield(0, catalog::envoy_of_okinec_ahau());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: envoy, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Gnome" && c.is_token));
+}
+
+/// Confounding Riddle mode 0 digs four, keeping one and binning the rest.
+#[test]
+fn confounding_riddle_digs() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::confounding_riddle());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    // -1 spell cast + 1 to hand = net unchanged; all four dug cards left the library.
+    assert_eq!(g.players[0].hand.len(), hand_before, "kept one card");
+    assert!(g.players[0].library.is_empty(), "dug all four off the top");
+}
+
+/// Oaken Siren taps for {U} restricted to artifact spells.
+#[test]
+fn oaken_siren_taps_for_artifact_mana() {
+    let mut g = two_player_game();
+    let siren = g.add_card_to_battlefield(0, catalog::oaken_siren());
+    g.clear_sickness(siren);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: siren, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate mana ability");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "added restricted U");
+    assert!(g.battlefield_find(siren).unwrap().tapped, "tapped for mana");
+}
+
+/// Ixalli's Lorekeeper taps for any color restricted to Dinosaur spells.
+#[test]
+fn ixallis_lorekeeper_taps_for_dino_mana() {
+    let mut g = two_player_game();
+    let keeper = g.add_card_to_battlefield(0, catalog::ixallis_lorekeeper());
+    g.clear_sickness(keeper);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: keeper, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate mana ability");
+    assert!(g.battlefield_find(keeper).unwrap().tapped, "tapped for mana");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "produced one restricted mana");
+}
