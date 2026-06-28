@@ -86,6 +86,31 @@ fn reasonable_doubt_suspects_target_creature() {
     assert!(g.battlefield_find(victim).unwrap().suspected, "creature suspected");
 }
 
+/// "Suspect up to one target creature" — the suspect clause is optional, so
+/// Reasonable Doubt still counters with no creature target supplied.
+#[test]
+fn reasonable_doubt_resolves_with_no_creature_target() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    let id = g.add_card_to_hand(0, catalog::reasonable_doubt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reasonable Doubt with no creature target");
+    drain_stack(&mut g);
+    // The countered spell never resolved → not on the battlefield.
+    assert!(g.battlefield_find(spell).is_none(), "spell countered without a creature to suspect");
+}
+
 // ── Collect Evidence (CR 701.59) ─────────────────────────────────────────────
 
 /// Sample Collector collects evidence on attack and grows a creature.

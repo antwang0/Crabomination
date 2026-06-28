@@ -42,8 +42,8 @@ pub fn repeat_offender() -> CardDefinition {
 }
 
 /// Reasonable Doubt — {1}{U} Instant. "Counter target spell unless its
-/// controller pays {2}. Suspect up to one target creature." (The "up to one"
-/// rider is modeled as a required creature target.)
+/// controller pays {2}. Suspect up to one target creature." The suspect slot
+/// is optional — the spell resolves (countering) with no creature supplied.
 pub fn reasonable_doubt() -> CardDefinition {
     CardDefinition {
         name: "Reasonable Doubt",

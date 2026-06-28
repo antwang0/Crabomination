@@ -4477,6 +4477,22 @@ static LEA: &[Factory] = &[
 static M11: &[Factory] = &[
     super::m11::preordain,
 ];
+static MH3: &[Factory] = &[
+    super::mh3::accursed_marauder,
+    super::mh3::faithful_watchdog,
+    super::mh3::nightshade_dryad,
+    super::mh3::serum_visionary,
+    super::mh3::wing_it,
+    super::mh3::gift_of_the_viper,
+    super::mh3::null_elemental_blast,
+    super::mh3::mogg_mob,
+    super::mh3::retrofitted_transmogrant,
+    super::mh3::sarpadian_simulacrum,
+    super::mh3::consuming_corruption,
+    super::mh3::fanged_flames,
+    super::mh3::solstice_zealot,
+    super::mh3::tempest_harvester,
+];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
     super::mkm::reasonable_doubt,
@@ -10072,6 +10088,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("lci", LCI),
     ("lea", LEA),
     ("m11", M11),
+    ("mh3", MH3),
     ("mkm", MKM),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
