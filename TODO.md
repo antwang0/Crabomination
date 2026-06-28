@@ -2313,8 +2313,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   restriction ✅ via `CardDefinition.companion` + `format::companion_restriction_met`,
   enforced by the server deck loader). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
+  Color-count value (105.2 — `Value::ColorCountOf`, "for each of its colors";
+  colorless/devoid counts 0 per 105.2c) ✅ — Breathe Your Last; tests
+  `cr_105_2c_colorless_counts_zero_colors`, `breathe_your_last_gains_life_per_color`.
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). (AutoDecider now flips a real random coin; scripted tests stay deterministic.)
+<<<<<<< HEAD
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g) ✅ (`CounterType::Defense`, CR 310). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅. "Choose a kind of counter at random it doesn't have" ✅ via `Effect::AddRandomMissingCounter` (keyword counters + +1/+1, never duplicating a present kind; respects Solemnity — Crystalline Giant). Return-a-died-creature-with-a-keyword-counter ✅ — a `CreatureDied`/`AnotherOfYours` trigger `Move`s `Selector::TriggerSource` (its gy card) back to the battlefield, then `AddKeywordCounter` on `Selector::LastMoved` (Luminous Broodmoth's flying counter; `luminous_broodmoth_returns_with_flying`). CR 614.16 additive replacement for *every* counter kind ✅ — `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor) adds one to any counter placed on your creatures, via `GameState::scaled_counter_count`; composes with Hardened Scales (+1/+1-only) and Doubling Season. The player-counter "counters you'd get" half is still approximated.
+=======
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅. Keyword counters (122.1c — distinct `keyword_counters` map granting the keyword via layers) ✅; test `cr_122_1_keyword_counter_grants_keyword` (Gift of the Viper).
+>>>>>>> 5c07094 (Server: SlotManager tests (connection-cap accounting). UI: surface rad counters in player HUD (wire + chip).)
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
   surfaced via `LibraryView.known_top` + a HUD chip; Courser, Oracle of Mul

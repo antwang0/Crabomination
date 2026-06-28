@@ -40,6 +40,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Energy (CR 122) — a Kaladesh aether teal.
         StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
+        // Rad counters (CR 122) — a Phyrexian hazard green; a slow mill/poison
+        // clock the player wants to keep an eye on.
+        StatChipKind::Rad => (Color::srgba(0.14, 0.32, 0.12, 1.0), theme::TEXT_PRIMARY),
         // Draw cap (CR 121.2b) — a muted warning amber: drawing is locked.
         StatChipKind::DrawCap => (Color::srgba(0.36, 0.24, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Storm/magecraft count (spells cast this turn) — an Izzet ember
@@ -89,6 +92,7 @@ pub(super) enum StatChipKind {
     Emblem,
     Devotion,
     Energy,
+    Rad,
     DrawCap,
     Storm,
     Monarch,
@@ -562,6 +566,11 @@ pub fn update_player_stats_chips(
         if p.speed > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
         }
+        // CR 122 rad counters — only surface once the player has any (Phyrexia
+        // poison-mill clock).
+        if p.rad_counters > 0 {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
+        }
         // Storm / magecraft count — surface once a second spell lands this
         // turn so Storm / prowess / magecraft payoffs can be read at a glance.
         if storm_chip_visible(p.spells_cast_this_turn) {
@@ -888,6 +897,9 @@ pub fn update_opponent_stats_rows(
                 }
                 if p.speed > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
+                }
+                if p.rad_counters > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
                 }
                 if let Some(cap) = p.draw_cap {
                     spawn_stat_chip(

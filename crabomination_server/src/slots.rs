@@ -129,3 +129,61 @@ impl Drop for SlotGuard {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::Ipv4Addr;
+
+    fn ip(n: u8) -> IpAddr {
+        IpAddr::V4(Ipv4Addr::new(127, 0, 0, n))
+    }
+
+    #[test]
+    fn global_cap_refuses_when_full() {
+        let mgr = SlotManager::new(2, 0);
+        let _a = mgr.try_acquire(ip(1)).expect("first slot");
+        let _b = mgr.try_acquire(ip(2)).expect("second slot");
+        assert!(matches!(mgr.try_acquire(ip(3)), Err(SlotRefusal::GlobalCapReached)));
+    }
+
+    #[test]
+    fn per_ip_cap_is_independent_per_address() {
+        let mgr = SlotManager::new(0, 1);
+        let _a = mgr.try_acquire(ip(1)).expect("ip1 first");
+        // Same IP is now full…
+        assert!(matches!(mgr.try_acquire(ip(1)), Err(SlotRefusal::PerIpCapReached)));
+        // …but a different IP still has its own slot.
+        let _b = mgr.try_acquire(ip(2)).expect("ip2 first");
+    }
+
+    #[test]
+    fn dropping_a_guard_frees_its_slot() {
+        let mgr = SlotManager::new(1, 0);
+        {
+            let _a = mgr.try_acquire(ip(1)).expect("slot");
+            assert!(matches!(mgr.try_acquire(ip(2)), Err(SlotRefusal::GlobalCapReached)));
+        }
+        // The guard dropped at the end of the block; the slot is reusable.
+        let _b = mgr.try_acquire(ip(2)).expect("slot freed after drop");
+    }
+
+    #[test]
+    fn per_ip_entry_is_removed_when_count_hits_zero() {
+        let mgr = SlotManager::new(0, 1);
+        {
+            let _a = mgr.try_acquire(ip(1)).expect("slot");
+        }
+        // After release the IP can acquire again (entry was cleaned up, not stuck at 1).
+        let _b = mgr.try_acquire(ip(1)).expect("ip reusable after release");
+    }
+
+    #[test]
+    fn zero_caps_mean_unlimited() {
+        let mgr = SlotManager::new(0, 0);
+        let mut guards = Vec::new();
+        for _ in 0..50 {
+            guards.push(mgr.try_acquire(ip(1)).expect("unlimited"));
+        }
+    }
+}
