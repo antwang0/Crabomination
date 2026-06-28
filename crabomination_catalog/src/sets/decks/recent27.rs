@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     etb, etb_draw, on_attack, on_attack_drain, on_attack_gain_life, on_dies, target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, StaticEffect};
+use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, generic, g, hybrid, u, w, Color};
 
 /// A 1/1 colorless Hero token (FIN).
@@ -325,5 +325,88 @@ pub fn warren_elder() -> CardDefinition {
             ..Default::default()
         }],
         ..creature("Warren Elder", cost(&[generic(1), w()]), vec![CreatureType::Rabbit, CreatureType::Cleric], 2, 2, vec![])
+    }
+}
+
+/// Jumbo Cactuar — {5}{G}{G} 1/7 Plant. Whenever it attacks, it gets +9999/+0
+/// until end of turn (10,000 Needles).
+pub fn jumbo_cactuar() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(9999),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Jumbo Cactuar", cost(&[generic(5), g(), g()]), vec![CreatureType::Plant], 1, 7, vec![])
+    }
+}
+
+/// Outlaw Medic — {1}{W} 1/3 Human Rogue, lifelink. When it dies, draw a card.
+pub fn outlaw_medic() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..creature("Outlaw Medic", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Rogue], 1, 3, vec![Keyword::Lifelink])
+    }
+}
+
+/// Sterling Supplier — {4}{W} 3/4 Bird Soldier, flying. When it enters, put a
+/// +1/+1 counter on another target creature you control.
+pub fn sterling_supplier() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: crate::card::CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..creature("Sterling Supplier", cost(&[generic(4), w()]), vec![CreatureType::Bird, CreatureType::Soldier], 3, 4, vec![Keyword::Flying])
+    }
+}
+
+/// Shrieking Drake — {U} 1/1 Drake, flying. When it enters, return a creature
+/// you control to its owner's hand.
+pub fn shrieking_drake() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        ..creature("Shrieking Drake", cost(&[u()]), vec![CreatureType::Drake], 1, 1, vec![Keyword::Flying])
+    }
+}
+
+/// Oasis Gardener — {3} 2/2 Artifact Creature — Scarecrow. ETB: gain 2 life.
+/// {T}: Add one mana of any color.
+pub fn oasis_gardener() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            ..Default::default()
+        }],
+        ..creature("Oasis Gardener", cost(&[generic(3)]), vec![CreatureType::Scarecrow], 2, 2, vec![])
+    }
+}
+
+/// Discerning Peddler — {1}{R} 2/2 Human Rogue. When it enters, you may discard
+/// a card. If you do, draw a card.
+pub fn discerning_peddler() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "discard a card, then draw a card".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+        })],
+        ..creature("Discerning Peddler", cost(&[generic(1), crate::mana::r()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 2, vec![])
     }
 }

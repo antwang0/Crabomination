@@ -231,3 +231,89 @@ fn warren_elder_team_pump() {
     assert_eq!(g.computed_permanent(buddy).unwrap().power, 3, "buddy pumped to 3");
     assert_eq!(g.computed_permanent(elder).unwrap().power, 3, "elder pumped to 3");
 }
+
+/// Jumbo Cactuar swings for +9999/+0 on attack.
+#[test]
+fn jumbo_cactuar_needles_on_attack() {
+    let mut g = two_player_game();
+    let cac = g.add_card_to_battlefield(0, catalog::jumbo_cactuar());
+    g.battlefield_find_mut(cac).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: cac, target: AttackTarget::Player(1) }]).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(cac).unwrap().power, 10000, "1 + 9999 power");
+}
+
+/// Outlaw Medic draws on death.
+#[test]
+fn outlaw_medic_draws_on_death() {
+    let mut g = two_player_game();
+    let medic = g.add_card_to_battlefield(0, catalog::outlaw_medic());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    g.sacrifice_one(medic, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card on death");
+}
+
+/// Sterling Supplier counters another creature on entry.
+#[test]
+fn sterling_supplier_counters_ally() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::sterling_supplier());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        1, "ally got a +1/+1 counter",
+    );
+}
+
+/// Shrieking Drake bounces a creature you control on entry.
+#[test]
+fn shrieking_drake_bounces_own() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(ally)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::shrieking_drake());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ally).is_none(), "ally bounced");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "ally in hand");
+}
+
+/// Oasis Gardener gains 2 life on entry and taps for any color.
+#[test]
+fn oasis_gardener_lifegain_and_mana() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let gard = g.move_card_to_battlefield_for_test(0, catalog::oasis_gardener());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life on entry");
+    g.battlefield_find_mut(gard).unwrap().summoning_sick = false;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert!(g.players[0].mana_pool.total() >= 1, "added a mana");
+}
+
+/// Discerning Peddler loots (discard then draw) on entry.
+#[test]
+fn discerning_peddler_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::discerning_peddler());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "discarded one and drew one (net zero)");
+}
