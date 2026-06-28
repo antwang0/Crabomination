@@ -1690,6 +1690,23 @@ fn volcanic_geyser_deals_x() {
     assert!(g.battlefield_find(prey).is_none(), "X=2 killed the 2/2");
 }
 
+/// Sorcerous Spyglass names a card on ETB (Pithing Needle's ability lock).
+#[test]
+fn sorcerous_spyglass_names_a_card() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Soulcoil Viper".into())]));
+    let glass = g.add_card_to_hand(0, catalog::sorcerous_spyglass());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: glass, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for {2}");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(glass).and_then(|c| c.named_card.as_deref()),
+        Some("Soulcoil Viper"),
+        "ETB stamps the named card for the ability lock");
+}
+
 /// Dusk Rose Reliquary sacrifices a permanent and exiles an opponent's creature
 /// until it leaves; the exile returns when the Reliquary is destroyed.
 #[test]

@@ -3413,6 +3413,19 @@ pub fn kindled_heroism() -> CardDefinition {
     }
 }
 
+/// Sorcerous Spyglass — {2} Artifact. ETB: name a card; activated abilities of
+/// sources with that name can't be activated (unless mana abilities). (The
+/// "look at an opponent's hand" rider is cosmetic and dropped.)
+pub fn sorcerous_spyglass() -> CardDefinition {
+    CardDefinition {
+        name: "Sorcerous Spyglass",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::NameCard { what: Selector::This })],
+        ..Default::default()
+    }
+}
+
 /// Dusk Rose Reliquary — {W} Artifact, Ward {2}. Additional cost: sacrifice an
 /// artifact or creature. ETB: exile target artifact or creature an opponent
 /// controls until this leaves.

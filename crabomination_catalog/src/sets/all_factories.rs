@@ -4501,6 +4501,7 @@ static LCI: &[Factory] = &[
     super::lci::deconstruction_hammer,
     super::lci::dusk_rose_reliquary,
     super::lci::digsite_conservator,
+    super::lci::sorcerous_spyglass,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
