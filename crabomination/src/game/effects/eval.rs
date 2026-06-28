@@ -1626,6 +1626,14 @@ impl GameState {
                             .count() as u32;
                         card.definition.cost.cmc() <= n
                     }
+                    R::ManaValueAtMostPermanentsInYourGraveyard => {
+                        let n = self.players[controller]
+                            .graveyard
+                            .iter()
+                            .filter(|c| c.definition.is_permanent())
+                            .count() as u32;
+                        card.definition.cost.cmc() <= n
+                    }
                     // Unresolved X-relative filter (no X in scope here).
                     R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
@@ -1859,6 +1867,14 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .count() as u32;
+                card.definition.cost.cmc() <= n
+            }
+            R::ManaValueAtMostPermanentsInYourGraveyard => {
+                let n = self.players[controller]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
                     .count() as u32;
                 card.definition.cost.cmc() <= n
             }

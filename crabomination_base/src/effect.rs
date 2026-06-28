@@ -2604,6 +2604,10 @@ pub enum Effect {
         keywords: Vec<Keyword>,
         duration: Duration,
     },
+    /// CR 613 layer 7b — "[what]'s base power becomes `power`" for `duration`,
+    /// leaving base toughness intact (Belligerent Yearling: base power becomes
+    /// equal to the entering Dinosaur's power until end of turn).
+    SetBasePower { what: Selector, power: Value, duration: Duration },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
     /// Each permanent picked by `what` loses `keyword` until end of turn
     /// (CR 613.7 layer 6 — the removal outranks any earlier grant this

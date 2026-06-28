@@ -4537,6 +4537,8 @@ static LCI: &[Factory] = &[
     super::lci::tendril_of_the_mycotyrant,
     super::lci::pit_of_offerings,
     super::lci::explorers_cache,
+    super::lci::belligerent_yearling,
+    super::lci::squirming_emergence,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

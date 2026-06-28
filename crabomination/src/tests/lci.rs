@@ -2530,3 +2530,47 @@ fn sunfire_torch_buffs_equipped() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+0 from Sunfire Torch");
 }
+
+/// Belligerent Yearling's base power becomes the entering Dinosaur's power.
+#[test]
+fn belligerent_yearling_copies_dino_power() {
+    let mut g = two_player_game();
+    let yearling = g.add_card_to_battlefield(0, catalog::belligerent_yearling());
+    assert_eq!(g.computed_permanent(yearling).unwrap().power, 3, "base 3/2");
+    // Accept the optional "you may" trigger.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // A 6/5 Seismic Monstrosaur is cast → base power becomes 6 (toughness stays 2).
+    let dino = g.add_card_to_hand(0, catalog::seismic_monstrosaur());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dino, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast dino");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(yearling).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 2), "base power copied, toughness intact");
+}
+
+/// Squirming Emergence reanimates a graveyard permanent only within the
+/// fathomless-descent mana-value cap.
+#[test]
+fn squirming_emergence_caps_by_graveyard_permanents() {
+    let mut g = two_player_game();
+    // Three permanent cards in graveyard → MV cap 3.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2 ≤ 3
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // instant — not a permanent card
+    let se = g.add_card_to_hand(0, catalog::squirming_emergence());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Only 2 permanent cards in gy (the two bears) → cap is 2, MV-2 bear qualifies.
+    cast_at(&mut g, se, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_some(), "MV-2 bear reanimated under cap 2");
+}

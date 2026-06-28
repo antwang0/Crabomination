@@ -1276,6 +1276,9 @@ pub enum SelectionRequirement {
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").
     ManaValueAtMostYourCount(Box<SelectionRequirement>),
+    /// LCI fathomless descent — MV at most the number of permanent cards in the
+    /// evaluating player's graveyard (Squirming Emergence's reanimation cap).
+    ManaValueAtMostPermanentsInYourGraveyard,
     /// Mana value ≤ the mana spent to cast the source permanent's spell
     /// (`CardInstance.cast_mana_spent`). Read source-relative at filter time —
     /// Astelli Reclaimer's "with mana value X or less, where X is the amount of

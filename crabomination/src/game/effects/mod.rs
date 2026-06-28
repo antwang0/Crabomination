@@ -4543,6 +4543,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetBasePower { what, power, duration } => {
+                use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer};
+                let p = self.evaluate_value(power, ctx);
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetPower(p),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GrantTriggeredAbility { what, trigger, duration: _ } => {
                 // Currently only EOT-duration grants are honored; the
                 // entry is cleared in `do_cleanup`. Permanent-duration

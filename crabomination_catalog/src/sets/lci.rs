@@ -4625,3 +4625,55 @@ pub fn explorers_cache() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Belligerent Yearling — {1}{R} 3/2 Dinosaur with trample. Whenever another
+/// Dinosaur you control enters, you may have its base power become that
+/// creature's power until end of turn.
+pub fn belligerent_yearling() -> CardDefinition {
+    CardDefinition {
+        name: "Belligerent Yearling",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                }),
+            effect: Effect::MayDo {
+                description: "have this creature's base power become that creature's power".into(),
+                body: Box::new(Effect::SetBasePower {
+                    what: Selector::This,
+                    power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Squirming Emergence — {1}{B}{G} Sorcery. Fathomless descent — return to the
+/// battlefield target nonland permanent card in your graveyard with mana value
+/// ≤ the number of permanent cards in your graveyard.
+pub fn squirming_emergence() -> CardDefinition {
+    CardDefinition {
+        name: "Squirming Emergence",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::InGraveyard
+                    .and(SelectionRequirement::PermanentCard)
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::ManaValueAtMostPermanentsInYourGraveyard),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}

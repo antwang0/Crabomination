@@ -114,6 +114,10 @@ pub enum Modification {
 
     // ── Layer 7 ──────────────────────────────────────────────────────────────
     SetPowerToughness(i32, i32),   // 7b
+    /// Set base power only (layer 7b), leaving base toughness intact — "this
+    /// creature's base power becomes N" (Belligerent Yearling). Ordered with
+    /// `SetPowerToughness` by timestamp; later wins.
+    SetPower(i32),                 // 7b
     ModifyPower(i32),              // 7c
     ModifyToughness(i32),          // 7c
     ModifyPowerToughness(i32, i32),// 7c
@@ -386,6 +390,7 @@ fn compute_permanent_pass(
     };
 
     let mut set_pt: Option<(i32, i32)> = None;
+    let mut set_power_only: Option<i32> = None;
     let mut mod_power: i32 = 0;
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
@@ -469,8 +474,12 @@ fn compute_permanent_pass(
                 lost_all_abilities = true;
             }
 
-            // Layer 7
-            Modification::SetPowerToughness(p, t) => set_pt = Some((*p, *t)),
+            // Layer 7 (modifications arrive in timestamp order; later wins)
+            Modification::SetPowerToughness(p, t) => {
+                set_pt = Some((*p, *t));
+                set_power_only = None;
+            }
+            Modification::SetPower(p) => set_power_only = Some(*p),
             Modification::ModifyPower(n) => mod_power += n,
             Modification::ModifyToughness(n) => mod_toughness += n,
             Modification::ModifyPowerToughness(p, t) => {
@@ -491,6 +500,10 @@ fn compute_permanent_pass(
     } else {
         (base_power, base_toughness)
     };
+    // Layer-7b "base power becomes N" (power only) overrides the power half.
+    if let Some(p) = set_power_only {
+        power = p;
+    }
     power += mod_power + card.power_bonus + card.perm_power_bonus;
     toughness += mod_toughness + card.toughness_bonus + card.perm_toughness_bonus;
     // Counters applied after 7c (CR 613.7f).

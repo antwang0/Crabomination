@@ -461,6 +461,9 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::SetBasePower { what, power, .. } => {
+                sel_has_target(what) || value_has_target(power)
+            }
             Effect::LoseKeywordThisTurn { what, .. } => sel_has_target(what),
             Effect::SkipNextUntap { what } => sel_has_target(what),
             Effect::SkipPlayerUntapStep { player } => player_has_target(player),
@@ -756,6 +759,7 @@ impl Effect {
                 sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
             }
             Effect::BecomeCreature { what, .. } => sel_filter(what),
+            Effect::SetBasePower { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
@@ -916,6 +920,8 @@ impl Effect {
             Effect::SetBasePT { .. } => false,
             // Animating your own land into a creature is a friendly self-buff.
             Effect::BecomeCreature { .. } => true,
+            // "Base power becomes equal to …" is a self-pump (Belligerent Yearling).
+            Effect::SetBasePower { .. } => true,
             // Doubling a life total is a gift — point Beacon of Immortality at
             // the caster, not the opponent.
             Effect::DoubleLife { .. } => true,
@@ -1338,6 +1344,7 @@ impl Effect {
             | Effect::SetBasePT { .. }
             | Effect::SwitchPT { .. }
             | Effect::BecomeCreature { .. }
+            | Effect::SetBasePower { .. }
             | Effect::GrantKeyword { .. }
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
@@ -1644,6 +1651,7 @@ impl Effect {
                     sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))
                 }
                 Effect::BecomeCreature { what, .. } => sel_find(what, slot),
+                Effect::SetBasePower { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
