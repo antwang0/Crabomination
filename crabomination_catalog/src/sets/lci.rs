@@ -2511,3 +2511,289 @@ pub fn triumphant_chomp() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── LCI batch 2 (modern_decks): descend / discover / explore commons ─────────
+
+/// Ruin-Lurker Bat — {W} 1/1 Bat, flying lifelink. End step, if you descended
+/// this turn, scry 1.
+pub fn ruin_lurker_bat() -> CardDefinition {
+    CardDefinition {
+        name: "Ruin-Lurker Bat",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::DescendedThisTurn { who: PlayerRef::You }),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Join the Dead — {1}{B}{B} Instant. Target creature gets -5/-5 until end of
+/// turn — or -10/-10 instead if you have four or more permanent cards in your
+/// graveyard (Descend 4).
+pub fn join_the_dead() -> CardDefinition {
+    CardDefinition {
+        name: "Join the Dead",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::DescendActive { who: PlayerRef::You, count: 4 },
+            then: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-10),
+                toughness: Value::Const(-10),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(-5),
+                toughness: Value::Const(-5),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ancestors' Aid — {1}{R} Instant. Target creature gets +2/+0 and gains first
+/// strike until end of turn. Create a Treasure token.
+pub fn ancestors_aid() -> CardDefinition {
+    CardDefinition {
+        name: "Ancestors' Aid",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: treasure_token() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// River Herald Guide — {2}{G} 3/1 Merfolk Scout, vigilance. When this enters,
+/// it explores.
+pub fn river_herald_guide() -> CardDefinition {
+    CardDefinition {
+        name: "River Herald Guide",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Explore { who: Selector::This })],
+        ..Default::default()
+    }
+}
+
+/// Might of the Ancestors — {2}{W} Enchantment. At the beginning of combat on
+/// your turn, target creature you control gets +2/+0 and gains vigilance until
+/// end of turn.
+pub fn might_of_the_ancestors() -> CardDefinition {
+    CardDefinition {
+        name: "Might of the Ancestors",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Walk with the Ancestors — {4}{G} Sorcery. Return up to one target permanent
+/// card from your graveyard to your hand. Discover 4.
+pub fn walk_with_the_ancestors() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Walk with the Ancestors",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::PermanentCard),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Discover { n: Value::Const(4), filter: None },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Vanguard of the Rose — {1}{W} 3/1 Vampire Knight. {1}, Sacrifice another
+/// creature or artifact: this creature gains indestructible until end of turn.
+/// Tap it.
+pub fn vanguard_of_the_rose() -> CardDefinition {
+    CardDefinition {
+        name: "Vanguard of the Rose",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Tap { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Daring Discovery — {4}{R} Sorcery. Up to three target creatures can't block
+/// this turn. Discover 4.
+pub fn daring_discovery() -> CardDefinition {
+    CardDefinition {
+        name: "Daring Discovery",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 3,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::Discover { n: Value::Const(4), filter: None },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Attentive Sunscribe — {1}{W} 2/2 Artifact Creature — Gnome. Whenever this
+/// becomes tapped, scry 1.
+pub fn attentive_sunscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Attentive Sunscribe",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+
+/// Self-Reflection — {4}{U}{U} Sorcery. Create a token that's a copy of target
+/// creature you control. Flashback {3}{U}.
+pub fn self_reflection() -> CardDefinition {
+    CardDefinition {
+        name: "Self-Reflection",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            extra_creature_types: vec![],
+            extra_card_types: vec![],
+            override_pt: None,
+            non_legendary: false,
+            legendary: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Canonized in Blood — {1}{B} Enchantment. End step, if you descended this
+/// turn, put a +1/+1 counter on target creature you control. {5}{B}{B},
+/// Sacrifice this enchantment: create a 4/3 white-black Vampire Demon with
+/// flying.
+pub fn canonized_in_blood() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let demon = TokenDefinition {
+        name: "Vampire Demon".into(),
+        power: 4,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Demon],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Canonized in Blood",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::DescendedThisTurn { who: PlayerRef::You }),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b(), b()]),
+            sac_cost: true,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: demon },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -1095,3 +1095,197 @@ fn triumphant_chomp_scales_with_dino() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe2).is_none(), "5 damage from the Dino killed the 2/3");
 }
+
+// ── LCI batch 2 (modern_decks) ───────────────────────────────────────────────
+
+/// Ruin-Lurker Bat scries at end step when you descended.
+#[test]
+fn ruin_lurker_bat_scry_on_descend() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ruin_lurker_bat());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].descended_this_turn = true;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    // Scry ran (no panic); library intact.
+    assert_eq!(g.players[0].library.len(), 1);
+}
+
+/// Join the Dead is -5/-5, or -10/-10 with descend 4.
+#[test]
+fn join_the_dead_scales_with_descend() {
+    let mut g = two_player_game();
+    // Without descend: a 7/6 survives -5/-5 (→ 2/1).
+    let big = g.add_card_to_battlefield(1, catalog::trumpeting_carnosaur()); // 7/6
+    let spell = g.add_card_to_hand(0, catalog::join_the_dead());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(big)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_some(), "7/6 survives -5/-5 with no descend");
+    // Now with descend 4 active, -10/-10 kills it.
+    let big2 = g.add_card_to_battlefield(1, catalog::trumpeting_carnosaur());
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    let spell2 = g.add_card_to_hand(0, catalog::join_the_dead());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell2, target: Some(Target::Permanent(big2)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big2).is_none(), "-10/-10 with descend 4 kills the 5/5");
+}
+
+/// Ancestors' Aid pumps with first strike and makes a Treasure.
+#[test]
+fn ancestors_aid_pumps_and_treasure() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::ancestors_aid());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "Treasure");
+}
+
+/// River Herald Guide explores on entry.
+#[test]
+fn river_herald_guide_explores() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.move_card_to_battlefield_for_test(0, catalog::river_herald_guide());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "explored land to hand");
+}
+
+/// Might of the Ancestors pumps a creature at the beginning of combat.
+#[test]
+fn might_of_the_ancestors_combat_pump() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::might_of_the_ancestors());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "vigilance");
+}
+
+/// Walk with the Ancestors returns a permanent card from the graveyard.
+#[test]
+fn walk_with_the_ancestors_recurs() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::walk_with_the_ancestors());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "returned to hand");
+}
+
+/// Vanguard of the Rose gains indestructible by sacrificing another permanent.
+#[test]
+fn vanguard_of_the_rose_sac_for_indestructible() {
+    let mut g = two_player_game();
+    let vanguard = g.add_card_to_battlefield(0, catalog::vanguard_of_the_rose());
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vanguard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert!(g.computed_permanent(vanguard).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.battlefield_find(vanguard).unwrap().tapped, "tapped itself");
+}
+
+/// Daring Discovery stops up to three blockers and discovers.
+#[test]
+fn daring_discovery_locks_blockers() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // discover → to hand
+    let spell = g.add_card_to_hand(0, catalog::daring_discovery());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock), "can't block");
+}
+
+/// Attentive Sunscribe scries when it becomes tapped.
+#[test]
+fn attentive_sunscribe_scry_on_tap() {
+    let mut g = two_player_game();
+    let scribe = g.add_card_to_battlefield(0, catalog::attentive_sunscribe());
+    g.add_card_to_library(0, catalog::island());
+    g.battlefield_find_mut(scribe).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: scribe }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 1, "scry kept the card (no panic)");
+}
+
+
+/// Self-Reflection copies a creature you control.
+#[test]
+fn self_reflection_copies_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::self_reflection());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "original + token copy");
+}
+
+/// Canonized in Blood adds a counter at end step on descend.
+#[test]
+fn canonized_in_blood_descend_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::canonized_in_blood());
+    g.players[0].descended_this_turn = true;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "counter added");
+}

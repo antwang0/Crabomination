@@ -29,7 +29,9 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
   targets up front and the auto-targeter can't fill them, so the MayPay never
   fires. The fix is a `MayPay` whose `body` is a *reflexive triggered ability*
   whose targets are chosen when it goes on the stack after payment (CR 603.7 /
-  "when you do"). Card dropped this run pending that primitive.
+  "when you do"). Itzquinth and **Glorifier of Suffering** (`MaySacrifice` → a
+  targeted `SupportCounters`) both dropped this run — the nested reflexive body's
+  targets aren't auto-selected, so the payoff fizzles.
 - **Molten Collapse / Abuelo's Awakening** deferred: Molten Collapse needs a
   descend-gated "choose both" modal (conditional extra mode with per-mode
   targets); Abuelo's Awakening needs reanimate-as-1/1-flying-Spirit + X counters.

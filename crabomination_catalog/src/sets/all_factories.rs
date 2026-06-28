@@ -4457,6 +4457,17 @@ static LCI: &[Factory] = &[
     super::lci::glowcap_lantern,
     super::lci::pirate_hat,
     super::lci::triumphant_chomp,
+    super::lci::ruin_lurker_bat,
+    super::lci::join_the_dead,
+    super::lci::ancestors_aid,
+    super::lci::river_herald_guide,
+    super::lci::might_of_the_ancestors,
+    super::lci::walk_with_the_ancestors,
+    super::lci::vanguard_of_the_rose,
+    super::lci::daring_discovery,
+    super::lci::attentive_sunscribe,
+    super::lci::self_reflection,
+    super::lci::canonized_in_blood,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
