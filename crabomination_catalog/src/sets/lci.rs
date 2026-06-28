@@ -3100,3 +3100,160 @@ pub fn deeproot_pilgrimage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Chupacabra Echo — {2}{B}{B} 3/2 Beast Horror Spirit. Fathomless descent —
+/// ETB: target creature an opponent controls gets -X/-X, X = permanent cards in
+/// your graveyard.
+pub fn chupacabra_echo() -> CardDefinition {
+    let descent = || Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::PermanentCard,
+    };
+    let neg = move || Value::Times(Box::new(descent()), Box::new(Value::Const(-1)));
+    CardDefinition {
+        name: "Chupacabra Echo",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Horror, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+            power: neg(),
+            toughness: neg(),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Huatli's Snubhorn — {1}{W} 2/2 Dinosaur with vigilance.
+pub fn huatlis_snubhorn() -> CardDefinition {
+    CardDefinition {
+        name: "Huatli's Snubhorn",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Pantlaza, Sun-Favored — {2}{R}{G}{W} 4/4 Dinosaur. When Pantlaza or another
+/// Dinosaur you control enters, you may discover X = that creature's toughness
+/// (once each turn).
+pub fn pantlaza_sun_favored() -> CardDefinition {
+    CardDefinition {
+        name: "Pantlaza, Sun-Favored",
+        cost: cost(&[generic(2), r(), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                })
+                .once_per_turn(),
+            effect: Effect::Discover {
+                n: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                filter: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stalactite Stalker — {B} 1/1 Goblin Rogue with menace. End step, if you
+/// descended this turn, +1/+1. {2}{B}, Sacrifice it: target creature gets -X/-X,
+/// X = this creature's power (last-known).
+pub fn stalactite_stalker() -> CardDefinition {
+    let neg_pow = || Value::Times(
+        Box::new(Value::PowerOf(Box::new(Selector::This))),
+        Box::new(Value::Const(-1)),
+    );
+    CardDefinition {
+        name: "Stalactite Stalker",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![end_step_descended_counter()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: neg_pow(),
+                toughness: neg_pow(),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glimpse the Core — {1}{G} Sorcery. Choose one — search for a basic Forest and
+/// put it onto the battlefield tapped; or return target Cave card from your
+/// graveyard to the battlefield tapped.
+pub fn glimpse_the_core() -> CardDefinition {
+    CardDefinition {
+        name: "Glimpse the Core",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand
+                    .and(SelectionRequirement::HasLandType(LandType::Forest)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::InGraveyard
+                        .and(SelectionRequirement::HasLandType(LandType::Cave)),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Quicksand Whirlpool — {5}{W} Instant. Costs {3} less if it targets a tapped
+/// creature. Exile target creature.
+pub fn quicksand_whirlpool() -> CardDefinition {
+    CardDefinition {
+        name: "Quicksand Whirlpool",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            3,
+        )),
+        effect: Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}

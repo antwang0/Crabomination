@@ -4478,6 +4478,12 @@ static LCI: &[Factory] = &[
     super::lci::huatlis_final_strike,
     super::lci::ghalta_stampede_tyrant,
     super::lci::deeproot_pilgrimage,
+    super::lci::chupacabra_echo,
+    super::lci::quicksand_whirlpool,
+    super::lci::huatlis_snubhorn,
+    super::lci::pantlaza_sun_favored,
+    super::lci::stalactite_stalker,
+    super::lci::glimpse_the_core,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

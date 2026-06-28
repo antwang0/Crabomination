@@ -1461,3 +1461,100 @@ fn deeproot_pilgrimage_on_merfolk_tap() {
         .filter(|c| c.controller == 0 && c.definition.name == "Merfolk").count();
     assert_eq!(merfolk, 1, "tapping a Merfolk minted a Merfolk token");
 }
+
+/// Chupacabra Echo's ETB shrinks an opponent's creature by your graveyard's
+/// permanent-card count.
+#[test]
+fn chupacabra_echo_descend_shrink() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // descend 2
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let echo = g.add_card_to_battlefield(0, catalog::chupacabra_echo());
+    g.fire_self_etb_triggers(echo, 0);
+    drain_stack(&mut g);
+    // -2/-2 on a 2/2 → dead (0/0 SBA).
+    assert!(g.battlefield_find(prey).is_none(), "shrunk to 0/0 and died");
+}
+
+/// Quicksand Whirlpool exiles a creature and costs {3} less vs a tapped one.
+#[test]
+fn quicksand_whirlpool_exiles_and_discounts() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::quicksand_whirlpool());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 3); // {3}{W} after the {3} tapped discount
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at discount");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled the tapped creature");
+}
+
+/// Huatli's Snubhorn is a 2/2 Dinosaur with vigilance.
+#[test]
+fn huatlis_snubhorn_is_vigilant_dino() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::huatlis_snubhorn());
+    let cp = g.computed_permanent(s).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(cp.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Pantlaza discovers off a Dinosaur entering (X = its toughness).
+#[test]
+fn pantlaza_discovers_on_dino_etb() {
+    let mut g = two_player_game();
+    // Stack a cheap nonland so discover 4 finds something to dig to.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::pantlaza_sun_favored());
+    let lib_before = g.players[0].library.len();
+    let dino = g.add_card_to_battlefield(0, catalog::huatlis_snubhorn()); // toughness 2
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: dino }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() < lib_before, "discover dug into the library");
+}
+
+/// Stalactite Stalker's sac ability shrinks a creature by its (LKI) power.
+#[test]
+fn stalactite_stalker_sac_shrinks() {
+    let mut g = two_player_game();
+    let stalker = g.add_card_to_battlefield(0, catalog::stalactite_stalker()); // 1/1
+    g.battlefield_find_mut(stalker).unwrap().add_counters(CounterType::PlusOnePlusOne, 1); // → 2/2
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(stalker);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stalker, ability_index: 0, target: Some(Target::Permanent(prey)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stalker).is_none(), "sacrificed");
+    assert!(g.battlefield_find(prey).is_none(), "-2/-2 killed the 2/2");
+}
+
+/// Glimpse the Core (mode 2) reanimates a Cave from the graveyard, tapped.
+#[test]
+fn glimpse_the_core_returns_cave() {
+    let mut g = two_player_game();
+    let cave = g.add_card_to_graveyard(0, catalog::captivating_cave());
+    let spell = g.add_card_to_hand(0, catalog::glimpse_the_core());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(cave)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast mode 1");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(cave).expect("Cave returned");
+    assert!(back.tapped, "entered tapped");
+}
