@@ -5195,6 +5195,61 @@ pub fn sovereign_okinec_ahau() -> CardDefinition {
     }
 }
 
+/// Vito, Fanatic of Aclazotz — {2}{W}{B} 4/4 Legendary Vampire Demon, flying.
+/// Whenever you sacrifice another permanent: 1st time this turn → gain 2 life;
+/// 2nd → each opponent loses 2 life; 3rd → make a 4/3 W/B flying Vampire Demon.
+pub fn vito_fanatic_of_aclazotz() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let demon = TokenDefinition {
+        name: "Vampire Demon".into(),
+        power: 4,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Demon],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Vito, Fanatic of Aclazotz",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::OtherThanSource,
+                }),
+            effect: Effect::EscalatingThisTurn {
+                modes: vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: demon,
+                    },
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Caparocti Sunborn — {2}{R}{W} 4/4 Legendary Human Soldier. Whenever it
 /// attacks, you may tap two untapped artifacts and/or creatures you control;
 /// if you do, discover 3.

@@ -3288,6 +3288,11 @@ pub enum Effect {
     /// control, then puts the cards they exiled this way onto the battlefield
     /// under their own control.
     LivingDeath,
+    /// "If this is the first time this ability has resolved this turn, [mode 0].
+    /// If the second time, [mode 1]. …" (CR 603-style escalation — Vito,
+    /// Fanatic of Aclazotz). Runs `modes[min(n, len-1)]` where `n` is the count
+    /// of prior resolutions this turn keyed by the source, then increments.
+    EscalatingThisTurn { modes: Vec<Effect> },
     /// Bringer of the Last Gift's ETB: each player sacrifices all creatures
     /// they control *except the source*, then each player returns all creature
     /// cards that were already in their graveyard (not put there this way) to

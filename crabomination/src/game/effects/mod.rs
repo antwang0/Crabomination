@@ -6771,6 +6771,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EscalatingThisTurn { modes } => {
+                if modes.is_empty() { return Ok(()); }
+                let key = ctx.source.unwrap_or(CardId(0));
+                let n = *self.ability_resolutions_this_turn.get(&key).unwrap_or(&0) as usize;
+                let idx = n.min(modes.len() - 1);
+                let mode = modes[idx].clone();
+                *self.ability_resolutions_this_turn.entry(key).or_insert(0) += 1;
+                self.run_effect(&mode, ctx, events)?;
+                Ok(())
+            }
+
             Effect::SacrificeOthersThenReanimate => {
                 // 1. Snapshot existing graveyard creature cards per player —
                 //    these are eligible to return; the about-to-die ones won't be.

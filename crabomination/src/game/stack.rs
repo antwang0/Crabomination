@@ -1936,6 +1936,8 @@ impl GameState {
         // tracker (used by Fractal Tender's end-step trigger). Resetting
         // at cleanup is the canonical "until end of turn" scope.
         self.permanents_gained_counter_this_turn.clear();
+        // CR 603-style "Nth time this turn" escalation counters reset.
+        self.ability_resolutions_this_turn.clear();
         // Clear transient granted triggers (Rabid Attack, Root
         // Manipulation EOT-duration grants).
         self.granted_triggers_eot.clear();

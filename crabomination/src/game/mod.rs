@@ -995,6 +995,11 @@ pub struct GameState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub(crate) permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
+    /// How many times each source's escalating ability has resolved this turn
+    /// (CR 603.3-style "if this is the first/second/third time …" — Vito,
+    /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) ability_resolutions_this_turn: std::collections::HashMap<CardId, u32>,
     /// Per-permanent transient triggered abilities granted by spells /
     /// continuous effects (Rabid Attack, Root Manipulation: "creatures
     /// you control gain '…trigger…' until end of turn"). The dispatcher
@@ -1239,6 +1244,7 @@ impl Clone for GameState {
             leaves_bf_lki: self.leaves_bf_lki.clone(),
             resolving_lki_source: self.resolving_lki_source,
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
+            ability_resolutions_this_turn: self.ability_resolutions_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
@@ -1375,6 +1381,7 @@ impl GameState {
             leaves_bf_lki: HashMap::new(),
             resolving_lki_source: None,
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
+            ability_resolutions_this_turn: std::collections::HashMap::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
             resolving_spell_lifelink_seat: None,

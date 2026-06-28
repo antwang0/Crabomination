@@ -2922,6 +2922,36 @@ fn deepfathom_echo_explores_and_copies() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
 }
 
+/// Vito escalates each time you sacrifice another permanent this turn: gain 2
+/// life, then drain each opponent 2, then mint a Vampire Demon token.
+#[test]
+fn vito_fanatic_escalates_on_sacrifice() {
+    let mut g = two_player_game();
+    let _vito = g.add_card_to_battlefield(0, catalog::vito_fanatic_of_aclazotz());
+    let victims: Vec<CardId> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    let sac = |g: &mut GameState, id: CardId| {
+        let mut evs = Vec::new();
+        g.sacrifice_one(id, 0, &mut evs);
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    // 1st sacrifice → gain 2 life.
+    sac(&mut g, victims[0]);
+    assert_eq!(g.players[0].life, my_life + 2, "first sacrifice gains 2 life");
+    assert_eq!(g.players[1].life, opp_life, "opponent untouched yet");
+    // 2nd sacrifice → each opponent loses 2.
+    sac(&mut g, victims[1]);
+    assert_eq!(g.players[1].life, opp_life - 2, "second sacrifice drains opponent 2");
+    // 3rd sacrifice → make a 4/3 Vampire Demon token.
+    sac(&mut g, victims[2]);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Vampire Demon").count(),
+        1, "third sacrifice creates a Vampire Demon token",
+    );
+}
+
 /// Caparocti Sunborn's attack taps two permanents, then discovers 3.
 #[test]
 fn caparocti_sunborn_taps_then_discovers() {

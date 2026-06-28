@@ -4559,6 +4559,7 @@ static LCI: &[Factory] = &[
     super::lci::bringer_of_the_last_gift,
     super::lci::guardian_of_the_great_door,
     super::lci::caparocti_sunborn,
+    super::lci::vito_fanatic_of_aclazotz,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
