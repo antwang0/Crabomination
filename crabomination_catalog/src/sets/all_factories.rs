@@ -4496,6 +4496,9 @@ static LCI: &[Factory] = &[
     super::lci::cosmium_blast,
     super::lci::thousand_moons_crackshot,
     super::lci::fanatical_offering,
+    super::lci::malamet_battle_glyph,
+    super::lci::volatile_wanderglyph,
+    super::lci::deconstruction_hammer,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

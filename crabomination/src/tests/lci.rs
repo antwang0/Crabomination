@@ -1690,6 +1690,58 @@ fn volcanic_geyser_deals_x() {
     assert!(g.battlefield_find(prey).is_none(), "X=2 killed the 2/2");
 }
 
+/// Malamet Battle Glyph: a freshly-entered creature gets a counter, then fights.
+#[test]
+fn malamet_battle_glyph_buffs_fresh_then_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(mine).unwrap().entered_turn = Some(g.turn_number); // "entered this turn"
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::malamet_battle_glyph());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // mine became 3/3 (counter) and dealt 3 to the 2/2 → foe dies; mine takes 2, survives.
+    assert!(g.battlefield_find(foe).is_none(), "foe died to the buffed fighter");
+    assert!(g.battlefield_find(mine).is_some(), "buffed 3/3 survived the 2-damage fight back");
+}
+
+/// Volatile Wanderglyph loots when it becomes tapped.
+#[test]
+fn volatile_wanderglyph_loots_on_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let glyph = g.add_card_to_battlefield(0, catalog::volatile_wanderglyph());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // to discard
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(glyph).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: glyph }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "discarded 1, drew 1");
+}
+
+/// Deconstruction Hammer equips for +1/+1.
+#[test]
+fn deconstruction_hammer_equips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let hammer = g.add_card_to_battlefield(0, catalog::deconstruction_hammer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: hammer, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Hammer");
+}
+
 /// Kindled Heroism pumps +1/+0, grants first strike, and scries.
 #[test]
 fn kindled_heroism_pumps_and_scries() {

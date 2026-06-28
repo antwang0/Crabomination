@@ -3413,6 +3413,81 @@ pub fn kindled_heroism() -> CardDefinition {
     }
 }
 
+/// Malamet Battle Glyph — {G} Sorcery. Choose a creature you control and one you
+/// don't; if yours entered this turn, put a +1/+1 counter on it; then they fight.
+pub fn malamet_battle_glyph() -> CardDefinition {
+    CardDefinition {
+        name: "Malamet Battle Glyph",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::EnteredThisTurn,
+                },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Volatile Wanderglyph — {1}{R} 2/2 artifact Golem. Whenever it becomes tapped,
+/// you may discard a card; if you do, draw a card.
+pub fn volatile_wanderglyph() -> CardDefinition {
+    CardDefinition {
+        name: "Volatile Wanderglyph",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Loot: discard a card, then draw a card".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Deconstruction Hammer — {W} Equipment, equipped +1/+1, Equip {1}. (The
+/// granted "{3}, {T}, sac: destroy artifact/enchantment" ability is omitted —
+/// equipment can't grant activated abilities yet.)
+pub fn deconstruction_hammer() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Deconstruction Hammer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
 /// Cosmium Blast — {1}{W} Instant. Deal 4 damage to target attacking or
 /// blocking creature.
 pub fn cosmium_blast() -> CardDefinition {
