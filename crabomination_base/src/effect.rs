@@ -1830,6 +1830,19 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// "You may tap [count] untapped [filter] you control. If you do, [then]."
+    /// The reflexive tap cost (Caparocti Sunborn's attack → discover 3). Asks
+    /// the controller yes/no (gated on owning `count` untapped matches); on
+    /// yes, the lowest-impact matches are tapped and `then` runs.
+    MayTap {
+        description: String,
+        filter: SelectionRequirement,
+        count: Value,
+        then: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
     /// Reveal-from-hand gate: "you may reveal a [filter] card from your
     /// hand. If you do, run `then`; otherwise run `else_`." Used by the
     /// STX Snarl dual-land cycle (Frostboil, Furycalm, Necroblossom,

@@ -5195,6 +5195,32 @@ pub fn sovereign_okinec_ahau() -> CardDefinition {
     }
 }
 
+/// Caparocti Sunborn — {2}{R}{W} 4/4 Legendary Human Soldier. Whenever it
+/// attacks, you may tap two untapped artifacts and/or creatures you control;
+/// if you do, discover 3.
+pub fn caparocti_sunborn() -> CardDefinition {
+    CardDefinition {
+        name: "Caparocti Sunborn",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::MayTap {
+            description: "tap two untapped artifacts and/or creatures you control".into(),
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: Value::Const(2),
+            then: Box::new(Effect::Discover { n: Value::Const(3), filter: None }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Guardian of the Great Door — {W}{W} 4/4 Angel, flying. Additional cost:
 /// tap four untapped artifacts, creatures, and/or lands you control.
 pub fn guardian_of_the_great_door() -> CardDefinition {

@@ -4558,6 +4558,7 @@ static LCI: &[Factory] = &[
     super::lci::sovereign_okinec_ahau,
     super::lci::bringer_of_the_last_gift,
     super::lci::guardian_of_the_great_door,
+    super::lci::caparocti_sunborn,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

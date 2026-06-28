@@ -280,7 +280,8 @@ impl Effect {
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
             Effect::MayPay { body, .. } => body.requires_target(),
-            Effect::MaySacrifice { then, else_, .. } => {
+            Effect::MaySacrifice { then, else_, .. }
+            | Effect::MayTap { then, else_, .. } => {
                 then.requires_target()
                     || else_.as_ref().is_some_and(|e| e.requires_target())
             }

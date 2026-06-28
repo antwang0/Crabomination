@@ -1445,6 +1445,62 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayTap {
+                description,
+                filter,
+                count,
+                then,
+                else_,
+            } => {
+                // Reflexive tap cost: ask yes/no (only when the controller has
+                // enough untapped matches), tap the lowest-impact ones, run `then`.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && !c.tapped
+                            && self.evaluate_requirement_static(
+                                filter, &Target::Permanent(c.id), ctx.controller, ctx.source,
+                            )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if n == 0 || candidates.len() < n {
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor, ctx.controller, description.clone(), source, effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
+                    // Tap non-lands first (preserve mana), then lowest mana value.
+                    candidates.sort_by_key(|id| {
+                        self.battlefield_find(*id)
+                            .map(|c| (c.definition.is_land(), c.definition.cost.cmc()))
+                            .unwrap_or((true, 0))
+                    });
+                    for id in candidates.into_iter().take(n) {
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: id });
+                        }
+                    }
+                    self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::DealDamage { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }

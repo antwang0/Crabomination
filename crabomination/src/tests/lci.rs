@@ -2922,6 +2922,33 @@ fn deepfathom_echo_explores_and_copies() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
 }
 
+/// Caparocti Sunborn's attack taps two permanents, then discovers 3.
+#[test]
+fn caparocti_sunborn_taps_then_discovers() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::caparocti_sunborn());
+    g.battlefield_find_mut(cap).unwrap().summoning_sick = false;
+    let fodder: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    // A cheap nonland card on top so discover hits immediately.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    // Yes to the tap cost; decline the free cast → discovered card to hand.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    g.declare_attackers(vec![Attack { attacker: cap, target: AttackTarget::Player(1) }])
+        .expect("Caparocti attacks");
+    drain_stack(&mut g);
+    assert_eq!(
+        fodder.iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count(),
+        2, "two permanents tapped for the cost",
+    );
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "discovered card went to hand");
+}
+
 /// Guardian of the Great Door's additional cost taps four permanents you
 /// control; with too few untapped it can't be cast.
 #[test]
