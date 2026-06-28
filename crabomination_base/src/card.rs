@@ -1383,6 +1383,12 @@ pub enum SelectionRequirement {
     /// card from an opponent's graveyard" — Nezumi Graverobber). Complement
     /// of `InYourGraveyard`.
     InOpponentGraveyard,
+    /// Descend N (CR 701.x — LCI) — true when the candidate's controller has
+    /// N or more permanent cards in their graveyard. Used as the `condition`
+    /// of a `SelfHasKeywordWhile` for "Descend 8 — this can't be blocked as
+    /// long as there are eight or more permanent cards in your graveyard"
+    /// (Watertight Gondola), and as a generic gate for Descend payoffs.
+    ControllerDescend(u32),
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.

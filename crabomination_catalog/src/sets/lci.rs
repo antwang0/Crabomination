@@ -217,8 +217,10 @@ pub fn spring_loaded_sawblades() -> CardDefinition {
 
 /// Waterlogged Hulk // Watertight Gondola — {U} Artifact; {T}: mill a card.
 /// Craft with Island {3}{U} → Watertight Gondola (Artifact Vehicle 4/4,
-/// Vigilance, Crew 1). (Descend-8 unblockable is omitted.)
+/// Vigilance, Crew 1; Descend 8 — unblockable while you have 8+ permanent
+/// cards in your graveyard).
 pub fn waterlogged_hulk() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     let gondola = CardDefinition {
         name: "Watertight Gondola",
         card_types: vec![CardType::Artifact],
@@ -226,6 +228,13 @@ pub fn waterlogged_hulk() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Crew(1)],
+        static_abilities: vec![StaticAbility {
+            description: "Descend 8 — can't be blocked while you have 8+ permanent cards in your graveyard.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Unblockable,
+                condition: SelectionRequirement::ControllerDescend(8),
+            },
+        }],
         ..Default::default()
     };
     CardDefinition {

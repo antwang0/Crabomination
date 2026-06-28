@@ -22,8 +22,10 @@
 //! token-doubling interaction (CR 614.13), attack-only "can't attack
 //! unless you control N" restrictions (CR 508.1a), the Ring-bearer's
 //! granted Legendary supertype (CR 701.54c / 205.4b), block-only combat
-//! restrictions (CR 509.1c), and one-sided "deals damage equal to its
-//! power" effects (CR 701.12-style).
+//! restrictions (CR 509.1c), one-sided "deals damage equal to its
+//! power" effects (CR 701.12-style), Craft (CR 702.169), the Descend ability
+//! word (CR 207.2c — permanent cards in the graveyard), and losing on an
+//! empty-library draw (CR 104.3c / 704.5c).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -4933,4 +4935,81 @@ fn cr_120_10_excess_damage_tracked_per_resolution() {
     let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(big)));
     g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }, &ctx).unwrap();
     assert_eq!(g.excess_damage_this_resolution, 0, "6 to a 9/9 → no excess");
+}
+
+// ── CR 207.2c / 700.11 — Descend (LCI ability word) ──────────────────────────
+
+/// "Descend 8" reads "eight or more permanent cards in your graveyard"
+/// (CR 207.2c ability word). Crafting Waterlogged Hulk into Watertight Gondola
+/// grants Unblockable only once the controller's graveyard holds 8 permanent
+/// cards; instant/sorcery cards there don't count.
+#[test]
+fn descend_8_grants_unblockable_only_at_eight_permanent_cards() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hulk = g.add_card_to_battlefield(0, catalog::waterlogged_hulk());
+    g.add_card_to_battlefield(0, catalog::island()); // Island to exile as the craft cost
+    // Seven permanent cards + one instant in the graveyard → descend 7.
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // not a permanent card
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hulk, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("craft into gondola");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hulk).unwrap().definition.name, "Watertight Gondola");
+    assert!(
+        !g.computed_permanent(hulk).unwrap().keywords.contains(&Keyword::Unblockable),
+        "descend 7 (instant doesn't count) → still blockable",
+    );
+    // Add an eighth permanent card → descend 8 flips the static on.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(hulk).unwrap().keywords.contains(&Keyword::Unblockable),
+        "descend 8 → unblockable",
+    );
+}
+
+// ── CR 702.169 — Craft ────────────────────────────────────────────────────────
+
+/// Craft (CR 702.169) is a sorcery-speed activated ability that exiles the
+/// source and other objects, returning the source transformed.
+#[test]
+fn cr_702_169_craft_exiles_and_returns_transformed() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::tithing_blade());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: blade, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("craft");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fodder), "creature exiled as cost");
+    assert_eq!(g.battlefield_find(blade).unwrap().definition.name, "Consuming Sepulcher");
+}
+
+// ── CR 104.3c / 704.5a — losing on an empty-library draw ─────────────────────
+
+/// A player who has attempted to draw from an empty library since the last
+/// SBA check loses the game (CR 104.3c via 704.5c).
+#[test]
+fn cr_704_5c_drawing_from_empty_library_loses() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let mut events = vec![];
+    assert!(!g.draw_one(0, &mut events), "draw from empty library fails");
+    g.lose_to_empty_draw(0);
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated, "empty-library draw eliminates the player");
+    assert!(g.is_game_over(), "game ends — the other player wins");
 }

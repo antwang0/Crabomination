@@ -1374,6 +1374,24 @@ impl GameState {
                 }),
                 Target::Permanent(_) => false,
             },
+            R::ControllerDescend(n) => {
+                // Count permanent cards in the candidate's controller's
+                // graveyard (CR 701.x — LCI Descend). For a `SelfHasKeywordWhile`
+                // condition the controller arg already is the source's
+                // controller, so read it directly.
+                let owner = match target {
+                    Target::Permanent(cid) => {
+                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                    }
+                    Target::Player(p) => *p,
+                };
+                let count = self.players[owner]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count();
+                count >= *n as usize
+            }
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Look on the battlefield first; fall through to graveyards,
@@ -1755,6 +1773,14 @@ impl GameState {
             R::Enchantment => card.definition.is_enchantment(),
             R::Planeswalker => card.definition.is_planeswalker(),
             R::Permanent | R::PermanentCard => card.definition.is_permanent(),
+            R::ControllerDescend(n) => {
+                self.players[controller]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count()
+                    >= *n as usize
+            }
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
             R::Noncreature => !card.definition.is_creature(),
