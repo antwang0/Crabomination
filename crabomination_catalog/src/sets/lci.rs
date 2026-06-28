@@ -3662,6 +3662,258 @@ pub fn akawalli_the_seething_tower() -> CardDefinition {
     }
 }
 
+/// Abrade — {1}{R} Instant. Choose one — 3 damage to target creature; or
+/// destroy target artifact.
+pub fn abrade() -> CardDefinition {
+    CardDefinition {
+        name: "Abrade",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dead Weight — {B} Aura. Enchant creature; enchanted creature gets -2/-2.
+pub fn dead_weight() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Dead Weight",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(EquipBonus { power: -2, toughness: -2, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Deep-Cavern Bat — {1}{B} 1/1 Bat with flying and lifelink. ETB: look at an
+/// opponent's hand and exile a nonland card from it until this leaves play.
+pub fn deep_cavern_bat() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Deep-Cavern Bat",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::ExileChosenUntilSourceLeaves {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland,
+            return_to: ExileReturnZone::Hand,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cenote Scout — {G} 1/1 Merfolk Scout. When it enters, it explores.
+pub fn cenote_scout() -> CardDefinition {
+    CardDefinition {
+        name: "Cenote Scout",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk, CreatureType::Scout], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Explore { who: Selector::This })],
+        ..Default::default()
+    }
+}
+
+/// Thrashing Brontodon — {1}{G}{G} 3/4 Dinosaur. {1}, Sacrifice this: destroy
+/// target artifact or enchantment.
+pub fn thrashing_brontodon() -> CardDefinition {
+    CardDefinition {
+        name: "Thrashing Brontodon",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Tomb Raider — {R} 1/2 Goblin Pirate. While you control an artifact it
+/// gets +1/+0 and has haste.
+pub fn goblin_tomb_raider() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Goblin Tomb Raider",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Pirate], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "While you control an artifact, gets +1/+0 and has haste.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::Haste],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hulking Raptor — {2}{G}{G} 5/3 Dinosaur with ward {2}. At the beginning of
+/// your first main phase, add {G}{G}.
+pub fn hulking_raptor() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Hulking Raptor",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::ActivePlayer),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Get Lost — {1}{W} Instant. Destroy target creature, enchantment, or
+/// planeswalker; its controller creates two Map tokens.
+pub fn get_lost() -> CardDefinition {
+    let target = target_filtered(
+        SelectionRequirement::Creature
+            .or(SelectionRequirement::Enchantment)
+            .or(SelectionRequirement::Planeswalker),
+    );
+    CardDefinition {
+        name: "Get Lost",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(2),
+                definition: map_token(),
+            },
+            Effect::Destroy { what: target },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Chart a Course — {1}{U} Sorcery. Draw two; then discard a card unless you
+/// attacked this turn.
+pub fn chart_a_course() -> CardDefinition {
+    CardDefinition {
+        name: "Chart a Course",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::If {
+                cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Marauding Brinefang — {5}{U}{U} 6/7 Dinosaur with ward {3} and islandcycling
+/// {2}.
+pub fn marauding_brinefang() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Marauding Brinefang",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 7,
+        keywords: vec![
+            Keyword::Ward(WardCost::Mana(cost(&[generic(3)]))),
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Island),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Resplendent Angel — {1}{W}{W} 3/3 Angel with flying. At each end step, if you
+/// gained 5+ life this turn, make a 4/4 white Angel with flying and vigilance.
+/// {3}{W}{W}{W}: pump +2/+2 and gain flying/vigilance/lifelink until end of turn.
+pub fn resplendent_angel() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Resplendent Angel",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::If {
+                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(5) },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Angel".into(),
+                        power: 4,
+                        toughness: 4,
+                        colors: vec![Color::White],
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+                        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), w(), w()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hidden Grotto — Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of
 /// any color.
 pub fn hidden_grotto() -> CardDefinition {

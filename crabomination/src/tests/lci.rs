@@ -1902,3 +1902,206 @@ fn akawalli_descend_4_buff() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "descend 4 → +2/+2");
     assert!(cp.keywords.contains(&Keyword::Trample));
 }
+
+/// Abrade mode 0 deals 3 to a creature; mode 1 destroys an artifact.
+#[test]
+fn abrade_modes() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::abrade());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "3 damage killed the 2/2");
+
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let spell2 = g.add_card_to_hand(0, catalog::abrade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell2, target: Some(Target::Permanent(art)), additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast mode 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Dead Weight gives -2/-2; attaching to a 2/2 kills it via SBA.
+#[test]
+fn dead_weight_kills_two_toughness() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::dead_weight());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "0/0 dies to SBA");
+}
+
+/// Deep-Cavern Bat exiles a nonland from an opponent's hand until it leaves.
+#[test]
+fn deep_cavern_bat_exiles_until_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bat = g.add_card_to_hand(0, catalog::deep_cavern_bat());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let bat_id = g.perform_action(GameAction::CastSpell {
+        card_id: bat, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).map(|_| bat).unwrap_or(bat);
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == victim), "card exiled from hand");
+    g.remove_to_graveyard_with_triggers(bat_id);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "card returns when bat leaves");
+}
+
+/// Cenote Scout explores on ETB — a land reveal goes to hand.
+#[test]
+fn cenote_scout_explores_land_to_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest()); // top card is a land
+    let scout = g.add_card_to_hand(0, catalog::cenote_scout());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: scout, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast scout");
+    drain_stack(&mut g);
+    // Spell left hand (-1), explored land entered hand (+1) → net unchanged.
+    assert_eq!(g.players[0].hand.len(), before, "explored land went to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"));
+}
+
+/// Thrashing Brontodon sacs itself to destroy an artifact.
+#[test]
+fn thrashing_brontodon_sacs_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let bronto = g.add_card_to_battlefield(0, catalog::thrashing_brontodon());
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bronto, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bronto).is_none(), "sacrificed as cost");
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Goblin Tomb Raider gets +1/+0 and haste only while you control an artifact.
+#[test]
+fn goblin_tomb_raider_artifact_buff() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_tomb_raider());
+    let c = g.computed_permanent(gob).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 2), "1/2 with no artifact");
+    assert!(!c.keywords.contains(&Keyword::Haste));
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    let c = g.computed_permanent(gob).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2), "+1/+0 with an artifact");
+    assert!(c.keywords.contains(&Keyword::Haste));
+}
+
+/// Hulking Raptor adds {G}{G} at the beginning of your first main phase.
+#[test]
+fn hulking_raptor_adds_gg_first_main() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hulking_raptor());
+    g.active_player_idx = 0;
+    let before = g.players[0].mana_pool.amount(Color::Green);
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), before + 2, "added GG");
+}
+
+/// Get Lost destroys a creature and gives its controller two Maps.
+#[test]
+fn get_lost_destroys_and_gifts_maps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::get_lost());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    let maps = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Map").count();
+    assert_eq!(maps, 2, "controller got two Maps");
+}
+
+/// Chart a Course draws two and discards one when you haven't attacked.
+#[test]
+fn chart_a_course_draws_two_discards_without_attack() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::chart_a_course());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[0].hand.len(); // includes the spell
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 spell, +2 draw, -1 discard = net +0.
+    assert_eq!(g.players[0].hand.len(), before, "drew 2, discarded 1");
+}
+
+/// Marauding Brinefang can be islandcycled to fetch an Island.
+#[test]
+fn marauding_brinefang_islandcycles() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::marauding_brinefang());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Landcycle { card_id: id }).expect("islandcycle");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Island"), "fetched Island");
+}
+
+/// Resplendent Angel makes a 4/4 Angel at end step after gaining 5+ life.
+#[test]
+fn resplendent_angel_makes_angel_after_lifegain() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::resplendent_angel());
+    g.active_player_idx = 0;
+    // No lifegain yet → no token.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Angel" && c.is_token),
+        "no token without lifegain");
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::GainLife { who: Selector::You, amount: Value::Const(5) }, &ctx).unwrap();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Angel" && c.is_token),
+        "4/4 Angel token created after gaining 5 life");
+}

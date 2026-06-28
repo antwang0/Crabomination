@@ -4502,6 +4502,17 @@ static LCI: &[Factory] = &[
     super::lci::dusk_rose_reliquary,
     super::lci::digsite_conservator,
     super::lci::sorcerous_spyglass,
+    super::lci::abrade,
+    super::lci::dead_weight,
+    super::lci::deep_cavern_bat,
+    super::lci::cenote_scout,
+    super::lci::thrashing_brontodon,
+    super::lci::goblin_tomb_raider,
+    super::lci::hulking_raptor,
+    super::lci::get_lost,
+    super::lci::chart_a_course,
+    super::lci::marauding_brinefang,
+    super::lci::resplendent_angel,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
