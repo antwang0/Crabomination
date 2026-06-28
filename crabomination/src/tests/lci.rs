@@ -341,3 +341,20 @@ fn forgotten_monument_grants_other_caves_any_color_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "produced 1 mana of any color");
     assert_eq!(g.players[0].life, 19, "paid 1 life");
 }
+
+/// Sanguine Evangelist's battle cry pumps other attackers; ETB makes a Bat.
+#[test]
+fn sanguine_evangelist_battle_cry_and_bat() {
+    let mut g = two_player_game();
+    let evangelist = g.add_card_to_hand(0, catalog::sanguine_evangelist());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: evangelist, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bat" && c.controller == 0), "ETB Bat token");
+}

@@ -1378,3 +1378,40 @@ pub fn spelunking() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sanguine Evangelist — {2}{W} 2/1 Vampire Cleric with battle cry. When it
+/// enters or dies, create a 1/1 black Bat with flying.
+pub fn sanguine_evangelist() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let bat = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: TokenDefinition {
+            name: "Bat".into(),
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Flying],
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::Black],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+            ..Default::default()
+        },
+    };
+    CardDefinition {
+        name: "Sanguine Evangelist",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            crate::effect::shortcut::battle_cry(1),
+            etb(bat()),
+            on_dies(bat()),
+        ],
+        ..Default::default()
+    }
+}

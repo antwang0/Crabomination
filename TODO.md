@@ -13,10 +13,7 @@ state-corrupting in ordinary play.
 Shipped this run: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),
 Descend (`SelectionRequirement::ControllerDescend`, `Predicate::{DescendActive,
 DescendedThisTurn}`, `DynamicPt::PermanentCardsInControllerGraveyard`, HUD chip).
-48 LCI cards added. Deferred from the set:
-- **Battle cry** isn't a real `Keyword` yet — Sanguine Evangelist and the
-  Thousand Moons soldiers that use it are deferred; model it as an on-attack
-  "each other attacking creature +1/+0" trigger or a first-class keyword.
+49 LCI cards added. Deferred from the set:
 - **Craft "or pay 3 life" / "discard or sac" choices** are approximated as a
   flat discard (Bitter Triumph, Souls of the Lost) — needs a real either-cost
   `AdditionalCastCost` mode. Craft's per-object UI exile-choice is auto-picked.
