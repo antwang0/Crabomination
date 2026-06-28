@@ -8,7 +8,7 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::{
-    add_any_one_color, add_colorless, etb, mint_treasures, on_attack, target_filtered,
+    add_any_one_color, add_colorless, etb, on_attack, target_filtered,
 };
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w};
