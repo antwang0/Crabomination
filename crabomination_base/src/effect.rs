@@ -181,6 +181,12 @@ pub enum Selector {
     /// no creatures. Powers Triumph of Gerrard's "target creature you control
     /// with the greatest power" chapters (modeled non-targeted).
     GreatestPowerYouControl,
+    /// The single creature `ctx.controller` controls with the greatest power
+    /// among those matching `filter`. Empty when none match — read through
+    /// `Value::PowerOf` this yields 0, so `Max(Const(n), PowerOf(..))` floors at
+    /// n (Triumphant Chomp — "2 or the greatest power among Dinosaurs you
+    /// control, whichever is greater").
+    GreatestPowerControlledMatching(SelectionRequirement),
     /// The single *other* creature `ctx.controller` controls with the greatest
     /// toughness (first in battlefield order on a tie), excluding the effect's
     /// own source. Empty when the controller has no other creatures. Powers

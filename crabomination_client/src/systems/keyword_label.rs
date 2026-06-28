@@ -128,6 +128,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Phasing => "Phs",
         Changeling => "Chg",
         Reconfigure(_) => "Rcfg",
+        // Ability-lock granted by auras/effects (Petrify) — its activated
+        // abilities can't be activated, worth surfacing alongside NoAtk/NoBlk.
+        CantActivateAbilities => "NoAbil",
         _ => return None,
     })
 }

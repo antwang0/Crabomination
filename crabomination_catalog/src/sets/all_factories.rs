@@ -4456,6 +4456,7 @@ static LCI: &[Factory] = &[
     super::lci::diamond_pick_axe,
     super::lci::glowcap_lantern,
     super::lci::pirate_hat,
+    super::lci::triumphant_chomp,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -491,9 +491,14 @@ mod tests {
 
     #[test]
     pub(crate) fn format_from_env_unknown_value_falls_back_to_demo() {
-        let f = with_env("CRAB_FORMAT", Some("Cube"), Format::from_env);
-        assert_eq!(f.label(), "demo",
-            "case-sensitive: 'Cube' is not a recognized value");
+        let f = with_env("CRAB_FORMAT", Some("pauper"), Format::from_env);
+        assert_eq!(f.label(), "demo", "unrecognized value falls back to demo");
+    }
+
+    #[test]
+    pub(crate) fn format_from_env_is_case_and_whitespace_insensitive() {
+        assert_eq!(with_env("CRAB_FORMAT", Some("Cube"), Format::from_env).label(), "cube");
+        assert_eq!(with_env("CRAB_FORMAT", Some("  COMMANDER "), Format::from_env).label(), "commander");
     }
 
     #[test]

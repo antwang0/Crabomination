@@ -11897,6 +11897,18 @@ impl GameState {
                 .into_iter()
                 .collect(),
 
+            Selector::GreatestPowerControlledMatching(filter) => self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == ctx.controller
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source)
+                })
+                .max_by_key(|c| c.power())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
             // The controller's greatest-toughness *other* creature.
             Selector::GreatestToughnessYouControl => self
                 .battlefield

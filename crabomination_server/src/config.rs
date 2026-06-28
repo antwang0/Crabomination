@@ -21,15 +21,24 @@ pub(crate) enum Format {
 
 impl Format {
     pub(crate) fn from_env() -> Self {
-        match env::var("CRAB_FORMAT").ok().as_deref() {
+        Self::parse(env::var("CRAB_FORMAT").ok().as_deref())
+    }
+
+    /// Pure parser for `CRAB_FORMAT` (case-insensitive, whitespace-trimmed) so
+    /// `"Cube"`, `" commander "`, etc. all resolve. Unknown values warn and
+    /// fall back to demo. Split out from `from_env` for unit testing.
+    pub(crate) fn parse(raw: Option<&str>) -> Self {
+        let value = raw.map(|s| s.trim().to_ascii_lowercase());
+        match value.as_deref() {
             Some("cube") => Self::Cube,
             Some("sos") | Some("strixhaven") => Self::Sos,
             Some("commander") | Some("edh") => Self::Commander,
-            Some("demo") | None => Self::Demo,
-            Some(other) => {
+            Some("demo") | Some("") | None => Self::Demo,
+            Some(_) => {
                 eprintln!(
-                    "warning: CRAB_FORMAT={other:?} not recognized — \
-                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\" | \"commander\"."
+                    "warning: CRAB_FORMAT={:?} not recognized — \
+                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\" | \"commander\".",
+                    raw.unwrap_or_default()
                 );
                 Self::Demo
             }
@@ -217,3 +226,24 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::Format;
+
+    #[test]
+    fn format_parse_is_case_and_whitespace_insensitive() {
+        assert!(matches!(Format::parse(Some("Cube")), Format::Cube));
+        assert!(matches!(Format::parse(Some("  commander ")), Format::Commander));
+        assert!(matches!(Format::parse(Some("EDH")), Format::Commander));
+        assert!(matches!(Format::parse(Some("strixhaven")), Format::Sos));
+    }
+
+    #[test]
+    fn format_parse_defaults_and_unknown_fall_back_to_demo() {
+        assert!(matches!(Format::parse(None), Format::Demo));
+        assert!(matches!(Format::parse(Some("")), Format::Demo));
+        assert!(matches!(Format::parse(Some("   ")), Format::Demo));
+        assert!(matches!(Format::parse(Some("pauper")), Format::Demo));
+    }
+}

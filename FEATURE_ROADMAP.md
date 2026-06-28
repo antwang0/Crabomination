@@ -65,7 +65,10 @@ exercising each) was elided in a compaction pass; recover it from
   `SelectionRequirement::ManaValueParity` (Extinction Event's odd/even sweep);
   CDA P/T for creatures-in-your-graveyard and other-flyers-you-control
   (`DynamicPt::BasePlusCreaturesInControllerGraveyard` — Fiend Artisan;
-  `BasePlusOtherFlyersControlled` — Skycat Sovereign).
+  `BasePlusOtherFlyersControlled` — Skycat Sovereign);
+  `Selector::GreatestPowerControlledMatching(filter)` read through `Value::PowerOf`
+  + `Value::Max` for "N or the greatest power among [type] you control" floors
+  (Triumphant Chomp).
 - **Ability/trigger riders:** statics-granted triggered abilities (Kataki),
   conditional aura riders, rhystic taxes (Esper Sentinel), once-per-turn
   triggers (603.3d), opponents-only activations, discard-self cost,

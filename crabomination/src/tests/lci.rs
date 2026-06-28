@@ -1065,3 +1065,33 @@ fn pirate_hat_loots_on_attack() {
     // Loot = draw 1, discard 1 → net hand size unchanged, but the drawn Island is in hand.
     assert_eq!(g.players[0].hand.len(), hand_before, "loot is net-zero");
 }
+
+/// Triumphant Chomp deals max(2, greatest Dinosaur power) — floored at 2 with no
+/// Dino, scaled up by a big one.
+#[test]
+fn triumphant_chomp_scales_with_dino() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // No Dinosaur → deals 2, kills the 2/2.
+    let spell = g.add_card_to_hand(0, catalog::triumphant_chomp());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "2 damage with no Dino killed the 2/2");
+
+    // With a 5/5 Dinosaur you control, a 2/3 takes 5 and dies.
+    g.add_card_to_battlefield(0, catalog::nurturing_bristleback()); // 5/5 Dino
+    let foe2 = g.add_card_to_battlefield(1, catalog::sentry_of_the_underworld()); // 2/3
+    let spell2 = g.add_card_to_hand(0, catalog::triumphant_chomp());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell2, target: Some(Target::Permanent(foe2)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe2).is_none(), "5 damage from the Dino killed the 2/3");
+}

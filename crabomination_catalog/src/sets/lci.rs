@@ -2491,3 +2491,23 @@ pub fn pirate_hat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Triumphant Chomp — {R} Sorcery. Deals damage to target creature equal to 2
+/// or the greatest power among Dinosaurs you control, whichever is greater.
+pub fn triumphant_chomp() -> CardDefinition {
+    CardDefinition {
+        name: "Triumphant Chomp",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Max(
+                Box::new(Value::Const(2)),
+                Box::new(Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                )))),
+            ),
+        },
+        ..Default::default()
+    }
+}
