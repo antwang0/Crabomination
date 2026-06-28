@@ -6715,6 +6715,49 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeOthersThenReanimate => {
+                // 1. Snapshot existing graveyard creature cards per player —
+                //    these are eligible to return; the about-to-die ones won't be.
+                let mut eligible: Vec<(usize, CardId)> = Vec::new();
+                for p in 0..self.players.len() {
+                    for c in &self.players[p].graveyard {
+                        if c.definition.is_creature() {
+                            eligible.push((p, c.id));
+                        }
+                    }
+                }
+                // 2. Each player sacrifices all OTHER creatures (source survives).
+                let src = ctx.source;
+                let sac: Vec<(CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && Some(c.id) != src)
+                    .map(|c| (c.id, c.controller))
+                    .collect();
+                for (id, who) in sac {
+                    if self.battlefield_find(id).is_some() {
+                        self.sacrifice_one(id, who, events);
+                    }
+                }
+                // 3. Return the pre-sac graveyard creatures under their owners'
+                //    control (still present — the just-sacrificed ones are new).
+                for (owner, id) in eligible {
+                    if self.players[owner].graveyard.iter().any(|c| c.id == id) {
+                        let octx = EffectContext::for_ability(id, owner, None);
+                        self.move_card_to(
+                            id,
+                            &crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::You,
+                                tapped: false,
+                            },
+                            &octx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
             Effect::EachPlayerMayPutPermanentFromHand { filter } => {
                 // APNAP order (active player first).
                 let order = self.apnap_sort((0..self.players.len()).collect());

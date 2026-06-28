@@ -28,14 +28,14 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **LCI cards still ⏳** (need bespoke primitives): Starving Revenant
   (surveil-2-then-draw/lose-per-card-put-on-top), Vito (Nth-time-this-turn
   sacrifice escalation), Caparocti / Bat Colony (reflexive "tap two as a cost" /
-  Cave-mana-spent count), Guardian of the Great Door
-  (`AdditionalCastCost::TapPermanents`), Bringer of the Last Gift (mass sac +
-  mass reanimate), Song of Stupefaction (graveyard-count EquipScale), Intrepid
-  Paleontologist (cast Dinosaurs from exile-with-source), Cosmium Confluence /
-  Wail of the Forgotten (repeatable/descend modal). Shipped:
-  `Effect::AddCountersForPowerOverBase` (Sovereign Okinec Ahau), Nicanzil, Sage
-  of Days, Deepfathom Echo. Easy LCI commons sit in `sets::lci` with tests in
-  `tests::lci`.
+  Cave-mana-spent count), Song of Stupefaction (graveyard-count EquipScale),
+  Intrepid Paleontologist (cast Dinosaurs from exile-with-source), Cosmium
+  Confluence / Wail of the Forgotten (repeatable/descend modal). Shipped:
+  `Effect::AddCountersForPowerOverBase` (Sovereign Okinec Ahau),
+  `Effect::SacrificeOthersThenReanimate` (Bringer of the Last Gift),
+  `AdditionalCastCost::TapPermanents` (Guardian of the Great Door), Nicanzil,
+  Sage of Days, Deepfathom Echo. Easy LCI commons sit in `sets::lci` with tests
+  in `tests::lci`.
 - ✅ **Reflexive targeted "when you do" triggers** (CR 603.7) — `Effect::Reflexive
   { body }` wraps a targeted payoff that's opaque to the cast/trigger-time target
   walk and auto-targets its body fresh at resolution. Composes with `MayPay`

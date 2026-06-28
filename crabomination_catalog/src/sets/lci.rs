@@ -5194,3 +5194,51 @@ pub fn sovereign_okinec_ahau() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Guardian of the Great Door — {W}{W} 4/4 Angel, flying. Additional cost:
+/// tap four untapped artifacts, creatures, and/or lands you control.
+pub fn guardian_of_the_great_door() -> CardDefinition {
+    CardDefinition {
+        name: "Guardian of the Great Door",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        additional_cast_cost: vec![AdditionalCastCost::TapPermanents {
+            filter: SelectionRequirement::Artifact
+                .or(SelectionRequirement::Creature)
+                .or(SelectionRequirement::Land),
+            count: 4,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bringer of the Last Gift — {6}{B}{B} 6/6 Vampire Demon, flying. When it
+/// enters, if you cast it, each player sacrifices all other creatures, then
+/// each player reanimates all creature cards already in their graveyard.
+pub fn bringer_of_the_last_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Bringer of the Last Gift",
+        cost: cost(&[generic(6), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SourceWasCast,
+            then: Box::new(Effect::SacrificeOthersThenReanimate),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}

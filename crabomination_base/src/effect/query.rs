@@ -471,6 +471,7 @@ impl Effect {
             Effect::LandsDontUntapNextUntapStep { who } => sel_has_target(who),
             Effect::SacrificeAllMatching { who, .. } => sel_has_target(who),
             Effect::LivingDeath => false,
+            Effect::SacrificeOthersThenReanimate => false,
             Effect::EachPlayerMayPutPermanentFromHand { .. } => false,
             Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }

@@ -4181,6 +4181,14 @@ impl GameState {
                 .exile
                 .iter()
                 .any(|c| !self.same_team(c.owner, p)),
+            A::TapPermanents { filter, count } => {
+                let matching = self.battlefield.iter().filter(|c| {
+                    c.controller == p
+                        && !c.tapped
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                }).count();
+                matching >= *count as usize
+            }
         })
     }
 
@@ -4395,6 +4403,30 @@ impl GameState {
                     {
                         let card = self.exile.remove(pos);
                         self.route_to_graveyard(card, &mut events);
+                    }
+                }
+                A::TapPermanents { filter, count } => {
+                    // Auto-tap the lowest-impact untapped matches (non-lands
+                    // first to preserve mana, then lowest mana value).
+                    let mut cands: Vec<&crate::card::CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && !c.tapped
+                                && self.evaluate_requirement_static(
+                                    filter, &Target::Permanent(c.id), p, None,
+                                )
+                        })
+                        .collect();
+                    cands.sort_by_key(|c| (c.definition.is_land(), c.definition.cost.cmc()));
+                    let ids: Vec<CardId> =
+                        cands.iter().take(*count as usize).map(|c| c.id).collect();
+                    for id in ids {
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: id });
+                        }
                     }
                 }
             }

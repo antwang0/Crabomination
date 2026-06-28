@@ -2220,6 +2220,15 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         pay: u32,
     },
+    /// "As an additional cost to cast this spell, tap N untapped permanents you
+    /// control matching `filter`." Guardian of the Great Door ("tap four
+    /// untapped artifacts, creatures, and/or lands you control"). The cast is
+    /// rejected unless that many untapped matches exist; the auto-picker taps
+    /// the lowest-impact ones (non-mana sources, then lowest mana value).
+    TapPermanents {
+        filter: SelectionRequirement,
+        count: u32,
+    },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.

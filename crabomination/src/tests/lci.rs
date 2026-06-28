@@ -2922,6 +2922,71 @@ fn deepfathom_echo_explores_and_copies() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
 }
 
+/// Guardian of the Great Door's additional cost taps four permanents you
+/// control; with too few untapped it can't be cast.
+#[test]
+fn guardian_of_the_great_door_taps_four() {
+    let mut g = two_player_game();
+    let guardian = g.add_card_to_hand(0, catalog::guardian_of_the_great_door());
+    let fodder: Vec<CardId> = (0..4).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: guardian, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Guardian by tapping four creatures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(guardian).is_some(), "Guardian on the battlefield");
+    assert_eq!(
+        fodder.iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count(),
+        4, "four permanents tapped to pay the additional cost",
+    );
+}
+
+/// With only three untapped permanents the additional tap cost is unpayable.
+#[test]
+fn guardian_of_the_great_door_needs_four_untapped() {
+    let mut g = two_player_game();
+    let guardian = g.add_card_to_hand(0, catalog::guardian_of_the_great_door());
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: guardian, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "cannot cast without four untapped permanents");
+}
+
+/// Bringer of the Last Gift sacrifices every other creature, then each player
+/// reanimates the creatures that were already in their graveyard (not the ones
+/// just sacrificed). The Bringer itself survives.
+#[test]
+fn bringer_of_the_last_gift_mass_swap() {
+    let mut g = two_player_game();
+    let bringer = g.add_card_to_battlefield(0, catalog::bringer_of_the_last_gift());
+    let my_creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Pre-existing graveyard creatures (eligible to return).
+    let my_dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let opp_dead = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(bringer, 0, None);
+    ctx.source = Some(bringer);
+    let evs = g.resolve_effect(&Effect::SacrificeOthersThenReanimate, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    // Bringer survives; the two on-board creatures were sacrificed.
+    assert!(g.battlefield_find(bringer).is_some(), "Bringer survives");
+    assert!(g.battlefield_find(my_creature).is_none(), "my other creature sacrificed");
+    assert!(g.battlefield_find(opp_creature).is_none(), "opponent's creature sacrificed");
+    // The pre-sac graveyard creatures returned to their owners' battlefields.
+    assert!(g.battlefield_find(my_dead).is_some(), "my graveyard creature reanimated");
+    assert_eq!(g.battlefield_find(my_dead).unwrap().controller, 0);
+    assert!(g.battlefield_find(opp_dead).is_some(), "opponent's graveyard creature reanimated");
+    assert_eq!(g.battlefield_find(opp_dead).unwrap().controller, 1);
+    // The just-sacrificed creatures stay in the graveyard (not put there before).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == my_creature));
+}
+
 /// Sovereign Okinec Ahau's attack puts +1/+1 counters on each creature you
 /// control equal to how far its power exceeds its base power; a base-stats
 /// creature is untouched.

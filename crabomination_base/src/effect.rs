@@ -3275,6 +3275,11 @@ pub enum Effect {
     /// control, then puts the cards they exiled this way onto the battlefield
     /// under their own control.
     LivingDeath,
+    /// Bringer of the Last Gift's ETB: each player sacrifices all creatures
+    /// they control *except the source*, then each player returns all creature
+    /// cards that were already in their graveyard (not put there this way) to
+    /// the battlefield under their control.
+    SacrificeOthersThenReanimate,
     /// Each player, in APNAP order, may put one permanent card matching
     /// `filter` from their hand onto the battlefield (Show and Tell). A
     /// `wants_ui` player is prompted; bots/tests auto-pick their highest-mana
