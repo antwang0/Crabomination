@@ -112,6 +112,9 @@ mod tests_recent25;
 #[path = "../tests/recent26.rs"]
 mod tests_recent26;
 #[cfg(test)]
+#[path = "../tests/recent27.rs"]
+mod tests_recent27;
+#[cfg(test)]
 #[path = "../tests/lci_craft.rs"]
 mod tests_lci_craft;
 #[cfg(test)]

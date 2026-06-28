@@ -54,7 +54,7 @@ pub enum CreatureType {
     Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
-    Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg,
+    Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
