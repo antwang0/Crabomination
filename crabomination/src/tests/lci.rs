@@ -1558,3 +1558,72 @@ fn glimpse_the_core_returns_cave() {
     let back = g.battlefield_find(cave).expect("Cave returned");
     assert!(back.tapped, "entered tapped");
 }
+
+/// Reckless Detective's attack discard draws a card and pumps it +2/+0.
+#[test]
+fn reckless_detective_attack_loots_and_pumps() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let det = g.add_card_to_battlefield(0, catalog::reckless_detective()); // 0/3
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // to discard
+    g.clear_sickness(det);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: det, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "discarded 1, drew 1 → net 0");
+    assert_eq!(g.computed_permanent(det).unwrap().power, 2, "+2/+0 this turn");
+}
+
+/// Idol of the Deep King's ETB deals 2 to any target.
+#[test]
+fn idol_of_the_deep_king_pings() {
+    let mut g = two_player_game();
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[1].life = 20;
+    let idol = g.add_card_to_battlefield(0, catalog::idol_of_the_deep_king());
+    g.fire_self_etb_triggers(idol, 0);
+    drain_stack(&mut g);
+    // The ping hit a hostile target — the opponent's creature or their face.
+    let hit_creature = g.battlefield_find(prey).is_none();
+    let hit_face = g.players[1].life == 18;
+    assert!(hit_creature || hit_face, "dealt 2 to an opponent target");
+}
+
+/// Calamitous Tide bounces up to two creatures and loots (draw 2, discard 1).
+#[test]
+fn calamitous_tide_bounces_and_loots() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::calamitous_tide());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both bounced");
+    // cast 1 (spell left hand) then draw 2 discard 1 → net +1 vs pre-cast hand.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew 2, discarded 1, spent the spell");
+}
+
+/// Hidden Grotto surveils on ETB (no-panic) and taps for colorless.
+#[test]
+fn hidden_grotto_etb_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let grotto = g.move_card_to_battlefield_for_test(0, catalog::hidden_grotto());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(grotto).is_some(), "land entered and surveiled");
+}

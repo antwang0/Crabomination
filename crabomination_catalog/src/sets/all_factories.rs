@@ -4484,6 +4484,10 @@ static LCI: &[Factory] = &[
     super::lci::pantlaza_sun_favored,
     super::lci::stalactite_stalker,
     super::lci::glimpse_the_core,
+    super::lci::reckless_detective,
+    super::lci::idol_of_the_deep_king,
+    super::lci::calamitous_tide,
+    super::lci::hidden_grotto,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

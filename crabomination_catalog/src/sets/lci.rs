@@ -3257,3 +3257,119 @@ pub fn quicksand_whirlpool() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Reckless Detective — {1}{R} 0/3 Devil Detective. Whenever it attacks, you may
+/// discard a card; if you do, draw a card and it gets +2/+0. (The "sacrifice an
+/// artifact" alternative cost is approximated as the discard.)
+pub fn reckless_detective() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Detective",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::MayDo {
+            description: "Discard a card: draw a card and +2/+0".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Idol of the Deep King // Sovereign's Macuahuitl — {2}{R} flash artifact; ETB
+/// deal 2 to any target. Craft with artifact {2}{R} → an Equipment that attaches
+/// on ETB, grants +2/+0, Equip {2}.
+pub fn idol_of_the_deep_king() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let macuahuitl = CardDefinition {
+        name: "Sovereign's Macuahuitl",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        })],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Idol of the Deep King",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        })],
+        activated_abilities: vec![craft(cost(&[generic(2), r()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(macuahuitl)),
+        ..Default::default()
+    }
+}
+
+/// Calamitous Tide — {4}{U}{U} Sorcery. Return up to two target creatures to
+/// their owners' hands. Draw two cards, then discard a card.
+pub fn calamitous_tide() -> CardDefinition {
+    CardDefinition {
+        name: "Calamitous Tide",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hidden Grotto — Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of
+/// any color.
+pub fn hidden_grotto() -> CardDefinition {
+    CardDefinition {
+        name: "Hidden Grotto",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
