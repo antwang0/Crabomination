@@ -25,6 +25,16 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **Bonehoard Dracosaur, Quintorius Kand, Tarrian's Journal, the remaining
   craft DFCs** (Sunbird Standard's color-count CDA, exiled-card recast) need
   bespoke effects; deferred.
+- **LCI cards still ⏳** (need bespoke primitives): Nicanzil (explore-*land*-vs-
+  *nonland* event detail), Sage of Days / Starving Revenant (look-top-keep-one-
+  on-top-rest-to-graveyard), Vito (Nth-time-this-turn sacrifice escalation),
+  Caparocti / Bat Colony (reflexive "tap two as a cost" / Cave-mana-spent count),
+  Guardian of the Great Door (`AdditionalCastCost::TapPermanents`), Sovereign
+  Okinec Ahau (per-creature counters = power−base difference), Bringer of the
+  Last Gift (mass sac + mass reanimate), Song of Stupefaction (graveyard-count
+  EquipScale), Deepfathom Echo, Intrepid Paleontologist, Cosmium Confluence /
+  Wail of the Forgotten (repeatable/descend modal). Easy LCI commons shipped this
+  run sit in `sets::lci` with tests in `tests::lci`.
 - ✅ **Reflexive targeted "when you do" triggers** (CR 603.7) — `Effect::Reflexive
   { body }` wraps a targeted payoff that's opaque to the cast/trigger-time target
   walk and auto-targets its body fresh at resolution. Composes with `MayPay`
@@ -2378,7 +2388,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration). Per-player
   one-step land-untap lock ✅ (502.3 — `Effect::LandsDontUntapNextUntapStep` +
   `Player.lands_dont_untap_next_untap`, consumed in `do_untap`; Bontu's Last
-  Reckoning, `cr_502_3_bontus_lands_skip_one_untap_step`).
+  Reckoning, `cr_502_3_bontus_lands_skip_one_untap_step`). Self-scoped
+  untap-on-every-step ✅ (502.3 — `StaticEffect::UntapSelfEachUntapStep`, a
+  `do_untap` follow-up pass untaps the source on each *other* player's untap
+  step too, Stun counters still interpose; Thousand Moons Infantry,
+  `thousand_moons_infantry_untaps_on_opponent_untap`).
 - ✅ **CR 510 — Combat Damage Step** — remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers); blocker strike-back per-source ✅ (702.90 / 615.6 — infect/deathtouch/scaling/shields/lifelink apply per blocker event, tests `cr_702_90_*`). **Assigns combat damage equal to toughness** ✅ (510.1c — `Keyword::AssignsCombatDamageByToughness`, read by `combat_damage_value` for attackers, blockers, and the cached-assignment path; Doran, Tapestry Warden, Bill the Pony, `tests/recent23.rs`).
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas). Power-based block restriction ✅ (`Keyword::CantBeBlockedByPowerLess` — Formation Breaker; inverse of Skulk, `formation_breaker_blocks_only_by_equal_or_greater_power`). The bot's block planner now satisfies the minimum-blocker count for Menace **and** `CantBeBlockedExceptByN(n)` (tops up or drops the block), so it never submits an illegal under-filled multi-block. Protection-by-mana-value block restriction ✅ (`Keyword::ProtectionFromManaValueExcept` — Haktos can't be blocked by a creature whose MV isn't the chosen number; test `cr_509_1b_protection_from_mv_restricts_blockers`). Protection-by-mana-value-**parity** ✅ (`Keyword::ProtectionFromManaValueParity { odd }` — Lavabrink Venturer's ETB odd/even choice; gates targeting, blocking, and combat-damage prevention CR 702.16e; tests `lavabrink_venturer_parity_protection`, `cr_702_16e_parity_protection_prevents_combat_damage`). Blocker-side "can block only creatures with flying" ✅ (`Keyword::CanBlockOnlyFlying` — Wanderlight Spirit, Shacklegeist, Pinnacle Emissary's Drone; test `cr_509_1b_can_block_only_flying_restriction`). Conditional attack/block gates (509.1a / 508.1a) ✅ — `Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)` (Hazoret the Fervent) and `Keyword::CantAttackOrBlockUnlessDelirium` (Patchwork Beastie, via `GameState::delirium_active`), enforced in `declare_attackers` + `blocker_can_block_attacker` + `legal_attackers` and surfaced as client chips. "Can't attack or block alone" (509.1c) ✅ — `Keyword::CantAttackOrBlockAlone` rejects a lone-attacker / lone-blocker batch (Toby's Beast token; tests `cant_attack_or_block_alone_*`, `cant_block_alone_*`).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6). Board-conditional self cost reduction ✅ (CR 601.2f — `StaticEffect::SelfCostReducedIfControlEach`, discounts a spell while you control a permanent matching each filter — Of One Mind's Human + non-Human). Opponent target-tax ✅ (`StaticEffect::TaxOpponentSpellsTargeting`, threaded through `extra_cost_for_spell` with the spell's chosen target — Jubilant Skybonder, Callaphe Beloved of the Sea). Mana-spent-vs-MV gate ✅ (`Effect::CounterSpellDrawIfUnderpaid` reads the countered spell's stored `mana_spent` against its mana value — Unravel draws only on a cost-reduced/alt-cast spell).

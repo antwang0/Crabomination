@@ -416,9 +416,11 @@ Each a small targeted feature; sweep batch by batch.
    Stop/Skip overrides on the phase chart (`StopConfig`), separate for your turns
    vs. opponents'.
 3. 🟡 **Combat math / damage preview** — `combat_preview` projects life swing +
-   dying creatures (first/double strike, deathtouch spread, trample, protection),
-   layer-aware, with planeswalker-target rows. Remaining: multi-blocker
-   damage-order nuance.
+   dying creatures (first/double strike — incl. double strike's two damage steps
+   for face/trample/lifelink — deathtouch spread, trample, protection),
+   layer-aware, with planeswalker-target rows; the client HUD flags a projected
+   life total ≤ 0 with a "☠ LETHAL" tag. Remaining: multi-blocker damage-order
+   nuance.
 4. ⏳ **Undo / mana-tap rollback** — undo un-committed taps before a spell locks in.
 5. ✅ **Targeting arrows on the stack** — `draw_stack_arrows` (primary +
    additional-target slots; counter magic points at its spell).
