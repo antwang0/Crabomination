@@ -2694,3 +2694,61 @@ fn akal_pakal_digs_after_artifact_etb() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand1 + 1, "artifact entered → dig one to hand");
 }
+
+/// Kutzil stops opponents casting on your turn and draws when a pumped creature
+/// connects.
+#[test]
+fn kutzil_locks_opponent_and_draws_on_pumped_hit() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kutzil_malamet_exemplar());
+    // Static: opponent can't cast during your (seat 0's) turn.
+    let opp_spell = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: opp_spell, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(res.is_err(), "opponent can't cast during your turn");
+    // Draw: a +1/+1-pumped attacker connects → draw a card.
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // base 2/2
+    g.battlefield_find_mut(atk).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1); // 3/3 > base
+    g.clear_sickness(atk);
+    g.add_card_to_library(0, catalog::lightning_bolt()); // something to draw
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[1].life;
+    to_step(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3, "3/3 connected for 3");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "pumped creature connected → drew a card");
+}
+
+/// Anim Pakal grows and mints attacking Gnomes when it attacks.
+#[test]
+fn anim_pakal_mints_gnomes_on_attack() {
+    let mut g = two_player_game();
+    let anim = g.add_card_to_battlefield(0, catalog::anim_pakal_thousandth_moon());
+    g.clear_sickness(anim);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: anim, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // First attack: one counter → one Gnome token.
+    assert_eq!(
+        g.battlefield_find(anim).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "gained a +1/+1 counter",
+    );
+    let gnomes: Vec<CardId> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Gnome").map(|c| c.id).collect();
+    assert_eq!(gnomes.len(), 1, "one Gnome token for one counter");
+    assert!(g.attacking_ids().contains(&gnomes[0]), "Gnome is attacking");
+}

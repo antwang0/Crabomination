@@ -1165,6 +1165,10 @@ pub enum SelectionRequirement {
     /// Fodder's "creatures that each have toughness greater than their power").
     /// Battlefield-only; false for non-creatures.
     ToughnessGreaterThanPower,
+    /// Candidate's current power exceeds its printed base power — i.e. it has
+    /// been pumped (counters / bonuses). Kutzil, Malamet Exemplar; Sovereign
+    /// Okinec Ahau. Battlefield-only; false for non-creatures.
+    PowerGreaterThanBasePower,
     /// Candidate's power + toughness (layer-computed) is at most `n`. Used
     /// by Cut Down ("destroy target creature with total power and toughness
     /// 5 or less"). Battlefield-only; false for non-creatures.

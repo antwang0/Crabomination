@@ -4838,3 +4838,73 @@ pub fn akal_pakal_first_among_equals() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kutzil, Malamet Exemplar — {1}{G}{W} 3/3 Legendary Cat Warrior. Your
+/// opponents can't cast spells during your turn. Whenever a creature you control
+/// with power greater than its base power deals combat damage to a player, draw
+/// a card. (Modeled per-creature.)
+pub fn kutzil_malamet_exemplar() -> CardDefinition {
+    CardDefinition {
+        name: "Kutzil, Malamet Exemplar",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Warrior], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't cast spells during your turn.",
+            effect: StaticEffect::OpponentsCantCastDuringYourTurn,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::PowerGreaterThanBasePower,
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Anim Pakal, Thousandth Moon — {1}{R}{W} 1/2 Legendary Human Soldier. When it
+/// attacks, put a +1/+1 counter on it, then create that many tapped, attacking
+/// 1/1 Gnome artifact tokens. (Modeled off Anim's own attack.)
+pub fn anim_pakal_thousandth_moon() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let gnome = TokenDefinition {
+        name: "Gnome".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Anim Pakal, Thousandth Moon",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                definition: gnome,
+                cleanup: crate::effect::AttackingTokenCleanup::None,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
