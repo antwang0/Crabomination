@@ -498,9 +498,8 @@ fn staggering_size_pumps_and_tramples() {
 /// Compass Gnome searches a Cave onto the top of the library on ETB.
 #[test]
 fn compass_gnome_tutors_cave_to_top() {
-    let cave_id;
     let mut g = two_player_game();
-    cave_id = g.add_card_to_library(0, catalog::captivating_cave());
+    let cave_id = g.add_card_to_library(0, catalog::captivating_cave());
     g.move_card_to_battlefield_for_test(0, catalog::compass_gnome());
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(cave_id), "Cave placed on top");
@@ -524,4 +523,26 @@ fn gargantuan_leech_affinity_for_caves() {
     }).expect("cast at the Cave-reduced cost");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == leech), "Leech resolved");
+}
+
+/// Terror Tide shrinks all creatures by the number of permanent cards in your
+/// graveyard.
+#[test]
+fn terror_tide_mass_minus_x() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    for _ in 0..2 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // descent 2
+    let spell = g.add_card_to_hand(0, catalog::terror_tide());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // 2/2 - 2/2 = 0/0 → both die as a state-based action.
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(foe).is_none(), "both shrank to 0/0 and died");
 }

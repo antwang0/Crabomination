@@ -4423,6 +4423,7 @@ static LCI: &[Factory] = &[
     super::lci::staggering_size,
     super::lci::compass_gnome,
     super::lci::gargantuan_leech,
+    super::lci::terror_tide,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

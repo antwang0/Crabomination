@@ -10,10 +10,16 @@ state-corrupting in ordinary play.
 
 ## Discovered follow-ups — LCI / Craft / Descend (`sets::lci`)
 
-Shipped this run: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),
+Shipped: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),
 Descend (`SelectionRequirement::ControllerDescend`, `Predicate::{DescendActive,
-DescendedThisTurn}`, `DynamicPt::PermanentCardsInControllerGraveyard`, HUD chip).
-49 LCI cards added. Deferred from the set:
+DescendedThisTurn}`, `DynamicPt::PermanentCardsInControllerGraveyard`, HUD chip),
+`LandType::Cave` + the 10-card Cave subset (Captivating Cave, Volatile Fault,
+Promising Vein, Forgotten Monument's grant, the 5 Hidden Discover caves,
+Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
+- **Gargantuan Leech** uses `affinity_filter` for Caves you control; its "each
+  Cave card in your graveyard" half is dropped (affinity counts only battlefield
+  permanents). Wants a count-based `SelfCostReducedPer { filter, per }` that also
+  reads the graveyard.
 - **Craft "or pay 3 life" / "discard or sac" choices** are approximated as a
   flat discard (Bitter Triumph, Souls of the Lost) — needs a real either-cost
   `AdditionalCastCost` mode. Craft's per-object UI exile-choice is auto-picked.
@@ -2421,7 +2427,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
-- 🟡 **CR 614 — Replacement Effects** — general "instead" framework. Damage *halving* ✅ (614.5 — `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent; composed with doublers via `scale_damage` at both damage funnels). Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* ✅ (`Player.skip_turns`, Chronatog / Ral Zarek -7). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
+- 🟡 **CR 614 — Replacement Effects** — general "instead" framework. Damage *halving* ✅ (614.5 — `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent; composed with doublers via `scale_damage` at both damage funnels). Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* ✅ (`Player.skip_turns`, Chronatog / Ral Zarek -7). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.) Enters-*untapped* replacement ✅ — `StaticEffect::LandsEnterUntapped` overrides any enters-tapped effect for the controller's lands in `apply_enters_tapped_replacement` (Spelunking).
 - 🟡 **CR 615.1 / 615.12 — Prevention effects** — global "combat damage can't be prevented" ✅ (`StaticEffect::CombatDamageCantBePrevented` — Frenzied Baloth; bypasses shields for any creature-sourced damage, sharing the Questing-Beast combat approximation). Per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Source-of-your-choice prevention (615.7) ✅ via
   `Effect::PreventAllDamageFromChosenSourceThisTurn` +
   `GameState.damage_prevented_sources`, consulted at both damage funnels
@@ -2433,7 +2439,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Protection cycle, Rune of Protection: Red/Black).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Extra **combat-phase** insertion ✅ (CR 505.1b — `AdditionalCombatPhase` at End of Combat + `AdditionalCombatPhaseAfterMain` post-main re-entry, Relentless Assault). Phasing-in of extra non-combat steps still ⏳.
 - ✅ **CR 702.113 — Awaken** — rides `AlternativeCost { target_filter, effect_override }`: awaken cast adds the counters + a permanent-duration `BecomeCreature` on the targeted land (Part the Waterveil).
-- 🟡 **CR 305 — Lands** — see git for the per-clause detail.
+- 🟡 **CR 305 — Lands** — see git for the per-clause detail. `LandType::Cave`
+  added (CR 305.6 land subtypes), unblocking the LCI Cave lands + Caves-matter
+  payoffs (Forgotten Monument grant, Compass Gnome tutor, Gargantuan Leech
+  affinity, Spelunking).
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.

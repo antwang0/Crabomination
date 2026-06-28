@@ -1649,3 +1649,26 @@ pub fn gargantuan_leech() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Terror Tide — {2}{B}{B} Sorcery. Fathomless descent — all creatures get
+/// -X/-X until end of turn, where X is the number of permanent cards in your
+/// graveyard.
+pub fn terror_tide() -> CardDefinition {
+    let descent = || Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::PermanentCard,
+    };
+    let neg = move || Value::Times(Box::new(descent()), Box::new(Value::Const(-1)));
+    CardDefinition {
+        name: "Terror Tide",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            power: neg(),
+            toughness: neg(),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

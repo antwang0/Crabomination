@@ -113,7 +113,9 @@ Each unblocks a large swath of cards.
 
 1. 🟡 **Replacement-effect framework.** `replacement.rs` models zone-change
    replacements (Commander → command zone); the rest is per-card. Shipped:
-   enters-tapped (`StaticEffect::EntersTapped`, incl. self-source), exile-instead
+   enters-tapped (`StaticEffect::EntersTapped`, incl. self-source) and the
+   enters-*untapped* override (`StaticEffect::LandsEnterUntapped` — Spelunking),
+   exile-instead
    for non-cast creatures (Containment Priest), opponent-creature-dies → exile
    (Valentin), graveyard → exile hate (`ExileCardsBoundForGraveyard` via
    `route_to_graveyard` — Rest in Peace, Leyline of the Void), counter-lock
