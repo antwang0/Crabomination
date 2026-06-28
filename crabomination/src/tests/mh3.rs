@@ -595,3 +595,47 @@ fn dreadmobile_sacs_to_grow() {
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature");
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Inspired Inventor's ETB modal can make a Servo token.
+#[test]
+fn inspired_inventor_makes_servo() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Choose mode 2 (index 2) — create a Servo.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(2)]));
+    let id = g.add_card_to_hand(0, catalog::inspired_inventor());
+    cast_creature(&mut g, id);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Servo"),
+        "made a Servo token",
+    );
+}
+
+/// Proud Pack-Rhino's proliferate mode adds a counter to an existing pile.
+#[test]
+fn proud_pack_rhino_proliferates() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    // Mode 1 = proliferate; the proliferate sub-decisions fall back to the
+    // AutoDecider (proliferate everything eligible).
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, catalog::proud_pack_rhino());
+    cast_creature(&mut g, id);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "proliferate added a +1/+1 counter to the existing pile",
+    );
+}
+
+/// Smelted Chargebug makes two energy on ETB and has menace.
+#[test]
+fn smelted_chargebug_etb_energy_and_menace() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::smelted_chargebug());
+    cast_creature(&mut g, id);
+    assert_eq!(g.players[0].energy, 2, "ETB gives two energy");
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Menace));
+}

@@ -4511,6 +4511,9 @@ static MH3: &[Factory] = &[
     super::mh3::fetid_gargantua,
     super::mh3::conduit_goblin,
     super::mh3::dreadmobile,
+    super::mh3::inspired_inventor,
+    super::mh3::smelted_chargebug,
+    super::mh3::proud_pack_rhino,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

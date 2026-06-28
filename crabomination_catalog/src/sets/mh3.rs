@@ -929,3 +929,123 @@ pub fn dreadmobile() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// 1/1 colorless Servo artifact creature token.
+fn servo_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Servo".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Servo],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Inspired Inventor — {2}{W} 2/2 Human Artificer. ETB choose one: get
+/// {E}{E}{E}; or a +1/+1 counter on target creature; or make a Servo.
+pub fn inspired_inventor() -> CardDefinition {
+    CardDefinition {
+        name: "Inspired Inventor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddEnergy(Value::Const(3)),
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: servo_token(),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Smelted Chargebug — {1}{R} 1/3 Artifact Insect with menace. ETB: get
+/// {E}{E}. On attack, may pay {E} to give another attacking creature +1/+0
+/// and menace.
+pub fn smelted_chargebug() -> CardDefinition {
+    CardDefinition {
+        name: "Smelted Chargebug",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::MayDo {
+                description: "pay {E} to pump another attacker".into(),
+                body: Box::new(Effect::PayEnergy {
+                    amount: 1,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::PumpPT {
+                            what: target_filtered(
+                                SelectionRequirement::Creature
+                                    .and(SelectionRequirement::IsAttacking)
+                                    .and(SelectionRequirement::OtherThanSource),
+                            ),
+                            power: Value::Const(1),
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: target_filtered(
+                                SelectionRequirement::Creature
+                                    .and(SelectionRequirement::IsAttacking)
+                                    .and(SelectionRequirement::OtherThanSource),
+                            ),
+                            keyword: Keyword::Menace,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                }),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Proud Pack-Rhino — {2}{W} 3/3 Rhino. ETB choose one: a shield counter on
+/// target permanent; or proliferate.
+pub fn proud_pack_rhino() -> CardDefinition {
+    CardDefinition {
+        name: "Proud Pack-Rhino",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Permanent),
+                kind: CounterType::Shield,
+                amount: Value::Const(1),
+            },
+            Effect::Proliferate,
+        ]))],
+        ..Default::default()
+    }
+}
