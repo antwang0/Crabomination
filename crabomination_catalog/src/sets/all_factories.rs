@@ -4499,6 +4499,7 @@ static MH3: &[Factory] = &[
     super::mh3::horrid_shadowspinner,
     super::mh3::unfathomable_truths,
     super::mh3::phyrexian_ironworks,
+    super::mh3::breathe_your_last,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

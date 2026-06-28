@@ -131,6 +131,7 @@ impl Effect {
                 }
                 Value::NonNeg(v) => value_has_target(v),
                 Value::ManaValueOf(s) => sel_has_target(s),
+                Value::ColorCountOf(s) => sel_has_target(s),
                 Value::LoyaltyOf(s) => sel_has_target(s),
                 _ => false,
             }

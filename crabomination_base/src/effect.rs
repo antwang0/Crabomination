@@ -443,6 +443,10 @@ pub enum Value {
     /// resolves to; 0 if none. Rush of Knowledge ("draw cards equal to the
     /// highest mana value among permanents you control").
     HighestManaValueAmong(Box<Selector>),
+    /// Number of distinct colors of the resolved permanent/card (CR 105.2 —
+    /// "for each of its colors"). Reads printed colors; a colorless/devoid
+    /// object counts 0. Breathe Your Last.
+    ColorCountOf(Box<Selector>),
     /// Converge value: the number of distinct colors of mana spent on the
     /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
     /// from `EffectContext.converged_value` here. Used by Prismatic

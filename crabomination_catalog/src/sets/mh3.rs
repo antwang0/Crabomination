@@ -561,3 +561,25 @@ pub fn phyrexian_ironworks() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Breathe Your Last — {1}{B}{B} Instant. Destroy target creature or
+/// planeswalker; you gain 1 life for each of its colors.
+pub fn breathe_your_last() -> CardDefinition {
+    let target = || target_filtered(
+        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+    );
+    CardDefinition {
+        name: "Breathe Your Last",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        // Count colors before destroying so the life gain reads the live object.
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ColorCountOf(Box::new(target())),
+            },
+            Effect::Destroy { what: target() },
+        ]),
+        ..Default::default()
+    }
+}

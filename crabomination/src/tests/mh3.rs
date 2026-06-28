@@ -335,3 +335,22 @@ fn phyrexian_ironworks_makes_golem() {
         "minted a Golem",
     );
 }
+
+/// Breathe Your Last destroys the target and gains 1 life per color.
+#[test]
+fn breathe_your_last_gains_life_per_color() {
+    let mut g = two_player_game();
+    // A two-color creature (Watchwolf is G/W).
+    let victim = g.add_card_to_battlefield(1, catalog::watchwolf());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::breathe_your_last());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Breathe Your Last");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "destroyed");
+    assert_eq!(g.players[0].life, life_before + 2, "gained 1 life per color (G/W = 2)");
+}

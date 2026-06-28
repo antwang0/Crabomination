@@ -441,6 +441,25 @@ impl GameState {
                 })
                 .max()
                 .unwrap_or(0),
+            Value::ColorCountOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .or_else(|| {
+                            self.players.iter().find_map(|p| {
+                                p.graveyard
+                                    .iter()
+                                    .find(|c| c.id == cid)
+                                    .or_else(|| p.hand.iter().find(|c| c.id == cid))
+                            })
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| c.definition.printed_colors().len() as i32),
+                    EntityRef::Player(_) => None,
+                })
+                .unwrap_or(0),
             Value::DistinctTypesInTopOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
