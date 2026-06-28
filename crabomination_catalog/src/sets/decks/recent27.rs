@@ -4,12 +4,14 @@
 //! Tests in `crabomination/src/tests/recent27.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate, SelectionRequirement,
-    Selector, Subtypes, TokenDefinition, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate,
+    SelectionRequirement, Selector, StaticAbility, Subtypes, TokenDefinition, Value,
 };
-use crate::effect::shortcut::{etb, etb_draw, on_attack_drain, on_attack_gain_life, on_dies};
+use crate::effect::shortcut::{
+    etb, etb_draw, on_attack, on_attack_drain, on_attack_gain_life, on_dies, target_filtered,
+};
 use crate::effect::{Duration, PlayerRef, StaticEffect};
-use crate::mana::{cost, generic, g, hybrid, u, w, Color};
+use crate::mana::{b, cost, generic, g, hybrid, u, w, Color};
 
 /// A 1/1 colorless Hero token (FIN).
 fn hero_token() -> TokenDefinition {
@@ -208,5 +210,120 @@ pub fn dwarven_castle_guard() -> CardDefinition {
             definition: hero_token(),
         })],
         ..creature("Dwarven Castle Guard", cost(&[generic(1), w()]), vec![CreatureType::Dwarf, CreatureType::Soldier], 2, 1, vec![])
+    }
+}
+
+/// Coeurl — {1}{W} 2/2 Cat Beast. {1}{W}, {T}: Tap target nonenchantment creature.
+pub fn coeurl() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Not(
+                    Box::new(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                ))),
+            },
+            ..Default::default()
+        }],
+        ..creature("Coeurl", cost(&[generic(1), w()]), vec![CreatureType::Cat, CreatureType::Beast], 2, 2, vec![])
+    }
+}
+
+/// Ahriman — {2}{B} 2/2 Eye Horror, flying + deathtouch. {3}, Sacrifice another
+/// creature or artifact: Draw a card.
+pub fn ahriman() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                1,
+            )),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Ahriman", cost(&[generic(2), b()]),
+            vec![CreatureType::Eye, CreatureType::Horror], 2, 2,
+            vec![Keyword::Flying, Keyword::Deathtouch],
+        )
+    }
+}
+
+/// Gaelicat — {2}{W} 1/3 Cat, flying + vigilance. +2/+0 while you control two or
+/// more artifacts.
+pub fn gaelicat() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Gets +2/+0 while you control two or more artifacts.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(2),
+                },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..creature("Gaelicat", cost(&[generic(2), w()]), vec![CreatureType::Cat], 1, 3, vec![Keyword::Flying, Keyword::Vigilance])
+    }
+}
+
+/// Scorpion Sentinel — {1}{U} 1/4 Artifact Creature — Robot Scorpion. +3/+0
+/// while you control seven or more lands.
+pub fn scorpion_sentinel() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +3/+0 while you control seven or more lands.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(7),
+                },
+                power: 3,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..creature("Scorpion Sentinel", cost(&[generic(1), u()]), vec![CreatureType::Robot, CreatureType::Scorpion], 1, 4, vec![])
+    }
+}
+
+/// Thistledown Players — {2}{W} 3/3 Mouse Bard. Whenever it attacks, untap
+/// target nonland permanent.
+pub fn thistledown_players() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::Untap {
+            what: target_filtered(SelectionRequirement::Nonland),
+            up_to: None,
+        })],
+        ..creature("Thistledown Players", cost(&[generic(2), w()]), vec![CreatureType::Mouse, CreatureType::Bard], 3, 3, vec![])
+    }
+}
+
+/// Warren Elder — {1}{W} 2/2 Rabbit Cleric. {3}{W}: Creatures you control get
+/// +1/+1 until end of turn.
+pub fn warren_elder() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Warren Elder", cost(&[generic(1), w()]), vec![CreatureType::Rabbit, CreatureType::Cleric], 2, 2, vec![])
     }
 }

@@ -137,3 +137,97 @@ fn dragoons_wyvern_makes_hero() {
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Hero"), 1, "made a Hero token on entry");
 }
+
+/// Coeurl taps a target nonenchantment creature.
+#[test]
+fn coeurl_taps_target_creature() {
+    let mut g = two_player_game();
+    let coeurl = g.add_card_to_battlefield(0, catalog::coeurl());
+    g.battlefield_find_mut(coeurl).unwrap().summoning_sick = false;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coeurl, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(victim)), additional_targets: vec![], x_value: None,
+    }).expect("activate Coeurl");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "target creature tapped");
+}
+
+/// Ahriman sacrifices another permanent to draw a card.
+#[test]
+fn ahriman_sacrifices_to_draw() {
+    let mut g = two_player_game();
+    let ahriman = g.add_card_to_battlefield(0, catalog::ahriman());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ahriman, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Ahriman");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card off the sacrifice");
+}
+
+/// Gaelicat gets +2/+0 with two artifacts.
+#[test]
+fn gaelicat_pumps_with_artifacts() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::gaelicat());
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 1);
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 3, "+2/+0 with two artifacts");
+}
+
+/// Scorpion Sentinel gets +3/+0 with seven lands.
+#[test]
+fn scorpion_sentinel_pumps_with_lands() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::scorpion_sentinel());
+    assert_eq!(g.computed_permanent(s).unwrap().power, 1);
+    for _ in 0..7 { g.add_card_to_battlefield(0, catalog::island()); }
+    assert_eq!(g.computed_permanent(s).unwrap().power, 4, "1 +3 = 4 power");
+}
+
+/// Thistledown Players untaps a target nonland permanent on attack.
+#[test]
+fn thistledown_players_untaps_on_attack() {
+    let mut g = two_player_game();
+    let players = g.add_card_to_battlefield(0, catalog::thistledown_players());
+    g.battlefield_find_mut(players).unwrap().summoning_sick = false;
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(ally).unwrap().tapped = true;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(ally)),
+    ]));
+    g.declare_attackers(vec![Attack { attacker: players, target: AttackTarget::Player(1) }]).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(ally).unwrap().tapped, "ally untapped by the attack trigger");
+}
+
+/// Warren Elder pumps the team +1/+1 until end of turn.
+#[test]
+fn warren_elder_team_pump() {
+    let mut g = two_player_game();
+    let elder = g.add_card_to_battlefield(0, catalog::warren_elder());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elder, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Warren Elder");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(buddy).unwrap().power, 3, "buddy pumped to 3");
+    assert_eq!(g.computed_permanent(elder).unwrap().power, 3, "elder pumped to 3");
+}
