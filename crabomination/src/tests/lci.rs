@@ -393,3 +393,37 @@ fn bartolome_sacrifices_for_counter() {
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
     assert_eq!(g.computed_permanent(barto).unwrap().power, 3, "2/1 + counter = 3/2");
 }
+
+/// Captain Storm puts a +1/+1 counter on a Pirate when an artifact enters.
+#[test]
+fn captain_storm_counters_pirate_on_artifact_etb() {
+    let mut g = two_player_game();
+    let storm = g.add_card_to_battlefield(0, catalog::captain_storm_cosmium_raider());
+    let thopter = g.add_card_to_hand(0, catalog::ornithopter());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: thopter, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast artifact");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(storm).unwrap().power, 3, "Pirate grew from artifact ETB");
+}
+
+/// Bedrock Tortoise grants your creatures hexproof only during your turn, and
+/// makes your T>P creatures assign combat damage by toughness.
+#[test]
+fn bedrock_tortoise_turn_hexproof_and_toughness_damage() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let tortoise = g.add_card_to_battlefield(0, catalog::bedrock_tortoise());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Your turn → hexproof on your creatures.
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof on your turn");
+    // Opponent's turn → no hexproof.
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof off-turn");
+    // The 0/6 tortoise (T>P) assigns combat damage by toughness.
+    assert!(g.computed_permanent(tortoise).unwrap().keywords.contains(&Keyword::AssignsCombatDamageByToughness));
+}

@@ -244,10 +244,6 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   (Crashing Wave: "waterbend {X}") and as an activated-ability cost (Flexible
   Waterbender: "Waterbend {3}: …"). Needs a cost-path extension; the
   `cast_spell_with_convoke` plumbing is the closest primitive to generalize.
-- **Firebend N.** Avatar keyword: "Whenever this attacks, add N {R}; that mana
-  lasts until end of combat." Needs combat-spanning mana (survives the step
-  transition through combat, CR 500.4) — the engine empties pools each step.
-  Fire Nation Cadets / Fire Sages / Zuko are deferred on it.
 - **Blight as an activated/additional cost.** `Effect::Blight` is a resolution
   effect; cards that put it in a *cost* ("{T}, Blight 1: …" — Gristle Glutton,
   Dawnhand Dissident; "As an additional cost, blight 1" — Cinder Strike) need

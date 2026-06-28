@@ -1458,3 +1458,80 @@ pub fn bartolome_del_presidio() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── More LCI staples (Pirate / Dinosaur payoffs) ────────────────────────────
+
+/// Captain Storm, Cosmium Raider — {U}{R} 2/2 legendary Human Pirate. Whenever
+/// an artifact you control enters, put a +1/+1 counter on target Pirate you
+/// control.
+pub fn captain_storm_cosmium_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Captain Storm, Cosmium Raider",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Pirate)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bedrock Tortoise — {3}{G} 0/6 Turtle. During your turn, creatures you
+/// control have hexproof. Each creature you control with toughness > power
+/// assigns combat damage by its toughness.
+pub fn bedrock_tortoise() -> CardDefinition {
+    let yours = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Bedrock Tortoise",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        power: 0,
+        toughness: 6,
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, creatures you control have hexproof.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: Predicate::IsTurnOf(PlayerRef::You),
+                    applies_to: yours(),
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::Hexproof],
+                },
+            },
+            StaticAbility {
+                description: "Your creatures with toughness > power assign combat damage by toughness.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::ToughnessGreaterThanPower),
+                    ),
+                    keyword: Keyword::AssignsCombatDamageByToughness,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
