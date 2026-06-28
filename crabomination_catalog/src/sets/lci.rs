@@ -5323,3 +5323,114 @@ pub fn bringer_of_the_last_gift() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Chimil, the Inner Sun — {6} Legendary Artifact. Spells you control can't be
+/// countered. At the beginning of your end step, discover 5.
+pub fn chimil_the_inner_sun() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Chimil, the Inner Sun",
+        cost: cost(&[generic(6)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Spells you control can't be countered.",
+            effect: StaticEffect::SpellsUncounterable { filter: SelectionRequirement::Any },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Discover { n: Value::Const(5), filter: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abuelo, Ancestral Echo — {1}{W}{U} 2/2 Legendary Spirit, flying, ward {2}.
+/// {1}{W}{U}: Exile another target creature or artifact you control; return it
+/// at the beginning of the next end step.
+pub fn abuelo_ancestral_echo() -> CardDefinition {
+    CardDefinition {
+        name: "Abuelo, Ancestral Echo",
+        cost: cost(&[generic(1), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w(), u()]),
+            effect: Effect::ExileReturnNextEndStep {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Palani's Hatcher — {3}{R}{G} 5/3 Dinosaur. Other Dinosaurs you control have
+/// haste. ETB: make two 0/1 Dinosaur Egg tokens. At combat on your turn, if you
+/// control an Egg, sacrifice one and make a 3/3 Dinosaur token.
+pub fn palanis_hatcher() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, TokenDefinition};
+    let egg = TokenDefinition {
+        name: "Dinosaur Egg".into(),
+        power: 0,
+        toughness: 1,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Egg],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let dino = TokenDefinition {
+        name: "Dinosaur".into(),
+        power: 3,
+        toughness: 3,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        ..Default::default()
+    };
+    let eggs = SelectionRequirement::HasCreatureType(CreatureType::Egg)
+        .and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Palani's Hatcher",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Dinosaurs you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dinosaur)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: egg }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                    .with_filter(Predicate::SelectorExists(Selector::EachPermanent(eggs.clone()))),
+                effect: Effect::Seq(vec![
+                    Effect::Sacrifice { who: Selector::You, count: Value::Const(1), filter: SelectionRequirement::HasCreatureType(CreatureType::Egg) },
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: dino },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}

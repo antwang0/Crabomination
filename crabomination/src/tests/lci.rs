@@ -3110,3 +3110,67 @@ fn nicanzil_land_and_nonland_explores() {
     let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
     assert_eq!(lands_after, lands_before + 1, "land explore → put a hand land onto the battlefield");
 }
+
+/// Chimil makes your spells uncounterable and discovers 5 at your end step.
+#[test]
+fn chimil_uncounterable_and_end_step_discover() {
+    let mut g = two_player_game();
+    let _chimil = g.add_card_to_battlefield(0, catalog::chimil_the_inner_sun());
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    assert!(g.caster_grants_uncounterable(0, &spell), "your spells are uncounterable");
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    let hand_before = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "discovered a card at end step");
+}
+
+/// Abuelo blinks one of your own permanents, which returns at the next end step.
+#[test]
+fn abuelo_blinks_own_permanent() {
+    let mut g = two_player_game();
+    let abuelo = g.add_card_to_battlefield(0, catalog::abuelo_ancestral_echo());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: abuelo, ability_index: 0,
+        target: Some(Target::Permanent(buddy)), additional_targets: vec![], x_value: None,
+    }).expect("activate blink");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(buddy).is_none(), "buddy exiled by the blink");
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"),
+        "buddy returned at the next end step");
+}
+
+/// Palani's Hatcher makes two Eggs on ETB, grants other Dinosaurs haste, and at
+/// combat sacrifices an Egg to make a 3/3 Dinosaur.
+#[test]
+fn palanis_hatcher_eggs_and_combat_token() {
+    let mut g = two_player_game();
+    // Real ETB funnel so the self-source token trigger fires.
+    let hatcher = g.move_card_to_battlefield_for_test(0, catalog::palanis_hatcher());
+    drain_stack(&mut g);
+    let _ = hatcher;
+    let eggs = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Dinosaur Egg").count();
+    assert_eq!(eggs, 2, "ETB made two Egg tokens");
+    let egg_id = g.battlefield.iter().find(|c| c.definition.name == "Dinosaur Egg").unwrap().id;
+    assert!(g.computed_permanent(egg_id).unwrap().keywords.contains(&Keyword::Haste), "Eggs gain haste");
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Dinosaur Egg").count(),
+        1, "one Egg sacrificed",
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Dinosaur" && c.power() == 3).count(),
+        1, "made a 3/3 Dinosaur token",
+    );
+}

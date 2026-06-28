@@ -4560,6 +4560,9 @@ static LCI: &[Factory] = &[
     super::lci::guardian_of_the_great_door,
     super::lci::caparocti_sunborn,
     super::lci::vito_fanatic_of_aclazotz,
+    super::lci::chimil_the_inner_sun,
+    super::lci::abuelo_ancestral_echo,
+    super::lci::palanis_hatcher,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
