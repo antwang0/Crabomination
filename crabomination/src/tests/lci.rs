@@ -2447,3 +2447,65 @@ fn hoverstone_pilgrim_bottoms_graveyard_card() {
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == gy_card), "left graveyard");
     assert!(g.players[1].library.iter().any(|c| c.id == gy_card), "on owner's library");
 }
+
+/// Scytheclaw Raptor burns a player who casts a spell on someone else's turn.
+#[test]
+fn scytheclaw_raptor_punishes_off_turn_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::scytheclaw_raptor());
+    // It's player 0's turn; player 1 casts an instant (off-turn for them).
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("p1 casts off-turn");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 4, "raptor dealt 4 to the off-turn caster");
+}
+
+/// Seismic Monstrosaur sacs a land to draw.
+#[test]
+fn seismic_monstrosaur_sac_land_draw() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::seismic_monstrosaur());
+    g.clear_sickness(dino);
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dino, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "sacrificed a land");
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
+}
+
+/// Corpses of the Lost is a Skeleton lord that mints a Skeleton Pirate on ETB.
+#[test]
+fn corpses_of_the_lost_lords_and_makes_token() {
+    let mut g = two_player_game();
+    let enc = g.add_card_to_hand(0, catalog::corpses_of_the_lost());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: enc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let pirate = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Skeleton Pirate").map(|c| c.id).expect("token");
+    // Lord buff: the 2/2 Skeleton Pirate becomes 3/2 with haste.
+    let cp = g.computed_permanent(pirate).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0 lord");
+    assert!(cp.keywords.contains(&Keyword::Haste), "haste from lord");
+}

@@ -4045,6 +4045,111 @@ pub fn ixallis_lorekeeper() -> CardDefinition {
     }
 }
 
+/// Scytheclaw Raptor — {2}{R} 4/3 Dinosaur. Whenever a player casts a spell on
+/// a turn that isn't theirs, deal 4 damage to them.
+pub fn scytheclaw_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Scytheclaw Raptor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::Triggerer)))),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seismic Monstrosaur — {4}{R}{R} 6/5 Dinosaur with trample. {2}{R}, Sacrifice
+/// a land: draw a card. Mountaincycling {2}.
+pub fn seismic_monstrosaur() -> CardDefinition {
+    CardDefinition {
+        name: "Seismic Monstrosaur",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Corpses of the Lost — {2}{B} Enchantment. Skeletons you control get +1/+0 and
+/// have haste. ETB: create a 2/2 black Skeleton Pirate. At your end step, if you
+/// descended this turn, create a 1/1 black Skeleton.
+pub fn corpses_of_the_lost() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, TokenDefinition};
+    let skeletons = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Skeleton)
+            .and(SelectionRequirement::ControlledByYou),
+    );
+    let skeleton = |power, name: &'static str| TokenDefinition {
+        name: name.into(),
+        power,
+        toughness: if power == 2 { 2 } else { 1 },
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: if power == 2 {
+                vec![CreatureType::Skeleton, CreatureType::Pirate]
+            } else {
+                vec![CreatureType::Skeleton]
+            },
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Corpses of the Lost",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Skeletons you control get +1/+0.",
+                effect: StaticEffect::PumpPT { applies_to: skeletons(), power: 1, toughness: 0 },
+            },
+            StaticAbility {
+                description: "Skeletons you control have haste.",
+                effect: StaticEffect::GrantKeyword { applies_to: skeletons(), keyword: Keyword::Haste },
+            },
+        ],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: skeleton(2, "Skeleton Pirate"),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+                effect: Effect::If {
+                    cond: Predicate::DescendedThisTurn { who: PlayerRef::You },
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: skeleton(1, "Skeleton"),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Didact Echo — {4}{U} 3/2 Spirit Cleric. ETB draw a card. Descend 4 — has
 /// flying while you have 4+ permanent cards in your graveyard.
 pub fn didact_echo() -> CardDefinition {
