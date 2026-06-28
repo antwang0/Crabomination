@@ -130,3 +130,56 @@ fn cavern_stomper_grants_evasion() {
         g.computed_permanent(stomper).unwrap().keywords.contains(&Keyword::CantBeBlockedByPowerAtMost(2)),
     );
 }
+
+/// Panicked Altisaur taps to deal 2 to each opponent.
+#[test]
+fn panicked_altisaur_pings_each_opponent() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::panicked_altisaur());
+    g.clear_sickness(dino);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let start = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dino, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, start - 2);
+}
+
+/// Plundering Pirate makes a Treasure on ETB.
+#[test]
+fn plundering_pirate_makes_treasure() {
+    let mut g = two_player_game();
+    let pirate = g.add_card_to_hand(0, catalog::plundering_pirate());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pirate, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
+}
+
+/// Miner's Guidewing's death trigger makes a creature you control explore (puts
+/// a +1/+1 counter when a nonland is revealed).
+#[test]
+fn miners_guidewing_dies_triggers_explore() {
+    let mut g = two_player_game();
+    let wing = g.add_card_to_battlefield(0, catalog::miners_guidewing());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Stack a nonland on top so the explore yields a +1/+1 counter.
+    let nid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(nid, catalog::grizzly_bears(), 0));
+    g.remove_to_graveyard_with_triggers(wing);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1,
+        "explore put a +1/+1 counter",
+    );
+}

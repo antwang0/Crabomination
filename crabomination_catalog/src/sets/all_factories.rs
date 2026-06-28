@@ -4381,6 +4381,15 @@ static LCI: &[Factory] = &[
     super::lci::rampaging_ceratops,
     super::lci::mineshaft_spider,
     super::lci::poison_dart_frog,
+    super::lci::river_herald_scout,
+    super::lci::waterwind_scout,
+    super::lci::pathfinding_axejaw,
+    super::lci::merfolk_cave_diver,
+    super::lci::panicked_altisaur,
+    super::lci::plundering_pirate,
+    super::lci::vitos_inquisitor,
+    super::lci::oltec_cloud_guard,
+    super::lci::miners_guidewing,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

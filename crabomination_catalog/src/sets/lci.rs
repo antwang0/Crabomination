@@ -690,3 +690,223 @@ pub fn poison_dart_frog() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── LCI explore / Map / token commons ───────────────────────────────────────
+
+/// River Herald Scout — {1}{U} 1/2 Merfolk Scout. ETB: it explores.
+pub fn river_herald_scout() -> CardDefinition {
+    CardDefinition {
+        name: "River Herald Scout",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Explore { who: Selector::This })],
+        ..Default::default()
+    }
+}
+
+/// Waterwind Scout — {2}{U} 2/2 Merfolk Scout with flying. ETB: create a Map.
+pub fn waterwind_scout() -> CardDefinition {
+    CardDefinition {
+        name: "Waterwind Scout",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: map_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pathfinding Axejaw — {3}{G} 4/3 Dinosaur. ETB: it explores.
+pub fn pathfinding_axejaw() -> CardDefinition {
+    CardDefinition {
+        name: "Pathfinding Axejaw",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Explore { who: Selector::This })],
+        ..Default::default()
+    }
+}
+
+/// Merfolk Cave-Diver — {2}{U} 2/4 Merfolk Scout. Whenever a creature you
+/// control explores, this gets +1/+0 and can't be blocked this turn.
+pub fn merfolk_cave_diver() -> CardDefinition {
+    CardDefinition {
+        name: "Merfolk Cave-Diver",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Explored, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Panicked Altisaur — {4}{R} 4/5 Dinosaur with reach. {T}: deals 2 damage to
+/// each opponent.
+pub fn panicked_altisaur() -> CardDefinition {
+    CardDefinition {
+        name: "Panicked Altisaur",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Plundering Pirate — {2}{R} 3/2 Orc Pirate. ETB: create a Treasure token.
+pub fn plundering_pirate() -> CardDefinition {
+    CardDefinition {
+        name: "Plundering Pirate",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: treasure_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vito's Inquisitor — {3}{B} 3/3 Vampire Knight. {B}, Sacrifice another
+/// creature or artifact: put a +1/+1 counter on this and it gains menace EOT.
+pub fn vitos_inquisitor() -> CardDefinition {
+    CardDefinition {
+        name: "Vito's Inquisitor",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oltec Cloud Guard — {3}{W} 3/2 Human Soldier with flying. ETB: create a 1/1
+/// colorless Gnome artifact creature token.
+pub fn oltec_cloud_guard() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Oltec Cloud Guard",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Gnome".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Artifact, CardType::Creature],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Miner's Guidewing — {W} 1/1 Bird with flying and vigilance. When it dies,
+/// target creature you control explores.
+pub fn miners_guidewing() -> CardDefinition {
+    CardDefinition {
+        name: "Miner's Guidewing",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![on_dies(Effect::Explore {
+            who: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        })],
+        ..Default::default()
+    }
+}
