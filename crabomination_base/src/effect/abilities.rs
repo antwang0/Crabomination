@@ -1286,6 +1286,16 @@ pub struct ActivatedAbility {
     /// — is never cleared at turn start. Defaults to false.
     #[serde(default)]
     pub exhaust: bool,
+    /// Craft (CR 702.169) — exile `count` *other* objects matching this
+    /// filter from among permanents you control and/or cards in your
+    /// graveyard, as an additional cost. Pairs with
+    /// `Effect::ExileSelfReturnTransformed` (which exiles the source and
+    /// returns it transformed). Activate only as a sorcery
+    /// (`sorcery_speed: true`). The auto-picker exiles graveyard cards
+    /// first, then the lowest-power battlefield permanents, so higher-value
+    /// board pieces stay put. Defaults to None.
+    #[serde(default)]
+    pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

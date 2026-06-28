@@ -8234,6 +8234,46 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight Craft gate (CR 702.169): collect `count` *other* objects
+        // matching the filter from among permanents the activator controls
+        // and/or cards in their graveyard. Reject cleanly when fewer than
+        // `count` match. Auto-picks graveyard cards first, then the lowest-power
+        // battlefield permanents, so higher-value board pieces stay put. The
+        // exile happens after tap/mana/life payment succeeds. (`(card_id, true)`
+        // marks a graveyard pick; `(id, false)` a battlefield pick.)
+        let craft_exile_picks: Vec<(CardId, bool)> = if let Some((filter, count)) =
+            ability.craft_exile_cost.as_ref()
+        {
+            let count = *count as usize;
+            let gy: Vec<CardId> = self.players[p]
+                .graveyard
+                .iter()
+                .filter(|c| c.id != card_id)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            let mut bf: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            if gy.len() + bf.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            let mut picks: Vec<(CardId, bool)> =
+                gy.into_iter().take(count).map(|id| (id, true)).collect();
+            if picks.len() < count {
+                let need = count - picks.len();
+                bf = self.auto_pick_lowest_power(&bf, need);
+                picks.extend(bf.into_iter().map(|id| (id, false)));
+            }
+            picks
+        } else {
+            Vec::new()
+        };
+
         // Pre-flight sacrifice-other gate: confirm `count` battlefield
         // permanents the activator controls match the cost's filter
         // (excluding the source itself, since activating from the
@@ -8852,6 +8892,32 @@ impl GameState {
                 &crate::game::effects::EffectContext::for_ability(card_id, p, None),
                 &mut events,
             );
+        }
+
+        // Craft-exile-as-cost (CR 702.169): with tap/mana/life paid, exile
+        // each cost-picked object. Battlefield permanents route through
+        // `move_card_to` so leaves-the-battlefield triggers fire; graveyard
+        // cards move straight to exile. Validated by the pre-flight
+        // `craft_exile_picks` gate.
+        for (other_cid, in_gy) in craft_exile_picks {
+            if in_gy {
+                if let Some(idx) = self.players[p].graveyard.iter().position(|c| c.id == other_cid) {
+                    let card = self.players[p].graveyard.remove(idx);
+                    self.exile.push(card);
+                    events.push(GameEvent::CardLeftGraveyard { player: p, card_id: other_cid });
+                    self.players[p].cards_left_graveyard_this_turn =
+                        self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+                }
+                self.players[p].cards_exiled_this_turn =
+                    self.players[p].cards_exiled_this_turn.saturating_add(1);
+            } else {
+                self.move_card_to(
+                    other_cid,
+                    &crate::effect::ZoneDest::Exile,
+                    &crate::game::effects::EffectContext::for_ability(card_id, p, None),
+                    &mut events,
+                );
+            }
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile

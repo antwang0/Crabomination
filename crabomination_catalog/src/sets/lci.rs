@@ -2,13 +2,15 @@
 //! (CR 701.57) keyword action.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement, Selector,
-    Subtypes, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement, Selector, Subtypes,
+    TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_dies, target_filtered};
+use crate::effect::shortcut::{craft, drain, etb, on_attack, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, ZoneDest};
 use crate::game::effects::{map_token, treasure_token};
-use crate::mana::{b, cost, g, generic, r, u, x};
+use crate::mana::{b, cost, g, generic, r, u, w, x};
+use crate::game::types::TurnStep;
 
 /// Geological Appraiser — {2}{R}{R} 3/2 Human Artificer. "When this enters,
 /// if you cast it, discover 3." (The "if you cast it" gate is approximated as
@@ -108,6 +110,137 @@ pub fn goldvein_hydra() -> CardDefinition {
             count: Value::PowerOf(Box::new(Selector::This)),
             definition: treasure_token(),
         })],
+        ..Default::default()
+    }
+}
+
+// ── Craft (CR 702.169) — LCI transforming artifacts ─────────────────────────
+// The front face exiles itself and returns transformed via
+// `Effect::ExileSelfReturnTransformed`; the "exile N other [type]" additional
+// cost rides `craft_exile_cost` (graveyard cards first, then lowest-power
+// battlefield permanents). All are sorcery-speed.
+
+/// Tithing Blade // Consuming Sepulcher — {1}{B} Artifact; ETB each opponent
+/// sacrifices a creature. Craft with creature {4}{B} → Consuming Sepulcher
+/// (Artifact; your upkeep: drain 1).
+pub fn tithing_blade() -> CardDefinition {
+    let sepulcher = CardDefinition {
+        name: "Consuming Sepulcher",
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: drain(1),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Tithing Blade",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        })],
+        activated_abilities: vec![craft(cost(&[generic(4), b()]), SelectionRequirement::Creature, 1)],
+        back_face: Some(Box::new(sepulcher)),
+        ..Default::default()
+    }
+}
+
+/// Visage of Dread // Dread Osseosaur — {1}{B} Artifact; ETB target opponent
+/// reveals hand, you choose an artifact/creature card, they discard it. Craft
+/// with two creatures {5}{B} → Dread Osseosaur (5/4 Menace; ETB/attack mill 2).
+pub fn visage_of_dread() -> CardDefinition {
+    let osseosaur = CardDefinition {
+        name: "Dread Osseosaur",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Skeleton, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            etb(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+            on_attack(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Visage of Dread",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::DiscardChosen {
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+        })],
+        activated_abilities: vec![craft(cost(&[generic(5), b()]), SelectionRequirement::Creature, 2)],
+        back_face: Some(Box::new(osseosaur)),
+        ..Default::default()
+    }
+}
+
+/// Spring-Loaded Sawblades // Bladewheel Chariot — {1}{W} Artifact, Flash; ETB
+/// deal 5 to target tapped creature an opponent controls. Craft with artifact
+/// {3}{W} → Bladewheel Chariot (Artifact Vehicle 5/5, Crew 1).
+pub fn spring_loaded_sawblades() -> CardDefinition {
+    let chariot = CardDefinition {
+        name: "Bladewheel Chariot",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Crew(1)],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Spring-Loaded Sawblades",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::Tapped)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(5),
+        })],
+        activated_abilities: vec![craft(cost(&[generic(3), w()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(chariot)),
+        ..Default::default()
+    }
+}
+
+/// Waterlogged Hulk // Watertight Gondola — {U} Artifact; {T}: mill a card.
+/// Craft with Island {3}{U} → Watertight Gondola (Artifact Vehicle 4/4,
+/// Vigilance, Crew 1). (Descend-8 unblockable is omitted.)
+pub fn waterlogged_hulk() -> CardDefinition {
+    let gondola = CardDefinition {
+        name: "Watertight Gondola",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Crew(1)],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Waterlogged Hulk",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+            craft(cost(&[generic(3), u()]), SelectionRequirement::HasLandType(LandType::Island), 1),
+        ],
+        back_face: Some(Box::new(gondola)),
         ..Default::default()
     }
 }

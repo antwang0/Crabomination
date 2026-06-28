@@ -3024,6 +3024,22 @@ pub fn scavenge(cost: crate::mana::ManaCost) -> ActivatedAbility {
     }
 }
 
+/// Craft (CR 702.169): "[cost], Exile this artifact, Exile `count` other
+/// [filter] from among permanents you control and/or [filter] cards from your
+/// graveyard: Return this card transformed. Activate only as a sorcery." The
+/// source's exile-and-return-transformed rides `ExileSelfReturnTransformed`;
+/// the additional "exile N other objects" cost rides `craft_exile_cost`. The
+/// front face must carry a `back_face`. LCI cycle.
+pub fn craft(cost: crate::mana::ManaCost, filter: SelectionRequirement, count: u32) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        craft_exile_cost: Some((filter, count)),
+        effect: Effect::ExileSelfReturnTransformed,
+        ..Default::default()
+    }
+}
+
 /// Transmute (CR 702.53): "[cost], Discard this card: Search your library for a
 /// card with the same mana value as this card, reveal it, put it into your
 /// hand, then shuffle. Activate only as a sorcery." `mv` is the card's own mana

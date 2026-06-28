@@ -4360,6 +4360,10 @@ static LCI: &[Factory] = &[
     super::lci::spyglass_siren,
     super::lci::defossilize,
     super::lci::goldvein_hydra,
+    super::lci::tithing_blade,
+    super::lci::visage_of_dread,
+    super::lci::spring_loaded_sawblades,
+    super::lci::waterlogged_hulk,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

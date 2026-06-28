@@ -246,7 +246,13 @@ Each a small targeted feature; sweep batch by batch.
   deck-construction validation, full Ikoria cycle),
   ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
   502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
-  ✅ Backup, ✅ Bargain, ⏳ Craft, ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
+  ✅ Backup, ✅ Bargain,
+  ✅ Craft (CR 702.169 — `shortcut::craft`: sorcery-speed activated ability
+    pairing `craft_exile_cost` (exile N other objects from among permanents you
+    control and/or graveyard cards) with `Effect::ExileSelfReturnTransformed`;
+    LCI batch in `sets::lci` — Tithing Blade, Visage of Dread, Spring-Loaded
+    Sawblades, Waterlogged Hulk),
+  ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
   ✅ Gift (CR 702.165 — `CardDefinition.gift` + `GameAction::CastGift`; promise
   the gift and resolve the enhanced `gifted_effect`, incl. target-broadening —
   Into the Flood Maw, Long River's Pull),
