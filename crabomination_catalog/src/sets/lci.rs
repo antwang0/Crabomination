@@ -445,32 +445,6 @@ pub fn souls_of_the_lost() -> CardDefinition {
     }
 }
 
-/// Acolyte of Aclazotz — {2}{B} 1/4 Vampire Cleric. {T}, Sacrifice another
-/// creature or artifact: each opponent loses 1 life and you gain 1 life.
-pub fn acolyte_of_aclazotz() -> CardDefinition {
-    CardDefinition {
-        name: "Acolyte of Aclazotz",
-        cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 4,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            sac_other_filter: Some((
-                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-                1,
-            )),
-            effect: drain(1),
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Cavern Stomper — {4}{G}{G} 7/7 Dinosaur. ETB scry 2. {3}{G}: this can't be
 /// blocked by creatures with power 2 or less this turn.
 pub fn cavern_stomper() -> CardDefinition {
@@ -4064,6 +4038,178 @@ pub fn ixallis_lorekeeper() -> CardDefinition {
                     Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
                     crate::mana::SpendRestriction::CreatureOfType(CreatureType::Dinosaur),
                 ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Didact Echo — {4}{U} 3/2 Spirit Cleric. ETB draw a card. Descend 4 — has
+/// flying while you have 4+ permanent cards in your graveyard.
+pub fn didact_echo() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Didact Echo",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit, CreatureType::Cleric], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        static_abilities: vec![StaticAbility {
+            description: "Descend 4 — has flying while you have 4+ permanent cards in your graveyard.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Flying,
+                condition: SelectionRequirement::ControllerDescend(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Synapse Necromage — {2}{B} 3/1 Fungus Wizard. When it dies, create two 1/1
+/// black Fungus tokens that can't block.
+pub fn synapse_necromage() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Synapse Necromage",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus, CreatureType::Wizard], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Fungus".into(),
+                power: 1,
+                toughness: 1,
+                colors: vec![Color::Black],
+                card_types: vec![CardType::Creature],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+                keywords: vec![Keyword::CantBlock],
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Acolyte of Aclazotz — {2}{B} 1/4 Vampire Cleric. {T}, Sacrifice another
+/// creature or artifact: each opponent loses 1 life and you gain 1.
+pub fn acolyte_of_aclazotz() -> CardDefinition {
+    CardDefinition {
+        name: "Acolyte of Aclazotz",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire, CreatureType::Cleric], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Creature.or(SelectionRequirement::Artifact), 1)),
+            effect: drain(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Broodrage Mycoid — {3}{B} 4/3 Fungus. At your end step, if you descended this
+/// turn, create a 1/1 black Fungus token that can't block.
+pub fn broodrage_mycoid() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Broodrage Mycoid",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::If {
+                cond: Predicate::DescendedThisTurn { who: PlayerRef::You },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Fungus".into(),
+                        power: 1,
+                        toughness: 1,
+                        colors: vec![Color::Black],
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+                        keywords: vec![Keyword::CantBlock],
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abyssal Gorestalker — {4}{B}{B} 6/6 Horror. ETB: each player sacrifices two
+/// creatures of their choice.
+pub fn abyssal_gorestalker() -> CardDefinition {
+    CardDefinition {
+        name: "Abyssal Gorestalker",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            count: Value::Const(2),
+            filter: SelectionRequirement::Creature,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Skullcap Snail — {1}{B} 1/1 Fungus Snail. ETB: target opponent exiles a card
+/// from their hand. (Caster auto-picks — the engine-wide player-choice gap.)
+pub fn skullcap_snail() -> CardDefinition {
+    CardDefinition {
+        name: "Skullcap Snail",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus, CreatureType::Snail], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::ExileChosenFromHand {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Any,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Hoverstone Pilgrim — {5} 2/5 Golem artifact creature with flying and ward
+/// {2}. {2}: put target card from a graveyard on the bottom of its owner's
+/// library.
+pub fn hoverstone_pilgrim() -> CardDefinition {
+    use crate::card::WardCost;
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Hoverstone Pilgrim",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InGraveyard),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
             },
             ..Default::default()
         }],

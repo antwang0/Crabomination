@@ -2336,3 +2336,114 @@ fn curator_of_suns_creation_rediscovers() {
     // Initial discover + Curator's re-discover = two cards to hand.
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "discovered twice");
 }
+
+/// Didact Echo draws on ETB and gains flying at descend 4.
+#[test]
+fn didact_echo_draw_and_descend_flying() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let echo = g.add_card_to_hand(0, catalog::didact_echo());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: echo, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 spell + 1 drawn = net unchanged.
+    assert_eq!(g.players[0].hand.len(), before);
+    assert!(!g.computed_permanent(echo).unwrap().keywords.contains(&Keyword::Flying), "no flying yet");
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    assert!(g.computed_permanent(echo).unwrap().keywords.contains(&Keyword::Flying), "descend 4 → flying");
+}
+
+/// Synapse Necromage makes two can't-block Fungus tokens when it dies.
+#[test]
+fn synapse_necromage_dies_makes_fungi() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::synapse_necromage());
+    g.remove_to_graveyard_with_triggers(mage);
+    drain_stack(&mut g);
+    let fungi: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Fungus" && c.is_token).collect();
+    assert_eq!(fungi.len(), 2, "two Fungus tokens");
+    assert!(fungi[0].definition.keywords.contains(&Keyword::CantBlock));
+}
+
+/// Broodrage Mycoid makes a Fungus at end step after descending.
+#[test]
+fn broodrage_mycoid_descend_end_step_token() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::broodrage_mycoid());
+    g.active_player_idx = 0;
+    // No descend yet → no token.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Fungus" && c.is_token), "no token without descend");
+    g.players[0].descended_this_turn = true;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Fungus" && c.is_token), "token after descend");
+}
+
+/// Abyssal Gorestalker makes each player sacrifice two creatures.
+#[test]
+fn abyssal_gorestalker_mass_edict() {
+    let mut g = two_player_game();
+    let o1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let o2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let m1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stalker = g.add_card_to_hand(0, catalog::abyssal_gorestalker());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: stalker, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Opponent loses both bears; you lose your one other creature (m1).
+    assert!(g.battlefield_find(o1).is_none() && g.battlefield_find(o2).is_none(), "opp sacrificed two");
+    assert!(g.battlefield_find(m1).is_none(), "you sacrificed your other creature");
+}
+
+/// Skullcap Snail exiles a card from an opponent's hand on ETB.
+#[test]
+fn skullcap_snail_exiles_from_hand() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let snail = g.add_card_to_hand(0, catalog::skullcap_snail());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: snail, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == victim), "exiled from hand");
+    assert!(g.exile.iter().any(|c| c.id == victim), "card is in exile");
+}
+
+/// Hoverstone Pilgrim bottoms a graveyard card.
+#[test]
+fn hoverstone_pilgrim_bottoms_graveyard_card() {
+    let mut g = two_player_game();
+    let pilgrim = g.add_card_to_battlefield(0, catalog::hoverstone_pilgrim());
+    g.clear_sickness(pilgrim);
+    let gy_card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pilgrim, ability_index: 0, target: Some(Target::Permanent(gy_card)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == gy_card), "left graveyard");
+    assert!(g.players[1].library.iter().any(|c| c.id == gy_card), "on owner's library");
+}
