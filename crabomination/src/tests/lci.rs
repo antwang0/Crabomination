@@ -2896,3 +2896,28 @@ fn sage_of_days_keeps_one_mills_two() {
     assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "two cards milled");
     assert_eq!(g.players[0].library.len(), lib_before - 2, "one kept on top");
 }
+
+/// Deepfathom Echo explores and may become a copy of another creature at combat.
+#[test]
+fn deepfathom_echo_explores_and_copies() {
+    let mut g = two_player_game();
+    let echo = g.add_card_to_battlefield(0, catalog::deepfathom_echo());
+    let serra = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 flyer to copy
+    g.clear_sickness(echo);
+    // Stack a nonland on top so the explore yields a +1/+1 counter (deterministic).
+    let nid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(nid, catalog::grizzly_bears(), 0));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Accept the optional copy, targeting Serra Angel.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(serra)),
+    ]));
+    to_step(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(echo).unwrap();
+    // Became a copy of Serra Angel (4/4 flyer); the +1/+1 explore counter rides on top.
+    assert!(cp.keywords.contains(&Keyword::Flying), "copied Serra Angel's flying");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
+}

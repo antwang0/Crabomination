@@ -5088,3 +5088,41 @@ pub fn sage_of_days() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Deepfathom Echo — {2}{G}{U} 4/4 Merfolk Spirit. At the beginning of combat on
+/// your turn, it explores; then you may have it become a copy of another
+/// creature you control until end of turn.
+pub fn deepfathom_echo() -> CardDefinition {
+    CardDefinition {
+        name: "Deepfathom Echo",
+        cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk, CreatureType::Spirit], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::ControlledByYou,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Explore { who: Selector::This },
+                Effect::MayDo {
+                    description: "have it become a copy of another creature you control".into(),
+                    body: Box::new(Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
+                        ),
+                        duration: Duration::EndOfTurn,
+                        non_legendary: false,
+                    }),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
