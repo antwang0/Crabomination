@@ -4695,3 +4695,70 @@ pub fn thousand_moons_infantry() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Magmatic Galleon — {3}{R}{R} Artifact — Vehicle 5/5, Crew 2. ETB: deal 5
+/// damage to target creature an opponent controls. (The excess-noncombat-damage
+/// Treasure trigger is approximated away.)
+pub fn magmatic_galleon() -> CardDefinition {
+    CardDefinition {
+        name: "Magmatic Galleon",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Crew(2)],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(5),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Relic's Roar — {U} Instant. Until end of turn, target artifact or creature
+/// becomes a 4/3 Dinosaur creature in addition to its other types. (The
+/// granted artifact card type is approximated away.)
+pub fn relics_roar() -> CardDefinition {
+    CardDefinition {
+        name: "Relic's Roar",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeCreature {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            ),
+            power: Value::Const(4),
+            toughness: Value::Const(3),
+            creature_types: vec![CreatureType::Dinosaur],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Hurl into History — {3}{U}{U} Instant. Counter target artifact or creature
+/// spell, then discover X where X is that spell's mana value.
+pub fn hurl_into_history() -> CardDefinition {
+    CardDefinition {
+        name: "Hurl into History",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Discover {
+                n: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                filter: None,
+            },
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}

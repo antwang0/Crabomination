@@ -2591,3 +2591,64 @@ fn thousand_moons_infantry_untaps_on_opponent_untap() {
     g.do_untap();
     assert!(g.battlefield_find(bear).unwrap().tapped, "vanilla stays tapped on opponent's untap");
 }
+
+/// Magmatic Galleon's ETB deals 5 to an opponent's creature.
+#[test]
+fn magmatic_galleon_etb_burns_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let gal = g.add_card_to_hand(0, catalog::magmatic_galleon());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gal, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast vehicle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "4/4 took 5 and died");
+}
+
+/// Relic's Roar animates an artifact into a 4/3 Dinosaur.
+#[test]
+fn relics_roar_animates_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(0, catalog::buried_treasure());
+    let rr = g.add_card_to_hand(0, catalog::relics_roar());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast_at(&mut g, rr, Target::Permanent(art));
+    let cp = g.computed_permanent(art).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "now a 4/3");
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Dinosaur), "Dinosaur");
+}
+
+/// Hurl into History counters an artifact/creature spell and discovers its MV.
+#[test]
+fn hurl_into_history_counters_and_discovers() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::serra_angel()); // MV 5 creature
+    g.players[1].mana_pool.add(Color::White, 3);
+    g.players[1].mana_pool.add_colorless(2);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    // Seed a cheap nonland on top so the discover finds something MV ≤ 5.
+    let nid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(nid, catalog::grizzly_bears(), 0));
+    let hurl = g.add_card_to_hand(0, catalog::hurl_into_history());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // discover → to hand
+    cast_at(&mut g, hurl, Target::Permanent(spell));
+    assert!(g.battlefield_find(spell).is_none(), "creature spell countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "countered spell in graveyard");
+}

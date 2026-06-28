@@ -4540,6 +4540,9 @@ static LCI: &[Factory] = &[
     super::lci::belligerent_yearling,
     super::lci::squirming_emergence,
     super::lci::thousand_moons_infantry,
+    super::lci::magmatic_galleon,
+    super::lci::relics_roar,
+    super::lci::hurl_into_history,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
