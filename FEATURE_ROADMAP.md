@@ -84,7 +84,12 @@ exercising each) was elided in a compaction pass; recover it from
   (`StaticEffect::CanAttackIgnoringDefenderWhile` — Drowsing Tyrannodon);
   bounty-counter dies payoff (`CounterType::Bounty` — Chevill);
   token-created triggers (CR 111.10 — `EventKind::TokenCreated`, fires once per
-  token incl. doubled tokens — Voldaren Bloodcaster's five-Blood transform).
+  token incl. doubled tokens — Voldaren Bloodcaster's five-Blood transform);
+  reflexive "when you do" payoffs (CR 603.7 — `Effect::Reflexive`, opaque to the
+  cast/trigger-time target walk, auto-targets at resolution; composes with
+  `MayPay`/`MaySacrifice` — Itzquinth, Glorifier of Suffering, Inti);
+  counter-added triggers bind `Selector::TriggerSource` to the counter-receiving
+  permanent (CR 122/603.6 — Auntie Ool's Ward—Blight drain off an opponent).
 - **Protection / locks / piles (THB batch):** protection from each mana value
   other than N (`Keyword::ProtectionFromManaValueExcept`, all DEBT facets —
   Haktos); permanent opponents-can't-cast-named lock + linked counter-exile

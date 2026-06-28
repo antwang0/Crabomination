@@ -31,6 +31,16 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
 - **Molten Collapse / Abuelo's Awakening** deferred: Molten Collapse needs a
   descend-gated "choose both" modal (conditional extra mode with per-mode
   targets); Abuelo's Awakening needs reanimate-as-1/1-flying-Spirit + X counters.
+- **Opponents-must-attack-you static** (Trove of Temptation) — a global force-
+  attack (≥1 creature per opponent at you / your planeswalker each combat), a new
+  `StaticEffect` honored by the attack-legality check and the bot's attack
+  heuristic. Only the end-step Treasure half is tractable today, so the card is
+  deferred rather than shipped at half fidelity.
+- **Saheeli, the Sun's Brilliance** — token-copy that's "an artifact in addition
+  to its other types" + sac-at-next-end-step. `CreateTokenCopyOf` lacks the
+  add-a-card-type rider; deferred.
+- **Master of the Hunt / banding** (CR 702.22) — the Wolves-of-the-Hunt token
+  needs real banding; deferred.
 - **"Descended this turn" reset** is at untap; double-check end-step descend
   payoffs see the flag (they fire in the same turn's end step — verified for
   Deep Goblin Skulltaker).
