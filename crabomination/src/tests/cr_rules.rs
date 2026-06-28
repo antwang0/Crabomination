@@ -5013,3 +5013,42 @@ fn cr_704_5c_drawing_from_empty_library_loses() {
     assert!(g.players[0].eliminated, "empty-library draw eliminates the player");
     assert!(g.is_game_over(), "game ends — the other player wins");
 }
+
+// ── CR 603.7 — reflexive "when you do" triggered abilities ───────────────────
+
+/// CR 603.7 — a reflexive ability set up by "you may pay {2}. When you do, …"
+/// chooses its targets when it triggers (after the cost), not when the ETB
+/// trigger is put on the stack. `Effect::Reflexive` is opaque to the cast/
+/// trigger-time target walk; Itzquinth's bite resolves only after the {2}.
+#[test]
+fn cr_603_7_reflexive_payoff_targets_after_cost() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let itz = g.add_card_to_battlefield(0, catalog::itzquinth_firstborn_of_gishath());
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.fire_self_etb_triggers(itz, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "reflexive bite resolved after the {{2}} was paid");
+}
+
+// ── CR 701.57 — Discover ─────────────────────────────────────────────────────
+
+/// CR 701.57 — discover N exiles from the top until a nonland card with mana
+/// value ≤ N, then casts it for free (or puts it into hand). Trumpeting
+/// Carnosaur discovers 5 on ETB.
+#[test]
+fn cr_701_57_discover_digs_and_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 ≤ 5 → discovered
+    let carno = g.add_card_to_battlefield(0, catalog::trumpeting_carnosaur());
+    let lib_before = g.players[0].library.len();
+    g.fire_self_etb_triggers(carno, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() < lib_before, "discover dug into the library");
+    // The MV-2 nonland card was discovered — cast for free or put into hand.
+    let found = g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+        || g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears");
+    assert!(found, "discovered card moved out of the library (cast or to hand)");
+}
