@@ -87,6 +87,63 @@ fn craft_rejected_at_instant_speed() {
     assert!(err.is_err(), "craft barred at instant speed");
 }
 
+/// Crafting Inverted Iceberg returns the 6/6 Iceberg Titan artifact creature.
+#[test]
+fn craft_returns_artifact_creature_back_face() {
+    let mut g = two_player_game();
+    let ice = g.add_card_to_battlefield(0, catalog::inverted_iceberg());
+    g.add_card_to_battlefield(0, catalog::bonesplitter()); // an artifact to exile
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ice,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate craft");
+    drain_stack(&mut g);
+
+    let titan = g.battlefield_find(ice).expect("titan on bf");
+    assert_eq!(titan.definition.name, "Iceberg Titan");
+    assert_eq!((titan.power(), titan.toughness()), (6, 6));
+    assert!(titan.definition.is_creature());
+}
+
+/// Crafting Clay-Fired Bricks into Cosmium Kiln applies its +1/+1 anthem.
+#[test]
+fn craft_back_face_anthem_applies() {
+    let mut g = two_player_game();
+    let bricks = g.add_card_to_battlefield(0, catalog::clay_fired_bricks());
+    g.add_card_to_battlefield(0, catalog::bonesplitter()); // artifact to exile
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bricks,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("activate craft");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield_find(bricks).unwrap().definition.name, "Cosmium Kiln");
+    // The 2/2 Grizzly Bears is buffed to 3/3 by the anthem.
+    let buffed = g.computed_permanent(bear).unwrap();
+    assert_eq!((buffed.power, buffed.toughness), (3, 3));
+}
+
 /// Craft is rejected when there aren't enough other objects to exile.
 #[test]
 fn craft_rejected_without_enough_fodder() {

@@ -4364,6 +4364,11 @@ static LCI: &[Factory] = &[
     super::lci::visage_of_dread,
     super::lci::spring_loaded_sawblades,
     super::lci::waterlogged_hulk,
+    super::lci::lodestone_needle,
+    super::lci::inverted_iceberg,
+    super::lci::oteclan_landmark,
+    super::lci::dire_flail,
+    super::lci::clay_fired_bricks,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,

@@ -244,3 +244,173 @@ pub fn waterlogged_hulk() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lodestone Needle // Guidestone Compass — {1}{U} Artifact, Flash; ETB tap a
+/// target artifact/creature and put two stun counters on it. Craft with
+/// artifact {2}{U} → Guidestone Compass ({1},{T}: target creature you control
+/// explores; sorcery-speed).
+pub fn lodestone_needle() -> CardDefinition {
+    let compass = CardDefinition {
+        name: "Guidestone Compass",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            sorcery_speed: true,
+            effect: Effect::Explore {
+                who: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Lodestone Needle",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Artifact)),
+            },
+            Effect::AddCounter {
+                what: crate::effect::shortcut::target(),
+                kind: CounterType::Stun,
+                amount: Value::Const(2),
+            },
+        ]))],
+        activated_abilities: vec![craft(cost(&[generic(2), u()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(compass)),
+        ..Default::default()
+    }
+}
+
+/// Inverted Iceberg // Iceberg Titan — {1}{U} Artifact; ETB mill 1, then draw 1.
+/// Craft with artifact {4}{U}{U} → Iceberg Titan (6/6 Golem). (The attack
+/// tap/untap rider is omitted.)
+pub fn inverted_iceberg() -> CardDefinition {
+    let titan = CardDefinition {
+        name: "Iceberg Titan",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Inverted Iceberg",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        activated_abilities: vec![craft(cost(&[generic(4), u(), u()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(titan)),
+        ..Default::default()
+    }
+}
+
+/// Oteclan Landmark // Oteclan Levitator — {W} Artifact; ETB scry 2. Craft with
+/// artifact {2}{W} → Oteclan Levitator (1/4 Golem with flying). (The
+/// attack grant-flying rider is omitted.)
+pub fn oteclan_landmark() -> CardDefinition {
+    let levitator = CardDefinition {
+        name: "Oteclan Levitator",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Oteclan Landmark",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        activated_abilities: vec![craft(cost(&[generic(2), w()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(levitator)),
+        ..Default::default()
+    }
+}
+
+/// Dire Flail // Dire Blunderbuss — {R} Artifact Equipment, equipped +2/+0,
+/// Equip {1}. Craft with artifact {3}{R}{R} → Dire Blunderbuss (equipped +3/+0,
+/// Equip {1}). (The "attack-sac-artifact ping" granted ability is omitted.)
+pub fn dire_flail() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let blunderbuss = CardDefinition {
+        name: "Dire Blunderbuss",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus { power: 3, toughness: 0, ..Default::default() }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dire Flail",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, ..Default::default() }),
+        activated_abilities: vec![craft(cost(&[generic(3), r(), r()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(blunderbuss)),
+        ..Default::default()
+    }
+}
+
+/// Clay-Fired Bricks // Cosmium Kiln — {1}{W} Artifact; ETB tutor a basic Plains
+/// to hand and gain 2 life. Craft with artifact {5}{W}{W} → Cosmium Kiln (ETB
+/// make two 1/1 Gnome tokens; creatures you control get +1/+1).
+pub fn clay_fired_bricks() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, TokenDefinition};
+    let gnome = TokenDefinition {
+        name: "Gnome".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        ..Default::default()
+    };
+    let kiln = CardDefinition {
+        name: "Cosmium Kiln",
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: gnome,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Clay-Fired Bricks",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasLandType(LandType::Plains)
+                    .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Basic)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        activated_abilities: vec![craft(cost(&[generic(5), w(), w()]), SelectionRequirement::Artifact, 1)],
+        back_face: Some(Box::new(kiln)),
+        ..Default::default()
+    }
+}
