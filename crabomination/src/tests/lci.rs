@@ -358,3 +358,38 @@ fn sanguine_evangelist_battle_cry_and_bat() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Bat" && c.controller == 0), "ETB Bat token");
 }
+
+/// Family Reunion (mode 0) pumps your creatures +1/+1.
+#[test]
+fn family_reunion_pumps_your_team() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::family_reunion());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1");
+}
+
+/// Bartolomé del Presidio grows by sacrificing another creature.
+#[test]
+fn bartolome_sacrifices_for_counter() {
+    let mut g = two_player_game();
+    let barto = g.add_card_to_battlefield(0, catalog::bartolome_del_presidio());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: barto, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.computed_permanent(barto).unwrap().power, 3, "2/1 + counter = 3/2");
+}

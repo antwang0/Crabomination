@@ -1415,3 +1415,46 @@ pub fn sanguine_evangelist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── More LCI staples (Map / explore / removal) ──────────────────────────────
+
+/// Family Reunion — {1}{W} Instant. Choose one — creatures you control get
+/// +1/+1 until end of turn; or creatures you control gain hexproof until end
+/// of turn.
+pub fn family_reunion() -> CardDefinition {
+    let yours = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Family Reunion",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT { what: yours(), power: Value::Const(1), toughness: Value::Const(1), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: yours(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bartolomé del Presidio — {W}{B} 2/1 Vampire Knight. Sacrifice another
+/// creature or artifact: put a +1/+1 counter on Bartolomé.
+pub fn bartolome_del_presidio() -> CardDefinition {
+    CardDefinition {
+        name: "Bartolomé del Presidio",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature.or(SelectionRequirement::Artifact), 1)),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

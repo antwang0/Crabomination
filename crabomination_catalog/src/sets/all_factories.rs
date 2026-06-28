@@ -4414,6 +4414,8 @@ static LCI: &[Factory] = &[
     super::lci::hidden_nursery,
     super::lci::spelunking,
     super::lci::sanguine_evangelist,
+    super::lci::family_reunion,
+    super::lci::bartolome_del_presidio,
 ];
 static LEA: &[Factory] = &[
     super::lea::mox_pearl,
