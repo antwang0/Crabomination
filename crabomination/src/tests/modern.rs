@@ -65444,3 +65444,60 @@ fn disallow_counters_a_spell() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Lightning Bolt countered to graveyard");
 }
+
+#[test]
+fn voice_of_the_provinces_makes_a_human() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::voice_of_the_provinces());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Human" && c.controller == 0),
+        "minted a 1/1 Human");
+}
+
+#[test]
+fn sensor_splicer_makes_a_golem_with_vigilance_anthem() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sensor_splicer());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").expect("Golem minted");
+    let cp = g.computed_permanent(golem.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Golem));
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "Golem anthem grants vigilance");
+}
+
+#[test]
+fn maul_splicer_makes_two_golems_with_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::maul_splicer());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let golems: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Golem").collect();
+    assert_eq!(golems.len(), 2, "minted two Golems");
+    let cp = g.computed_permanent(golems[0].id).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Trample), "Golem anthem grants trample");
+}
+
+#[test]
+fn sengir_autocrat_makes_three_serfs() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sengir_autocrat());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Serf").count(), 3, "three Serfs");
+}
+
+#[test]
+fn yavimaya_granger_fetches_a_basic_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_battlefield(0, catalog::yavimaya_granger());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "fetched a Forest to hand");
+}

@@ -16581,6 +16581,165 @@ pub fn capsize() -> CardDefinition {
     }
 }
 
+/// Voice of the Provinces — {4}{W}{W} 3/3 Angel. Flying. When it enters, create
+/// a 1/1 white Human creature token.
+pub fn voice_of_the_provinces() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Voice of the Provinces",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Human".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// A 3/3 colorless Phyrexian Golem artifact creature token.
+fn phyrexian_golem_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Golem".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Golem-keyword anthem ("Golem creatures you control have [kw]").
+fn golem_anthem(keyword: Keyword) -> StaticAbility {
+    StaticAbility {
+        description: "Golem creatures you control have a keyword.",
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Golem)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword,
+        },
+    }
+}
+
+/// Sensor Splicer — {4}{W} 1/1 Phyrexian Artificer. ETB create a 3/3 Phyrexian
+/// Golem; Golem creatures you control have vigilance.
+pub fn sensor_splicer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Sensor Splicer",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: phyrexian_golem_token(),
+        })],
+        static_abilities: vec![golem_anthem(Keyword::Vigilance)],
+        ..Default::default()
+    }
+}
+
+/// Maul Splicer — {6}{G} 1/1 Phyrexian Human Artificer. ETB create two 3/3
+/// Phyrexian Golems; Golem creatures you control have trample.
+pub fn maul_splicer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Maul Splicer",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: phyrexian_golem_token(),
+        })],
+        static_abilities: vec![golem_anthem(Keyword::Trample)],
+        ..Default::default()
+    }
+}
+
+/// Sengir Autocrat — {3}{B} 2/2 Human. ETB create three 0/1 black Serf tokens.
+/// (The "exile all Serfs when this leaves" rider is dropped — tracked in
+/// TODO.md.)
+pub fn sengir_autocrat() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Sengir Autocrat",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: TokenDefinition {
+                name: "Serf".into(),
+                power: 0,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Black],
+                // "Serf" isn't in the CreatureType enum; the token keeps its
+                // printed name with no modeled subtype.
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Yavimaya Granger — {2}{G} 2/2 Elf. ETB search your library for a basic land,
+/// reveal it, put it into your hand. (Echo is dropped — tracked in TODO.md.)
+pub fn yavimaya_granger() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Yavimaya Granger",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Flames of the Firebrand — {2}{R} Sorcery. Deal 3 damage divided as you
 /// choose among up to three target creatures and/or players.
 pub fn flames_of_the_firebrand() -> CardDefinition {
