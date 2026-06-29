@@ -1357,6 +1357,12 @@ pub struct PermanentView {
     /// Frog). A UI hint so clients can badge "abilities removed".
     #[serde(default)]
     pub lost_all_abilities: bool,
+    /// Computed colors after layer-5 effects (so a creature turned blue by
+    /// Turn to Frog / Snakeform shows as blue). Empty = colorless. Lets the
+    /// client surface a "now [color]" line when it differs from the printed
+    /// card. `#[serde(default)]` for older clients.
+    #[serde(default)]
+    pub colors: Vec<crate::mana::Color>,
 }
 
 impl PermanentView {

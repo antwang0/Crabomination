@@ -1073,6 +1073,7 @@ mod tests {
             prepare_needs_target: false,
             creature_subtypes: vec![],
             lost_all_abilities: false,
+            colors: vec![],
             crew_power_bonus: 0,
             saddled: false,
             station_charges: None,

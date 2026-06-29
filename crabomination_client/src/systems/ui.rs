@@ -728,6 +728,7 @@ fn live_override_lines(
     name: &str,
     lost_all_abilities: bool,
     creature_subtypes: &[crabomination::card::CreatureType],
+    colors: &[crabomination::mana::Color],
 ) -> Vec<(String, bool)> {
     let mut out = Vec::new();
     if lost_all_abilities {
@@ -736,8 +737,10 @@ fn live_override_lines(
     // Computed creature subtypes that differ from the printed ones (a
     // type-changing aura / animation). Only note it when there's an actual
     // change so vanilla creatures stay quiet.
-    let printed_types = crabomination::catalog::lookup_by_name(name)
-        .map(|d| d.subtypes.creature_types)
+    let printed = crabomination::catalog::lookup_by_name(name);
+    let printed_types = printed
+        .as_ref()
+        .map(|d| d.subtypes.creature_types.clone())
         .unwrap_or_default();
     if !creature_subtypes.is_empty() && creature_subtypes != printed_types.as_slice() {
         let line = creature_subtypes
@@ -746,6 +749,28 @@ fn live_override_lines(
             .collect::<Vec<_>>()
             .join(" ");
         out.push((format!("Now: {line}"), true));
+    }
+    // Computed colors that differ from the printed card's colors (a
+    // color-changing effect — Turn to Frog / Snakeform become blue/green).
+    if let Some(def) = printed.as_ref() {
+        let mut printed_colors = def.cost.colors();
+        for c in &def.color_indicator {
+            if !printed_colors.contains(c) {
+                printed_colors.push(*c);
+            }
+        }
+        if colors != printed_colors.as_slice() {
+            let label = if colors.is_empty() {
+                "colorless".to_string()
+            } else {
+                colors
+                    .iter()
+                    .map(|c| format!("{c:?}").to_lowercase())
+                    .collect::<Vec<_>>()
+                    .join(" and ")
+            };
+            out.push((format!("Now: {label}"), true));
+        }
     }
     out
 }
@@ -951,7 +976,12 @@ pub fn hover_card_preview(
     if let (Some(id), Some(cv)) = (card_id, view.0.as_ref())
         && let Some(pv) = cv.battlefield.iter().find(|p| p.id == id)
     {
-        info.extend(live_override_lines(&pv.name, pv.lost_all_abilities, &pv.creature_subtypes));
+        info.extend(live_override_lines(
+            &pv.name,
+            pv.lost_all_abilities,
+            &pv.creature_subtypes,
+            &pv.colors,
+        ));
     }
     // Estimated panel height so the anchor keeps the whole column on screen
     // (reminder lines wrap to ~2 rows at this width).

@@ -3670,6 +3670,9 @@ fn view_surfaces_aura_characteristic_override() {
     assert!(pv.creature_subtypes.contains(&crate::card::CreatureType::Fish), "shown as a Fish");
     assert!(pv.lost_all_abilities, "abilities-removed flag surfaced");
     assert_eq!((pv.power, pv.toughness), (0, 1));
+    // The white Angel becomes blue — the computed color is surfaced for the
+    // client's "Now: blue" override line.
+    assert_eq!(pv.colors, vec![Color::Blue], "computed color surfaced in the view");
 }
 
 /// Flummoxed Cyclops can block a lone attacker but not a swarm of two-plus.
