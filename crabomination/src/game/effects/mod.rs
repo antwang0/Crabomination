@@ -4180,20 +4180,33 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!("Return up to {n} cards to your hand"),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: n,
-                });
-                let chosen: Vec<CardId> = match answer {
-                    DecisionAnswer::Cards(ids) => ids
-                        .into_iter()
-                        .filter(|id| candidates.iter().any(|(c, _)| c == id))
-                        .take(n as usize)
-                        .collect(),
-                    _ => Vec::new(),
+                // Returning cards to hand is pure upside, so a non-UI seat
+                // (bot/AutoDecider, which would otherwise pick the min of 0)
+                // grabs the `n` highest-mana-value matches instead of whiffing.
+                let chosen: Vec<CardId> = if self.players[p].wants_ui {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: format!("Return up to {n} cards to your hand"),
+                        candidates: candidates.clone(),
+                        min: 0,
+                        max: n,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(ids) => ids
+                            .into_iter()
+                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                            .take(n as usize)
+                            .collect(),
+                        _ => Vec::new(),
+                    }
+                } else {
+                    let mut matches: Vec<&crate::card::CardInstance> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| candidates.iter().any(|(id, _)| *id == c.id))
+                        .collect();
+                    matches.sort_by_key(|c| std::cmp::Reverse(c.definition.cost.cmc()));
+                    matches.into_iter().take(n as usize).map(|c| c.id).collect()
                 };
                 for cid in chosen {
                     self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);

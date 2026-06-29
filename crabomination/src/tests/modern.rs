@@ -65189,17 +65189,14 @@ fn heat_shimmer_makes_a_hasty_copy() {
 #[test]
 fn macabre_waltz_returns_two_creatures_and_discards() {
     let mut g = two_player_game();
-    let c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let c2 = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let _c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let _c2 = g.add_card_to_graveyard(0, catalog::serra_angel());
     let filler = g.add_card_to_hand(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::macabre_waltz());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
-    // Return both creatures, then discard the Island.
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Cards(vec![c1, c2]),
-        DecisionAnswer::Discard(vec![filler]),
-    ]));
+    // Non-UI seat: the gy-return auto-picks the two highest-MV creatures, and
+    // the discard auto-picks the leftover Island.
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Macabre Waltz castable");
