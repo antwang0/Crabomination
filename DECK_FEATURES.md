@@ -182,6 +182,13 @@ Hour of Promise, Pir's Whim, Gather the Pack & Tracker's Instincts
 Flunkies, Wily Goblin, Hunted Witness, Brindle Shoat, Goblin Assault, Goblin
 Rally, Bottomless Pit.
 
+`catalog::sets::decks::recent37` (tests in `tests/recent37.rs`) is the Enchantress
+draw cycle (Mesa/Verduran on `SpellCast`+enchantment, Femeref on enchantment→gy,
+Eidolon of Blossoms constellation), three black board wipes (Mutilate scaling on
+Swamp count via `Value::Times`, Golden Demise, Yahenni's Expertise — free-cast/
+ascend riders dropped), Sword of the Animist (Legendary Equipment, attack →
+fetch a basic), and Dawn of Hope (`LifeGained` may-draw + Soldier token).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing
