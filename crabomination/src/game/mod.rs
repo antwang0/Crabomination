@@ -154,6 +154,9 @@ mod tests_recent39;
 #[path = "../tests/recent40.rs"]
 mod tests_recent40;
 #[cfg(test)]
+#[path = "../tests/recent41.rs"]
+mod tests_recent41;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -3010,6 +3013,7 @@ impl GameState {
                     opponents_only,
                     own_only,
                     colors,
+                    card_types,
                     void_counter,
                 } = &sa.effect
                 {
@@ -3017,6 +3021,9 @@ impl GameState {
                         && (!own_only || c.controller == owner)
                         && colors.as_ref().is_none_or(|cs| {
                             card.definition.printed_colors().iter().any(|c| cs.contains(c))
+                        })
+                        && card_types.as_ref().is_none_or(|ts| {
+                            card.definition.card_types.iter().any(|t| ts.contains(t))
                         });
                     if applies {
                         redirects = true;
@@ -5132,6 +5139,26 @@ impl GameState {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::PreventAllDamageToController)
+                })
+        })
+    }
+
+    /// CR 615 — true if `target` is a creature whose controller has a
+    /// "prevent all noncombat damage to creatures you control" static (Mark of
+    /// Asylum). Consulted only at the noncombat damage funnel.
+    pub(crate) fn noncombat_damage_to_creature_prevented(&self, target: CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let Some(tgt) = self.battlefield_find(target) else { return false };
+        if !tgt.definition.is_creature() {
+            return false;
+        }
+        let controller = tgt.controller;
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::PreventNoncombatDamageToYourCreatures)
                 })
         })
     }
@@ -10808,6 +10835,7 @@ fn static_effect_to_effects(
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController
+            | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::UnspentManaBecomesColorless
             // GraveyardAnthem is zone-special: gathered from graveyards in
             // `gather_continuous_effects_inner`, never from the battlefield.

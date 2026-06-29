@@ -4135,6 +4135,7 @@ pub fn samurai_of_the_pale_curtain() -> CardDefinition {
                 opponents_only: false,
                 own_only: false,
                 colors: None,
+                card_types: None,
                 void_counter: false,
             },
         }],

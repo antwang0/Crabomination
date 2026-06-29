@@ -300,6 +300,14 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Mark-of-Asylum-style "prevent all noncombat damage to
+        // creatures you control" (this funnel only carries noncombat damage to
+        // permanents; combat damage is marked elsewhere).
+        if let EntityRef::Permanent(tgt) = ent
+            && self.noncombat_damage_to_creature_prevented(tgt)
+        {
+            return;
+        }
         // CR 614.2 / 614.5 — global damage doubling (Furnace of Rath) then
         // halving (Ghosts of the Innocent), applied before prevention so a
         // shield soaks the already-scaled total (CR 616 lets the affected

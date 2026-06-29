@@ -8919,6 +8919,7 @@ pub fn dauthi_voidwalker() -> CardDefinition {
                 opponents_only: true,
                 own_only: false,
                 colors: None,
+                card_types: None,
                 void_counter: true,
             },
         }],

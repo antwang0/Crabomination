@@ -867,6 +867,11 @@ pub enum StaticEffect {
     /// Consulted at the player-directed branch of the shared damage funnel
     /// (combat and noncombat alike), unless prevention is shut off this turn.
     PreventAllDamageToController,
+    /// CR 615 — "Prevent all noncombat damage that would be dealt to creatures
+    /// you control." Mark of Asylum. Consulted at the shared (noncombat) damage
+    /// funnel for creature targets; combat damage is marked on a separate path
+    /// and is unaffected.
+    PreventNoncombatDamageToYourCreatures,
     /// CR 106.4 override — "If you would lose unspent mana, that mana
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.
@@ -974,6 +979,11 @@ pub enum StaticEffect {
         own_only: bool,
         #[serde(default)]
         colors: Option<Vec<crate::mana::Color>>,
+        /// Restrict the redirect to cards whose printed types intersect this
+        /// list (Dryad Militant / Scavenging Ooze's instant-and-sorcery-only
+        /// graveyard hate). `None` = every card type.
+        #[serde(default)]
+        card_types: Option<Vec<crate::card::CardType>>,
         /// Stamp a void counter on each card this redirect exiles
         /// (Dauthi Voidwalker — its sac ability frees one for a free play).
         #[serde(default)]
