@@ -392,6 +392,10 @@ Each a small targeted feature; sweep batch by batch.
   Remaining: attacking-band formation + "bands with other".
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault).
+- ✅ **"Whenever you attack"** (CR 508) — `EventKind::YouAttack` fires once per
+  combat for the attacking player (not per-attacker), via `shortcut::on_you_attack`.
+  Replaces the old `Attacks/YourControl + once_per_turn` approximation on
+  Razorkin Hordecaller, Inti, Gut, Raffine, Most Valuable Slayer, Lionheart Glimmer.
 - 🟡 **"Must/can't attack/block" restrictions** — `Keyword::{CantAttack,CantBlock,
   AttacksAlone,CantAttackAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad;
   power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker;

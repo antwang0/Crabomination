@@ -336,7 +336,7 @@ pub fn most_valuable_slayer() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::IsAttacking),

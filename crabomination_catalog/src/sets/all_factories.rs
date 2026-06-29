@@ -4045,6 +4045,19 @@ static DECKS: &[Factory] = &[
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,
     super::decks::spider_man_india,
+    // Recovered orphans: defined in recent24/recent.rs but never registered.
+    super::decks::fear_of_lost_teeth,
+    super::decks::friendly_ghost,
+    super::decks::razorkin_hordecaller,
+    super::decks::gremlin_tamer,
+    // New DSK batch (recent28).
+    super::decks::piggy_bank,
+    super::decks::appendage_amalgam,
+    super::decks::skullsnap_nuisance,
+    super::decks::shepherding_spirits,
+    super::decks::slavering_branchsnapper,
+    super::decks::seized_from_slumber,
+    super::decks::manifest_dread_spell,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

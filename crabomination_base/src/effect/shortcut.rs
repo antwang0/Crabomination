@@ -292,6 +292,14 @@ pub fn on_attack(effect: Effect) -> TriggeredAbility {
         effect,
     }
 }
+/// "Whenever you attack, `effect`" (CR 508) — fires once per combat for the
+/// attacking player, regardless of attacker count (Razorkin Hordecaller).
+pub fn on_you_attack(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+        effect,
+    }
+}
 /// Revolt (CR 702.139): "When this enters, if a permanent left the
 /// battlefield under your control this turn, `body`." An ETB trigger
 /// gated on `Predicate::RevoltActive { You }`. Models "enters with a

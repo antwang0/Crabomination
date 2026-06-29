@@ -687,7 +687,7 @@ pub fn gut_true_soul_zealot() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
             effect: Effect::MaySacrifice {
                 description: "Sacrifice another creature or artifact? (create a 4/1 Skeleton, tapped and attacking)".into(),
                 filter: SelectionRequirement::Creature
@@ -4675,8 +4675,7 @@ pub fn boon_bringer_valkyrie() -> CardDefinition {
 /// Inti, Seneschal of the Sun — {1}{R} 2/2 Legendary Human Knight. Whenever you
 /// attack, you may discard a card to put a +1/+1 counter on target attacking
 /// creature and give it trample. Whenever you discard a card, exile the top of
-/// your library; you may play it until your next end step. ("Whenever you
-/// attack" is approximated as once per turn.)
+/// your library; you may play it until your next end step.
 pub fn inti_seneschal_of_the_sun() -> CardDefinition {
     CardDefinition {
         name: "Inti, Seneschal of the Sun",
@@ -4691,7 +4690,7 @@ pub fn inti_seneschal_of_the_sun() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
                 effect: Effect::MayDo {
                     description: "Discard a card to grow a target attacking creature".into(),
                     body: Box::new(Effect::Seq(vec![
@@ -5601,7 +5600,7 @@ pub fn felonious_rage() -> CardDefinition {
 }
 
 /// Razorkin Hordecaller — {4}{R} 4/4 Human Clown Berserker with haste. Whenever
-/// you attack, create a 1/1 red Gremlin creature token. (Modeled once per turn.)
+/// you attack, create a 1/1 red Gremlin creature token.
 pub fn razorkin_hordecaller() -> CardDefinition {
     use crate::card::TokenDefinition;
     use crate::mana::Color;
@@ -5616,25 +5615,22 @@ pub fn razorkin_hordecaller() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: TokenDefinition {
-                    name: "Gremlin".into(),
-                    card_types: vec![CardType::Creature],
-                    colors: vec![Color::Red],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Gremlin],
-                        ..Default::default()
-                    },
-                    power: 1,
-                    toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::on_you_attack(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Gremlin".into(),
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Gremlin],
                     ..Default::default()
                 },
+                power: 1,
+                toughness: 1,
+                ..Default::default()
             },
-        }],
+        })],
         ..Default::default()
     }
 }

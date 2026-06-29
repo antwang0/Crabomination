@@ -374,6 +374,7 @@ impl GameState {
             }
         }
 
+        let any_attackers = !attacks.is_empty();
         for atk in attacks {
             let id = atk.attacker;
             // Statics-granted triggers ("Slivers you control have
@@ -574,6 +575,32 @@ impl GameState {
                     .target(auto_target)
                     .build(),
             );
+        }
+
+        // CR 508 — "Whenever you attack" fires once for the attacking player
+        // when one or more attackers are declared. Walk every permanent the
+        // active player controls for a `YouAttack` trigger (SelfSource or
+        // YourControl scope are equivalent here — the event is player-wide).
+        if any_attackers {
+            let ap = self.active_player_idx;
+            let you_attack: Vec<(CardId, Effect)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ap)
+                .flat_map(|c| {
+                    c.definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| t.event.kind == EventKind::YouAttack)
+                        .map(move |t| (c.id, t.effect.clone()))
+                })
+                .collect();
+            for (src, effect) in you_attack {
+                let auto_target = self.auto_target_for_effect_avoiding(&effect, ap, Some(src));
+                self.stack.push(
+                    TriggerPush::new(src, ap, effect).target(auto_target).build(),
+                );
+            }
         }
 
         self.give_priority_to_active();

@@ -191,7 +191,7 @@ pub fn lionheart_glimmer() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
             effect: Effect::PumpPT {
                 what: Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),

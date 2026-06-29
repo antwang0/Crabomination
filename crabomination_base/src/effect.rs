@@ -1294,6 +1294,12 @@ pub enum EventKind {
     SpellCast,
     /// A creature was declared as an attacker.
     Attacks,
+    /// CR 508 — "Whenever you attack": fires **once** per combat for the
+    /// attacking player when they declare one or more attackers, regardless of
+    /// how many. Use a `SelfSource`/`YourControl` trigger over this instead of
+    /// per-attacker `Attacks` for "whenever you attack, …" abilities (Razorkin
+    /// Hordecaller). Dispatched directly from `declare_attackers`.
+    YouAttack,
     /// A creature was declared as a blocker. Fired once per blocker
     /// from `declare_blockers` (CR 509.1i). Dispatched in addition to
     /// the existing `BecomesBlocked` event on the attacker side.

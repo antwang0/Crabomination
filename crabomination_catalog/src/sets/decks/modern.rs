@@ -47362,7 +47362,7 @@ pub fn valley_floodcaller() -> CardDefinition {
 
 /// Raffine, Scheming Seer — {W}{U}{B} Sphinx Demon 1/4. Flying, Ward {1}.
 /// Whenever you attack, target attacking creature connives X (X = number of
-/// attacking creatures). Once-per-turn approximates "whenever you attack."
+/// attacking creatures).
 pub fn raffine_scheming_seer() -> CardDefinition {
     let x = Value::count(Selector::EachPermanent(
         SelectionRequirement::IsAttacking.and(SelectionRequirement::ControlledByYou),
@@ -47380,7 +47380,7 @@ pub fn raffine_scheming_seer() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: x.clone() },
                 Effect::Discard { who: Selector::You, amount: x, random: false },
