@@ -1155,6 +1155,9 @@ pub enum SelectionRequirement {
     NameDiffersFromLastMoved,
     ControlledByYou,
     ControlledByOpponent,
+    /// CR 108.3 — the object's owner is you (regardless of who controls it).
+    /// Gruul Charm's "gain control of all permanents you own".
+    OwnedByYou,
     HasSupertype(Supertype),
     HasCreatureType(CreatureType),
     /// CR 700.12 — the object is an **outlaw**: a creature that is an Assassin,
@@ -2397,6 +2400,9 @@ pub enum DynamicPt {
     /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
     /// player's graveyard).
     BasePlusLandsInAllGraveyards { base_p: i32, base_t: i32 },
+    /// Power = base_p + creature cards in all graveyards; toughness = base_t +
+    /// that count. Lhurgoyf (0/1+*), Mortivore (0/0 + {B} regenerate).
+    CreatureCardsInAllGraveyards { base_p: i32, base_t: i32 },
     /// Power = toughness = base + land cards in the *controller's*
     /// graveyard. Wight of the Reliquary (base 1/1, +1/+1 per land in
     /// your graveyard).

@@ -124,6 +124,9 @@ mod tests_recent29;
 #[path = "../tests/recent30.rs"]
 mod tests_recent30;
 #[cfg(test)]
+#[path = "../tests/recent31.rs"]
+mod tests_recent31;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -4525,6 +4528,9 @@ impl GameState {
         let lands_in_gys: i32 = self.players.iter()
             .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
             .sum();
+        let creatures_in_gys: i32 = self.players.iter()
+            .map(|p| p.graveyard.iter().filter(|c| c.definition.is_creature()).count() as i32)
+            .sum();
         for card in &self.battlefield {
             let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
             let (power, toughness) = match formula {
@@ -4600,6 +4606,9 @@ impl GameState {
                 }
                 crate::card::DynamicPt::BasePlusLandsInAllGraveyards { base_p, base_t } => {
                     (base_p + lands_in_gys, base_t + lands_in_gys)
+                }
+                crate::card::DynamicPt::CreatureCardsInAllGraveyards { base_p, base_t } => {
+                    (base_p + creatures_in_gys, base_t + creatures_in_gys)
                 }
                 crate::card::DynamicPt::BasePlusLandsInControllerGraveyard { base_p, base_t } => {
                     let n = self.players[card.controller].graveyard.iter()

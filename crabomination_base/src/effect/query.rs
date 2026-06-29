@@ -422,6 +422,7 @@ impl Effect {
                 }
             }
             Effect::Destroy { what }
+            | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
             | Effect::ExileIfWouldDieThisTurn { what }
@@ -705,6 +706,7 @@ impl Effect {
             | Effect::SacrificeHalf { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
+            | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
             | Effect::ExileIfWouldDieThisTurn { what }
@@ -1041,7 +1043,9 @@ impl Effect {
                     ZoneDest::Library { .. } => format!("put {t} into its owner's library"),
                 }
             }
-            Effect::Destroy { .. } => format!("destroy {}", self.target_phrase()),
+            Effect::Destroy { .. } | Effect::DestroyAndRemember { .. } => {
+                format!("destroy {}", self.target_phrase())
+            }
             Effect::DestroyLandOfEachBasicType => {
                 "choose a land of each basic land type, then destroy those lands".into()
             }
@@ -1347,6 +1351,7 @@ impl Effect {
             }
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
+            | Effect::DestroyAndRemember { .. }
             | Effect::DestroyNoRegen { .. }
             | Effect::Exile { .. }
             | Effect::Move { .. }
@@ -1633,6 +1638,7 @@ impl Effect {
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
                 Effect::Move { what, .. } => sel_find(what, slot),
                 Effect::Destroy { what }
+                | Effect::DestroyAndRemember { what }
                 | Effect::DestroyNoRegen { what }
                 | Effect::ExileIfWouldDieThisTurn { what }
                 | Effect::GrantFlashbackThisTurn { what }

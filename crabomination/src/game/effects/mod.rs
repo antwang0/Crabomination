@@ -9376,6 +9376,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DestroyAndRemember { what } => {
+                // Record the target permanent's P/T/MV (like
+                // `SacrificeAndRemember`) before destroying it, so a following
+                // `Value::SacrificedToughness`/`SacrificedPower` reads it —
+                // Orzhov Charm's "destroy target creature and lose life equal
+                // to its toughness".
+                let entities = self.resolve_selector(what, ctx);
+                let stats = entities.iter().find_map(|e| e.as_permanent_id()).and_then(|cid| {
+                    self.battlefield_find(cid)
+                        .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc()))
+                });
+                if let Some((power, toughness, mv)) = stats {
+                    self.sacrificed_power = Some(power);
+                    self.sacrificed_toughness = Some(toughness);
+                    self.sacrificed_mana_value = Some(mv);
+                }
+                self.run_effect(&Effect::Destroy { what: what.clone() }, ctx, events)
+            }
+
             Effect::SacrificeAnyNumber { who, filter, per_each } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

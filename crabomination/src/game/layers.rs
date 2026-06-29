@@ -741,6 +741,7 @@ pub(crate) fn requirement_matches_card(
         R::Untapped => !card.tapped,
         R::ControlledByYou => card.controller == source_controller,
         R::ControlledByOpponent => card.controller != source_controller,
+        R::OwnedByYou => card.owner == source_controller,
         R::HasCardType(t) => def.card_types.contains(t),
         R::HasSupertype(s) => def.supertypes.contains(s),
         R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)

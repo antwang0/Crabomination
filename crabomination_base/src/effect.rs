@@ -3636,6 +3636,13 @@ pub enum Effect {
     /// its power) and similar spells.
     SacrificeAndRemember { who: PlayerRef, filter: SelectionRequirement },
 
+    /// Destroy the resolved permanent and record its power/toughness/mana value
+    /// on the resolution context (like [`Effect::SacrificeAndRemember`]) so a
+    /// following `Value::SacrificedToughness`/`SacrificedPower` reads it. Orzhov
+    /// Charm's "destroy target creature and you lose life equal to its
+    /// toughness".
+    DestroyAndRemember { what: Selector },
+
     /// Internal plumbing: re-stamp the P/T (and mana value) of a creature
     /// sacrificed as an *activation cost* before running `body`, so
     /// `Value::SacrificedPower/Toughness` and the

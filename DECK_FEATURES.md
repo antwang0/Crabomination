@@ -127,6 +127,17 @@ bending effects in *spell* form — Earthbending Lesson (Earthbend 4 sorcery) an
 the modal Dai Li Indoctrination (discard-a-nonland **or** earthbend 2),
 confirming `Effect::Earthbend` targets correctly through the modal cast path.
 
+`catalog::sets::decks::recent31` (tests in `tests/recent31.rs`) adds the
+wedge/guild modal charms & commands (Gruul/Dimir/Orzhov/Naya/Jund/Grixis Charm,
+Silumgar's/Ojutai's/Atarka's Command) and the graveyard-CDA *goyf* family, on
+three new reusable primitives: `DynamicPt::CreatureCardsInAllGraveyards`
+(Lhurgoyf, Mortivore), `SelectionRequirement::OwnedByYou` (Gruul Charm's
+"gain control of all permanents you own"), and `Effect::DestroyAndRemember`
+(Orzhov Charm's "destroy and lose life equal to its toughness"). Plus Disciple
+of Bolas, Agony Warp, Savage Knuckleblade, Butcher of the Horde, Demonic Dread
+(Cascade), Glory (graveyard-only protection grant), Foul-Tongue Invocation, and
+The First Sliver (Sliver spells you cast have cascade).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

@@ -1382,6 +1382,12 @@ impl GameState {
                     .unwrap_or(false),
                 Target::Player(p) => !self.same_team(*p, controller),
             },
+            R::OwnedByYou => match target {
+                Target::Permanent(cid) => {
+                    self.battlefield_find(*cid).map(|c| c.owner == controller).unwrap_or(false)
+                }
+                Target::Player(_) => false,
+            },
             R::DealtDamageToControllerThisTurn => match target {
                 Target::Permanent(cid) => self.players[controller]
                     .creatures_that_damaged_me_this_turn
@@ -1803,6 +1809,7 @@ impl GameState {
             R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
+            R::OwnedByYou => card.owner == controller,
             R::Creature => card.definition.is_creature(),
             R::Artifact => card.definition.is_artifact(),
             R::Enchantment => card.definition.is_enchantment(),
