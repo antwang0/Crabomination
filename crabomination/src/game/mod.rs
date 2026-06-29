@@ -139,6 +139,9 @@ mod tests_recent34;
 #[path = "../tests/recent35.rs"]
 mod tests_recent35;
 #[cfg(test)]
+#[path = "../tests/recent36.rs"]
+mod tests_recent36;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -5604,6 +5607,12 @@ impl GameState {
             matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
                 if self.descend_count(blocker.controller) < *n as usize)
         }) {
+            return false;
+        }
+        // CR 509.1a — city's blessing gate (Wayward Swordtooth).
+        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
+            && !self.players[blocker.controller].city_blessing
+        {
             return false;
         }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).

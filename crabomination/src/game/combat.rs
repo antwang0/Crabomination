@@ -295,6 +295,10 @@ impl GameState {
                     matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
                         if self.descend_count(p) < *n as usize)
                 });
+                // CR 508.1a — city's blessing gate (Wayward Swordtooth).
+                let blessing_locked =
+                    kws.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
+                        && !self.players[p].city_blessing;
                 let defender_locked =
                     kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
@@ -307,6 +311,7 @@ impl GameState {
                     && !delirium_locked
                     && !creature_died_locked
                     && !descend_locked
+                    && !blessing_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
@@ -320,6 +325,7 @@ impl GameState {
                         || hand_locked
                         || delirium_locked
                         || descend_locked
+                        || blessing_locked
                     {
                         return Err(GameError::CannotAttack(id));
                     }

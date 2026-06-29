@@ -743,6 +743,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackOrBlockUnlessHandSizeAtMost(_) => "Can't attack or block unless you have that many or fewer cards in hand.",
         K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium (four or more card types among cards in your graveyard).",
         K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
+        K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
         K::CantBeBlockedIfControllerCastSpells(_) => "Can't be blocked if you've cast that many or more spells this turn.",
         K::Sneak(_) => "You may cast it for its sneak cost by returning an unblocked attacker you control to its owner's hand.",
@@ -935,6 +936,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         }
         K::CantAttackOrBlockUnlessDescend(n) => {
             format!("Can't attack or block unless you descended {n}")
+        }
+        K::CantAttackOrBlockUnlessCityBlessing => {
+            "Can't attack or block unless you have the city's blessing".into()
         }
         K::CanAttackOnlyIfYouControl(_) => {
             "Can attack only if you control a matching permanent".into()

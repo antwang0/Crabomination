@@ -307,6 +307,9 @@ impl GameState {
                     Keyword::CantAttackOrBlockUnlessDescend(n) => {
                         self.descend_count(seat) >= *n as usize
                     }
+                    Keyword::CantAttackOrBlockUnlessCityBlessing => {
+                        self.players[seat].city_blessing
+                    }
                     Keyword::CantAttackOrBlockUnlessYouControlCount {
                         filter, min, block_only, ..
                     } => {

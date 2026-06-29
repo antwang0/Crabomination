@@ -172,6 +172,16 @@ tutor), Plea for Guidance, Three Dreams (enchantment/Aura tutors), Fleetfoot
 Dancer, Stormscape Apprentice, Cavern Harpy, Stonecloaker, Narcolepsy (Aura
 tap-lock), Bile Blight (`Selector::SharingNameWith`).
 
+`catalog::sets::decks::recent36` (tests in `tests/recent36.rs`) adds ramp/token/
+graveyard-fill commons and two punisher enchantments. New engine primitive
+`Keyword::CantAttackOrBlockUnlessCityBlessing` (CR 702.131, wired into attack/
+block legality + affordances + client chip/tooltip) powers Wayward Swordtooth
+(also `StaticEffect::ExtraLandPerTurn` + `Effect::Ascend` on ETB/upkeep). Cards:
+Hour of Promise, Pir's Whim, Gather the Pack & Tracker's Instincts
+(`MillThenToHand`), Dictate of Kruphix (each draw step extra draw), Mogg
+Flunkies, Wily Goblin, Hunted Witness, Brindle Shoat, Goblin Assault, Goblin
+Rally, Bottomless Pit.
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

@@ -819,6 +819,10 @@ pub enum Keyword {
     /// (The Ancient One, descend 8). Enforced against the controller's
     /// permanent-card graveyard count (`descend_count`).
     CantAttackOrBlockUnlessDescend(u32),
+    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
+    /// unless you have the city's blessing" (CR 702.131 — Wayward Swordtooth).
+    /// Enforced against the controller's `city_blessing` flag.
+    CantAttackOrBlockUnlessCityBlessing,
     /// CR 508.1a / 509.1a restriction — "[This creature] can't attack or block
     /// unless a creature died under your control this turn" (Bontu the
     /// Glorified). Enforced against the controller's `creatures_died_this_turn`.

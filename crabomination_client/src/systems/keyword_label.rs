@@ -88,6 +88,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantAttackOrBlockUnlessDelirium => "Dlr?",
         CantAttackOrBlockUnlessCreatureDiedThisTurn => "Died?",
         CantAttackOrBlockUnlessDescend(_) => "Dsc?",
+        CantAttackOrBlockUnlessCityBlessing => "Bless?",
         Decayed => "Dcy",
         Flanking => "Flk",
         // Combat-pump statics from the Kamigawa/legacy sets read at a glance.
