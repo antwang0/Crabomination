@@ -101,7 +101,8 @@ Thalia, Heretic Cathar · Quandrix Mathwarden / Spellmage / Streamcaller ·
 Prismari Mage-Mentor · Frostpyre Arcanist · Quandrix Field Trip.
 
 ### 6. No additional-cost-with-life/exile · no Phyrexian mana (riders dropped / folded into resolution)
-Deep Analysis (pay 3 life) · Resurgent Belief (exile a gy card) · Necrotic Fumes ·
+~~Deep Analysis (pay 3 life)~~ ✅ **FIXED** (`AdditionalCastCost::PayLife`, CR 119.4 —
+wired into the flashback cost map) · Resurgent Belief (exile a gy card) · Necrotic Fumes ·
 Final Payment · Birthing Pod & Mox Diamond ({G/P}, land-discard) · Vicious Rivalry ·
 Mana Vault (pay {4} skip) · Channel.
 
@@ -121,8 +122,14 @@ Quandrix Snapcaster · Prismari Maestro · Echocasting Symposium · Lorehold Tom
 Spark Double (no planeswalker-copy) · Prismari, the Inspiration · Mirror Image (legendary-strip).
 
 ### 9. No type/color rewrite on existing permanents (layers 4–5)
-Kasmina's Transmutation · Fractalize · Lorehold Reclamation (Spirit-typing) ·
-Fractal-token color/type riders.
+**Largely solved** — `Effect::BecomeCreatureType` (one-shot layer-4 set-types) +
+`EquipBonus.set_creature_types`/`set_land_types`/`set_card_types`/`set_colors`
++ the CR 613.8 type-lord recompute now ship the "becomes a [color] [type]"
+family (Turn to Frog, Snakeform, Polymorphist's Jest, Frogify, Darksteel
+Mutation, Witness Protection, Song of the Dryads, Imprisoned in the Moon).
+~~Kasmina's Transmutation~~ ✅ (now its real Aura). Remaining: Fractalize ·
+Lorehold Reclamation (Spirit-typing) · Fractal-token color/type riders ·
+type-gated `CardMatch` lords.
 
 ### 10. "Rest on bottom of library" approximated as "leave on top" / "to graveyard"
 **Stale** — `LookPickToHand { rest_to_graveyard: false }` already bottoms the

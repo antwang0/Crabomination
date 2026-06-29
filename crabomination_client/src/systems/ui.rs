@@ -1718,15 +1718,26 @@ mod tests {
     #[test]
     fn override_lines_note_fish_and_lost_abilities() {
         // Serra Angel turned into a 0/1 Fish with no abilities (Ichthyomorphosis).
-        let lines = live_override_lines("Serra Angel", true, &[CreatureType::Fish]);
+        let lines = live_override_lines(
+            "Serra Angel",
+            true,
+            &[CreatureType::Fish],
+            &[crabomination::mana::Color::Blue],
+        );
         assert!(lines.iter().any(|(t, _)| t.contains("abilities removed")));
         assert!(lines.iter().any(|(t, _)| t.contains("Fish")));
+        assert!(lines.iter().any(|(t, _)| t.contains("blue")));
     }
 
     #[test]
     fn override_lines_quiet_for_unchanged_creature() {
         // A Grizzly Bears still a Bear with its abilities → no override notes.
-        let lines = live_override_lines("Grizzly Bears", false, &[CreatureType::Bear]);
+        let lines = live_override_lines(
+            "Grizzly Bears",
+            false,
+            &[CreatureType::Bear],
+            &[crabomination::mana::Color::Green],
+        );
         assert!(lines.is_empty(), "no notes when nothing diverges");
     }
 

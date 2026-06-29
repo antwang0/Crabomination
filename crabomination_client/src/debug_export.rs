@@ -208,6 +208,7 @@ mod tests {
                 ring_bearer: None,
                 void_active: false,
                 speed: 0,
+                at_max_speed: false,
             }],
             battlefield: vec![],
             stack: vec![],

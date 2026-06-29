@@ -38,6 +38,27 @@ Deferred TDM/DFT cards needing new engine primitives:
   `Value::SpellsCastThisTurn`).
 - DFT "Mount that saddles/crews as though power greater" rider; bot saddle AI.
 
+## Discovered follow-ups — "becomes"/blink batch (modern_decks)
+
+New this run: `Effect::BecomeCreatureType` (layer-4 set-creature-types one-shot),
+`AdditionalCastCost::PayLife` (CR 119.4), `EquipBonus.set_land_types`,
+`PermanentView.colors` (computed color surfaced to the client), the CR 613.8
+type-lord recompute (`gate_types`), and a bot-friendly `ReturnGraveyardCardsToHand`.
+Deferred riders:
+- **Type-gated `CardMatch` lords** — the CR 613.8 recompute only covers
+  `AllWithCreatureType`; a lord routed through `CardMatch` (disjunctive type
+  filter) still reads printed types.
+- **`EquipBonus` granted activated abilities** — Imprisoned in the Moon's
+  "{T}: Add {C}" and Song of the Dryads' intrinsic mana are approximated (the
+  resulting land carries no granted activated ability).
+- **Essence Flux / Displace / Ghostly Flicker** — immediate multi-target blink
+  + a "+1/+1 if Spirit" rider on the returned (new) object; the target ref
+  doesn't survive exile→return, so the counter can't be applied.
+- **Joraga Treespeaker** — `LevelBand` carries only P/T + keywords, not the
+  level-gated activated mana ability / Elf-grant.
+- **Curse of the Swine** — exile X *target* creatures + a 2/2 per exiled
+  creature's controller (multi-target + per-target `ControllerOf` token).
+
 ## Discovered follow-ups — LCI / Craft / Descend (`sets::lci`)
 
 Shipped: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),
