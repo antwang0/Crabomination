@@ -181,6 +181,9 @@ mod tests_recent48;
 #[path = "../tests/recent49.rs"]
 mod tests_recent49;
 #[cfg(test)]
+#[path = "../tests/recent50.rs"]
+mod tests_recent50;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -4809,6 +4812,12 @@ impl GameState {
                         + self.exile.iter()
                             .filter(|c| c.owner == card.controller && is_is(c))
                             .count() as i32;
+                    (n, base_t)
+                }
+                crate::card::DynamicPt::InstantsSorceriesInControllerGraveyard { base_t } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+                        .count() as i32;
                     (n, base_t)
                 }
                 crate::card::DynamicPt::ExiledWithSourcePt { base_p, base_t } => self
