@@ -123,6 +123,75 @@ fn manifest_dread_spell_makes_face_down() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.face_down), "a face-down creature");
 }
 
+/// Impossible Inferno deals 6 to a creature and, with delirium, exiles the top
+/// card with a play permission.
+#[test]
+fn impossible_inferno_burns_and_impulses_with_delirium() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Four card types in graveyard → delirium active.
+    for c in [catalog::lightning_bolt(), catalog::grizzly_bears(), catalog::ornithopter(), catalog::sticky_fingers()] {
+        let id = g.next_id();
+        g.players[0].send_to_graveyard(crate::card::CardInstance::new(id, c, 0));
+    }
+    let topid = g.next_id();
+    g.players[0].add_to_library_top(topid, catalog::mountain());
+    let spell = g.add_card_to_hand(0, catalog::impossible_inferno());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == foe), "6 damage killed the bear");
+    assert!(g.exile.iter().any(|c| c.id == topid && c.may_play_until.is_some()), "delirium exiled top with may-play");
+}
+
+/// Break Down the Door's first mode exiles a target artifact.
+#[test]
+fn break_down_the_door_exiles_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let spell = g.add_card_to_hand(0, catalog::break_down_the_door());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(art)), additional_targets: vec![],
+        mode: Some(0), x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == art), "artifact exiled");
+}
+
+/// Found Footage sacrifices for surveil-2-then-draw.
+#[test]
+fn found_footage_sac_draws() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    let clue = g.add_card_to_battlefield(0, catalog::found_footage());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: clue, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    assert!(!g.battlefield.iter().any(|c| c.id == clue), "Clue sacrificed");
+}
+
 /// Fear of Lost Teeth (recovered orphan) pings and gains life on death.
 #[test]
 fn fear_of_lost_teeth_dies_pings() {

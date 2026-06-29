@@ -142,3 +142,70 @@ pub fn manifest_dread_spell() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Impossible Inferno — {4}{R} instant. Deals 6 damage to target creature;
+/// Delirium — if there are four+ card types in your graveyard, exile the top
+/// card of your library and you may play it until the end of your next turn.
+pub fn impossible_inferno() -> CardDefinition {
+    CardDefinition {
+        name: "Impossible Inferno",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(6),
+            },
+            Effect::If {
+                cond: Predicate::DeliriumActive { who: PlayerRef::You },
+                then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    uncast_penalty: None,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Break Down the Door — {2}{G} instant. Choose one: exile target artifact;
+/// exile target enchantment; or manifest dread.
+pub fn break_down_the_door() -> CardDefinition {
+    CardDefinition {
+        name: "Break Down the Door",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Exile { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::Exile { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::ManifestDread { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Found Footage — {1} Clue artifact. {2}, Sacrifice this artifact: surveil 2,
+/// then draw a card.
+pub fn found_footage() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype};
+    CardDefinition {
+        name: "Found Footage",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Clue], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
