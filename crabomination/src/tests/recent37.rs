@@ -3,7 +3,6 @@
 
 use crate::card::{CardType, Supertype};
 use crate::catalog;
-use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::mana::Color;
 use crate::game::two_player_game;
 use crate::game::*;

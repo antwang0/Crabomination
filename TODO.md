@@ -8,6 +8,25 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — utility-land / hatebear sweep (`decks::recent40`–`recent44`)
+
+Cards confirmed absent and deferred this run for want of a mechanic:
+- **Constant Mists** — Buyback with a *non-mana* cost ("Buyback—Sacrifice a
+  land"). `Keyword::Buyback` only carries a `ManaCost`; needs a buyback variant
+  that pays a sacrifice at cast time and still sets `bought_back`. Touches the
+  central cast pipeline.
+- **By Force** — "Destroy X target artifacts." `Effect::ApplyToTargets` takes a
+  fixed `max_targets: u8`; needs an `XFromCost`-driven target count.
+- **Sanctum Prelate** — "Noncreature spells with the chosen mana value can't be
+  cast." Like the new `NoncreatureSpellsCantBeCastIf` but keyed on an
+  ETB-chosen exact mana value (needs a `Decision::ChooseNumber` + a per-source
+  chosen-MV gate).
+- **Palace Jailer** — monarch ETB + "exile until you're no longer the monarch"
+  (a monarch-linked exile, distinct from `ExileUntilSourceLeaves`).
+- **Goblin Welder / Daretti, Scrap Savant** — artifact-swap (sacrifice one,
+  reanimate another) needs a two-target gy↔bf swap effect.
+- **Dark Depths / Smokestack / Tangle Wire** — ice/soot/fade counter engines.
+
 ## Discovered follow-ups — TDM/DFT staples (`decks::recent29`/`recent30`)
 
 New: `SelectionRequirement::WithAnyCounter` ("a creature with a counter on it");
@@ -2550,7 +2569,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   restriction ✅ — `PreventionShield.{source,one_event}` +
   `Effect::PreventNextDamageFromChosenSource` (the damage source is now
   threaded through `apply_prevention_shields` at both funnels; Circle of
-  Protection cycle, Rune of Protection: Red/Black).
+  Protection cycle, Rune of Protection: Red/Black). Blanket controller immunity
+  ✅ — `StaticEffect::PreventAllDamageToController` (Glacial Chasm) at the
+  player-directed branch of both funnels; surfaced as `PlayerView
+  .damage_fully_prevented` + a client "🛡 immune" chip. Your-creatures noncombat
+  immunity ✅ — `StaticEffect::PreventNoncombatDamageToYourCreatures` (Mark of
+  Asylum; noncombat-only because combat damage to creatures is marked off the
+  shared funnel).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Extra **combat-phase** insertion ✅ (CR 505.1b — `AdditionalCombatPhase` at End of Combat + `AdditionalCombatPhaseAfterMain` post-main re-entry, Relentless Assault). Phasing-in of extra non-combat steps still ⏳.
 - ✅ **CR 702.113 — Awaken** — rides `AlternativeCost { target_filter, effect_override }`: awaken cast adds the counters + a permanent-duration `BecomeCreature` on the targeted land (Part the Waterveil).
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail. `LandType::Cave`
