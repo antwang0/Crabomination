@@ -65297,3 +65297,76 @@ fn defile_scales_with_swamps() {
     // 3 Swamps → -3/-3 → 2/2 dies.
     assert!(g.battlefield_find(bears).is_none(), "creature dies to -3/-3 from 3 Swamps");
 }
+
+#[test]
+fn prison_realm_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prison_realm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Prison Realm castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature exiled by Prison Realm");
+    // The enchantment leaves → the creature returns.
+    let realm = g.battlefield.iter().find(|c| c.definition.name == "Prison Realm").unwrap().id;
+    g.remove_from_battlefield_to_graveyard_raw(realm);
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().any(|c| c.id == victim),
+        "creature returns when Prison Realm leaves");
+}
+
+#[test]
+fn stasis_snare_has_flash_and_exiles() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    assert!(catalog::stasis_snare().keywords.contains(&Keyword::Flash), "has flash");
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::stasis_snare());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stasis Snare castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature exiled by Stasis Snare");
+}
+
+#[test]
+fn reprobation_makes_a_0_1_with_no_abilities() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::reprobation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reprobation castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1));
+    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+}
+
+#[test]
+fn bound_in_gold_locks_down_a_permanent() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::bound_in_gold());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bound in Gold castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert!(cp.keywords.contains(&Keyword::CantAttack) && cp.keywords.contains(&Keyword::CantBlock));
+}

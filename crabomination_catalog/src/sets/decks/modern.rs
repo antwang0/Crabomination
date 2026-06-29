@@ -16581,6 +16581,102 @@ pub fn capsize() -> CardDefinition {
     }
 }
 
+/// Prison Realm — {2}{W} Enchantment. When it enters, exile target creature or
+/// planeswalker an opponent controls until it leaves; scry 1.
+pub fn prison_realm() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Prison Realm",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Or(
+                        Box::new(SelectionRequirement::Creature),
+                        Box::new(SelectionRequirement::Planeswalker),
+                    )
+                    .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Stasis Snare — {1}{W}{W} Enchantment, Flash. When it enters, exile target
+/// creature an opponent controls until it leaves.
+pub fn stasis_snare() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Stasis Snare",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Reprobation — {1}{W} Aura. Enchant creature. Enchanted creature loses all
+/// abilities and has base power and toughness 0/1.
+pub fn reprobation() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Reprobation",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((0, 1)),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Bound in Gold — {2}{W} Aura. Enchant permanent. Enchanted permanent can't
+/// attack or block, and its activated abilities can't be activated. (The
+/// "unless mana ability" carve-out is approximated as a full activation lock.)
+pub fn bound_in_gold() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Bound in Gold",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Permanent),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Cloudshift — {W} Instant. Exile target creature you control, then return
 /// that card to the battlefield under your control (re-triggers ETBs).
 pub fn cloudshift() -> CardDefinition {
