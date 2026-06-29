@@ -2228,6 +2228,69 @@ pub fn careening_mine_cart() -> CardDefinition {
     }
 }
 
+/// Bonehoard Dracosaur — {3}{R}{R} 5/5 Dinosaur Dragon, Flying, first strike.
+/// At your upkeep, exile the top two cards; you may play them this turn. If you
+/// exiled a land this way, make a 3/1 red Dinosaur; if a nonland, make a Treasure.
+pub fn bonehoard_dracosaur() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let dino = TokenDefinition {
+        name: "Dinosaur".into(),
+        power: 3,
+        toughness: 1,
+        colors: vec![Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Bonehoard Dracosaur",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    uncast_penalty: None,
+                },
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::ExiledThisResolution {
+                        filter: SelectionRequirement::Land,
+                    }),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: dino,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::ExiledThisResolution {
+                        filter: SelectionRequirement::Nonland,
+                    }),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: treasure_token(),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// The Belligerent — {2}{U}{R} Legendary Artifact — Vehicle 5/5, Crew 3.
 /// Whenever it attacks, create a Treasure and, until end of turn, you may play
 /// lands and cast spells from the top of your library.

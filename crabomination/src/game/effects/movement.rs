@@ -846,6 +846,9 @@ impl GameState {
             ZoneDest::Exile => {
                 let cid = card.id;
                 self.exile.push(card);
+                // Record for `Selector::ExiledThisResolution` ("if you exiled
+                // a [type] card this way" — Bonehoard Dracosaur).
+                self.exiled_card_ids_this_resolution.push(cid);
                 // Bump the controller-of-the-exile-effect's per-turn
                 // exile tally for Strixhaven "if one or more cards were
                 // put into exile this turn" payoffs (Ennis the Debate

@@ -679,6 +679,12 @@ pub struct GameState {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: the `CardId`s of cards put into exile within the current
+    /// effect resolution (any source zone, via `place_card_in_dest`). Powers
+    /// `Selector::ExiledThisResolution` — "if you exiled a [type] card this
+    /// way" payoffs (Bonehoard Dracosaur). Reset between resolutions.
+    #[serde(skip)]
+    pub(crate) exiled_card_ids_this_resolution: Vec<CardId>,
     /// Transient: count of permanents destroyed by `Effect::Destroy` within
     /// the current resolution. Read by `Value::PermanentsDestroyedThisResolution`
     /// so a follow-up `Effect::Seq` step can scale off the kill count
@@ -1207,6 +1213,7 @@ impl Clone for GameState {
             cipher_encode_pending: self.cipher_encode_pending,
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
+            exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
@@ -1344,6 +1351,7 @@ impl GameState {
             cipher_encode_pending: None,
             haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
+            exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),

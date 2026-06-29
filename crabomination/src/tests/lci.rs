@@ -924,6 +924,34 @@ fn the_belligerent_grants_play_from_top() {
     assert!(g.library_top_playable(0, top), "top card is now castable");
 }
 
+/// Bonehoard Dracosaur exiles the top two at upkeep and mints a Dinosaur for
+/// the exiled land and a Treasure for the exiled nonland.
+#[test]
+fn bonehoard_dracosaur_upkeep_exiles_and_makes_tokens() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::bonehoard_dracosaur());
+    // Top two: a land then a nonland.
+    let nonland = g.next_id();
+    g.players[0].add_to_library_top(nonland, catalog::grizzly_bears());
+    let land = g.next_id();
+    g.players[0].add_to_library_top(land, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == land && c.may_play_until.is_some()), "land exiled with may-play");
+    assert!(g.exile.iter().any(|c| c.id == nonland && c.may_play_until.is_some()), "nonland exiled with may-play");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Dinosaur").count(), 1,
+        "a 3/1 Dinosaur for the exiled land",
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count(), 1,
+        "a Treasure for the exiled nonland",
+    );
+    let _ = dino;
+}
+
 /// The Ancient One can't attack until you have eight permanent cards in your
 /// graveyard (Descend 8, CR 508.1a).
 #[test]

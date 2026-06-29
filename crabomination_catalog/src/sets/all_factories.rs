@@ -4492,6 +4492,7 @@ static LCI: &[Factory] = &[
     super::lci::careening_mine_cart,
     super::lci::the_belligerent,
     super::lci::the_ancient_one,
+    super::lci::bonehoard_dracosaur,
     super::lci::brazen_blademaster,
     super::lci::burning_sun_cavalry,
     super::lci::hotfoot_gnome,

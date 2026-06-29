@@ -233,6 +233,12 @@ pub enum Selector {
     /// the gy zone.
     DiscardedThisResolution { filter: SelectionRequirement },
 
+    /// Cards put into exile earlier in this same resolution matching `filter`.
+    /// Backed by `GameState.exiled_card_ids_this_resolution`; looked up in the
+    /// exile zone. "If you exiled a land/nonland card this way" (Bonehoard
+    /// Dracosaur).
+    ExiledThisResolution { filter: SelectionRequirement },
+
     /// A single player, lifted to selector form.
     Player(PlayerRef),
 

@@ -717,6 +717,7 @@ impl GameState {
         self.cards_discarded_per_player_this_resolution.clear();
         self.nonland_cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
+        self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
         self.excess_damage_this_resolution = 0;
         self.players_sacrificed_this_resolution.clear();
@@ -12332,6 +12333,22 @@ impl GameState {
                     let card = self.players.iter()
                         .find_map(|p| p.graveyard.iter().find(|c| c.id == cid));
                     if let Some(c) = card
+                        && self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                    {
+                        out.push(EntityRef::Card(cid));
+                    }
+                }
+                out
+            }
+
+            Selector::ExiledThisResolution { filter } => {
+                // Walk the IDs captured in `exiled_card_ids_this_resolution` and
+                // look them up in the exile zone, filtering via the card-level
+                // evaluator (the cards aren't on the battlefield).
+                let ids = self.exiled_card_ids_this_resolution.clone();
+                let mut out: Vec<EntityRef> = Vec::new();
+                for cid in ids {
+                    if let Some(c) = self.exile.iter().find(|c| c.id == cid)
                         && self.evaluate_requirement_on_card(filter, c, ctx.controller)
                     {
                         out.push(EntityRef::Card(cid));
