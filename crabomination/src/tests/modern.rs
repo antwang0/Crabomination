@@ -65370,3 +65370,77 @@ fn bound_in_gold_locks_down_a_permanent() {
     let cp = g.computed_permanent(bears).unwrap();
     assert!(cp.keywords.contains(&Keyword::CantAttack) && cp.keywords.contains(&Keyword::CantBlock));
 }
+
+#[test]
+fn flames_of_the_firebrand_divides_three_damage() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::flames_of_the_firebrand());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Auto-divider spreads 3 across the two targets; assert total board damage = 3.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("Flames castable");
+    drain_stack(&mut g);
+    let dmg: u32 = [a, b].iter().filter_map(|id| g.battlefield_find(*id)).map(|c| c.damage).sum();
+    let dead = [a, b].iter().filter(|id| g.battlefield_find(**id).is_none()).count();
+    assert_eq!(dmg + dead as u32 * 2, 3, "3 damage divided across the targets (2 marks a kill)");
+}
+
+#[test]
+fn cleansing_nova_mode_zero_wraths_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::cleansing_nova());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Cleansing Nova castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "all creatures destroyed");
+}
+
+#[test]
+fn time_wipe_saves_one_creature_then_wraths() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::time_wipe());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Time Wipe castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "my creature bounced to hand");
+    assert!(g.battlefield_find(theirs).is_none(), "their creature destroyed by the wrath");
+}
+
+#[test]
+fn disallow_counters_a_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt cast");
+    let id = g.add_card_to_hand(0, catalog::disallow());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Disallow castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Lightning Bolt countered to graveyard");
+}

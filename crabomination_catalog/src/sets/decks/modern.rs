@@ -16581,6 +16581,87 @@ pub fn capsize() -> CardDefinition {
     }
 }
 
+/// Flames of the Firebrand — {2}{R} Sorcery. Deal 3 damage divided as you
+/// choose among up to three target creatures and/or players.
+pub fn flames_of_the_firebrand() -> CardDefinition {
+    CardDefinition {
+        name: "Flames of the Firebrand",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(3),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 3,
+        },
+        ..Default::default()
+    }
+}
+
+/// Cleansing Nova — {3}{W}{W} Sorcery. Choose one — destroy all creatures; or
+/// destroy all artifacts and enchantments.
+pub fn cleansing_nova() -> CardDefinition {
+    CardDefinition {
+        name: "Cleansing Nova",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Time Wipe — {2}{W}{W}{U} Sorcery. Return target creature you control to its
+/// owner's hand, then destroy all creatures.
+pub fn time_wipe() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Time Wipe",
+        cost: cost(&[generic(2), w(), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Disallow — {1}{U}{U} Instant. Counter target spell. (The printed
+/// "or activated or triggered ability" modes are approximated as a
+/// spell-only counter.)
+pub fn disallow() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Disallow",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}
+
 /// Prison Realm — {2}{W} Enchantment. When it enters, exile target creature or
 /// planeswalker an opponent controls until it leaves; scry 1.
 pub fn prison_realm() -> CardDefinition {
