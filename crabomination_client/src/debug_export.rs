@@ -194,6 +194,7 @@ mod tests {
                 emblems: vec![],
                 eliminated: false,
                 has_prevention_shield: false,
+                damage_fully_prevented: false,
                 devotion: [0; 5],
                 is_monarch: false,
                 has_city_blessing: false,

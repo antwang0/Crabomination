@@ -436,6 +436,7 @@ fn project_player(
     let has_prevention_shield = prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Player(player_seat));
+    let damage_fully_prevented = state.all_damage_to_player_prevented(player_seat);
     // Coven — three or more controlled creatures with different (computed) powers.
     let coven_active = {
         let powers: std::collections::HashSet<i32> = state
@@ -535,6 +536,7 @@ fn project_player(
             })
             .collect(),
         has_prevention_shield,
+        damage_fully_prevented,
         devotion,
         is_monarch,
         has_city_blessing: player.city_blessing,

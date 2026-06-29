@@ -628,6 +628,12 @@ pub struct PlayerView {
     /// player. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// CR 615 — true when a blanket "prevent all damage that would be dealt to
+    /// you" static (Glacial Chasm) shields this player from *all* damage this
+    /// turn. Distinct from `has_prevention_shield` (a partial / next-N shield).
+    /// Surfaced so UIs can show a full-immunity badge. `#[serde(default)]`.
+    #[serde(default)]
+    pub damage_fully_prevented: bool,
     /// CR 700.5 — this player's devotion to each color, ordered W, U, B, R,
     /// G (the count of mana symbols of that color among the mana costs of
     /// permanents they control). Surfaced so UIs can show a devotion readout

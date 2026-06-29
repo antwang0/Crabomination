@@ -84,6 +84,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Skipped combat (CR 506 — Stonehorn Dignitary) — a muted stone grey
         // so a player knows their next swing is off the table.
         StatChipKind::SkipCombat => (Color::srgba(0.24, 0.24, 0.26, 1.0), theme::TEXT_PRIMARY),
+        // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
+        // blue so total prevention reads as a hard shield, not a partial one.
+        StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -115,6 +118,7 @@ pub(super) enum StatChipKind {
     Void,
     Descend,
     SkipCombat,
+    Shield,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -704,6 +708,10 @@ pub fn update_player_stats_chips(
         if cv.combat_damage_prevented_this_turn && p.seat == cv.active_player {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Fog, "🌫 fog".to_string());
         }
+        // CR 615 — blanket damage immunity (Glacial Chasm) on the viewer.
+        if p.damage_fully_prevented {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
+        }
     });
 }
 
@@ -966,6 +974,10 @@ pub fn update_opponent_stats_rows(
                 // CR 119.7 — an opponent who can't gain life.
                 if p.cannot_gain_life {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
+                }
+                // CR 615 — an opponent with blanket damage immunity (Glacial Chasm).
+                if p.damage_fully_prevented {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
                 }
             });
         }
