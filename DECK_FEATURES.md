@@ -146,6 +146,12 @@ Sacrifice-as-cost activated abilities fold the sacrifice as the effect's first
 step. New keyword `CantAttackOrBlockUnlessCreatureDiedThisTurn` (Bontu's combat
 gate, wired into attack/block legality + the client HUD strip/tooltip).
 
+`catalog::sets::decks::recent33` (tests in `tests/recent33.rs`) adds more
+sacrifice-outlet staples — Endless Cockroaches (dies → hand), Poison-Tip Archer
+(reach/deathtouch aristocrat drain), Altar of Dementia (sac → mill = power),
+Sadistic Hypnotist (sac → discard two, sorcery speed), Sprout Swarm (Convoke +
+Buyback token).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing
