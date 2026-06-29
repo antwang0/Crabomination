@@ -28,7 +28,10 @@
 //! empty-library draw (CR 104.3c / 704.5c), characteristic-defining P/T that
 //! recomputes live (CR 604.3 — Lhurgoyf), ownership independent of control
 //! (CR 108.3 / 800.4a — Gruul Charm's "gain control of permanents you own"),
-//! and Cascade granted to other spells (CR 702.85 — The First Sliver).
+//! and Cascade granted to other spells (CR 702.85 — The First Sliver),
+//! abilities-only mana spend restrictions (CR 605.1c — Omen Hawker),
+//! controller-graveyard characteristic-defining P/T (CR 604.3 — Nethergoyf),
+//! and "can't block" as an illegal-blocker restriction (CR 509.1b).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -5408,4 +5411,76 @@ fn cr_602_5b_quest_activation_needs_its_counters() {
     }).expect("now payable");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie Giant"));
+}
+
+// ── CR 605.1c — "Spend this mana only to activate abilities" ────────────────
+
+/// Omen Hawker's mana funds ability activations but is rejected for spell
+/// casts (the new `SpendRestriction::AbilitiesOnly`, CR 605.1c).
+#[test]
+fn cr_605_1c_abilities_only_mana_funds_abilities_not_spells() {
+    use crate::mana::{ManaCost, SpellKind};
+    let mut g = two_player_game();
+    let hawker = g.add_card_to_battlefield(0, catalog::omen_hawker());
+    g.clear_sickness(hawker);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hawker, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    }).expect("tap for {C}{U}");
+    let pool = &mut g.players[0].mana_pool;
+    assert_eq!(pool.restricted_total(), 2, "two restricted mana (C and U)");
+    let one = ManaCost::new(vec![crate::mana::generic(1)]);
+    assert!(pool.pay_for_spell(&one, &SpellKind::default()).is_err(), "can't fund a spell");
+    let ability = SpellKind { activating_ability: true, ..Default::default() };
+    assert!(pool.pay_for_spell(&one, &ability).is_ok(), "funds an ability activation");
+}
+
+// ── CR 604.3 — characteristic-defining P/T from the controller's graveyard ──
+
+/// Nethergoyf's `*/1+*` reads card types in *its controller's own* graveyard
+/// (CR 604.3 — `DynamicPt::CardTypesInControllerGraveyard`), and an opponent's
+/// graveyard doesn't feed it.
+#[test]
+fn cr_604_3_nethergoyf_counts_only_your_graveyard_types() {
+    let mut g = two_player_game();
+    let goyf = g.add_card_to_battlefield(0, catalog::nethergoyf());
+    // Opponent's graveyard types must NOT count.
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let v = g.compute_battlefield();
+    let c = v.iter().find(|c| c.id == goyf).unwrap();
+    assert_eq!((c.power, c.toughness), (0, 1), "opponent graveyard ignored");
+    // Your own graveyard with three card types → 3/4.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());   // Creature
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());  // Instant
+    g.add_card_to_graveyard(0, catalog::forest());          // Land
+    let v = g.compute_battlefield();
+    let c = v.iter().find(|c| c.id == goyf).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "three of your card types → 3/4");
+}
+
+// ── CR 509.1b — a creature that "can't block" is an illegal blocker ─────────
+
+/// Hazardous Blast grants every opposing creature "can't block this turn"; the
+/// engine then refuses to declare such a creature as a blocker (CR 509.1b).
+#[test]
+fn cr_509_1b_cant_block_grant_rejects_the_blocker() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 survives the ping
+    let blast = g.add_card_to_hand(0, catalog::hazardous_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hazardous Blast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::CantBlock));
+    // Attack with a creature; the CantBlock wall can't be declared as a blocker.
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.block_map.clear();
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(wall, attacker)]));
+    assert!(err.is_err(), "a can't-block creature is an illegal blocker");
 }

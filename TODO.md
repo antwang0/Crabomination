@@ -8,6 +8,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Duskmourn/Foundations sweep (`decks::recent52`)
+
+Shipped: `DynamicPt::CardTypesInControllerGraveyard` (Nethergoyf),
+`SpendRestriction::AbilitiesOnly` (Omen Hawker), `Predicate::ValueIsPrime`
+(Zimone). Deferred for want of a primitive:
+- **Fear of Abduction** — needs `AdditionalCastCost::ExilePermanent` (exile a
+  creature you control as you cast) + an exile-until-leaves that returns to
+  *hand* (not battlefield).
+- **Cursecloth Wrappings** — "{T}: target gy creature card gains embalm until
+  EOT" needs a grant-embalm-to-a-graveyard-card effect (cf.
+  `GrantFlashbackThisTurn`).
+- **Caretaker's Talent** — Class leveling (`CardType::Class` + level-up
+  activated abilities + "becomes level N" triggers) isn't modeled yet.
+- **The Mindskinner** — "damage you'd deal to an opponent is prevented; they
+  mill that much instead" needs a damage→mill replacement.
+- **Niko, Light of Hope** / **Valgavoth, Terror Eater** — Shard tokens +
+  exile-and-copy; Ward—sacrifice-three + play-from-exile-paying-life. Both want
+  several primitives; left for a focused pass.
+- **Winter, Misanthropic Guide** — the delirium "opponents' max hand size =
+  7 − card types" downside is dropped (needs a delirium-gated dynamic
+  `OpponentsMaxHandSizeReduced`); ward + symmetric upkeep draw ship.
+- **Fear of the Dark** — the "if defending player controls no Glimmer" gate on
+  the menace/deathtouch grant is approximated as unconditional.
+
 ## Discovered follow-ups — green/value sweep (`decks::recent46`–`recent49`)
 
 Shipped: `StaticEffect::SelfCostReducedByTotalPower` (Ghalta) +

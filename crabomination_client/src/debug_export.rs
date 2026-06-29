@@ -177,6 +177,7 @@ mod tests {
                 graveyard: vec![],
                 hand: vec![],
                 lands_played_this_turn: 0,
+                skip_next_combat: 0,
                 first_spell_tax_charges: 0,
                 life_gained_this_turn: 0,
                 cards_drawn_this_turn: 0,

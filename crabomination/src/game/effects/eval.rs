@@ -676,6 +676,10 @@ impl GameState {
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
             Predicate::ValueIsOdd(v) => self.evaluate_value(v, ctx).rem_euclid(2) == 1,
+            Predicate::ValueIsPrime(v) => {
+                let n = self.evaluate_value(v, ctx) as i64;
+                n >= 2 && (2..=((n as f64).sqrt() as i64)).all(|d| n % d != 0)
+            }
             Predicate::PlayerSacrificedThisResolution(pref) => self
                 .resolve_player(pref, ctx)
                 .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),

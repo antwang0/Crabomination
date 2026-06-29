@@ -2442,6 +2442,10 @@ pub enum DynamicPt {
     /// controller's *opponents'* graveyards; toughness is the fixed `base_t`.
     /// Nighthawk Scavenger (1+*/3).
     CardTypesInOpponentsGraveyards { base_p: i32, base_t: i32 },
+    /// Power = `base_p` + the number of card types among cards in the
+    /// *controller's own* graveyard; toughness = `base_t` + that count.
+    /// Nethergoyf (*/1+* → base_p 0, base_t 1).
+    CardTypesInControllerGraveyard { base_p: i32, base_t: i32 },
     /// Power = toughness = the number of cards in the controller's hand.
     /// Maro, Kagemaro.
     ControllerHandSize,
@@ -2700,6 +2704,7 @@ impl CardDefinition {
             creature: self.is_creature(),
             creature_ability: false,
             casting_nonartifact_spell: !self.is_artifact(),
+            activating_ability: false,
         }
     }
 
@@ -2710,6 +2715,7 @@ impl CardDefinition {
             artifact: self.is_artifact(),
             land_ability: self.is_land(),
             creature_ability: self.is_creature(),
+            activating_ability: true,
             ..Default::default()
         }
     }

@@ -668,6 +668,10 @@ pub enum Predicate {
     /// riders (Sab-Sunen, Luxa Embodied). `ValueIsOdd(0)` is false (zero is
     /// even, CR-flavor).
     ValueIsOdd(Value),
+    /// The value is a prime number (2, 3, 5, 7, …). Powers Zimone,
+    /// All-Questioning's "if you control a prime number of lands". 0 and 1
+    /// are not prime.
+    ValueIsPrime(Value),
     /// True if `who` sacrificed at least one permanent during the current
     /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
     /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).
@@ -1246,8 +1250,8 @@ pub enum ManaPayload {
     /// produces with `restriction` ("Spend this mana only to …"). Used by
     /// the Strixhaven school mana sources (Abstract Paintmage, Tablet of
     /// Discovery, Hydro-Channeler, Great Hall of the Biblioplex,
-    /// Resonating Lute). Colorless pips in a wrapped payload are added
-    /// unrestricted — no current card produces restricted colorless mana.
+    /// Resonating Lute). Colorless pips are restricted too
+    /// (`add_restricted_colorless` — Powerstone tokens, Omen Hawker's {C}).
     Restricted(Box<ManaPayload>, SpendRestriction),
     /// Like `Restricted`, but the restriction is "spend only to cast a
     /// creature spell of the source's chosen creature type, and that spell

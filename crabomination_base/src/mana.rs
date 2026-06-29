@@ -391,6 +391,9 @@ pub enum SpendRestriction {
     /// "This mana can't be spent to cast a nonartifact spell." (Powerstone
     /// tokens, CR 111.10q — abilities and artifact casts are fine.)
     NoNonartifactSpells,
+    /// "Spend this mana only to activate abilities." (Omen Hawker.) Funds
+    /// any ability activation regardless of the source's card type.
+    AbilitiesOnly,
 }
 
 impl SpendRestriction {
@@ -409,6 +412,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureSpellsOrAbilities => {
                 kind.creature || kind.creature_ability
             }
+            SpendRestriction::AbilitiesOnly => kind.activating_ability,
         }
     }
 }
@@ -437,6 +441,8 @@ pub struct SpellKind {
     pub creature_ability: bool,
     /// Casting a spell that isn't an artifact spell (Powerstone gate).
     pub casting_nonartifact_spell: bool,
+    /// Activating an ability of any source (Omen Hawker's abilities-only mana).
+    pub activating_ability: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

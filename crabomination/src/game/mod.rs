@@ -187,6 +187,9 @@ mod tests_recent50;
 #[path = "../tests/recent51.rs"]
 mod tests_recent51;
 #[cfg(test)]
+#[path = "../tests/recent52.rs"]
+mod tests_recent52;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -4757,6 +4760,15 @@ impl GameState {
                         }
                     }
                     (base_p + seen.len() as i32, base_t)
+                }
+                crate::card::DynamicPt::CardTypesInControllerGraveyard { base_p, base_t } => {
+                    let mut seen: std::collections::HashSet<crate::card::CardType> =
+                        std::collections::HashSet::new();
+                    for c in &self.players[card.controller].graveyard {
+                        for ct in &c.definition.card_types { seen.insert(ct.clone()); }
+                    }
+                    let n = seen.len() as i32;
+                    (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::BasePlusLandsOfTypeControlled { land_type, base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {

@@ -1834,23 +1834,12 @@ pub fn cuboid_colony() -> CardDefinition {
     }
 }
 
-/// Fractal Tender — {3}{G}{U}, 3/3 Elf Wizard.
-/// "Ward {2}. Increment (...) / At the beginning of each end step, if
-/// you put a counter on this creature this turn, create a 0/0 green
-/// and blue Fractal creature token and put three +1/+1 counters on
-/// it."
-///
-/// Increment wired via `shortcut::increment_self_plus_one()`. The
-/// end-step Fractal-with-counters payoff is still omitted (no
-/// per-permanent "got-a-counter-this-turn" flag yet — tracked in
-/// TODO.md). 3/3 Ward {2} body remains.
-/// Approximation: body + `Keyword::Ward(crate::card::WardCost::generic(2))` wired. Increment trigger
-/// and end-step Fractal-with-counters payoff are both omitted (Increment
-/// needs mana-spent introspection on cast; the end-step trigger
-/// needs a "did this creature gain a counter this turn"
-/// per-permanent flag the engine doesn't track yet). The card still
-/// slots into Quandrix as a 3/3 attacker with a Ward stub, and the
-/// keyword is wired so Ward enforcement picks it up.
+/// Fractal Tender — {3}{G}{U}, 3/3 Elf Wizard. Ward {2}. Increment
+/// (a +1/+1 counter when you spend 5+ mana on a spell). At each end
+/// step, if it gained a counter this turn, mint a 0/0 G/U Fractal with
+/// three +1/+1 counters. Fully wired: Increment via
+/// `increment_self_plus_one()`, the payoff via
+/// `Predicate::SourceGainedCounterThisTurn`.
 pub fn fractal_tender() -> CardDefinition {
     use crate::card::Predicate;
     use crate::catalog::sets::sos::sorceries::fractal_token;
@@ -4398,14 +4387,10 @@ pub fn rubble_rouser() -> CardDefinition {
 /// Destroy target creature. / -7: You get an emblem with 'Whenever you
 /// gain life, target opponent loses that much life.'"
 ///
-/// Wired with the three numerical abilities (`+2 gain 3`, `0 draw 1 / lose
-/// 1`, `-3 destroy creature`). The `-7` emblem clause is omitted —
-/// emblems aren't a modelled zone yet (see TODO.md "Planeswalker
-/// Interactions"). The base shell is the standard Witherbloom
-/// removal-and-card-draw planeswalker, leveraging the existing engine
-/// loyalty-ability machinery; the `-3` ability uses
-/// `target_filtered(Creature)` so the auto-target picker takes a
-/// hostile creature when one is available.
+/// All four abilities wired: `+2 gain 3`, `0 draw 1 / lose 1`, `-3
+/// destroy creature`, and the ultimate emblem ("whenever you gain life,
+/// each opponent loses that much life" — a triggered emblem via
+/// `Effect::CreateEmblem`).
 pub fn professor_dellian_fel() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
     use crate::effect::shortcut::target_filtered;

@@ -747,6 +747,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
         K::CantBeBlockedIfControllerCastSpells(_) => "Can't be blocked if you've cast that many or more spells this turn.",
         K::Sneak(_) => "You may cast it for its sneak cost by returning an unblocked attacker you control to its owner's hand.",
+        K::CantAttackOrBlockUnlessCreatureDiedThisTurn => "Can't attack or block unless a creature died this turn.",
         _ => return None,
     })
 }
@@ -1500,6 +1501,7 @@ mod tests {
             Keyword::CantAttackUnlessCastCreatureThisTurn,
             Keyword::CantAttackOrBlockUnlessEvenCounters,
             Keyword::CantBeCounteredIfXAtLeast(5),
+            Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn,
         ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");

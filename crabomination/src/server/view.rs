@@ -1709,14 +1709,22 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
 /// player can pick a specific color before casting an off-color spell.
 fn is_mana_ability(effect: &Effect) -> bool {
     use crate::effect::ManaPayload;
-    match effect {
-        Effect::AddMana { pool, .. } => matches!(
-            pool,
+    fn no_choice_payload(pool: &ManaPayload) -> bool {
+        match pool {
             // No-choice payloads — auto-tap activates them on the user's
             // behalf without surfacing a menu entry.
-            ManaPayload::Colors(_) | ManaPayload::Colorless(_)
-                | ManaPayload::OfColor(_, _)
-        ),
+            ManaPayload::Colors(_) | ManaPayload::Colorless(_) | ManaPayload::OfColor(_, _) => true,
+            // Spend-restricted mana (Omen Hawker, the Strixhaven school
+            // dorks) is still a fixed-output mana ability — recurse past the
+            // restriction wrapper.
+            ManaPayload::Restricted(inner, _)
+            | ManaPayload::RestrictedToChosenType(inner)
+            | ManaPayload::RestrictedToChosenTypePlain(inner) => no_choice_payload(inner),
+            _ => false,
+        }
+    }
+    match effect {
+        Effect::AddMana { pool, .. } => no_choice_payload(pool),
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
         _ => false,
     }
@@ -2651,6 +2659,19 @@ mod tests {
             "gate_label should describe the printed condition");
         assert!(draw_ability.gate_label.contains("hand"),
             "gate_label should mention 'hand' (got {:?})", draw_ability.gate_label);
+    }
+
+    /// Omen Hawker taps for spend-restricted `{C}{U}` (`ManaPayload::Restricted`).
+    /// The projection should still classify it as a mana ability so the client
+    /// auto-taps it rather than surfacing a spurious menu entry.
+    #[test]
+    fn omen_hawker_restricted_mana_is_a_mana_ability() {
+        let mut state = two_player_game();
+        let hawker = state.add_card_to_battlefield(0, catalog::omen_hawker());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == hawker).unwrap();
+        assert!(perm.abilities.iter().all(|a| a.is_mana),
+            "Omen Hawker's restricted {{C}}{{U}} ability is a mana ability");
     }
 
     /// Potioner's Trove's lifegain ability picked up a printed gate
