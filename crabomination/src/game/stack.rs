@@ -169,6 +169,19 @@ impl GameState {
             next = TurnStep::EndCombat;
         }
 
+        // CR 506 — skip the active player's combat phase (Stonehorn
+        // Dignitary). When we'd enter Begin Combat with a banked skip charge,
+        // consume it and jump straight to the postcombat main — no
+        // begin-combat triggers, declares, or damage. (The post-main extra
+        // combat below is unaffected; only the scheduled combat is skipped.)
+        if next == TurnStep::BeginCombat
+            && self.step == TurnStep::PreCombatMain
+            && self.players[self.active_player_idx].skip_next_combat > 0
+        {
+            self.players[self.active_player_idx].skip_next_combat -= 1;
+            next = TurnStep::PostCombatMain;
+        }
+
         // CR 505.1b — additional combat phase. When the active player leaves
         // End of Combat with a banked extra phase, loop back to Begin Combat
         // (a fresh combat) instead of advancing to the postcombat main.

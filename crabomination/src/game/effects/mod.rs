@@ -11837,6 +11837,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SkipNextCombatPhase { who } => {
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].skip_next_combat =
+                            self.players[p].skip_next_combat.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::TakeExtraTurn { who, count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }

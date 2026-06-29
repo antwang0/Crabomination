@@ -617,6 +617,7 @@ impl Effect {
             Effect::SkipTurns { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::SkipNextCombatPhase { who } => player_has_target(who),
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

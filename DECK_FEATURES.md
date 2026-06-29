@@ -162,6 +162,16 @@ Relic (cast-creature → counter; remove 5 + sac → tutor an Equipment to play;
 auto-attach rider is dropped). Plus standalone gaps: Magebane Lizard (new
 `Value::NoncreatureSpellsCastThisTurn`), Atog, Origin Spellbomb, Land Tax.
 
+`catalog::sets::decks::recent35` (tests in `tests/recent35.rs`) adds blink/tempo/
+tutor staples and the Spike counter engine. New engine primitive
+`Effect::SkipNextCombatPhase` (CR 506 — `Player.skip_next_combat`, consumed in
+`advance_step` when the active player would enter Begin Combat) powers Stonehorn
+Dignitary. Cards: Spike Weaver (enters-with-3-counters; counter-to-target / Fog
+outlets), Glimmerpoint Stag (ETB blink), Weathered Wayfarer (conditional land
+tutor), Plea for Guidance, Three Dreams (enchantment/Aura tutors), Fleetfoot
+Dancer, Stormscape Apprentice, Cavern Harpy, Stonecloaker, Narcolepsy (Aura
+tap-lock), Bile Blight (`Selector::SharingNameWith`).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

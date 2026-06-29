@@ -3930,6 +3930,11 @@ pub enum Effect {
     /// of coins that came up heads.") via a `FlipCoin` + `SkipTurns`
     /// chain.
     SkipTurns { who: PlayerRef, count: Value },
+    /// CR 506 — "[Player] skips their next combat phase" (Stonehorn
+    /// Dignitary, Fog Bank-adjacent tempo). Bumps `who`'s `skip_next_combat`
+    /// counter; `advance_step` consumes it when their turn would enter Begin
+    /// Combat, jumping to the postcombat main.
+    SkipNextCombatPhase { who: PlayerRef },
     /// CR 724 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
     /// CR 701.54 — "the Ring tempts you." Increments `who`'s ring-temptation

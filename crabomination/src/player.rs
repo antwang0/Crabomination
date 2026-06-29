@@ -418,6 +418,12 @@ pub struct Player {
     /// their untap step would run; while > 0 their permanents don't untap.
     #[serde(default)]
     pub skip_next_untap_step: u32,
+    /// CR 506 — number of this player's upcoming combat phases to skip
+    /// (Stonehorn Dignitary). Consumed when their turn reaches Begin Combat,
+    /// jumping straight to the postcombat main. Defaults to 0 for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub skip_next_combat: u32,
     /// Number of this player's upcoming untap steps in which the **lands** they
     /// control don't untap (Bontu's Last Reckoning). Decremented when their
     /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
@@ -604,6 +610,7 @@ impl Player {
             eliminated: false,
             skip_turns: 0,
             skip_next_untap_step: 0,
+            skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
