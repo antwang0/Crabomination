@@ -16581,6 +16581,95 @@ pub fn capsize() -> CardDefinition {
     }
 }
 
+/// Cloudshift — {W} Instant. Exile target creature you control, then return
+/// that card to the battlefield under your control (re-triggers ETBs).
+pub fn cloudshift() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Cloudshift",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spark Spray — {R} Instant. Deal 1 damage to any target. Cycling {R}.
+pub fn spark_spray() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Spark Spray",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[r()]))],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Haze of Pollen — {1}{G} Instant. Prevent all combat damage this turn.
+/// Cycling {3}.
+pub fn haze_of_pollen() -> CardDefinition {
+    CardDefinition {
+        name: "Haze of Pollen",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+
+/// Brain Freeze — {1}{U} Instant. Target player mills three cards. Storm.
+pub fn brain_freeze() -> CardDefinition {
+    CardDefinition {
+        name: "Brain Freeze",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::Mill { who: Selector::Target(0), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Defile — {B} Instant. Target creature gets -1/-1 until end of turn for each
+/// Swamp you control.
+pub fn defile() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    let swamps = || Value::Times(
+        Box::new(Value::Const(-1)),
+        Box::new(Value::CountMatching {
+            sel: Box::new(Selector::EachPermanent(
+                SelectionRequirement::HasLandType(LandType::Swamp)
+                    .and(SelectionRequirement::ControlledByYou),
+            )),
+            filter: SelectionRequirement::Land,
+        }),
+    );
+    CardDefinition {
+        name: "Defile",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: swamps(),
+            toughness: swamps(),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 /// Undying Evil — {B} Instant. Target creature gains undying until end of turn.
 pub fn undying_evil() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;

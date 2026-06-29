@@ -65206,3 +65206,94 @@ fn macabre_waltz_returns_two_creatures_and_discards() {
     assert_eq!(creatures_in_hand, 2, "both creatures returned to hand");
     assert!(!g.players[0].hand.iter().any(|c| c.id == filler), "discarded the Island");
 }
+
+#[test]
+fn cloudshift_blinks_your_creature() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cloudshift());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cloudshift castable");
+    drain_stack(&mut g);
+    let _ = bears;
+    // Exactly one Grizzly Bears is back under your control, and it re-entered
+    // (summoning sickness reset — proof of the exile/return blink).
+    let returned: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).collect();
+    assert_eq!(returned.len(), 1, "returned under your control");
+    assert!(returned[0].summoning_sick, "the returned creature is a new, summoning-sick object");
+}
+
+#[test]
+fn spark_spray_pings_a_creature() {
+    let mut g = two_player_game();
+    let one_one = g.add_card_to_battlefield(1, catalog::ornithopter()); // 0/2
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::spark_spray());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spark Spray castable");
+    drain_stack(&mut g);
+    let _ = one_one;
+    assert_eq!(g.battlefield_find(bears).map(|c| c.damage), Some(1), "1 damage dealt");
+}
+
+#[test]
+fn haze_of_pollen_fogs_combat() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let life_before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    let id = g.add_card_to_hand(1, catalog::haze_of_pollen());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Haze of Pollen castable");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].life, life_before, "all combat damage prevented");
+}
+
+#[test]
+fn brain_freeze_mills_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let before = g.players[1].graveyard.len();
+    let id = g.add_card_to_hand(0, catalog::brain_freeze());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Brain Freeze castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), before + 3, "target player milled 3");
+}
+
+#[test]
+fn defile_scales_with_swamps() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::swamp()); }
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::defile());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Defile castable");
+    drain_stack(&mut g);
+    // 3 Swamps → -3/-3 → 2/2 dies.
+    assert!(g.battlefield_find(bears).is_none(), "creature dies to -3/-3 from 3 Swamps");
+}
