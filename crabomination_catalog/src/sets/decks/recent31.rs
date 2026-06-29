@@ -1,6 +1,7 @@
 //! Modern-supplement batch: the wedge/guild modal "charms" and "commands"
 //! (`Effect::ChooseMode` / `Effect::ChooseN`), the graveyard-CDA *goyf* family
-//! (`DynamicPt::CreatureCardsInAllGraveyards` / `BasePlusCreaturesInController‌Graveyard`),
+//! (`DynamicPt::CreatureCardsInAllGraveyards` and
+//! `BasePlusCreaturesInControllerGraveyard`),
 //! and assorted multicolor staples. Tracked in `DECK_FEATURES.md` under the
 //! Modern supplement. Tests in `tests/recent31.rs`.
 

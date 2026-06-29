@@ -2588,6 +2588,27 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **recent31 (multicolor staples) follow-ups / deferred cards:**
+  - Dimir Charm mode 3 ("look at top three, put one back, rest into graveyard")
+    is modeled as **mill 2** — wants a look-top-N-keep-one-rest-to-graveyard
+    effect (a target-player surveil-to-graveyard variant).
+  - Naya Charm mode 3 ("tap all creatures **target player** controls") taps
+    all creatures **opponents** control — no relative `ControlledBy(target)`
+    selection requirement yet.
+  - Atarka's Command mode 3 ("put a land from your **hand**") reuses
+    `PutFromHandOrGraveyardOntoBattlefield` (also allows graveyard) — wants a
+    hand-only put primitive.
+  - Foul-Tongue Invocation drops the "reveal a Dragon from hand" additional
+    cost; the bonus 4 life is gated on controlling a Dragon instead.
+  - **Deferred — need new primitives:** Necropolis Fiend ({X},{T}, exile X from
+    gy: −X/−X — activated abilities have no `{X}` cost + Value-count gy-exile);
+    Pulmonic Sliver ("Slivers may go to library top instead of graveyard" —
+    a graveyard→library replacement static); Bonehoard (living-weapon equip
+    +X/+X where X = creature cards in all graveyards — `EquipScale` counts
+    battlefield permanents, not graveyards); Dromoka's Command (mode "prevent
+    all damage target instant/sorcery would deal" — no prevent-spell-damage
+    effect); Pyromancer Ascension (quest-counter + spell-copy enchantment);
+    Crime // Punishment (split card).
 - ⏳ **recent20 (OTJ) approximations / follow-ups:** Magda, the Hoardmaster
   drops the "Sacrifice three Treasures: make a 4/4 Scorpion Dragon" ability
   (needs a fixed-count sacrifice-cost picker); Gisa's "Ward—{2}, Pay 2 life" is

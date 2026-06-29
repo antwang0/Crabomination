@@ -105,14 +105,30 @@ const RECONNECT_GRACE: Duration = Duration::from_secs(60);
 /// is a human and `CRAB_ACTION_TIMEOUT_SECS` is set (> 0), the match actor
 /// waits at most this long for their action, then acts for them —
 /// AutoDecider's answer for a pending decision, or a priority pass.
-/// Unset / 0 / unparsable → disabled (the pre-rope behavior: humans may
-/// think forever).
+/// Unset / 0 → disabled (the pre-rope behavior: humans may think forever).
 fn action_timeout_from_env() -> Option<Duration> {
-    std::env::var("CRAB_ACTION_TIMEOUT_SECS")
-        .ok()
-        .and_then(|v| v.parse::<u64>().ok())
-        .filter(|&secs| secs > 0)
-        .map(Duration::from_secs)
+    parse_action_timeout(std::env::var("CRAB_ACTION_TIMEOUT_SECS").ok().as_deref())
+}
+
+/// Pure parser for `CRAB_ACTION_TIMEOUT_SECS` (whitespace-trimmed). `None`/
+/// empty/`0` → `None` (rope disabled). A non-numeric value warns loudly and
+/// disables the rope rather than failing silently — a typo like `"30s"` should
+/// not quietly leave human seats able to stall forever.
+fn parse_action_timeout(raw: Option<&str>) -> Option<Duration> {
+    match raw.map(str::trim) {
+        None | Some("") => None,
+        Some(s) => match s.parse::<u64>() {
+            Ok(0) => None,
+            Ok(secs) => Some(Duration::from_secs(secs)),
+            Err(_) => {
+                eprintln!(
+                    "warning: CRAB_ACTION_TIMEOUT_SECS={s:?} not a non-negative integer — \
+                     rope disabled (human seats may think forever)",
+                );
+                None
+            }
+        },
+    }
 }
 
 /// Messages the match actor multiplexes onto its single inbound channel.
@@ -2242,6 +2258,17 @@ mod tests {
         let _ = done_rx.recv_timeout(Duration::from_secs(30));
         let _ = handle.join();
     }
+    #[test]
+    fn parse_action_timeout_handles_edge_cases() {
+        assert_eq!(parse_action_timeout(None), None, "unset → disabled");
+        assert_eq!(parse_action_timeout(Some("")), None, "empty → disabled");
+        assert_eq!(parse_action_timeout(Some("0")), None, "0 → disabled");
+        assert_eq!(parse_action_timeout(Some(" 45 ")), Some(Duration::from_secs(45)),
+            "whitespace is trimmed");
+        // A typo (non-numeric) warns and disables rather than panicking.
+        assert_eq!(parse_action_timeout(Some("30s")), None, "garbage → disabled");
+    }
+
     /// With an action timeout set, a stalled human seat is auto-passed:
     /// the turn advances without the client ever submitting an action.
     #[test]

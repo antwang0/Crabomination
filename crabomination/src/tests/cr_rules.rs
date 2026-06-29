@@ -24,8 +24,11 @@
 //! granted Legendary supertype (CR 701.54c / 205.4b), block-only combat
 //! restrictions (CR 509.1c), one-sided "deals damage equal to its
 //! power" effects (CR 701.12-style), Craft (CR 702.169), the Descend ability
-//! word (CR 207.2c — permanent cards in the graveyard), and losing on an
-//! empty-library draw (CR 104.3c / 704.5c).
+//! word (CR 207.2c — permanent cards in the graveyard), losing on an
+//! empty-library draw (CR 104.3c / 704.5c), characteristic-defining P/T that
+//! recomputes live (CR 604.3 — Lhurgoyf), ownership independent of control
+//! (CR 108.3 / 800.4a — Gruul Charm's "gain control of permanents you own"),
+//! and Cascade granted to other spells (CR 702.85 — The First Sliver).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -5292,4 +5295,62 @@ fn cr_305_7_type_change_swaps_lord_applicability() {
     assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "now a Frog");
     // Base 1/1 (Turn to Frog) + the Frog lord's +1/+1 → 2/2.
     assert_eq!((cp.power, cp.toughness), (2, 2), "the Frog lord now buffs the new Frog");
+}
+
+// ── CR 604.3 — characteristic-defining P/T recomputes live ─────────────────────
+
+#[test]
+fn cr_604_3_lhurgoyf_pt_tracks_graveyard_creatures() {
+    // A CDA P/T (Lhurgoyf = creature cards in all graveyards / +1 toughness) is
+    // recomputed continuously, so adding a creature card to a graveyard grows it.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lhurgoyf());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1), "empty graveyards → 0/1");
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "two creature cards across graveyards → 2/3");
+}
+
+// ── CR 108.3 / 800.4a — ownership independent of control ───────────────────────
+
+#[test]
+fn cr_108_3_gain_control_of_permanents_you_own() {
+    // Gruul Charm mode 1: "Gain control of all permanents you own." A creature
+    // you OWN but an opponent CONTROLS returns to you (SelectionRequirement::
+    // OwnedByYou keys off owner, not controller — CR 108.3).
+    use crate::card::Effect;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Hand it to the opponent's control while P0 keeps ownership.
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1);
+    let Effect::ChooseMode(m) = catalog::gruul_charm().effect else { panic!() };
+    g.resolve_effect(&m[1], &crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0,
+        "you regain control of a permanent you own");
+}
+
+// ── CR 702.85 — Cascade granted to other spells (The First Sliver) ─────────────
+
+#[test]
+fn cr_702_85_first_sliver_grants_sliver_spells_cascade() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Library top: a nonland the cascade can hit (MV 2 < Megantic Sliver's MV 6).
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    // The First Sliver on the battlefield grants your Sliver spells cascade.
+    g.add_card_to_battlefield(0, catalog::the_first_sliver());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let meg = g.add_card_to_hand(0, catalog::megantic_sliver());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: meg, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Megantic Sliver castable for {5}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "the granted cascade casts the lower-MV card onto the battlefield");
 }

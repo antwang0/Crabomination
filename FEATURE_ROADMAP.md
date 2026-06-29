@@ -65,7 +65,11 @@ exercising each) was elided in a compaction pass; recover it from
   `SelectionRequirement::ManaValueParity` (Extinction Event's odd/even sweep);
   CDA P/T for creatures-in-your-graveyard and other-flyers-you-control
   (`DynamicPt::BasePlusCreaturesInControllerGraveyard` — Fiend Artisan;
-  `BasePlusOtherFlyersControlled` — Skycat Sovereign);
+  `BasePlusOtherFlyersControlled` — Skycat Sovereign), and creature-cards-in-
+  **all**-graveyards (`DynamicPt::CreatureCardsInAllGraveyards` — Lhurgoyf,
+  Mortivore); `SelectionRequirement::OwnedByYou` (CR 108.3 — Gruul Charm's
+  "gain control of all permanents you own"); `Effect::DestroyAndRemember`
+  (destroy + record P/T like `SacrificeAndRemember` — Orzhov Charm);
   `Selector::GreatestPowerControlledMatching(filter)` read through `Value::PowerOf`
   + `Value::Max` for "N or the greatest power among [type] you control" floors
   (Triumphant Chomp).

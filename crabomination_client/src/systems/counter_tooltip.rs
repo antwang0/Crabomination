@@ -913,6 +913,65 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             format!("Can't be countered if X is {n} or more")
         }
         K::StartYourEngines => "Start your engines!".into(),
+        // Evasion / combat-restriction keywords that previously fell through to
+        // the raw `{:?}` debug shape.
+        K::Unblockable => "Can't be blocked".into(),
+        K::Horsemanship => "Horsemanship".into(),
+        K::Flanking => "Flanking".into(),
+        K::SplitSecond => "Split second".into(),
+        K::CanBlockOnlyFlying => "Can block only creatures with flying".into(),
+        K::CantBeBlockedIfControllerCastSpells(n) => {
+            format!("Can't be blocked if its controller cast {n} or more spells this turn")
+        }
+        K::CantAttackUnlessCastCreatureThisTurn => {
+            "Can't attack unless you cast a creature spell this turn".into()
+        }
+        K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium".into(),
+        K::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
+            format!("Can't attack or block unless you have {n} or fewer cards in hand")
+        }
+        K::CantAttackOrBlockUnlessDescend(n) => {
+            format!("Can't attack or block unless you descended {n}")
+        }
+        K::CanAttackOnlyIfYouControl(_) => {
+            "Can attack only if you control a matching permanent".into()
+        }
+        // Protection variants beyond the single-color case.
+        K::ProtectionFromEverything => "Protection from everything".into(),
+        K::ProtectionFromMulticolored => "Protection from multicolored".into(),
+        K::ProtectionFromInstants => "Protection from instants".into(),
+        K::ProtectionFromColoredSpells => "Protection from colored spells".into(),
+        K::ProtectionFromSpells => "Protection from spells".into(),
+        K::ProtectionFromCreatures => "Protection from creatures".into(),
+        K::ProtectionFromCreatureType(t) => format!("Protection from {t:?}"),
+        K::ProtectionFromSpellSubtype(s) => format!("Protection from {s:?} spells"),
+        K::ProtectionFromManaValueExcept(n) => {
+            format!("Protection from each mana value except {n}")
+        }
+        K::ProtectionFromManaValueParity { odd } => {
+            format!("Protection from {} mana value", if *odd { "odd" } else { "even" })
+        }
+        K::UmbraArmor => "Totem armor".into(),
+        // Counter / cost keywords that previously printed the raw `{:?}` shape.
+        K::Poisonous(n) => format!("Poisonous {n}"),
+        K::Bloodthirst(n) => format!("Bloodthirst {n}"),
+        K::CyclingLife(n) => format!("Cycling—Pay {n} life"),
+        K::Impending(n) => format!("Impending {n}"),
+        K::Entwine(c) => format!("Entwine {}", c.summary()),
+        K::Squad(c) => format!("Squad {}", c.summary()),
+        K::Replicate(c) => format!("Replicate {}", c.summary()),
+        K::Mayhem(c) => format!("Mayhem {}", c.summary()),
+        K::Harmonize(c) => format!("Harmonize {}", c.summary()),
+        K::Disturb(c) => format!("Disturb {}", c.summary()),
+        K::Splice(c, st) => format!("Splice onto {st:?} {}", c.summary()),
+        // Ability words / static keywords with no payload.
+        K::Conspire => "Conspire".into(),
+        K::Improvise => "Improvise".into(),
+        K::Gravestorm => "Gravestorm".into(),
+        K::Epic => "Epic".into(),
+        K::JumpStart => "Jump-start".into(),
+        K::Companion => "Companion".into(),
+        K::SuspendAccelerant => "Suspend".into(),
         _ => format!("{kw:?}"),
     }
 }
