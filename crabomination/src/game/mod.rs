@@ -160,6 +160,9 @@ mod tests_recent41;
 #[path = "../tests/recent42.rs"]
 mod tests_recent42;
 #[cfg(test)]
+#[path = "../tests/recent43.rs"]
+mod tests_recent43;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
