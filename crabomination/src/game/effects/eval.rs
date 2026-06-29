@@ -1539,6 +1539,10 @@ impl GameState {
                             })
                     }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
+                    R::WithAnyCounter => {
+                        card.counters.values().any(|&n| n > 0)
+                            || card.keyword_counters.values().any(|&n| n > 0)
+                    }
                     R::HasNoCounters => {
                         card.counters.values().all(|&n| n == 0)
                             && card.keyword_counters.values().all(|&n| n == 0)
@@ -1992,7 +1996,7 @@ impl GameState {
                     .is_some_and(|c| c.definition.name == card.definition.name)
             }),
             // Battlefield-state predicates can't be evaluated for library cards.
-            R::Tapped | R::Untapped | R::WithCounter(_)
+            R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
             | R::IsAttacking | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
