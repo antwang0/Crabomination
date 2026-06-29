@@ -65501,3 +65501,59 @@ fn yavimaya_granger_fetches_a_basic_land() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "fetched a Forest to hand");
 }
+
+#[test]
+fn omenspeaker_scrys_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::omenspeaker());
+    // Scry resolves with the auto-decider (keeps order); just assert it fires cleanly.
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 3), "Omenspeaker is a 1/3");
+}
+
+#[test]
+fn wing_splicer_grants_golems_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::wing_splicer());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").expect("Golem minted");
+    assert!(g.computed_permanent(golem.id).unwrap().keywords.contains(&Keyword::Flying),
+        "Golem anthem grants flying");
+}
+
+#[test]
+fn rejuvenate_gains_five_life() {
+    let mut g = two_player_game();
+    let before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::rejuvenate());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rejuvenate castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 5, "gained 5 life");
+}
+
+#[test]
+fn angelic_gift_draws_and_grants_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::angelic_gift());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Angelic Gift castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw replaced the cast aura");
+    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Flying), "grants flying");
+}

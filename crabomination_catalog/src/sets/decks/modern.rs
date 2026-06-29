@@ -16581,6 +16581,79 @@ pub fn capsize() -> CardDefinition {
     }
 }
 
+/// Omenspeaker — {1}{U} 1/3 Spirit. When it enters, scry 2.
+pub fn omenspeaker() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Omenspeaker",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Wing Splicer — {3}{U} 1/1 Phyrexian Artificer. ETB create a 3/3 Phyrexian
+/// Golem; Golem creatures you control have flying.
+pub fn wing_splicer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Wing Splicer",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: phyrexian_golem_token(),
+        })],
+        static_abilities: vec![golem_anthem(Keyword::Flying)],
+        ..Default::default()
+    }
+}
+
+/// Rejuvenate — {2}{G} Instant. You gain 5 life.
+pub fn rejuvenate() -> CardDefinition {
+    CardDefinition {
+        name: "Rejuvenate",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+        ..Default::default()
+    }
+}
+
+/// Angelic Gift — {1}{W} Aura. Enchant creature. When it enters, draw a card.
+/// Enchanted creature has flying.
+pub fn angelic_gift() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Angelic Gift",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Flying], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
 /// Voice of the Provinces — {4}{W}{W} 3/3 Angel. Flying. When it enters, create
 /// a 1/1 white Human creature token.
 pub fn voice_of_the_provinces() -> CardDefinition {
