@@ -218,6 +218,11 @@ pub enum StaticEffect {
     /// permanents), so it only discounts its own cast. Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByGreatestPower,
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is the total
+    /// power of creatures you control" (Ghalta, Primal Hunger). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast*. Generic-only;
+    /// clamped by `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByTotalPower,
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// Domain" (CR 702.43 — Leyline Binding). Read by `cost_reduction_for_spell`
     /// off the *spell being cast*; the count is the distinct basic land types

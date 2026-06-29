@@ -423,6 +423,22 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .unwrap_or(0);
         reduction = reduction.saturating_add(greatest);
     }
+    // Card-intrinsic "costs {X} less, where X is the total power of creatures
+    // you control" (Ghalta, Primal Hunger). Generic-only, clamped by the caller.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByTotalPower))
+    {
+        let total: u32 = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == caster && c.definition.is_creature())
+            .map(|c| c.power().max(0) as u32)
+            .sum();
+        reduction = reduction.saturating_add(total);
+    }
     // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
     // — distinct basic land types among the caster's lands. Generic-only,
     // clamped by the caller via `ManaCost::reduce_generic`.

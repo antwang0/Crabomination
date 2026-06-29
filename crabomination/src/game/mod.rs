@@ -169,6 +169,15 @@ mod tests_recent44;
 #[path = "../tests/recent45.rs"]
 mod tests_recent45;
 #[cfg(test)]
+#[path = "../tests/recent46.rs"]
+mod tests_recent46;
+#[cfg(test)]
+#[path = "../tests/recent47.rs"]
+mod tests_recent47;
+#[cfg(test)]
+#[path = "../tests/recent48.rs"]
+mod tests_recent48;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -4720,6 +4729,25 @@ impl GameState {
                         c.controller == card.controller && c.definition.is_land()
                     }).count() as i32;
                     (base_p + n, base_t)
+                }
+                crate::card::DynamicPt::LandsControlledPlusLandsInControllerGraveyard { base } => {
+                    let bf = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && c.definition.is_land()
+                    }).count() as i32;
+                    let gy = self.players[card.controller].graveyard.iter()
+                        .filter(|c| c.definition.is_land()).count() as i32;
+                    (base + bf + gy, base + bf + gy)
+                }
+                crate::card::DynamicPt::CardTypesInOpponentsGraveyards { base_p, base_t } => {
+                    let mut seen: std::collections::HashSet<crate::card::CardType> =
+                        std::collections::HashSet::new();
+                    for (i, player) in self.players.iter().enumerate() {
+                        if i == card.controller { continue; }
+                        for c in &player.graveyard {
+                            for ct in &c.definition.card_types { seen.insert(ct.clone()); }
+                        }
+                    }
+                    (base_p + seen.len() as i32, base_t)
                 }
                 crate::card::DynamicPt::BasePlusLandsOfTypeControlled { land_type, base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {
@@ -10812,6 +10840,8 @@ fn static_effect_to_effects(
             // SelfCostReducedByGreatestPower (The Great Henge) — read by
             // `cost_reduction_for_spell` off the spell being cast; no layer.
             | StaticEffect::SelfCostReducedByGreatestPower
+            // SelfCostReducedByTotalPower (Ghalta) — same, off the spell.
+            | StaticEffect::SelfCostReducedByTotalPower
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
             | StaticEffect::SelfCostReducedByDomain { .. }
             // SelfCostReducedByDistinctLandNames (Fungal Colossus) — same.

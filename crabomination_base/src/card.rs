@@ -2435,6 +2435,13 @@ pub enum DynamicPt {
     /// the fixed `base_t`. `*`-power Vehicles whose power tracks lands
     /// while toughness is printed (Lumbering Worldwagon, `*/8`).
     LandsControlledPower { base_p: i32, base_t: i32 },
+    /// Power = toughness = `base` + lands the controller controls + land cards
+    /// in the controller's graveyard. Multani, Yavimaya's Avatar (base 0/0).
+    LandsControlledPlusLandsInControllerGraveyard { base: i32 },
+    /// Power = `base_p` + the number of card types among cards in the
+    /// controller's *opponents'* graveyards; toughness is the fixed `base_t`.
+    /// Nighthawk Scavenger (1+*/3).
+    CardTypesInOpponentsGraveyards { base_p: i32, base_t: i32 },
     /// Power = toughness = the number of cards in the controller's hand.
     /// Maro, Kagemaro.
     ControllerHandSize,
