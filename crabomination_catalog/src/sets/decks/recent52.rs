@@ -644,3 +644,28 @@ pub fn trail_of_crumbs() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Macabre Reconstruction — {3}{B} Sorcery. Costs {2} less if a creature died
+/// this turn (the printed "a creature card was put into your graveyard from
+/// anywhere" is approximated to the died case). Return up to two target
+/// creature cards from your graveyard to your hand.
+pub fn macabre_reconstruction() -> CardDefinition {
+    CardDefinition {
+        name: "Macabre Reconstruction",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if a creature died this turn.",
+            effect: StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount: 2 },
+        }],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: R::Creature,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
+        ..Default::default()
+    }
+}

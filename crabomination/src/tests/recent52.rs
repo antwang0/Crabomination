@@ -429,3 +429,21 @@ fn trail_of_crumbs_makes_food_and_digs_on_food_sac() {
     assert!(!g.battlefield.iter().any(|c| c.id == food), "Food was sacrificed");
     let _ = hand0; // the dig is an optional {1} payment (LookPickToHand machinery)
 }
+
+#[test]
+fn macabre_reconstruction_returns_up_to_two_and_is_cheaper_after_a_death() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].creatures_died_this_turn = 1; // {2} cheaper → {1}{B}
+    let mr = g.add_card_to_hand(0, catalog::macabre_reconstruction());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mr, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("Macabre castable for {1}{B} after a death");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a));
+    assert!(g.players[0].hand.iter().any(|c| c.id == b), "both creatures returned");
+}
