@@ -157,6 +157,9 @@ mod tests_recent40;
 #[path = "../tests/recent41.rs"]
 mod tests_recent41;
 #[cfg(test)]
+#[path = "../tests/recent42.rs"]
+mod tests_recent42;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -10821,6 +10824,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerDrawsDoubled
             | StaticEffect::RedirectDamageToSelf
             | StaticEffect::ControllerCantCastPermanentSpells
+            | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
             | StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { .. }
             | StaticEffect::SelfCostReducedPerOpponent { .. }

@@ -358,6 +358,11 @@ pub enum StaticEffect {
     /// (creature/artifact/enchantment/planeswalker). Checked at the main
     /// cast gate in `cast_spell`.
     ControllerCantCastPermanentSpells,
+    /// "Noncreature spells with mana value `min_mana_value` or greater can't be
+    /// cast" and (when `or_has_x`) "noncreature spells with {X} in their mana
+    /// costs can't be cast." Global — locks every player while any permanent
+    /// has it (Gaddock Teeg). Checked at the main cast gate in `cast_spell`.
+    NoncreatureSpellsCantBeCastIf { min_mana_value: u32, or_has_x: bool },
     /// CR 615.12 — while active, damage can't be prevented (global). A
     /// permanent-static sibling of `Effect::DamageCantBePreventedThisTurn`;
     /// `apply_prevention_shields` bypasses all shields while any source on the

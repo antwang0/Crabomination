@@ -2421,6 +2421,11 @@ pub enum Effect {
     /// Day of Judgment, Vindicate, ...). Indestructible and Shield-counter
     /// replacements still apply — only regeneration is denied.
     DestroyNoRegen { what: Selector },
+    /// "Destroy each nonland permanent with mana value equal to `value`" —
+    /// resolves `value` at resolution (typically `CountersOn { This, Charge }`)
+    /// and destroys every nonland permanent whose mana value matches. Ratchet
+    /// Bomb, Engineered Explosives, Blast Zone.
+    DestroyEachNonlandWithManaValue { value: Value },
     /// CR 701.15 — add a regeneration shield to each resolved permanent.
     /// The shield is a one-shot replacement that fires the next time the
     /// permanent would be destroyed this turn (tap + remove from combat +

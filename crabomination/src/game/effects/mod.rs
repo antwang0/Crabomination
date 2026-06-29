@@ -3459,6 +3459,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DestroyEachNonlandWithManaValue { value } => {
+                use crate::card::SelectionRequirement as R;
+                let n = self.evaluate_value(value, ctx).max(0) as u32;
+                let req = R::Nonland.and(R::ManaValueExactly(n));
+                self.run_effect(
+                    &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::Regenerate { what } => {
                 // CR 701.15 — add one regeneration shield per resolved
                 // permanent. The shield is consumed by the next destruction

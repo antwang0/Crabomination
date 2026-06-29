@@ -3595,6 +3595,12 @@ impl GameState {
             return Err(GameError::CantCastPermanentSpells);
         }
 
+        // Gaddock Teeg lock — high-mana-value / {X} noncreature spells can't be cast.
+        if self.noncreature_spell_cast_locked(&card.definition) {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
+        }
+
         // Validate convoke/improvise helpers up-front (before any state
         // mutation). Convoke taps untapped creatures (CR 702.52); Improvise
         // taps untapped artifacts (CR 702.126); each pays {1}.
@@ -6541,6 +6547,25 @@ impl GameState {
         })
     }
 
+    /// Gaddock Teeg lock — true if `card` is a noncreature spell barred from
+    /// being cast by some `NoncreatureSpellsCantBeCastIf` static anywhere on
+    /// the battlefield (global, all players).
+    pub(crate) fn noncreature_spell_cast_locked(&self, card: &crate::card::CardDefinition) -> bool {
+        use crate::effect::StaticEffect;
+        if card.is_creature() {
+            return false;
+        }
+        let mv = card.cost.cmc();
+        let has_x = card.cost.has_x();
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect,
+                    StaticEffect::NoncreatureSpellsCantBeCastIf { min_mana_value, or_has_x }
+                    if mv >= min_mana_value || (or_has_x && has_x))
+            })
+        })
+    }
+
     /// CR 702.16c — a permanent with protection from a quality can't be the
     /// target of an *ability* from a source with that quality. `source` is the
     /// ability's source permanent. Mirrors the cast-time spell gate but reads
@@ -8854,6 +8879,14 @@ impl GameState {
                 // CR 701.16 — emit the sacrifice-specific event first.
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id });
+            } else if let Some(snap) = self.battlefield_find(card_id).cloned() {
+                // CR 603.10 — a noncreature `sac_cost` source whose body reads
+                // its own last-known counters at resolution (Ratchet Bomb's
+                // "destroy each nonland with mana value = charge counters")
+                // needs the same leaves-battlefield LKI stash; counters are
+                // stripped on the move to the graveyard (CR 122.2).
+                self.died_card_snapshots.insert(card_id, snap.clone());
+                self.leaves_bf_lki.insert(card_id, snap);
             }
             // Generic permanent-sacrifice event (CR 701.16) — fires for
             // every sacrificed permanent regardless of type so

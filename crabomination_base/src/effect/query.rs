@@ -168,6 +168,8 @@ impl Effect {
             Effect::StealCreatureEtbThisTurn => false,
             // Sundering Titan auto-picks one land per basic type at resolution.
             Effect::DestroyLandOfEachBasicType => false,
+            // Untargeted mass destroy keyed on a mana-value count.
+            Effect::DestroyEachNonlandWithManaValue { .. } => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
             // Targets are chosen at resolution (Decision::ChooseCards), so no
