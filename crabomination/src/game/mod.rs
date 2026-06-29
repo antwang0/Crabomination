@@ -178,6 +178,9 @@ mod tests_recent47;
 #[path = "../tests/recent48.rs"]
 mod tests_recent48;
 #[cfg(test)]
+#[path = "../tests/recent49.rs"]
+mod tests_recent49;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -10842,6 +10845,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByGreatestPower
             // SelfCostReducedByTotalPower (Ghalta) — same, off the spell.
             | StaticEffect::SelfCostReducedByTotalPower
+            // SelfCostReducedPerCreatureInGraveyard (Ghoultree) — same.
+            | StaticEffect::SelfCostReducedPerCreatureInGraveyard
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
             | StaticEffect::SelfCostReducedByDomain { .. }
             // SelfCostReducedByDistinctLandNames (Fungal Colossus) — same.

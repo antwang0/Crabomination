@@ -223,6 +223,10 @@ pub enum StaticEffect {
     /// `cost_reduction_for_spell` off the *spell being cast*. Generic-only;
     /// clamped by `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByTotalPower,
+    /// Card-intrinsic "This spell costs {1} less to cast for each creature card
+    /// in your graveyard" (Ghoultree). Read by `cost_reduction_for_spell` off
+    /// the *spell being cast*. Generic-only; clamped by `ManaCost::reduce_generic`.
+    SelfCostReducedPerCreatureInGraveyard,
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// Domain" (CR 702.43 — Leyline Binding). Read by `cost_reduction_for_spell`
     /// off the *spell being cast*; the count is the distinct basic land types

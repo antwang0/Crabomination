@@ -439,6 +439,21 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .sum();
         reduction = reduction.saturating_add(total);
     }
+    // Card-intrinsic "costs {1} less for each creature card in your graveyard"
+    // (Ghoultree). Generic-only, clamped by the caller.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedPerCreatureInGraveyard))
+    {
+        let n = state.players[caster]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_creature())
+            .count() as u32;
+        reduction = reduction.saturating_add(n);
+    }
     // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
     // — distinct basic land types among the caster's lands. Generic-only,
     // clamped by the caller via `ManaCost::reduce_generic`.
