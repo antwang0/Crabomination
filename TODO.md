@@ -2588,6 +2588,29 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **recent34–38 follow-ups / deferred cards (this run):**
+  - Quest cycle remainder: **Quest for Pure Flame** (needs a turn-scoped
+    "double all damage from your sources" replacement — no primitive yet),
+    **Quest for the Nihil Stone** (each-opponent-upkeep intervening-`if` on
+    "that player has no cards in hand AND 2+ quest counters"), **Quest for
+    Ula's Temple** (look-at-top conditional reveal + end-step deploy from hand).
+  - **Quest for the Holy Relic** drops the "attach it to a creature you
+    control" rider — wants a search-to-battlefield-**attached** primitive (also
+    helps Stoneforge-style tutors).
+  - Approximations shipped this run, to revisit: Pir's Whim (full friend/foe
+    vote → you=friend/opponents=foe), Hour of Promise (3+ Deserts Zombie rider
+    dropped), Golden Demise (city's-blessing "opponents only" dropped),
+    Yahenni's Expertise (free-cast rider dropped), Gather the Pack (spell
+    mastery's 2nd creature dropped), Three Dreams (different-names dropped),
+    Goblin Assault ("Goblins attack each combat" dropped).
+  - Still missing, need new primitives: **Bonehoard** (`EquipScale` counts
+    controlled permanents, not graveyard cards), **Necropolis Fiend** ({X},{T},
+    exile X from gy: −X/−X — no X-driven gy-exile activation cost), **Pulmonic
+    Sliver** (graveyard→library replacement static), **Caustic Bronco** (Value
+    reading a just-revealed card's MV), **Wall of Denial** (prevent-all-damage-
+    to-self static), **Goblin Welder** / **Gilt-Leaf Archdruid** /
+    **Pyromancer Ascension** / **Twilight Prophet**.
+
 - ⏳ **recent31 (multicolor staples) follow-ups / deferred cards:**
   - Dimir Charm mode 3 ("look at top three, put one back, rest into graveyard")
     is modeled as **mill 2** — wants a look-top-N-keep-one-rest-to-graveyard

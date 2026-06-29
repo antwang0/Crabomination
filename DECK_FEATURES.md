@@ -189,6 +189,12 @@ Swamp count via `Value::Times`, Golden Demise, Yahenni's Expertise — free-cast
 ascend riders dropped), Sword of the Animist (Legendary Equipment, attack →
 fetch a basic), and Dawn of Hope (`LifeGained` may-draw + Soldier token).
 
+`catalog::sets::decks::recent38` (tests in `tests/recent38.rs`) completes the
+Amonkhet Monument cycle (Bontu's already shipped) on the existing cost-reduction
+static + creature-cast trigger: Oketra's (Warrior token), Kefnet's
+(`SkipNextUntap` on an opponent's creature), Hazoret's (`MayDo` loot), Rhonas's
+(+2/+2 & trample via `PumpPT` + `GrantKeyword`).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing
