@@ -64889,3 +64889,44 @@ fn lignify_makes_a_0_4_treefolk_with_no_abilities() {
     assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
     assert!(cp.lost_all_abilities, "loses all abilities");
 }
+
+#[test]
+fn deep_analysis_flashback_pays_three_life() {
+    // Flashback—{1}{U}, Pay 3 life: from the graveyard, draw two and lose 3 life.
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = g.add_card_to_graveyard(0, catalog::deep_analysis());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastFlashback {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Deep Analysis flashback castable for {1}{U} + 3 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 3, "paid 3 life as a flashback cost");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two cards");
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiled after flashback resolves");
+}
+
+#[test]
+fn deep_analysis_flashback_blocked_without_enough_life() {
+    // CR 119.4 — can't pay 3 life at 2 life, so flashback is rejected.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_graveyard(0, catalog::deep_analysis());
+    g.players[0].life = 2;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "2 life can't pay the 3-life flashback rider");
+}

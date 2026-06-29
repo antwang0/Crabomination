@@ -145,6 +145,9 @@ pub(crate) fn flashback_additional_cost_for_name(
             filter: S::Creature.and(S::ControlledByYou),
             count: 1,
         }],
+        // "Flashback—{1}{U}, Pay 3 life" (the {1}{U} is the printed flashback
+        // mana cost on the card; the life is the additional rider).
+        "Deep Analysis" => vec![A::PayLife { amount: 3 }],
         _ => vec![],
     }
 }
@@ -4194,6 +4197,8 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
+            // CR 119.4 — life can be paid only if the total is at least N.
+            A::PayLife { amount } => self.players[p].life >= *amount as i32,
         })
     }
 
@@ -4432,6 +4437,12 @@ impl GameState {
                             c.tapped = true;
                             events.push(GameEvent::PermanentTapped { card_id: id });
                         }
+                    }
+                }
+                A::PayLife { amount } => {
+                    let applied = self.adjust_life_applied(p, -(*amount as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
                 }
             }

@@ -1432,14 +1432,10 @@ pub fn brawn() -> CardDefinition {
 /// "Target player draws two cards and loses 2 life. / Flashback—{1}{U},
 /// Pay 3 life."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Blue card-draw with a
-/// graveyard recursion mode. Wired as a `Seq(Draw 2, LoseLife 2)`
-/// against the targeted player (collapsed to PlayerRef::Target(0)).
-/// Flashback {1}{U} is wired via `Keyword::Flashback` — the additional
-/// life payment ("Pay 3 life") on the flashback cost is an engine-wide
-/// alt-cost-with-life-cost gap, so the flashback path here is the
-/// plain mana-cost path. The card-advantage and graveyard-reload are
-/// the headline play patterns.
+/// Wired as `Seq(Draw 2, LoseLife 2)` against the targeted player
+/// (collapsed to `PlayerRef::Target(0)`). Flashback {1}{U} via
+/// `Keyword::Flashback`; the "Pay 3 life" flashback rider is applied via
+/// `flashback_additional_cost_for_name` (`AdditionalCastCost::PayLife`).
 pub fn deep_analysis() -> CardDefinition {
     CardDefinition {
         name: "Deep Analysis",

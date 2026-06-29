@@ -2238,6 +2238,11 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         count: u32,
     },
+    /// "As an additional cost to cast this spell, pay N life." (CR 119.4 —
+    /// payable only if life ≥ N.) Deep Analysis's "Flashback—{1}{U}, Pay 3
+    /// life". Paid immediately during casting, so any "loses life" watcher
+    /// fires before the spell resolves.
+    PayLife { amount: u32 },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
