@@ -16538,6 +16538,101 @@ pub fn sandstorm() -> CardDefinition {
     }
 }
 
+/// Blink of an Eye — {1}{U} Instant, Kicker {1}{U}. Return target nonland
+/// permanent to its owner's hand; draw a card if kicked (CR 702.32).
+pub fn blink_of_an_eye() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Blink of an Eye",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Capsize — {1}{U}{U} Instant, Buyback {3}. Return target permanent to its
+/// owner's hand (CR 702.27 — with buyback it returns to hand on resolve).
+pub fn capsize() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Capsize",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Buyback(cost(&[generic(3)]))],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Undying Evil — {B} Instant. Target creature gains undying until end of turn.
+pub fn undying_evil() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Undying Evil",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Undying,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Heat Shimmer — {2}{R} Sorcery. Create a token that's a copy of target
+/// creature, except it has haste and is sacrificed at the next end step.
+/// (Printed text exiles the token; modeled as the haste-sac copy primitive.)
+pub fn heat_shimmer() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Heat Shimmer",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateTokenCopiesHasteSac {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
+
+/// Macabre Waltz — {1}{B} Sorcery. Return up to two target creature cards from
+/// your graveyard to your hand, then discard a card.
+pub fn macabre_waltz() -> CardDefinition {
+    CardDefinition {
+        name: "Macabre Waltz",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::Creature,
+                max: Value::Const(2),
+            },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Witness Protection — {U} Aura. Enchant creature. Enchanted creature loses
 /// all abilities and is a green and white Citizen with base power and
 /// toughness 1/1 (named Legitimate Businessperson — the rename is cosmetic).

@@ -65117,3 +65117,95 @@ fn imprisoned_in_the_moon_neutralizes_to_a_colorless_land() {
     assert!(cp.lost_all_abilities, "abilities removed");
     assert!(cp.colors.is_empty(), "colorless");
 }
+
+#[test]
+fn blink_of_an_eye_bounces_and_draws_when_kicked() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let creat = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::blink_of_an_eye());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: Some(Target::Permanent(creat)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Blink of an Eye kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creat).is_none(), "bounced to hand");
+    // cast (-1) + draw (+1) = net unchanged hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "kicked draw replaced the cast card");
+}
+
+#[test]
+fn capsize_returns_a_permanent_to_hand() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::capsize());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Capsize castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "permanent bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Island"), "back in owner's hand");
+}
+
+#[test]
+fn undying_evil_grants_undying_eot() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::undying_evil());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Undying Evil castable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Undying),
+        "creature gained undying");
+}
+
+#[test]
+fn heat_shimmer_makes_a_hasty_copy() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let before = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    let id = g.add_card_to_hand(0, catalog::heat_shimmer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Heat Shimmer castable");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(after, before + 1, "minted a copy of the target creature");
+}
+
+#[test]
+fn macabre_waltz_returns_two_creatures_and_discards() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let filler = g.add_card_to_hand(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::macabre_waltz());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Return both creatures, then discard the Island.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![c1, c2]),
+        DecisionAnswer::Discard(vec![filler]),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Macabre Waltz castable");
+    drain_stack(&mut g);
+    let creatures_in_hand = g.players[0].hand.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears" || c.definition.name == "Serra Angel").count();
+    assert_eq!(creatures_in_hand, 2, "both creatures returned to hand");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == filler), "discarded the Island");
+}
