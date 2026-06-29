@@ -255,6 +255,14 @@ pub struct Player {
     /// them is prevented. Cleared when their turn begins.
     #[serde(default)]
     pub protected_from_everything: bool,
+    /// CR 401.6 — turn-scoped "you may look at the top card of your library
+    /// any time, and you may play lands and cast spells from the top of your
+    /// library" grant (The Belligerent, Bonehoard's Dracosaur-style player
+    /// permissions). Unlike `StaticEffect::PlayFromLibraryTop` this is a
+    /// player flag set at resolution and cleared at end of turn. Read by
+    /// `library_top_playable` and the top-revealed view.
+    #[serde(default)]
+    pub play_from_top_this_turn: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -551,6 +559,7 @@ impl Player {
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,
             graveyard_cast_types_this_turn: Vec::new(),
+            play_from_top_this_turn: false,
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
             prowl_types_this_turn: Vec::new(),

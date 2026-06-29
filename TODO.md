@@ -33,13 +33,13 @@ Spelunking via `StaticEffect::LandsEnterUntapped`). Deferred from the set:
     can't sum; needs CR 603.3e batch grouping). Cost-reduction-by-greatest-power
     and the {2},{T} double-power activated half are ready (`Value::
     GreatestPowerYouControl`, `Effect::DoublePower`).
-  - The Belligerent / Bonehoard Dracosaur — a turn-scoped "you may play lands /
-    cast spells from the top of your library this turn" player grant
-    (`StaticEffect::PlayFromLibraryTop` exists but only as a permanent static).
+  - Bonehoard Dracosaur — upkeep exile-top-2-may-play ✅ (turn-scoped
+    `Player.play_from_top_this_turn` + `Effect::GrantPlayFromTopThisTurn` /
+    `ExileTopAndGrantMayPlay` now ship). Still needs the per-type "if you
+    exiled a land → 3/1 Dino; if a nonland → Treasure" rider, which wants an
+    `exiled-this-resolution` selector (no single exile funnel today).
   - Quintorius Kand — planeswalker; +1/−3 trivial, the −6 needs
     "exile any number from your gy, add {R} each, may-play this turn".
-  - The Ancient One — a descend-N can't-attack/block static (parallel to
-    `CantAttackOrBlockUnlessDelirium`) + loot-then-mill-by-discarded-MV rider.
   - Zoyowa's Justice / Wail of the Forgotten / Cosmium Confluence — player-scoped
     Discover (`Discover` is always controller-only) and choose-N-with-repeats.
   - Bat Colony (Cave-mana-spent count), Song of Stupefaction (gy-count

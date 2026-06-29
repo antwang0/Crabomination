@@ -205,6 +205,7 @@ impl Effect {
             Effect::Enlist => false,
             Effect::StudyTopCard { .. } => false,
             Effect::ExileTopWithCounters { .. } => false,
+            Effect::GrantPlayFromTopThisTurn => false,
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. } => false,
             Effect::Manifest { .. } => false,

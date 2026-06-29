@@ -1734,6 +1734,8 @@ impl GameState {
             pl.dealt_combat_damage_to_player_this_turn = false;
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
+            // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
+            pl.play_from_top_this_turn = false;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters

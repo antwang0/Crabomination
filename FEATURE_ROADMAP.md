@@ -401,8 +401,10 @@ Each a small targeted feature; sweep batch by batch.
   — Topiary Stomper's "unless you control seven or more lands", with `attack_only` / `block_only` facets
   (Lambholt Pacifist / Olog-hai Crusher), honored in combat, affordances, bot,
   and the legal-blocker gate); hand-size-gated
-  (`CantAttackOrBlockUnlessHandSizeAtMost` — Hazoret) and delirium-gated
-  (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie). Open: granted
+  (`CantAttackOrBlockUnlessHandSizeAtMost` — Hazoret), delirium-gated
+  (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie) and descend-gated
+  (`CantAttackOrBlockUnlessDescend(n)` — The Ancient One, via `descend_count`).
+  Open: granted
   must-attack with future-turn duration, multiplayer goad-target clause,
   cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.

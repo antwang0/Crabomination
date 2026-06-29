@@ -1945,6 +1945,11 @@ impl GameState {
         if card.id != card_id {
             return false;
         }
+        // CR 401.6 — turn-scoped "play lands and cast spells from the top of
+        // your library" grant (The Belligerent) covers any top card.
+        if self.players[p].play_from_top_this_turn {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {

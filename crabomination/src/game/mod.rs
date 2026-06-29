@@ -4945,6 +4945,16 @@ impl GameState {
         kinds.len() >= 4
     }
 
+    /// CR 700.11 — the number of permanent cards in `seat`'s graveyard
+    /// ("descend" count, the threshold for Descend N gates).
+    pub fn descend_count(&self, seat: usize) -> usize {
+        self.players[seat]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_permanent())
+            .count()
+    }
+
     /// Get the computed state of a single permanent (or None if not on battlefield).
     ///
     /// Gathers the same continuous-effect set as `compute_battlefield` but
@@ -5536,6 +5546,13 @@ impl GameState {
         if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
             && !self.delirium_active(blocker.controller)
         {
+            return false;
+        }
+        // CR 509.1a — Descend N gate (The Ancient One).
+        if blocker_cp.keywords.iter().any(|k| {
+            matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
+                if self.descend_count(blocker.controller) < *n as usize)
+        }) {
             return false;
         }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).

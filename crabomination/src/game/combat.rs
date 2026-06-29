@@ -285,6 +285,11 @@ impl GameState {
                 // CR 508.1a — Delirium gate (Patchwork Beastie).
                 let delirium_locked = kws.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
                     && !self.delirium_active(p);
+                // CR 508.1a — Descend N gate (The Ancient One).
+                let descend_locked = kws.iter().any(|k| {
+                    matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
+                        if self.descend_count(p) < *n as usize)
+                });
                 let defender_locked =
                     kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
@@ -295,6 +300,7 @@ impl GameState {
                     && !cohort_locked
                     && !hand_locked
                     && !delirium_locked
+                    && !descend_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
@@ -307,6 +313,7 @@ impl GameState {
                         || cohort_locked
                         || hand_locked
                         || delirium_locked
+                        || descend_locked
                     {
                         return Err(GameError::CannotAttack(id));
                     }

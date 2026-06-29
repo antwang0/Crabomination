@@ -902,6 +902,79 @@ fn careening_mine_cart_treasure_on_attack() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "made a Treasure");
 }
 
+/// The Belligerent's attack trigger grants a turn-scoped "play lands and cast
+/// spells from the top of your library" permission (CR 401.6).
+#[test]
+fn the_belligerent_grants_play_from_top() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::the_belligerent());
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(veh);
+    let top = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(top, catalog::lightning_bolt(), 0));
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![bear1, bear2] }).expect("crew");
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: veh, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.players[0].play_from_top_this_turn, "permission set");
+    assert!(g.library_top_playable(0, top), "top card is now castable");
+}
+
+/// The Ancient One can't attack until you have eight permanent cards in your
+/// graveyard (Descend 8, CR 508.1a).
+#[test]
+fn the_ancient_one_descend_gate() {
+    let mut g = two_player_game();
+    let one = g.add_card_to_battlefield(0, catalog::the_ancient_one());
+    g.clear_sickness(one);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    to_step(&mut g, TurnStep::DeclareAttackers);
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: one, target: AttackTarget::Player(1) }])).is_err(),
+        "can't attack below descend 8",
+    );
+    for _ in 0..8 {
+        let id = g.next_id();
+        g.players[0].send_to_graveyard(crate::card::CardInstance::new(id, catalog::grizzly_bears(), 0));
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: one, target: AttackTarget::Player(1) }]))
+        .expect("attacks with descend 8");
+}
+
+/// The Ancient One's {2}{U}{B} loot mills the target player by the discarded
+/// card's mana value.
+#[test]
+fn the_ancient_one_mills_by_discarded_mv() {
+    let mut g = two_player_game();
+    let one = g.add_card_to_battlefield(0, catalog::the_ancient_one());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Stock the opponent's library so it can be milled.
+    for _ in 0..10 {
+        let id = g.next_id();
+        g.players[1].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    // Empty hand + a known {1}{G} card on top → draw it, then it's the only
+    // card to discard, so the mill reads its mana value (2).
+    g.players[0].hand.clear();
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: one, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 2, "milled by discarded mana value (Grizzly Bears = 2)");
+}
+
 /// Brazen Blademaster pumps when attacking with two+ artifacts.
 #[test]
 fn brazen_blademaster_artifact_pump() {

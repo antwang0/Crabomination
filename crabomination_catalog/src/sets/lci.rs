@@ -258,6 +258,41 @@ pub fn waterlogged_hulk() -> CardDefinition {
     }
 }
 
+/// The Ancient One — {U}{B} Legendary Creature — Spirit God 8/8. Descend 8 —
+/// can't attack or block unless there are 8+ permanent cards in your graveyard.
+/// {2}{U}{B}: Draw a card, then discard a card. When you discard a card this
+/// way, target player mills cards equal to its mana value.
+pub fn the_ancient_one() -> CardDefinition {
+    CardDefinition {
+        name: "The Ancient One",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::God],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::CantAttackOrBlockUnlessDescend(8)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u(), b()]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Mill {
+                    who: Selector::Target(0),
+                    amount: Value::ManaValueOf(Box::new(Selector::DiscardedThisResolution {
+                        filter: SelectionRequirement::Any,
+                    })),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Lodestone Needle // Guidestone Compass — {1}{U} Artifact, Flash; ETB tap a
 /// target artifact/creature and put two stun counters on it. Craft with
 /// artifact {2}{U} → Guidestone Compass ({1},{T}: target creature you control
@@ -2189,6 +2224,31 @@ pub fn careening_mine_cart() -> CardDefinition {
             count: Value::Const(1),
             definition: treasure_token(),
         })],
+        ..Default::default()
+    }
+}
+
+/// The Belligerent — {2}{U}{R} Legendary Artifact — Vehicle 5/5, Crew 3.
+/// Whenever it attacks, create a Treasure and, until end of turn, you may play
+/// lands and cast spells from the top of your library.
+pub fn the_belligerent() -> CardDefinition {
+    CardDefinition {
+        name: "The Belligerent",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Crew(3)],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+            Effect::GrantPlayFromTopThisTurn,
+        ]))],
         ..Default::default()
     }
 }

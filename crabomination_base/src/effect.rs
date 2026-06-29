@@ -3576,6 +3576,12 @@ pub enum Effect {
     /// controller's library, each with one `counter` counter on it.
     ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
 
+    /// CR 401.6 — "Until end of turn, you may look at the top card of your
+    /// library any time, and you may play lands and cast spells from the top
+    /// of your library." Sets `Player.play_from_top_this_turn` for the
+    /// effect's controller (The Belligerent's attack trigger).
+    GrantPlayFromTopThisTurn,
+
     /// "You may cast up to `count` spells from among face-up cards your
     /// opponents own from exile this turn without paying their mana costs."
     /// Grants the controller a free `may_play_until` end-of-turn permission

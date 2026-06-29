@@ -814,6 +814,11 @@ pub enum Keyword {
     /// unless there are four or more card types among cards in your graveyard"
     /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.
     CantAttackOrBlockUnlessDelirium,
+    /// CR 508.1a / 509.1a restriction — "Descend N — This creature can't attack
+    /// or block unless there are N or more permanent cards in your graveyard"
+    /// (The Ancient One, descend 8). Enforced against the controller's
+    /// permanent-card graveyard count (`descend_count`).
+    CantAttackOrBlockUnlessDescend(u32),
     /// "This creature assigns no combat damage this turn" (Master of
     /// Cruelties' attack rider). A marker keyword — typically granted with
     /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the

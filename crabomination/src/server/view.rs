@@ -408,7 +408,8 @@ fn known_library_top(
     let revealed_to_all =
         lantern || has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed));
     let owner_may_look = viewer_seat == player_seat
-        && has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }));
+        && (has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }))
+            || state.players[player_seat].play_from_top_this_turn);
     if revealed_to_all || owner_may_look {
         state.players[player_seat].library.first().map(known_card).into_iter().collect()
     } else {

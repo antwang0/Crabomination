@@ -8711,6 +8711,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantPlayFromTopThisTurn => {
+                self.players[ctx.controller].play_from_top_this_turn = true;
+                Ok(())
+            }
+
             Effect::CastUpToNFromOpponentsExile { count } => {
                 // Grant the controller a free end-of-turn cast permission on
                 // up to `count` opponent-owned cards in exile. Ashiok −7.

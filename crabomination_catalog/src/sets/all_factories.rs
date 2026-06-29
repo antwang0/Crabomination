@@ -4471,6 +4471,8 @@ static LCI: &[Factory] = &[
     super::lci::malamet_veteran,
     super::lci::enterprising_scallywag,
     super::lci::careening_mine_cart,
+    super::lci::the_belligerent,
+    super::lci::the_ancient_one,
     super::lci::brazen_blademaster,
     super::lci::burning_sun_cavalry,
     super::lci::hotfoot_gnome,
