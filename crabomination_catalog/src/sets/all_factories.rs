@@ -4104,6 +4104,9 @@ static DECKS: &[Factory] = &[
     super::decks::dredgers_insight,
     super::decks::aether_syphon,
     super::decks::alacrian_armory,
+    super::decks::dracosaur_auxiliary,
+    super::decks::detention_chariot,
+    super::decks::endrider_spikespitter,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

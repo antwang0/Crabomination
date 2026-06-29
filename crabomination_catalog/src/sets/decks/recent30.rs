@@ -5,11 +5,13 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, Predicate,
+    SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{attacks_while_saddled, etb, target_filtered};
+use crate::effect::shortcut::{attacks_while_saddled, deal, etb, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 fn cycling(c: crate::mana::ManaCost) -> Keyword {
@@ -465,6 +467,76 @@ pub fn dredgers_insight() -> CardDefinition {
 /// "Deal `amount` damage to `target`" with a dynamic amount.
 fn deal_value(amount: Value, target: Selector) -> Effect {
     Effect::DealDamage { to: target, amount }
+}
+
+/// Dracosaur Auxiliary — {4}{R}{R} 4/4 Dinosaur Dragon Mount with flying and
+/// haste. Whenever it attacks while saddled, it deals 2 damage to any target.
+/// Saddle 3.
+pub fn dracosaur_auxiliary() -> CardDefinition {
+    CardDefinition {
+        name: "Dracosaur Auxiliary",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Dragon, CreatureType::Mount],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Saddle(3)],
+        triggered_abilities: vec![attacks_while_saddled(deal(2, target_any()))],
+        ..Default::default()
+    }
+}
+
+/// Detention Chariot — {4}{W}{W} 6/6 Vehicle. ETB: exile target artifact or
+/// creature an opponent controls until this leaves. Crew 3. Cycling {W}.
+pub fn detention_chariot() -> CardDefinition {
+    CardDefinition {
+        name: "Detention Chariot",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: vehicle(vec![ArtifactSubtype::Vehicle]),
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Crew(3), cycling(cost(&[w()]))],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Endrider Spikespitter — {3}{R} 3/4 Human Mercenary with reach. Start your
+/// engines! Max speed — at the beginning of your upkeep, exile the top card and
+/// you may play it this turn.
+pub fn endrider_spikespitter() -> CardDefinition {
+    CardDefinition {
+        name: "Endrider Spikespitter",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::StartYourEngines],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::If {
+                cond: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                then: Box::new(Effect::LookTopExileOneMayPlay { count: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
 }
 
 /// Aether Syphon — {1}{U}{U} Artifact. Start your engines! {2}, {T}: Draw a

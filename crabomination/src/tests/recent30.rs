@@ -246,3 +246,48 @@ fn alacrian_armory_anthem() {
     assert_eq!((cp.power, cp.toughness), (2, 3), "+0/+1");
     assert!(cp.keywords.contains(&Keyword::Vigilance), "gained vigilance");
 }
+
+/// Dracosaur Auxiliary pings any target when it attacks while saddled.
+#[test]
+fn dracosaur_auxiliary_saddled_ping() {
+    let mut g = two_player_game();
+    let drac = g.add_card_to_battlefield(0, catalog::dracosaur_auxiliary());
+    let helper1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let helper2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(drac);
+    g.clear_sickness(helper1);
+    g.clear_sickness(helper2);
+    ready(&mut g);
+    g.perform_action(GameAction::Saddle { mount: drac, creatures: vec![helper1, helper2] })
+        .expect("saddle 3 via two 2-power bears");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.declare_attackers(vec![Attack { attacker: drac, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "dealt 2 to the opponent");
+}
+
+/// Detention Chariot exiles an opponent's creature until it leaves.
+#[test]
+fn detention_chariot_exiles_until_leaves() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dc = etb_bf(&mut g, 0, catalog::detention_chariot());
+    assert!(g.battlefield_find(foe).is_none(), "opponent's creature exiled");
+    g.remove_to_graveyard_with_triggers(dc);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 1),
+        "returns when the Chariot leaves");
+}
+
+/// Endrider Spikespitter ships with reach and Start your engines!
+#[test]
+fn endrider_spikespitter_shape() {
+    let mut g = two_player_game();
+    let es = g.add_card_to_battlefield(0, catalog::endrider_spikespitter());
+    let cp = g.computed_permanent(es).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.keywords.contains(&Keyword::StartYourEngines));
+}
