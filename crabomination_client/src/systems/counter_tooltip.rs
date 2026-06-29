@@ -927,6 +927,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             "Can't attack unless you cast a creature spell this turn".into()
         }
         K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium".into(),
+        K::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
+            "Can't attack or block unless a creature died under your control this turn".into()
+        }
         K::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
             format!("Can't attack or block unless you have {n} or fewer cards in hand")
         }

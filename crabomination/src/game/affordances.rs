@@ -301,6 +301,9 @@ impl GameState {
                         self.players[seat].hand.len() as u32 <= *n
                     }
                     Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
+                    Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
+                        self.players[seat].creatures_died_this_turn > 0
+                    }
                     Keyword::CantAttackOrBlockUnlessDescend(n) => {
                         self.descend_count(seat) >= *n as usize
                     }

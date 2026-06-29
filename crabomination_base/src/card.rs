@@ -819,6 +819,10 @@ pub enum Keyword {
     /// (The Ancient One, descend 8). Enforced against the controller's
     /// permanent-card graveyard count (`descend_count`).
     CantAttackOrBlockUnlessDescend(u32),
+    /// CR 508.1a / 509.1a restriction — "[This creature] can't attack or block
+    /// unless a creature died under your control this turn" (Bontu the
+    /// Glorified). Enforced against the controller's `creatures_died_this_turn`.
+    CantAttackOrBlockUnlessCreatureDiedThisTurn,
     /// "This creature assigns no combat damage this turn" (Master of
     /// Cruelties' attack rider). A marker keyword — typically granted with
     /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the

@@ -138,6 +138,14 @@ of Bolas, Agony Warp, Savage Knuckleblade, Butcher of the Horde, Demonic Dread
 (Cascade), Glory (graveyard-only protection grant), Foul-Tongue Invocation, and
 The First Sliver (Sliver spells you cast have cascade).
 
+`catalog::sets::decks::recent32` (tests in `tests/recent32.rs`) is an
+aristocrats / sacrifice-matters batch: Cartel Aristocrat, Bloodflow
+Connoisseur, Vampire Aristocrat, Yahenni, Bontu the Glorified, Smothering
+Abomination, Butcher Ghoul, Elas il-Kor, Mahadi, and Heartless Summoning.
+Sacrifice-as-cost activated abilities fold the sacrifice as the effect's first
+step. New keyword `CantAttackOrBlockUnlessCreatureDiedThisTurn` (Bontu's combat
+gate, wired into attack/block legality + the client HUD strip/tooltip).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

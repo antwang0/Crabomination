@@ -285,6 +285,11 @@ impl GameState {
                 // CR 508.1a — Delirium gate (Patchwork Beastie).
                 let delirium_locked = kws.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
                     && !self.delirium_active(p);
+                // CR 508.1a — "a creature died under your control this turn"
+                // gate (Bontu the Glorified).
+                let creature_died_locked =
+                    kws.contains(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
+                        && self.players[p].creatures_died_this_turn == 0;
                 // CR 508.1a — Descend N gate (The Ancient One).
                 let descend_locked = kws.iter().any(|k| {
                     matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
@@ -300,6 +305,7 @@ impl GameState {
                     && !cohort_locked
                     && !hand_locked
                     && !delirium_locked
+                    && !creature_died_locked
                     && !descend_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {

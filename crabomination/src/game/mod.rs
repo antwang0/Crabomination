@@ -127,6 +127,9 @@ mod tests_recent30;
 #[path = "../tests/recent31.rs"]
 mod tests_recent31;
 #[cfg(test)]
+#[path = "../tests/recent32.rs"]
+mod tests_recent32;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -5578,6 +5581,12 @@ impl GameState {
         // CR 509.1a — Delirium gate (Patchwork Beastie).
         if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
             && !self.delirium_active(blocker.controller)
+        {
+            return false;
+        }
+        // CR 509.1a — "a creature died under your control this turn" gate (Bontu).
+        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
+            && self.players[blocker.controller].creatures_died_this_turn == 0
         {
             return false;
         }
