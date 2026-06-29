@@ -606,6 +606,10 @@ pub enum Value {
     /// table-wide aristocrat scaling, mirroring
     /// `Predicate::CreaturesDiedThisTurnTotalAtLeast`.
     CreaturesDiedThisTurnTotal,
+    /// Number of creatures that died **under the controller's control** this
+    /// turn (`Player.creatures_died_this_turn` for `ctx.controller`). Liliana's
+    /// Standard Bearer.
+    ControllerCreaturesDiedThisTurn,
     /// Number of Zubera that died this turn across **every** player. Sums
     /// `Player.zuberas_died_this_turn`. Powers the Champions-of-Kamigawa
     /// Zubera death-trigger cycle ("for each Zubera that died this turn").

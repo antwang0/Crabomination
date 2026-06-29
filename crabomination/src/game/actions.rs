@@ -454,6 +454,15 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .count() as u32;
         reduction = reduction.saturating_add(n);
     }
+    // Card-intrinsic "costs {amount} less if a creature died this turn" (Bone
+    // Picker). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount } = sa.effect
+            && state.players.iter().any(|p| p.creatures_died_this_turn > 0)
+        {
+            reduction = reduction.saturating_add(amount);
+        }
+    }
     // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
     // — distinct basic land types among the caster's lands. Generic-only,
     // clamped by the caller via `ManaCost::reduce_generic`.

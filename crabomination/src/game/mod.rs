@@ -184,6 +184,9 @@ mod tests_recent49;
 #[path = "../tests/recent50.rs"]
 mod tests_recent50;
 #[cfg(test)]
+#[path = "../tests/recent51.rs"]
+mod tests_recent51;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -10856,6 +10859,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByTotalPower
             // SelfCostReducedPerCreatureInGraveyard (Ghoultree) — same.
             | StaticEffect::SelfCostReducedPerCreatureInGraveyard
+            // SelfCostReducedIfCreatureDiedThisTurn (Bone Picker) — same.
+            | StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { .. }
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
             | StaticEffect::SelfCostReducedByDomain { .. }
             // SelfCostReducedByDistinctLandNames (Fungal Colossus) — same.

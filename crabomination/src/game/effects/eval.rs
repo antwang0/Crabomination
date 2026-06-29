@@ -553,6 +553,9 @@ impl GameState {
                 .iter()
                 .map(|p| p.creatures_died_this_turn as i32)
                 .sum(),
+            Value::ControllerCreaturesDiedThisTurn => {
+                self.players[ctx.controller].creatures_died_this_turn as i32
+            }
             Value::ZuberasDiedThisTurnTotal => self
                 .players
                 .iter()
