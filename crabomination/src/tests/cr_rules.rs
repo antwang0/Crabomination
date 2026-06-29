@@ -5199,3 +5199,97 @@ fn cr_702_179_start_your_engines_sets_speed_to_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].speed, 1, "Start your engines! set speed to 1");
 }
+
+// ── CR 702.2e / 510.1c — trample + deathtouch over multiple blockers ──────────
+
+/// A trample + deathtouch attacker assigns only 1 (the deathtouch lethal) to
+/// each blocker, so the rest tramples through (CR 510.1c lethal accounting +
+/// CR 702.2e "any nonzero amount is lethal under deathtouch").
+fn trample_deathtoucher(power: i32) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    CardDefinition {
+        name: "Test Trample Deathtoucher",
+        cost: crate::mana::cost(&[crate::mana::generic(3), crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        power,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+#[test]
+fn cr_702_2e_trample_deathtouch_assigns_one_per_blocker_then_tramples() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, trample_deathtoucher(4)); // 4/4
+    g.clear_sickness(attacker);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    let life_before = g.players[1].life;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    // 1 lethal (deathtouch) to each blocker → both die; 4 - 1 - 1 = 2 tramples over.
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(),
+        "deathtouch kills both blockers with 1 damage each");
+    assert_eq!(g.players[1].life, life_before - 2, "the remaining 2 power tramples through");
+}
+
+// ── CR 305.7 / 613 — a type-set effect swaps which tribal lord applies ─────────
+
+/// Turn to Frog's `BecomeCreatureType` replaces the creature's types (layer 4),
+/// so a non-Frog joins a Frog lord's umbrella — checked through the layer
+/// pipeline (CR 613 ordering: type set at L4 feeds the L7c anthem).
+#[test]
+fn cr_305_7_type_change_swaps_lord_applicability() {
+    use crate::card::{CardType, CreatureType, StaticAbility, StaticEffect, SelectionRequirement, Selector};
+    let mut g = two_player_game();
+    // A Frog lord: "Other Frogs you control get +1/+1."
+    let lord = crate::card::CardDefinition {
+        name: "Test Frog Lord",
+        cost: crate::mana::cost(&[crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Frog], ..Default::default()
+        },
+        power: 2, toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Frogs you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Frog)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    g.add_card_to_battlefield(0, lord);
+    // A vanilla 2/2 that is NOT a Frog — unaffected by the lord at first.
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 2, "non-Frog unbuffed");
+
+    // Turn the bears into a 1/1 Frog — sets its type at layer 4.
+    let spell = g.add_card_to_hand(0, catalog::turn_to_frog());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Turn to Frog castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "now a Frog");
+    // Base 1/1 (Turn to Frog) + the Frog lord's +1/+1 → 2/2.
+    assert_eq!((cp.power, cp.toughness), (2, 2), "the Frog lord now buffs the new Frog");
+}

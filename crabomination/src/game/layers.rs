@@ -304,20 +304,36 @@ fn compute_permanent(
     // pass 1 excludes them, pass 2 re-runs the full walk with each gate
     // resolved against that power. Keyword grants don't feed back into
     // layer 7, so the result is a fixpoint after one re-run.
-    let has_gated = effects
+    let has_power_gated = effects
         .iter()
         .any(|e| matches!(e.affected, AffectedPermanents::CardMatchPowerGated { .. }));
-    if !has_gated {
-        return compute_permanent_pass(card, effects, None);
+    // CR 613.8 — a creature-type lord (AllWithCreatureType) must see the
+    // *computed* types, so a creature animated/retyped into the lord's tribe
+    // (Turn to Frog into a Frog lord, Arcane Adaptation, etc.) gets the buff.
+    // Only re-run when both a type-changer and a type lord are present.
+    let has_type_changer = effects.iter().any(|e| {
+        matches!(
+            e.modification,
+            Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
+        )
+    });
+    let has_type_lord = effects
+        .iter()
+        .any(|e| matches!(e.affected, AffectedPermanents::AllWithCreatureType { .. }));
+    let has_type_gated = has_type_changer && has_type_lord;
+    if !has_power_gated && !has_type_gated {
+        return compute_permanent_pass(card, effects, None, None);
     }
-    let pass1 = compute_permanent_pass(card, effects, None);
-    compute_permanent_pass(card, effects, Some(pass1.power))
+    let pass1 = compute_permanent_pass(card, effects, None, None);
+    let gate_types = has_type_gated.then(|| pass1.subtypes.creature_types.clone());
+    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref())
 }
 
 fn compute_permanent_pass(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
     gate_power: Option<i32>,
+    gate_types: Option<&[CreatureType]>,
 ) -> ComputedPermanent {
     // Start from the base card definition.
     let mut controller = card.controller;
@@ -399,7 +415,7 @@ fn compute_permanent_pass(
     // Sort effects by layer, then sublayer, then timestamp.
     let mut sorted: Vec<&ContinuousEffect> = effects
         .iter()
-        .filter(|e| affects(e, card, gate_power))
+        .filter(|e| affects(e, card, gate_power, gate_types))
         .chain(eot_grants.iter())
         .collect();
     sorted.sort_by(|a, b| {
@@ -540,8 +556,9 @@ fn affects(
     effect: &ContinuousEffect,
     card: &crate::card::CardInstance,
     gate_power: Option<i32>,
+    gate_types: Option<&[CreatureType]>,
 ) -> bool {
-    affected_includes_gated(&effect.affected, effect.source, card, gate_power)
+    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types)
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -558,7 +575,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power))
+    affected_includes_gated(affected, source, card, Some(printed_power), None)
 }
 
 fn affected_includes_gated(
@@ -566,6 +583,9 @@ fn affected_includes_gated(
     source: CardId,
     card: &crate::card::CardInstance,
     gate_power: Option<i32>,
+    // CR 613.8 — the affected card's *computed* creature types (pass 2 of a
+    // type lord recompute). `None` falls back to printed types.
+    gate_types: Option<&[CreatureType]>,
 ) -> bool {
     match affected {
         AffectedPermanents::Source => source == card.id,
@@ -608,8 +628,12 @@ fn affected_includes_gated(
             }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let is_creature = card.definition.card_types.contains(&CardType::Creature);
-            let has_type = card.definition.subtypes.creature_types.contains(creature_type)
-                || card.definition.keywords.contains(&Keyword::Changeling);
+            // CR 613.8 — match against computed types when a type-changer is in
+            // play (pass 2), else the printed type line.
+            let has_type = match gate_types {
+                Some(types) => types.contains(creature_type),
+                None => card.definition.subtypes.creature_types.contains(creature_type),
+            } || card.definition.keywords.contains(&Keyword::Changeling);
             ctrl_ok && is_creature && has_type
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
