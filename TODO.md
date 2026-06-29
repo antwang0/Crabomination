@@ -2607,9 +2607,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     controlled permanents, not graveyard cards), **Necropolis Fiend** ({X},{T},
     exile X from gy: −X/−X — no X-driven gy-exile activation cost), **Pulmonic
     Sliver** (graveyard→library replacement static), **Caustic Bronco** (Value
-    reading a just-revealed card's MV), **Wall of Denial** (prevent-all-damage-
-    to-self static), **Goblin Welder** / **Gilt-Leaf Archdruid** /
-    **Pyromancer Ascension** / **Twilight Prophet**.
+    reading a just-revealed card's MV), **Goblin Welder** / **Gilt-Leaf
+    Archdruid** / **Pyromancer Ascension** / **Twilight Prophet**.
+    (Fog Bank / Guard Gomazoa shipped via `StaticEffect::PreventAllCombatDamage-
+    ToThis`; Wall of Denial shipped as Defender/Flying/Shroud per current oracle.)
 
 - ⏳ **recent31 (multicolor staples) follow-ups / deferred cards:**
   - Dimir Charm mode 3 ("look at top three, put one back, rest into graveyard")

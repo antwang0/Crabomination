@@ -501,6 +501,11 @@ pub enum StaticEffect {
     /// Innocent.) Read by `GameState::damage_halvers`; applied after any
     /// doublers at both damage funnels.
     HalveDamageDealt,
+    /// CR 615 — "Prevent all combat damage that would be dealt to this." A
+    /// self-static the combat-damage resolver honors (zeroing damage marked on
+    /// the permanent) unless combat damage can't be prevented this turn (615.12).
+    /// Fog Bank, Guard Gomazoa.
+    PreventAllCombatDamageToThis,
     /// CR 614.5 — "If a source would deal damage to an opponent or a
     /// permanent an opponent controls, it deals double that damage instead."
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's

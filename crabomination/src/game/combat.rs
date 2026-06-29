@@ -1778,6 +1778,9 @@ impl GameState {
                     // Ironscale Hydra replaces the damage with a +1/+1 counter
                     // (and so the attacker's lifelink scales off 0).
                     let dealt = self.ironscale_replace(blocker_id, dealt, &mut events);
+                    // CR 615 — a blocker that prevents all damage to itself
+                    // (Wall of Denial) takes none, and grants no lifelink.
+                    let dealt = if self.combat_damage_prevented_to_self(blocker_id) { 0 } else { dealt };
                     lifelink_dealt += dealt;
 
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
@@ -1892,6 +1895,9 @@ impl GameState {
                         // Ironscale Hydra replaces the blocker's strike-back
                         // with a +1/+1 counter (blocker's lifelink sees 0).
                         let dmg = self.ironscale_replace(atk.id, dmg as i32, &mut events) as u32;
+                        // CR 615 — an attacker that prevents all damage to itself
+                        // takes none from this blocker (and gives no lifelink).
+                        let dmg = if self.combat_damage_prevented_to_self(atk.id) { 0 } else { dmg };
                         if dmg == 0 {
                             continue;
                         }

@@ -195,6 +195,11 @@ static + creature-cast trigger: Oketra's (Warrior token), Kefnet's
 (`SkipNextUntap` on an opponent's creature), Hazoret's (`MayDo` loot), Rhonas's
 (+2/+2 & trample via `PumpPT` + `GrantKeyword`).
 
+`catalog::sets::decks::recent39` (tests in `tests/recent39.rs`) adds defensive
+walls. New engine primitive `StaticEffect::PreventAllCombatDamageToThis` (CR 615,
+honored in the combat-damage resolver, respecting the can't-be-prevented switch)
+powers Fog Bank and Guard Gomazoa; Wall of Denial is Defender/Flying/Shroud.
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

@@ -148,6 +148,9 @@ mod tests_recent37;
 #[path = "../tests/recent38.rs"]
 mod tests_recent38;
 #[cfg(test)]
+#[path = "../tests/recent39.rs"]
+mod tests_recent39;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -2861,6 +2864,27 @@ impl GameState {
                     .count() as u32
             })
             .sum()
+    }
+
+    /// CR 615 — true when `tgt` has a `PreventAllCombatDamageToThis` self-static
+    /// (Fog Bank, Guard Gomazoa), so the combat-damage resolver blanks damage
+    /// marked on it.
+    pub fn permanent_prevents_all_combat_damage_to_self(&self, tgt: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield_find(tgt).is_some_and(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThis))
+        })
+    }
+
+    /// CR 615 — true when `tgt` prevents all combat damage to itself and
+    /// prevention isn't switched off this turn. Consulted by the combat-damage
+    /// resolver to zero damage marked on Fog Bank / Guard Gomazoa.
+    pub fn combat_damage_prevented_to_self(&self, tgt: crate::card::CardId) -> bool {
+        !self.damage_cant_be_prevented_this_turn
+            && self.permanent_prevents_all_combat_damage_to_self(tgt)
     }
 
     /// Scale a pending damage event by the global doubling/halving
@@ -10510,6 +10534,7 @@ fn static_effect_to_effects(
             // `scale_damage_to`; no layer effect.
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
+            | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::HalveDamageToYou
