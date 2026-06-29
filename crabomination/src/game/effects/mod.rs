@@ -5030,6 +5030,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeCreatureType { what, creature_types, duration } => {
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetCreatureTypes(creature_types.clone()),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ChooseColorForSelf => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;

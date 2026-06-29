@@ -478,6 +478,7 @@ impl Effect {
             Effect::EachPlayerMayPutPermanentFromHand { .. } => false,
             Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }
+            | Effect::BecomeCreatureType { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_has_target(what),
@@ -864,6 +865,7 @@ impl Effect {
             | Effect::AddCardTypeIndefinitely { what, .. }
             | Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }
+            | Effect::BecomeCreatureType { what, .. }
             | Effect::GrantMayPlay { what, .. }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::NameCreatureType { what }
@@ -1218,6 +1220,11 @@ impl Effect {
                 let words: Vec<String> =
                     colors.iter().map(|c| format!("{c:?}").to_lowercase()).collect();
                 format!("{} becomes {}", self.target_phrase(), words.join(" and "))
+            }
+            Effect::BecomeCreatureType { creature_types, .. } => {
+                let words: Vec<String> =
+                    creature_types.iter().map(|t| format!("{t:?}")).collect();
+                format!("{} becomes a {}", self.target_phrase(), words.join(" "))
             }
             Effect::LoseAllAbilities { .. } => {
                 format!("{} loses all abilities", self.target_phrase())
@@ -1706,6 +1713,7 @@ impl Effect {
                 | Effect::SetLoyalty { what, .. }
                 | Effect::BecomeChosenColor { what, .. }
                 | Effect::BecomeColor { what, .. }
+                | Effect::BecomeCreatureType { what, .. }
                 | Effect::ReplaceColorWord { what, .. }
                 | Effect::ReplaceBasicLandType { what, .. }
                 | Effect::GrantMayPlay { what, .. }

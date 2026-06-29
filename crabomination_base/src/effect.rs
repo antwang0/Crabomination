@@ -2670,6 +2670,13 @@ pub enum Effect {
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
     /// red"), Crimson Wisps-style color set without a player choice.
     BecomeColor { what: Selector, colors: Vec<crate::mana::Color>, duration: Duration },
+    /// Each permanent picked by `what` has its creature types set to exactly
+    /// `creature_types` for `duration` (CR 305.7 / layer-4 `SetCreatureTypes`).
+    /// The type-line half of "becomes a [color] [type]" cards — pair with
+    /// `BecomeColor` / `SetBasePT` / `LoseAllAbilities` for the full rewrite
+    /// (Kasmina's Transmutation → blue Frog, Kenrith's Transformation → Elk,
+    /// Turn to Frog, Lignify → Treefolk).
+    BecomeCreatureType { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
     /// CR 612 — change the target's text by replacing all instances of one
     /// color word with another, both chosen by the controller (layer 3;
     /// rewrites Protection-from-color). Trait Doctoring, Mind Bend.

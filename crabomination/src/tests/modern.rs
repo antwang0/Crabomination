@@ -64825,3 +64825,67 @@ fn temur_charm_fights() {
     assert!(g.battlefield_find(theirs).is_none(), "their creature died to the fight");
     assert!(g.battlefield_find(mine).is_some(), "my pumped creature survived");
 }
+
+#[test]
+fn turn_to_frog_makes_target_a_1_1_blue_frog_with_no_abilities() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying-vigilance
+    let frog = g.add_card_to_hand(0, catalog::turn_to_frog());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: frog, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Turn to Frog castable for {1}{U}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).expect("angel still on bf");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "becomes 1/1");
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "becomes a Frog");
+    assert!(cp.colors.contains(&Color::Blue) && cp.colors.len() == 1, "becomes mono-blue");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(cp.lost_all_abilities, "loses all abilities");
+}
+
+#[test]
+fn kenriths_transformation_draws_and_makes_a_3_3_green_elk() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let hand_before = g.players[0].hand.len();
+    let aura = g.add_card_to_hand(0, catalog::kenriths_transformation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Kenrith's Transformation castable for {1}{G}");
+    drain_stack(&mut g);
+    // ETB draw nets +1 (the Aura left hand, one card drawn).
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw replaced the cast card");
+    let cp = g.computed_permanent(angel).expect("angel still on bf");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "becomes 3/3");
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Elk], "becomes an Elk");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(cp.lost_all_abilities, "loses all abilities");
+}
+
+#[test]
+fn lignify_makes_a_0_4_treefolk_with_no_abilities() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::lignify());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lignify castable for {1}{G}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).expect("angel still on bf");
+    assert_eq!((cp.power, cp.toughness), (0, 4), "becomes 0/4");
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Treefolk], "becomes a Treefolk");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(cp.lost_all_abilities, "loses all abilities");
+}

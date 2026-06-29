@@ -16269,6 +16269,103 @@ pub fn arrest() -> CardDefinition {
     )
 }
 
+/// Turn to Frog — {1}{U} Instant. Until end of turn, target creature loses
+/// all abilities and becomes a blue Frog with base power and toughness 1/1.
+pub fn turn_to_frog() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    use crate::card::SelectionRequirement;
+    let creature = || target_filtered(SelectionRequirement::Creature);
+    CardDefinition {
+        name: "Turn to Frog",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseAllAbilities { what: creature(), duration: Duration::EndOfTurn },
+            Effect::BecomeColor {
+                what: creature(),
+                colors: vec![Color::Blue],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeCreatureType {
+                what: creature(),
+                creature_types: vec![CreatureType::Frog],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::SetBasePT {
+                what: creature(),
+                power: crate::effect::Value::Const(1),
+                toughness: crate::effect::Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kenrith's Transformation — {1}{G} Aura. Enchant creature. When this Aura
+/// enters, draw a card. Enchanted creature loses all abilities and is a green
+/// Elk with base power and toughness 3/3.
+pub fn kenriths_transformation() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, Subtypes};
+    use crate::effect::shortcut::{etb, target_filtered};
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Kenrith's Transformation",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: crate::card::Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: crate::card::Selector::You,
+            amount: crate::effect::Value::Const(1),
+        })],
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((3, 3)),
+            set_creature_types: Some(vec![CreatureType::Elk]),
+            set_colors: Some(vec![Color::Green]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Lignify — {1}{G} Kindred Enchantment — Treefolk Aura. Enchant creature.
+/// Enchanted creature is a Treefolk with base power and toughness 0/4 and
+/// loses all abilities.
+pub fn lignify() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, Subtypes};
+    use crate::effect::shortcut::target_filtered;
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Lignify",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Kindred, CardType::Enchantment],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: crate::card::Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((0, 4)),
+            set_creature_types: Some(vec![CreatureType::Treefolk]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
 pub fn loot_the_pathfinder() -> CardDefinition {

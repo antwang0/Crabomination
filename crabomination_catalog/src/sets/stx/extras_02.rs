@@ -1457,36 +1457,28 @@ pub fn deep_analysis() -> CardDefinition {
 
 // ── Kasmina's Transmutation (STA reprint, Strixhaven Loyalty) ──────────────
 
-/// Kasmina's Transmutation — {1}{U} Sorcery (STA reprint, Strixhaven).
-///
-/// "Target creature loses all abilities and becomes a blue Frog with
-/// base power and toughness 1/1 until end of turn."
-///
-/// Push (modern_decks): the "loses all abilities" rider now lands via
-/// `Effect::LoseAllAbilities` (the same layer-6 strip primitive used by
-/// Mercurial Transformation, CR 113.10b). Body now resolves as
-/// `Seq(SetBasePT 1/1, LoseAllAbilities)` — the target shrinks to a
-/// 1/1 *and* loses Flying / triggered abilities / activated abilities
-/// for the rest of the turn. The "becomes a blue Frog" type-and-color
-/// rewrite (layer 4 + 5) is still omitted; the target keeps its
-/// printed creature types and colors.
+/// Kasmina's Transmutation — {1}{U} Aura (STA reprint, Strixhaven).
+/// Enchant creature. Enchanted creature loses all abilities and has base
+/// power and toughness 1/1.
 pub fn kasminas_transmutation() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
     CardDefinition {
         name: "Kasmina's Transmutation",
         cost: cost(&[generic(1), u()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::SetBasePT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::LoseAllAbilities {
-                what: target_filtered(SelectionRequirement::Creature),
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            remove_abilities: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
