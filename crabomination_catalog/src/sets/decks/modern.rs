@@ -16366,6 +16366,178 @@ pub fn lignify() -> CardDefinition {
     }
 }
 
+/// Ovinize — {1}{U} Instant. Until end of turn, target creature loses all
+/// abilities and has base power and toughness 0/1.
+pub fn ovinize() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    use crate::card::SelectionRequirement;
+    let creature = || target_filtered(SelectionRequirement::Creature);
+    CardDefinition {
+        name: "Ovinize",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseAllAbilities { what: creature(), duration: Duration::EndOfTurn },
+            Effect::SetBasePT {
+                what: creature(),
+                power: crate::effect::Value::Const(0),
+                toughness: crate::effect::Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Snakeform — {2}{G/U} Instant. Until end of turn, target creature loses all
+/// abilities and becomes a green Snake with base power and toughness 1/1.
+/// Draw a card.
+pub fn snakeform() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    use crate::card::SelectionRequirement;
+    let creature = || target_filtered(SelectionRequirement::Creature);
+    CardDefinition {
+        name: "Snakeform",
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseAllAbilities { what: creature(), duration: Duration::EndOfTurn },
+            Effect::BecomeColor {
+                what: creature(),
+                colors: vec![Color::Green],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeCreatureType {
+                what: creature(),
+                creature_types: vec![CreatureType::Snake],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::SetBasePT {
+                what: creature(),
+                power: crate::effect::Value::Const(1),
+                toughness: crate::effect::Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: crate::card::Selector::You, amount: crate::effect::Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Polymorphist's Jest — {1}{U}{U} Instant. Until end of turn, each creature
+/// target player controls loses all abilities and becomes a blue Frog with
+/// base power and toughness 1/1.
+pub fn polymorphists_jest() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    let theirs = || Selector::ControlledBy {
+        who: PlayerRef::Target(0),
+        filter: SelectionRequirement::Creature,
+    };
+    CardDefinition {
+        name: "Polymorphist's Jest",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseAllAbilities { what: theirs(), duration: Duration::EndOfTurn },
+            Effect::BecomeColor {
+                what: theirs(),
+                colors: vec![Color::Blue],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeCreatureType {
+                what: theirs(),
+                creature_types: vec![CreatureType::Frog],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::SetBasePT {
+                what: theirs(),
+                power: crate::effect::Value::Const(1),
+                toughness: crate::effect::Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Frogify — {1}{U} Aura. Enchant creature. Enchanted creature loses all
+/// abilities and is a blue Frog creature with base power and toughness 1/1.
+pub fn frogify() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, Subtypes, SelectionRequirement};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Frogify",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            set_card_types: Some(vec![CardType::Creature]),
+            set_creature_types: Some(vec![CreatureType::Frog]),
+            set_colors: Some(vec![Color::Blue]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Darksteel Mutation — {1}{W} Aura. Enchant creature. Enchanted creature is
+/// an Insect artifact creature with base power and toughness 0/1 and has
+/// indestructible, and it loses all other abilities, card types, and creature
+/// types.
+pub fn darksteel_mutation() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, Subtypes, SelectionRequirement};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Darksteel Mutation",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((0, 1)),
+            set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
+            set_creature_types: Some(vec![CreatureType::Insect]),
+            keywords: vec![Keyword::Indestructible],
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sandstorm — {G} Instant. Deal 1 damage to each attacking creature.
+pub fn sandstorm() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Sandstorm",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::IsAttacking),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: crate::effect::Value::Const(1),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
 pub fn loot_the_pathfinder() -> CardDefinition {

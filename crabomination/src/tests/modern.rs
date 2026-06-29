@@ -64930,3 +64930,131 @@ fn deep_analysis_flashback_blocked_without_enough_life() {
         card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "2 life can't pay the 3-life flashback rider");
 }
+
+#[test]
+fn ovinize_makes_target_a_0_1_with_no_abilities() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::ovinize());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ovinize castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1), "becomes 0/1");
+    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities, "loses abilities");
+}
+
+#[test]
+fn snakeform_makes_a_1_1_green_snake_and_draws() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::snakeform());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Snakeform castable for {2}{G/U}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Snake], "is a Snake");
+    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+    // cast (-1) + draw (+1) = net unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
+}
+
+#[test]
+fn polymorphists_jest_frogifies_target_players_creatures() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let a1 = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let a2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::polymorphists_jest());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Polymorphist's Jest targets a player");
+    drain_stack(&mut g);
+    for victim in [a1, a2] {
+        let cp = g.computed_permanent(victim).unwrap();
+        assert_eq!((cp.power, cp.toughness), (1, 1), "their creature is 1/1");
+        assert!(cp.subtypes.creature_types == vec![CreatureType::Frog]);
+        assert!(cp.lost_all_abilities);
+    }
+    // My own creature is untouched.
+    let cp = g.computed_permanent(mine).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "my creature keeps flying");
+}
+
+#[test]
+fn frogify_aura_makes_a_1_1_blue_frog() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::frogify());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Frogify castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog]);
+    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+}
+
+#[test]
+fn darksteel_mutation_makes_an_indestructible_0_1_insect() {
+    use crate::card::{CardType, CreatureType, Keyword};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::darksteel_mutation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Darksteel Mutation castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1));
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Insect]);
+    assert!(cp.card_types.contains(&CardType::Artifact), "becomes an artifact");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "gains indestructible");
+    assert!(cp.lost_all_abilities, "loses its printed abilities");
+}
+
+#[test]
+fn sandstorm_pings_each_attacking_creature() {
+    let mut g = two_player_game();
+    // Attacker 0/1 dies to 1 damage; a 2/2 survives.
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bears);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bears, target: AttackTarget::Player(1),
+    }])).expect("declared attacker");
+    let id = g.add_card_to_hand(1, catalog::sandstorm());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sandstorm castable");
+    drain_stack(&mut g);
+    let inst = g.battlefield_find(bears).expect("2/2 bear survives 1 damage");
+    assert_eq!(inst.damage, 1, "attacking creature took 1 damage from Sandstorm");
+}
