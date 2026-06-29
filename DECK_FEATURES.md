@@ -152,6 +152,16 @@ sacrifice-outlet staples — Endless Cockroaches (dies → hand), Poison-Tip Arc
 Sadistic Hypnotist (sac → discard two, sorcery speed), Sprout Swarm (Convoke +
 Buyback token).
 
+`catalog::sets::decks::recent34` (tests in `tests/recent34.rs`) is the Zendikar
+quest-counter cycle on the existing `CounterType::Quest` + `remove_counter_cost`
++ `sac_cost` primitives — Quest for the Goblin Lord (counter-gated team anthem),
+Gravelord (dies → counter; remove 3 + sac → 5/5 Zombie Giant), Gemblades
+(combat-damage-to-creature → counter; remove 1 + sac → four +1/+1), Ancient
+Secrets (card-to-gy → counter; remove 5 + sac → shuffle gy into library), Holy
+Relic (cast-creature → counter; remove 5 + sac → tutor an Equipment to play; the
+auto-attach rider is dropped). Plus standalone gaps: Magebane Lizard (new
+`Value::NoncreatureSpellsCastThisTurn`), Atog, Origin Spellbomb, Land Tax.
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

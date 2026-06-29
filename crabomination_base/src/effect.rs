@@ -343,6 +343,12 @@ pub enum Value {
     /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
     /// Backed by `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
+    /// Noncreature spells `who` has cast so far this turn — the **maximum**
+    /// over the resolved players. Backed by
+    /// `Player.noncreature_spells_cast_this_game_turn`. Magebane Lizard's
+    /// "damage equal to the number of noncreature spells they've cast this
+    /// turn" (the count includes the spell that triggered it).
+    NoncreatureSpellsCastThisTurn(PlayerRef),
     /// Creatures `who` declared as attackers this turn (max over resolved
     /// players). Creatures *put onto the battlefield attacking* don't count,
     /// matching the Windbrisk Heights ruling on "attacked with N creatures".

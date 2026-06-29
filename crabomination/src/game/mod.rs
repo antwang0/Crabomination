@@ -133,6 +133,9 @@ mod tests_recent32;
 #[path = "../tests/recent33.rs"]
 mod tests_recent33;
 #[cfg(test)]
+#[path = "../tests/recent34.rs"]
+mod tests_recent34;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]

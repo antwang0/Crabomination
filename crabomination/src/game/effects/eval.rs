@@ -184,6 +184,12 @@ impl GameState {
                 .map(|&p| self.players[p].creatures_attacked_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::NoncreatureSpellsCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].noncreature_spells_cast_this_game_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::DistinctPowerYouControl => {
                 let mut powers: Vec<i32> = self
                     .battlefield
