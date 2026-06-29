@@ -169,9 +169,12 @@ Each unblocks a large swath of cards.
   on both attacker→blocker and blocker→attacker). Remaining: "target each".
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg); layer-4 granted supertype ✅
-  (`Modification::AddSupertype` — the Ring-bearer's Legendary rider, CR 701.54c).
-  Remaining: CDA corners, full text-box swaps, "becomes a copy of" layer
-  interaction.
+  (`Modification::AddSupertype` — the Ring-bearer's Legendary rider, CR 701.54c);
+  layer-4 set-creature-types ✅ as a one-shot (`Effect::BecomeCreatureType` —
+  Turn to Frog / Snakeform / Polymorphist's Jest) **and** the CR 613.8 type-lord
+  dependency (a retyped creature is now seen by `AllWithCreatureType` lords via
+  a `gate_types` second pass). Remaining: CDA corners, full text-box swaps,
+  "becomes a copy of" layer interaction, type-gated `CardMatch` lords.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions, anthem stacking incl. disjunctive multi-type lords (Blex);
   devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion
@@ -385,8 +388,11 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Tier 6 — Combat fidelity
 
-- ⏳ **Damage assignment order** (Tier-1 #3) and **trample math** with
-  multiple/deathtouch blockers.
+- ✅ **Damage assignment order** (Tier-1 #3) + **trample math** with
+  multiple/deathtouch blockers — `default_damage_split` assigns lethal in
+  order (deathtouch lethal = 1, CR 702.2e) and tramples the remainder
+  (CR 510.1c/702.19g). Tests: `cr_702_2e_trample_deathtouch_*`,
+  `cr_702_19g_*`.
 - 🟡 **Banding** (CR 509.2 / 510.1c) — a banding blocker routes the attacker's
   combat-damage order + assignment to the *defending* player (Benalish Hero).
   Remaining: attacking-band formation + "bands with other".

@@ -65058,3 +65058,62 @@ fn sandstorm_pings_each_attacking_creature() {
     let inst = g.battlefield_find(bears).expect("2/2 bear survives 1 damage");
     assert_eq!(inst.damage, 1, "attacking creature took 1 damage from Sandstorm");
 }
+
+#[test]
+fn witness_protection_makes_a_1_1_gw_citizen() {
+    use crate::card::{CardType, CreatureType, Keyword};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::witness_protection());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Witness Protection castable for {U}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Citizen]);
+    assert!(cp.card_types.contains(&CardType::Creature) && !cp.card_types.contains(&CardType::Land));
+    assert!(cp.colors.contains(&Color::Green) && cp.colors.contains(&Color::White));
+    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+}
+
+#[test]
+fn song_of_the_dryads_turns_a_permanent_into_a_forest() {
+    use crate::card::{CardType, LandType};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::song_of_the_dryads());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Song of the Dryads castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.card_types.contains(&CardType::Land), "becomes a land");
+    assert!(!cp.card_types.contains(&CardType::Creature), "no longer a creature");
+    assert!(cp.subtypes.land_types.contains(&LandType::Forest), "is a Forest");
+    assert!(cp.colors.is_empty(), "colorless");
+}
+
+#[test]
+fn imprisoned_in_the_moon_neutralizes_to_a_colorless_land() {
+    use crate::card::CardType;
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::imprisoned_in_the_moon());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Imprisoned in the Moon castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.card_types.contains(&CardType::Land) && !cp.card_types.contains(&CardType::Creature));
+    assert!(cp.lost_all_abilities, "abilities removed");
+    assert!(cp.colors.is_empty(), "colorless");
+}

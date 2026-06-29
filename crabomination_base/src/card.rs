@@ -2296,6 +2296,11 @@ pub struct EquipBonus {
     pub set_card_types: Option<Vec<CardType>>,
     #[serde(default)]
     pub set_creature_types: Option<Vec<CreatureType>>,
+    /// Land types the host's type line becomes (the "is a Forest land" auras —
+    /// Song of the Dryads). Pairs with `set_card_types: Some([Land])` so the
+    /// intrinsic basic-land mana ability follows the granted type.
+    #[serde(default)]
+    pub set_land_types: Option<Vec<LandType>>,
     #[serde(default)]
     pub set_colors: Option<Vec<crate::mana::Color>>,
     /// When true the host loses all abilities (layer 6 — CR 613.1f).

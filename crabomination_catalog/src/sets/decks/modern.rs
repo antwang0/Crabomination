@@ -16538,6 +16538,94 @@ pub fn sandstorm() -> CardDefinition {
     }
 }
 
+/// Witness Protection — {U} Aura. Enchant creature. Enchanted creature loses
+/// all abilities and is a green and white Citizen with base power and
+/// toughness 1/1 (named Legitimate Businessperson — the rename is cosmetic).
+pub fn witness_protection() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Witness Protection",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            set_card_types: Some(vec![CardType::Creature]),
+            set_creature_types: Some(vec![CreatureType::Citizen]),
+            set_colors: Some(vec![Color::Green, Color::White]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Song of the Dryads — {2}{G} Aura. Enchant permanent. Enchanted permanent is
+/// a colorless Forest land (so it taps for {G} via the intrinsic land mana
+/// ability) and loses its other types/abilities.
+pub fn song_of_the_dryads() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Song of the Dryads",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Permanent),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_card_types: Some(vec![CardType::Land]),
+            set_land_types: Some(vec![LandType::Forest]),
+            set_colors: Some(vec![]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Imprisoned in the Moon — {2}{U} Aura. Enchant creature, land, or
+/// planeswalker. Enchanted permanent is a colorless land and loses all other
+/// card types and abilities. (Its printed "{T}: Add {C}" is dropped — the
+/// permanent is neutralized to a do-nothing land.)
+pub fn imprisoned_in_the_moon() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Imprisoned in the Moon",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Permanent),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_card_types: Some(vec![CardType::Land]),
+            set_colors: Some(vec![]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
 pub fn loot_the_pathfinder() -> CardDefinition {
