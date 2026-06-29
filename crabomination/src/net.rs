@@ -589,6 +589,11 @@ pub struct PlayerView {
     /// Ethersworn Canonist). UIs grey out further casts of the locked category.
     #[serde(default)]
     pub spell_cast_lock: SpellCastLock,
+    /// CR 506 — number of this player's upcoming combat phases that will be
+    /// skipped (Stonehorn Dignitary). Surfaced so the UI can warn "next
+    /// combat skipped." Defaults to 0.
+    #[serde(default)]
+    pub skip_next_combat: u32,
     /// CR 402.2 — this player's maximum hand size: `Some(n)` (normally
     /// `Some(7)`) or `None` for "no maximum hand size" effects (Wisdom of
     /// Ages, Reliquary Tower). Surfaced so UIs can show the right limit and

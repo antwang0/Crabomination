@@ -123,9 +123,10 @@ pub fn naya_charm() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             Effect::Tap {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
             },
         ]),
         ..Default::default()

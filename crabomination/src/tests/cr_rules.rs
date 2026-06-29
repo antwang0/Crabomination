@@ -5354,3 +5354,58 @@ fn cr_702_85_first_sliver_grants_sliver_spells_cascade() {
     assert!(g.battlefield.iter().any(|c| c.id == bears),
         "the granted cascade casts the lower-MV card onto the battlefield");
 }
+
+// ── CR 506 — skip the active player's combat phase (Stonehorn Dignitary) ───────
+
+#[test]
+fn cr_506_active_player_skips_their_combat_phase() {
+    // A banked skip charge sends Begin Combat straight to the postcombat main:
+    // no declare/damage steps occur.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].skip_next_combat = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.advance_step(Vec::new()).expect("advance from precombat main");
+    assert_eq!(g.step, TurnStep::PostCombatMain, "combat phase skipped entirely");
+    assert_eq!(g.players[0].skip_next_combat, 0, "charge consumed");
+}
+
+#[test]
+fn cr_506_skip_only_eats_one_combat() {
+    // A second turn's combat is unaffected once the single charge is spent.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].skip_next_combat = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.advance_step(Vec::new()).expect("skip the first combat");
+    assert_eq!(g.step, TurnStep::PostCombatMain);
+    // Next time we reach Begin Combat there's no charge → normal combat.
+    g.step = TurnStep::PreCombatMain;
+    g.advance_step(Vec::new()).expect("advance again");
+    assert_eq!(g.step, TurnStep::BeginCombat, "no charge left, combat proceeds");
+}
+
+// ── CR 602.5b — remove-a-counter activation cost (quest cycle) ─────────────────
+
+#[test]
+fn cr_602_5b_quest_activation_needs_its_counters() {
+    let mut g = two_player_game();
+    let quest = g.add_card_to_battlefield(0, catalog::quest_for_the_gravelord());
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Only two counters — short of the three the cost demands.
+    g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 2);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: quest, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    });
+    assert!(res.is_err(), "can't pay the remove-three-counters cost");
+    // Top up and it activates, consuming the counters via sacrifice.
+    g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: quest, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    }).expect("now payable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie Giant"));
+}

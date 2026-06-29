@@ -70,6 +70,21 @@ fn naya_charm_burns_a_creature() {
 }
 
 #[test]
+fn naya_charm_taps_only_target_players_creatures() {
+    // CR 107.3 / 508 — "target player controls": mode 3 taps the chosen
+    // player's creatures and leaves everyone else's untapped.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&modes(catalog::naya_charm())[2], &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "target player's creature tapped");
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "our own creature untouched");
+}
+
+#[test]
 fn jund_charm_adds_two_counters() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

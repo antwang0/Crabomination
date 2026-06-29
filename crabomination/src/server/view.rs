@@ -501,6 +501,7 @@ fn project_player(
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         spells_cast_this_turn: player.spells_cast_this_turn,
         spell_cast_lock,
+        skip_next_combat: player.skip_next_combat,
         max_hand_size: player.max_hand_size,
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since

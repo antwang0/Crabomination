@@ -81,6 +81,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Void => (Color::srgba(0.18, 0.10, 0.30, 1.0), theme::TEXT_PRIMARY),
         // LCI Descend — a cavern earth-brown that deepens as the graveyard fills.
         StatChipKind::Descend => (Color::srgba(0.26, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Skipped combat (CR 506 — Stonehorn Dignitary) — a muted stone grey
+        // so a player knows their next swing is off the table.
+        StatChipKind::SkipCombat => (Color::srgba(0.24, 0.24, 0.26, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -111,6 +114,7 @@ pub(super) enum StatChipKind {
     Crime,
     Void,
     Descend,
+    SkipCombat,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -609,6 +613,16 @@ pub fn update_player_stats_chips(
             if let Some(label) = label {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, label.to_string());
             }
+        }
+        // CR 506 skipped combat (Stonehorn Dignitary) — surface so the player
+        // knows their next combat phase won't happen.
+        if p.skip_next_combat > 0 {
+            let label = if p.skip_next_combat == 1 {
+                "⚔ skip".to_string()
+            } else {
+                format!("⚔ skip×{}", p.skip_next_combat)
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SkipCombat, label);
         }
         // CR 114 emblems — only surface when the player actually owns one.
         if !p.emblems.is_empty() {
