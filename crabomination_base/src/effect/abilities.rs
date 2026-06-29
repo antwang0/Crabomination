@@ -863,6 +863,10 @@ pub enum StaticEffect {
     /// creatures you control." Iroas, God of Victory. Consulted at both the
     /// combat strike-back and the shared non-combat damage funnel.
     PreventDamageToYourAttackers,
+    /// CR 615 — "Prevent all damage that would be dealt to you." Glacial Chasm.
+    /// Consulted at the player-directed branch of the shared damage funnel
+    /// (combat and noncombat alike), unless prevention is shut off this turn.
+    PreventAllDamageToController,
     /// CR 106.4 override — "If you would lose unspent mana, that mana
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.

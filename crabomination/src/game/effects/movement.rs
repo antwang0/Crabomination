@@ -293,6 +293,13 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Glacial-Chasm-style "prevent all damage that would be dealt
+        // to you" (combat and noncombat alike).
+        if let EntityRef::Player(p) = ent
+            && self.all_damage_to_player_prevented(p)
+        {
+            return;
+        }
         // CR 614.2 / 614.5 — global damage doubling (Furnace of Rath) then
         // halving (Ghosts of the Innocent), applied before prevention so a
         // shield soaks the already-scaled total (CR 616 lets the affected

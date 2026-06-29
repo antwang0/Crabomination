@@ -151,6 +151,9 @@ mod tests_recent38;
 #[path = "../tests/recent39.rs"]
 mod tests_recent39;
 #[cfg(test)]
+#[path = "../tests/recent40.rs"]
+mod tests_recent40;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -5114,6 +5117,21 @@ impl GameState {
             c.controller == controller
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::PreventDamageToYourAttackers)
+                })
+        })
+    }
+
+    /// CR 615 — true if `player` controls a permanent with a blanket
+    /// "prevent all damage that would be dealt to you" static (Glacial Chasm),
+    /// unless prevention is shut off this turn (615.12).
+    pub(crate) fn all_damage_to_player_prevented(&self, player: usize) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::PreventAllDamageToController)
                 })
         })
     }
@@ -10789,6 +10807,7 @@ fn static_effect_to_effects(
             | StaticEffect::OneNonartifactSpellPerTurn
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
             | StaticEffect::PreventDamageToYourAttackers
+            | StaticEffect::PreventAllDamageToController
             | StaticEffect::UnspentManaBecomesColorless
             // GraveyardAnthem is zone-special: gathered from graveyards in
             // `gather_continuous_effects_inner`, never from the battlefield.

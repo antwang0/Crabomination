@@ -2082,6 +2082,11 @@ impl GameState {
         use crate::game::effects::EntityRef;
         match target {
             AttackTarget::Player(p) => {
+                // CR 615 — Glacial-Chasm-style blanket prevention soaks the whole
+                // combat hit before any shield is consumed.
+                if self.all_damage_to_player_prevented(p) {
+                    return 0;
+                }
                 self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {
