@@ -3,7 +3,7 @@
 //! reanimation, modal removal, and graveyard value.
 
 use crate::catalog;
-use crate::card::{CardId, CardType, CounterType, Keyword};
+use crate::card::{CardId, CounterType, Keyword};
 use crate::game::types::{Attack, AttackTarget, Target};
 use crate::game::*;
 use crate::TurnStep;

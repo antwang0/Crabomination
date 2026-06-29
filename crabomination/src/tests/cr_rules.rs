@@ -5141,3 +5141,61 @@ fn cr_510_1c_deathtouch_trample_assigns_one() {
     assert!(g.battlefield_find(blocker).is_none(), "blocker dies to deathtouch");
     assert_eq!(g.players[1].life, life_before - 3, "1 lethal to blocker, 3 trample over");
 }
+
+// ── CR 702.122 — Crew ───────────────────────────────────────────────────────
+
+/// CR 702.122 — tapping creatures with total power ≥ the crew cost turns a
+/// Vehicle into an artifact creature until end of turn.
+#[test]
+fn cr_702_122_crew_animates_vehicle() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::broadcast_rambler()); // Crew 1
+    let crewer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crewer);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(!g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature),
+        "uncrewed Vehicle is not a creature");
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![crewer] })
+        .expect("crew");
+    assert!(g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature),
+        "crewed Vehicle becomes an artifact creature");
+}
+
+// ── CR 702.171 — Saddle ─────────────────────────────────────────────────────
+
+/// CR 702.171 — tapping creatures with total power ≥ the saddle cost saddles a
+/// Mount, enabling its "attacks while saddled" trigger.
+#[test]
+fn cr_702_171_saddle_enables_attack_trigger() {
+    let mut g = two_player_game();
+    let mount = g.add_card_to_battlefield(0, catalog::alacrian_jaguar()); // Saddle 1, 4/4
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mount);
+    g.clear_sickness(helper);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Saddle { mount, creatures: vec![helper] }).expect("saddle");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: mount, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mount).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "attacks-while-saddled gave +2/+2");
+}
+
+// ── CR 702.179 — Start your engines! ─────────────────────────────────────────
+
+/// CR 702.179a — a "Start your engines!" permanent entering sets its
+/// controller's speed to 1 (the speed starts at 0).
+#[test]
+fn cr_702_179_start_your_engines_sets_speed_to_one() {
+    let mut g = two_player_game();
+    assert_eq!(g.players[0].speed, 0, "no speed before any engine");
+    g.move_card_to_battlefield_for_test(0, catalog::glitch_ghost_surveyor());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].speed, 1, "Start your engines! set speed to 1");
+}

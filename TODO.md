@@ -8,6 +8,36 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — TDM/DFT staples (`decks::recent29`/`recent30`)
+
+New: `SelectionRequirement::WithAnyCounter` ("a creature with a counter on it");
+`PlayerView.at_max_speed`; the bot now crews idle Vehicles (`pick_crew_vehicle`).
+
+Per-card riders dropped (faithful headline shipped; complete when the engine
+gains the missing piece):
+- **Ainok Wayfarer** — "+1/+1 counter if you don't take a land" needs
+  `LookPickToHand` to report whether a card was actually taken.
+- **Iridescent Tiger** — "if you cast it" gate on the WUBRG ETB burst.
+- **Embermouth Sentinel** — the "if you control a Dragon, onto the battlefield
+  tapped instead" branch (conditional search destination).
+- **Tersa Lightshatter** — graveyard-7 attack exile-and-play rider.
+- **Earthrumbler / Glitch Ghost Surveyor / Aether Syphon** — the max-speed and
+  exile-from-graveyard self-crew/draw riders.
+- **Back on Track** — the Pilot token's "saddles/crews as though power +2" rider.
+- **Bulwark Ox** — the saddled +1/+1-on-target half (the sac half ships).
+- **Carrion Cruiser** — the gy-return is modeled as up-to-1 (`min:0`); the
+  printed text is mandatory. A min-1 `ReturnGraveyardCardsToHand` would fix it.
+
+Deferred TDM/DFT cards needing new engine primitives:
+- **Sidisi, Regent of the Mire** — sac MV X → reanimate MV X+1 (cost-linked X).
+- **Stalwart Successor** — "first time counters are put on a creature you
+  control each turn" (a counters-placed event + once-per-turn gate).
+- **Surrak, Elusive Hunter** — "becomes the target of an opponent's spell/
+  ability" trigger (a becomes-targeted event).
+- **Effortless Master** — conditional enters-with-counters (needs a
+  `Value::SpellsCastThisTurn`).
+- DFT "Mount that saddles/crews as though power greater" rider; bot saddle AI.
+
 ## Discovered follow-ups — LCI / Craft / Descend (`sets::lci`)
 
 Shipped: Craft (CR 702.169 — `shortcut::craft` + `craft_exile_cost`),

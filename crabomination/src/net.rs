@@ -507,6 +507,11 @@ pub struct PlayerView {
     /// show a speed chip for "Start your engines!" decks.
     #[serde(default)]
     pub speed: u32,
+    /// CR 702.179c — true once `speed == 4` (max speed). Pre-derived so the
+    /// client can highlight that "Max speed —" abilities are live without
+    /// re-checking the threshold.
+    #[serde(default)]
+    pub at_max_speed: bool,
     /// CR 122 rad counters this player has — each mills a card and may add a
     /// poison counter at the start of their turn. Surfaced for a HUD chip.
     #[serde(default)]

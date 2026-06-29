@@ -472,6 +472,7 @@ fn project_player(
         poison_counters: player.poison_counters,
         energy: player.energy,
         speed: player.speed,
+        at_max_speed: player.speed >= 4,
         rad_counters: player.rad_counters,
         mana_pool: player.mana_pool.clone(),
         library: LibraryView {
@@ -1793,6 +1794,17 @@ mod tests {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.remove_from_battlefield_to_graveyard_raw(bear); // a nonland permanent left
         assert!(project(&g, 0).players[0].void_active, "nonland leaving the battlefield → Void");
+    }
+
+    #[test]
+    fn project_surfaces_at_max_speed() {
+        // CR 702.179c — the view pre-derives the max-speed flag so the client
+        // can highlight live "Max speed —" abilities.
+        let mut g = two_player_game();
+        g.players[0].speed = 3;
+        assert!(!project(&g, 0).players[0].at_max_speed, "speed 3 is not max");
+        g.players[0].speed = 4;
+        assert!(project(&g, 0).players[0].at_max_speed, "speed 4 is max speed");
     }
 
     #[test]

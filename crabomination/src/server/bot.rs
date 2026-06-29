@@ -2093,7 +2093,60 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Crew an uncrewed Vehicle so it can attack this turn (Vehicles are dead
+    // cards to the bot otherwise). Dry-run-gated.
+    if let Some(action) = pick_crew_vehicle(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Crew an uncrewed Vehicle the bot controls, paying with the smallest
+/// untapped creatures whose total power covers the crew cost — but only when
+/// the Vehicle is at least as big as the power tapped to crew it (a net combat
+/// gain). Dry-run-gated, so crew legality (CR 702.122) bottoms out in
+/// `would_accept`.
+fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::CardType;
+    let mut crewers: Vec<(CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && !c.tapped)
+        .filter_map(|c| {
+            let cp = state.computed_permanent(c.id)?;
+            cp.card_types.contains(&CardType::Creature).then_some((c.id, cp.power.max(0)))
+        })
+        .collect();
+    crewers.sort_by_key(|&(_, p)| p);
+
+    for v in state.battlefield.iter().filter(|c| c.controller == seat) {
+        let Some(cost) = v.definition.crew_cost() else { continue };
+        let Some(cp) = state.computed_permanent(v.id) else { continue };
+        // Already a creature (crewed/animated this turn) → nothing to do.
+        if cp.card_types.contains(&CardType::Creature) {
+            continue;
+        }
+        let mut chosen = Vec::new();
+        let mut total = 0i32;
+        for &(id, p) in crewers.iter().filter(|&&(id, _)| id != v.id) {
+            if total >= cost as i32 {
+                break;
+            }
+            chosen.push(id);
+            total += p;
+        }
+        // Worth it only if the cost is fully paid and the Vehicle is at least
+        // as big as the creatures tapped to crew it.
+        if chosen.is_empty() || total < cost as i32 || cp.power < total {
+            continue;
+        }
+        let action = GameAction::Crew { vehicle: v.id, crew_creatures: chosen };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
 }
 
 /// Fire a "deal N damage to each opponent" / "drain N" / "each opponent loses
@@ -5898,6 +5951,25 @@ mod stack_response_tests {
         g.add_card_to_battlefield(0, catalog::grizzly_bears()); // a spare body
         assert!(optional_trigger_beneficial(&g, drowner, "Exploit — sacrifice a creature?"),
             "with a spare creature the bot exploits for value");
+    }
+
+    /// The bot crews an uncrewed Vehicle with a spare creature so it can swing.
+    #[test]
+    fn bot_crews_a_vehicle() {
+        let mut g = two_player_game();
+        let veh = g.add_card_to_battlefield(0, catalog::broadcast_rambler()); // Crew 1, 5/4
+        // No creatures yet → nothing to crew with.
+        assert!(pick_crew_vehicle(&g, 0).is_none(), "no crewers, no crew");
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 ≥ 1
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        assert!(
+            matches!(pick_crew_vehicle(&g, 0),
+                Some(GameAction::Crew { vehicle, .. }) if vehicle == veh),
+            "crews the Vehicle with the spare creature",
+        );
     }
 
     /// The bot fires a "deal N to each opponent" ability for lethal, and only
