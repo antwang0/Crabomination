@@ -130,6 +130,11 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
 /// being dropped. Configurable via `CRAB_PAIRING_TIMEOUT_SECS`.
 pub(crate) const DEFAULT_PAIRING_TIMEOUT: Duration = Duration::from_secs(300);
 
+/// Upper bound on `CRAB_PAIRING_TIMEOUT_SECS` (24h). A larger configured
+/// value is clamped to this — an effectively-unbounded wait would pin a
+/// connection slot indefinitely on a seat-0 client that never gets paired.
+pub(crate) const MAX_PAIRING_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// Default total concurrent connection slots. A pair match consumes 2.
 pub(crate) const DEFAULT_MAX_CONNS: usize = 100;
 
@@ -168,7 +173,18 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
                 );
                 DEFAULT_PAIRING_TIMEOUT
             }
-            Ok(n) => Duration::from_secs(n),
+            Ok(n) => {
+                let want = Duration::from_secs(n);
+                if want > MAX_PAIRING_TIMEOUT {
+                    eprintln!(
+                        "warning: CRAB_PAIRING_TIMEOUT_SECS={n} exceeds the {}s cap — clamping",
+                        MAX_PAIRING_TIMEOUT.as_secs(),
+                    );
+                    MAX_PAIRING_TIMEOUT
+                } else {
+                    want
+                }
+            }
             Err(_) => {
                 eprintln!(
                     "warning: CRAB_PAIRING_TIMEOUT_SECS={s:?} not a non-negative integer — \

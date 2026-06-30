@@ -70,8 +70,35 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Protection(_) => "Pro",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
+        Flanking => "Flk",
+        Bushido(_) => "Bsd",
+        Rampage(_) => "Rmp",
+        Persist => "Per",
+        Undying => "Und",
+        Phasing => "Phs",
+        Banding => "Bnd",
+        MustBeBlocked => "Lure",
+        CantBeBlockedExceptByN(_) => "Men+",
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keyword_strip;
+    use crabomination::card::Keyword;
+
+    #[test]
+    fn strip_surfaces_combat_keywords_dedup_in_order() {
+        let s = keyword_strip(&[
+            Keyword::Flying,
+            Keyword::Persist,
+            Keyword::Flying, // dup → elided
+            Keyword::Bushido(2),
+            Keyword::Flashback(Default::default()), // casting-only → hidden
+        ]);
+        assert_eq!(s, "Fly Per Bsd");
+    }
 }
 
 /// Build the displayed strip for a permanent's keyword list: each displayable

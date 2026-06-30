@@ -921,6 +921,7 @@ impl Effect {
             }
             Effect::Tap { .. } => format!("tap {}", self.target_phrase()),
             Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
+            Effect::RemoveFromCombat { .. } => format!("remove {} from combat", self.target_phrase()),
             Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
             Effect::CounterSpell { .. } | Effect::CounterSpellToZone { .. } => {
                 "counter target spell".into()

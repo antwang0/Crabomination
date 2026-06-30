@@ -474,6 +474,17 @@ mod tests {
         assert_eq!(t, DEFAULT_PAIRING_TIMEOUT);
     }
 
+    #[test]
+    pub(crate) fn pairing_timeout_clamps_absurd_values() {
+        use crate::config::MAX_PAIRING_TIMEOUT;
+        // One year of seconds is far above the 24h cap → clamped.
+        let t = with_env("CRAB_PAIRING_TIMEOUT_SECS", Some("31536000"), pairing_timeout_from_env);
+        assert_eq!(t, MAX_PAIRING_TIMEOUT);
+        // A value at the cap is preserved exactly.
+        let exact = with_env("CRAB_PAIRING_TIMEOUT_SECS", Some("86400"), pairing_timeout_from_env);
+        assert_eq!(exact, MAX_PAIRING_TIMEOUT);
+    }
+
     /// `accept_with_deadline` returns `None` after the deadline if no client
     /// connects. This is the core mechanism that prevents seat 0 from
     /// waiting forever for an opponent that never shows up.
