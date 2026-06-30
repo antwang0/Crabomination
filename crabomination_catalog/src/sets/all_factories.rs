@@ -4515,6 +4515,7 @@ static DECKS: &[Factory] = &[
     super::decks::sun_warriors,
     super::decks::razor_rings,
     super::decks::the_last_agni_kai,
+    super::decks::earth_rumble,
     super::decks::hei_bai_spirit_of_balance,
     super::decks::ty_lee_chi_blocker,
     super::decks::the_boulder_ready_to_rumble,

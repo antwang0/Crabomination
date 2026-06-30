@@ -2910,3 +2910,25 @@ fn serpent_of_the_pass_no_flash_without_lessons() {
         card_id: serp, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "sorcery-speed only without the Lesson gate");
 }
+
+/// Earth Rumble earthbends a land and makes your creature fight an opponent's.
+#[test]
+fn earth_rumble_earthbends_and_fights() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let er = g.add_card_to_hand(0, catalog::earth_rumble());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: er, target: Some(Target::Permanent(land)),
+        additional_targets: vec![Target::Permanent(mine), Target::Permanent(foe)],
+        mode: None, x_value: None,
+    }).expect("cast Earth Rumble");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2,
+        "earthbend 2 on the land");
+    assert!(g.battlefield_find(foe).is_none(), "the 2/2 died to the 4/4 fight");
+}

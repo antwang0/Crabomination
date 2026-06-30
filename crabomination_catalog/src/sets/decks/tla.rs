@@ -3894,6 +3894,32 @@ pub fn the_last_agni_kai() -> CardDefinition {
     }
 }
 
+/// Earth Rumble — {3}{G} Sorcery. Earthbend 2 (slot 0 = a land you control),
+/// then a creature you control (slot 1) fights a creature an opponent controls
+/// (slot 2).
+pub fn earth_rumble() -> CardDefinition {
+    CardDefinition {
+        name: "Earth Rumble",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Earthbend { n: Value::Const(2) },
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Hei Bai, Spirit of Balance — {2}{W/B}{W/B} 3/3 Legendary Bear Spirit.
 /// Enters or attacks: may sacrifice another creature/artifact for two +1/+1
 /// counters. On leaving the battlefield, moves its counters to target creature
