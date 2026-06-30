@@ -159,6 +159,11 @@ pub enum StaticEffect {
         per_toughness: i32,
         max: u32,
     },
+    /// "As long as this has `n` or more `kind` counters on it, it's an
+    /// (artifact) creature." War Balloon (3+ fire counters). Emits a layer-4
+    /// `AddCardType(Creature)` self-effect while the count holds; the printed
+    /// P/T already carry the creature stats.
+    SelfIsCreatureWhileCountersAtLeast { kind: crate::card::CounterType, n: u32 },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

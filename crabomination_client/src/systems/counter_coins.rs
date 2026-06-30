@@ -351,6 +351,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Burden => "Burden",
         CounterType::Luck => "Luck",
         CounterType::Age => "Age",
+        CounterType::Fire => "Fire",
         // Silver / Prepared and any future internal counters fall through.
         _ => "Counter",
     }
@@ -373,6 +374,7 @@ fn counter_label_color(kind: CounterType) -> Color {
         CounterType::Ki => Color::srgb(0.96, 0.62, 0.36),
         CounterType::Tide => Color::srgb(0.40, 0.74, 0.96),
         CounterType::Bounty => Color::srgb(0.96, 0.66, 0.36),
+        CounterType::Fire => Color::srgb(0.98, 0.44, 0.24),
         _ => Color::srgb(0.86, 0.86, 0.92),
     }
 }

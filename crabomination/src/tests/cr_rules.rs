@@ -5729,3 +5729,18 @@ fn cr_704_5f_plain_land_is_not_a_creature_and_survives() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_some(), "a plain land never dies to SBA");
 }
+
+/// War Balloon with 3 fire counters becomes a creature (layer 4) and a +1/+1
+/// counter still raises its printed 4/3 to 5/4 (layer 7).
+#[test]
+fn cr_613_counter_gated_creature_type_composes_with_pt() {
+    use crate::card::{CardType, CounterType};
+    let mut g = two_player_game();
+    let wb = g.add_card_to_battlefield(0, catalog::war_balloon());
+    let c = g.battlefield_find_mut(wb).unwrap();
+    c.add_counters(CounterType::Fire, 3);
+    c.add_counters(CounterType::PlusOnePlusOne, 1);
+    let cp = g.computed_permanent(wb).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature), "layer-4 AddCardType from 3 fire counters");
+    assert_eq!((cp.power, cp.toughness), (5, 4), "printed 4/3 + a +1/+1 counter");
+}

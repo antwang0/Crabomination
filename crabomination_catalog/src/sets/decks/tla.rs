@@ -5004,3 +5004,128 @@ pub fn momo_friendly_flier() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aang's Journey — {2} Sorcery (Lesson). Kicker {2}. Search your library for a
+/// basic land (and, if kicked, a Shrine), reveal, put into hand, shuffle, gain
+/// 2 life.
+pub fn aangs_journey() -> CardDefinition {
+    CardDefinition {
+        name: "Aang's Journey",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        keywords: vec![Keyword::Kicker(cost(&[generic(2)]))],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ember Island Production — {3}{U}{U} Sorcery. Choose one: copy a creature you
+/// control as a non-legendary 4/4 Hero, or copy one an opponent controls as a
+/// non-legendary 2/2 Coward.
+pub fn ember_island_production() -> CardDefinition {
+    CardDefinition {
+        name: "Ember Island Production",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                extra_creature_types: vec![CreatureType::Hero],
+                extra_card_types: vec![],
+                override_pt: Some((4, 4)),
+                non_legendary: true,
+                legendary: false,
+            },
+            Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                extra_creature_types: vec![CreatureType::Coward],
+                extra_card_types: vec![],
+                override_pt: Some((2, 2)),
+                non_legendary: true,
+                legendary: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Cave of Two Lovers — {3}{R} Enchantment — Saga. I: two 1/1 Ally tokens.
+/// II: search a Mountain or Cave to hand. III: earthbend 3.
+pub fn the_cave_of_two_lovers() -> CardDefinition {
+    CardDefinition {
+        name: "The Cave of Two Lovers",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: ally_token() }),
+            (2, Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasLandType(LandType::Mountain)
+                    .or(SelectionRequirement::HasLandType(LandType::Cave)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            (3, Effect::Earthbend { n: Value::Const(3) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// War Balloon — {2}{R} Artifact — Vehicle 4/3. Flying. {1}: put a fire
+/// counter on it. With 3+ fire counters it's an artifact creature. Crew 3.
+pub fn war_balloon() -> CardDefinition {
+    CardDefinition {
+        name: "War Balloon",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Crew(3)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Fire,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As long as War Balloon has three or more fire counters on it, it's an artifact creature.",
+            effect: StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind: CounterType::Fire, n: 3 },
+        }],
+        ..Default::default()
+    }
+}

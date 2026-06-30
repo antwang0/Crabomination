@@ -3055,3 +3055,107 @@ fn white_lotus_tile_mana_scales_with_tribe() {
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 3,
         "X = 3 (the Ally tribe; Human also 2, Warrior 2)");
 }
+
+/// Aang's Journey fetches a basic (plus a Shrine if kicked) and gains 2 life.
+#[test]
+fn aangs_journey_kicker_fetches_shrine() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let shrine = g.add_card_to_library(0, catalog::the_spirit_oasis());
+    let aj = g.add_card_to_hand(0, catalog::aangs_journey());
+    ready0(&mut g);
+    let life = g.players[0].life;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+        crate::decision::DecisionAnswer::Search(Some(shrine)),
+    ]));
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: aj, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic land to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == shrine), "Shrine to hand (kicked)");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+}
+
+/// Unkicked Aang's Journey fetches only the basic.
+#[test]
+fn aangs_journey_unkicked_basic_only() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let shrine = g.add_card_to_library(0, catalog::the_spirit_oasis());
+    let aj = g.add_card_to_hand(0, catalog::aangs_journey());
+    ready0(&mut g);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: aj, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic land to hand");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == shrine), "Shrine stays in library");
+}
+
+/// War Balloon becomes an artifact creature once it has three fire counters.
+#[test]
+fn war_balloon_animates_at_three_fire() {
+    let mut g = two_player_game();
+    let wb = g.add_card_to_battlefield(0, catalog::war_balloon());
+    assert!(!g.computed_permanent(wb).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "not a creature with no fire counters");
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: wb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        }).expect("add fire counter");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(wb).unwrap().counter_count(crate::card::CounterType::Fire), 3);
+    assert!(g.computed_permanent(wb).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "3 fire counters → artifact creature");
+}
+
+/// The Cave of Two Lovers makes two Allies (I) and fetches a Mountain (II).
+#[test]
+fn cave_of_two_lovers_tokens_and_search() {
+    let mut g = two_player_game();
+    let mountain = g.add_card_to_library(0, catalog::mountain());
+    let cave = g.add_card_to_hand(0, catalog::the_cave_of_two_lovers());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cave, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast saga");
+    drain_stack(&mut g); // chapter I on enter
+    assert_eq!(count_named(&g, 0, "Ally"), 2, "chapter I made two Allies");
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(mountain)),
+    ]));
+    g.saga_advance(cave); // chapter II — search Mountain/Cave
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mountain), "chapter II fetched a Mountain");
+}
+
+/// Ember Island Production's first mode copies your creature as a 4/4 Hero.
+#[test]
+fn ember_island_copies_your_creature_as_hero() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let eip = g.add_card_to_hand(0, catalog::ember_island_production());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eip,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.id != bear
+        && c.definition.name == "Grizzly Bears" && c.is_token).expect("token copy");
+    let cp = g.computed_permanent(token.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "4/4 override");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Hero), "is a Hero");
+}

@@ -2164,14 +2164,22 @@ fn pick_self_pump_counter(state: &GameState, seat: usize) -> Option<GameAction> 
             if ab.sac_cost || ab.exhaust {
                 continue;
             }
-            let Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                ..
-            } = &ab.effect
-            else {
+            let Effect::AddCounter { what: Selector::This, kind, .. } = &ab.effect else {
                 continue;
             };
+            // Always sink into +1/+1 self-pumps; otherwise only into a counter
+            // that still progresses an unmet "becomes a creature at N counters"
+            // static (War Balloon's fire counters), so the bot animates it
+            // instead of stalling and doesn't dump mana past the threshold.
+            let useful = *kind == CounterType::PlusOnePlusOne
+                || card.definition.static_abilities.iter().any(|sa| {
+                    matches!(&sa.effect,
+                        crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind: k, n }
+                        if k == kind && card.counter_count(*kind) < *n)
+                });
+            if !useful {
+                continue;
+            }
             let action = GameAction::ActivateAbility {
                 card_id: card.id,
                 ability_index: idx,
@@ -4111,6 +4119,35 @@ mod tests {
         }
     }
 
+
+    /// With spare mana and nothing better to do, the bot sinks it into War
+    /// Balloon's fire-counter ability to progress toward animating it.
+    #[test]
+    fn bot_feeds_fire_counters_to_animate_war_balloon() {
+        use crate::card::CounterType;
+        let mut g = two_player_game();
+        let wb = g.add_card_to_battlefield(0, catalog::war_balloon());
+        // A Mountain pays the {1} fire-counter cost; nothing else to do.
+        let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+        g.clear_sickness(mtn);
+        let mut bot = RandomBot::new();
+        // Drive a few actions: tap the land for mana, then sink into the counter.
+        let mut animated = false;
+        for _ in 0..6 {
+            let Some(action) = bot.next_action(&g, 0) else { break };
+            if let GameAction::ActivateAbility { card_id, ability_index, .. } = &action
+                && *card_id == wb
+            {
+                assert_eq!(*ability_index, 0, "the fire-counter ability");
+                animated = true;
+            }
+            if g.perform_action(action).is_err() { break }
+            crate::game::drain_stack(&mut g);
+        }
+        assert!(animated, "bot activated War Balloon's fire-counter sink");
+        assert!(g.battlefield_find(wb).unwrap().counter_count(CounterType::Fire) >= 1,
+            "a fire counter was added");
+    }
 
     /// The bot spends surplus energy on a beneficial energy-payoff ability
     /// (Longtusk Cub's `{E}{E}{E}: +1/+1 counter`) once nothing better to do.

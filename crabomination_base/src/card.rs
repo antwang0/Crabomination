@@ -173,6 +173,8 @@ pub enum CreatureType {
     Tyranid,
     // Final Fantasy Job Select Hero token (CR 702.182).
     Hero,
+    // TLA — Ember Island Production's 2/2 Coward token.
+    Coward,
     // Tarkir: Dragonstorm (Cunning Coyote).
     Coyote,
     // Tarkir: Dragonstorm (Sunpearl Kirin).
@@ -337,6 +339,9 @@ pub enum CounterType {
     /// one per creature you control that attacks; at 7+ counters its team
     /// anthem switches on via a `StaticEffect::PumpTeamIf` threshold).
     Quest,
+    /// Fire counter — TLA artifacts/Vehicles that grow or animate as they
+    /// accumulate them (War Balloon: 3+ fire → artifact creature).
+    Fire,
     /// Study counter — Strixhaven bookkeeping marker on cards in exile
     /// (Kianne // Imbraham). Cards exiled with study counters are tallied by
     /// `Value::DistinctManaValuesInExileWithCounter` (Kianne's Fractal) and

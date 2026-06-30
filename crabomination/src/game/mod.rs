@@ -4298,6 +4298,29 @@ impl GameState {
                 }
             }
         }
+        // War Balloon — "as long as this has N+ [kind] counters, it's a
+        // creature." Emit a layer-4 AddCardType(Creature) self-effect while
+        // the count holds (printed P/T already carry the stats).
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind, n } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                if card.counter_count(*kind) >= *n {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddCardType(CardType::Creature),
+                    });
+                }
+            }
+        }
         // CR 702.183 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
@@ -10871,6 +10894,9 @@ fn static_effect_to_effects(
             // PumpPTPerOtherOfType — needs the live type count; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpPTPerOtherOfType { .. }
+            // SelfIsCreatureWhileCountersAtLeast — live counter check; resolved
+            // in `gather_continuous_effects`.
+            | StaticEffect::SelfIsCreatureWhileCountersAtLeast { .. }
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }
