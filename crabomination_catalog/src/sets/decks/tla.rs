@@ -630,3 +630,77 @@ pub fn walltop_sentries() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Earth Kingdom Soldier — {4}{G/W} 3/4 Human Soldier. Vigilance. When this
+/// enters, put a +1/+1 counter on each of up to two target creatures you
+/// control.
+pub fn earth_kingdom_soldier() -> CardDefinition {
+    CardDefinition {
+        name: "Earth Kingdom Soldier",
+        cost: cost(&[generic(4), hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Soldier]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            max_targets: 2,
+            effect: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// White Lotus Reinforcements — {1}{G}{W} 2/3 Human Soldier Ally. Vigilance.
+/// Other Allies you control get +1/+1.
+pub fn white_lotus_reinforcements() -> CardDefinition {
+    CardDefinition {
+        name: "White Lotus Reinforcements",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Soldier, CreatureType::Ally]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Other Allies you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Ally)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Combustion Technique — {1}{R} Instant (Lesson). Deals damage equal to 2 plus
+/// the number of Lesson cards in your graveyard to target creature.
+pub fn combustion_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Combustion Technique",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Sum(vec![
+                Value::Const(2),
+                Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                },
+            ]),
+        },
+        ..Default::default()
+    }
+}

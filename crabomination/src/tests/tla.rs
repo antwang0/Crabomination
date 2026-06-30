@@ -375,3 +375,52 @@ fn cunning_maneuver_pumps_and_clues() {
     assert_eq!(v.iter().find(|c| c.id == bear).map(|c| (c.power, c.toughness)), Some((5, 3)));
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "made a Clue");
 }
+
+#[test]
+fn earth_kingdom_soldier_distributes_two_counters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sol = g.add_card_to_battlefield(0, catalog::earth_kingdom_soldier());
+    g.fire_self_etb_triggers(sol, 0); // up to two of my creatures auto-targeted
+    drain_stack(&mut g);
+    let total: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| c.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0))
+        .sum();
+    assert_eq!(total, 2, "two +1/+1 counters distributed");
+}
+
+#[test]
+fn white_lotus_anthems_other_allies() {
+    let mut g = two_player_game();
+    let lotus = g.add_card_to_battlefield(0, catalog::white_lotus_reinforcements());
+    let ally = g.add_card_to_battlefield(0, catalog::kyoshi_warriors()); // an Ally
+    let nonally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let v = g.compute_battlefield();
+    assert_eq!(v.iter().find(|c| c.id == ally).map(|c| (c.power, c.toughness)), Some((4, 4)), "ally buffed");
+    assert_eq!(v.iter().find(|c| c.id == nonally).map(|c| (c.power, c.toughness)), Some((2, 2)), "non-Ally not buffed");
+    assert_eq!(v.iter().find(|c| c.id == lotus).map(|c| (c.power, c.toughness)), Some((2, 3)), "not self");
+}
+
+#[test]
+fn combustion_technique_scales_with_lessons() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    g.add_card_to_graveyard(0, catalog::octopus_form()); // Lesson #1
+    g.add_card_to_graveyard(0, catalog::yip_yip());      // Lesson #2
+    let ct = g.add_card_to_hand(0, catalog::combustion_technique());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ct, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Combustion Technique");
+    drain_stack(&mut g);
+    // 2 + 2 Lessons = 4 damage to the 5/5 (survives with 4 marked).
+    assert_eq!(g.battlefield_find(foe).map(|c| c.damage), Some(4));
+}
