@@ -3219,3 +3219,109 @@ pub fn team_avatar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 13: modal Bison, copy-while-attacking, X-earthbend, token flashback ─
+
+/// Appa, Loyal Sky Bison — {4}{W}{W} 4/4 legendary Bison Ally. Flying. When
+/// Appa enters or attacks, choose one — target creature you control gains
+/// flying; or airbend another target nonland permanent you control.
+pub fn appa_loyal_sky_bison() -> CardDefinition {
+    let modal = || Effect::ChooseN {
+        picks: vec![0],
+        modes: vec![
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Airbend {
+                what: target_filtered(
+                    SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+        ],
+    };
+    CardDefinition {
+        name: "Appa, Loyal Sky Bison",
+        cost: cost(&[generic(4), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bison, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(modal()), on_attack(modal())],
+        ..Default::default()
+    }
+}
+
+/// Fire Lord Azula — {1}{U}{B}{R} 4/4 legendary Human Noble. Firebending 2.
+/// Whenever you cast a spell while Azula is attacking, copy that spell (you may
+/// choose new targets). (Modeled as "while Azula attacked this turn".)
+pub fn fire_lord_azula() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Lord Azula",
+        cost: cost(&[generic(1), u(), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Firebending(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::SourceAttackedThisTurn),
+            effect: Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rockalanche — {2}{G} Sorcery (Lesson). Earthbend X, where X is the number of
+/// Forests you control. Flashback {5}{G}.
+pub fn rockalanche() -> CardDefinition {
+    CardDefinition {
+        name: "Rockalanche",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), g()]))],
+        effect: Effect::Earthbend {
+            n: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                filter: SelectionRequirement::HasLandType(LandType::Forest),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Fire Nation Attacks — {4}{R} Instant. Create two 2/2 red Soldier tokens with
+/// firebending 1. Flashback {8}{R}.
+pub fn fire_nation_attacks() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Nation Attacks",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(8), r()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: firebending_soldier_token(),
+        },
+        ..Default::default()
+    }
+}

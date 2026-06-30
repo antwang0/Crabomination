@@ -1893,3 +1893,72 @@ fn team_avatar_pumps_lone_attacker() {
     attack_with(&mut g, bear);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 (one creature)");
 }
+
+// ── Batch 13 ────────────────────────────────────────────────────────────────
+
+/// Appa, Loyal Sky Bison's ETB mode grants flying to a creature you control.
+#[test]
+fn appa_loyal_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let appa = g.add_card_to_battlefield(0, catalog::appa_loyal_sky_bison());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Modes(vec![0]),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.fire_self_etb_triggers(appa, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Fire Lord Azula copies a spell cast while she's attacking.
+#[test]
+fn fire_lord_azula_copies_while_attacking() {
+    let mut g = two_player_game();
+    let azula = g.add_card_to_battlefield(0, catalog::fire_lord_azula());
+    g.battlefield_find_mut(azula).unwrap().attacked_this_turn = true;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    let life0 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life0 - 6, "original + copy each deal 3");
+}
+
+/// Rockalanche earthbends for the number of Forests you control.
+#[test]
+fn rockalanche_earthbends_for_forests() {
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let rock = g.add_card_to_hand(0, catalog::rockalanche());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rock, target: Some(Target::Permanent(f1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rockalanche");
+    drain_stack(&mut g);
+    let counters: u32 = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Forest")
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 2, "earthbend 2 (two Forests)");
+}
+
+/// Fire Nation Attacks makes two firebending Soldiers.
+#[test]
+fn fire_nation_attacks_makes_two_soldiers() {
+    let mut g = two_player_game();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::fire_nation_attacks().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Soldier"), 2, "two Soldier tokens");
+}

@@ -84,7 +84,7 @@ pub enum CreatureType {
     // Loot the Pathfinder).
     Otter, Detective,
     // The Last Airbender hybrid beasts.
-    Platypus,
+    Platypus, Bison,
     // Cube expansion (Collector Ouphe).
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
