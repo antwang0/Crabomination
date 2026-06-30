@@ -28,6 +28,11 @@ control). Deferred for want of a primitive:
   …" needs a what-was-exiled type gate (Sold Out's damaged-gate ships).
 - **Serpent of the Pass** — conditional flash ("you may cast as though it had
   flash if 3+ Lessons in gy") + cost-reduced-per-noncreature-in-gy.
+- **Fatal Fissure** — "when that creature dies this turn, you earthbend 4"
+  needs the delayed-trigger body to *re-target* a fresh land; `Effect::Earthbend`
+  reads slot 0 (the watched creature, not a land) so the body no-ops. Either a
+  re-targeting delayed body or an `Effect::Earthbend` auto-pick fallback when
+  slot 0 isn't a controlled land.
 
 ## Discovered follow-ups — Duskmourn/Foundations sweep (`decks::recent52`)
 

@@ -4481,6 +4481,8 @@ static DECKS: &[Factory] = &[
     super::decks::benders_waterskin,
     super::decks::the_fire_nation_drill,
     super::decks::iroh_grand_lotus,
+    super::decks::zukos_conviction,
+    super::decks::barrels_of_blasting_jelly,
     super::decks::suki_kyoshi_warrior,
     super::decks::toph_the_blind_bandit,
     super::decks::cycle_of_renewal,

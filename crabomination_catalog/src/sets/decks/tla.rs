@@ -3945,3 +3945,56 @@ pub fn hei_bai_spirit_of_balance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zuko's Conviction — {B} Instant, Kicker {4}. Return target creature card
+/// from your graveyard to your hand; if kicked, put it onto the battlefield
+/// tapped instead.
+pub fn zukos_conviction() -> CardDefinition {
+    CardDefinition {
+        name: "Zuko's Conviction",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(4)]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+            else_: Box::new(Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Barrels of Blasting Jelly — {1} Artifact. {1}: Add one mana of any color,
+/// once each turn. {5}, {T}, Sacrifice: deal 5 damage to target creature.
+pub fn barrels_of_blasting_jelly() -> CardDefinition {
+    CardDefinition {
+        name: "Barrels of Blasting Jelly",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                once_per_turn: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(5)]),
+                effect: Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(5),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

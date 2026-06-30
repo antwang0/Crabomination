@@ -2333,3 +2333,40 @@ fn sokka_grows_on_lesson_cast() {
     assert_eq!(g.battlefield_find(sokka).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
         "Sokka grew from the Lesson cast");
 }
+
+/// Zuko's Conviction returns a gy creature to hand, or reanimates it if kicked.
+#[test]
+fn zukos_conviction_kicked_reanimates() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let zc = g.add_card_to_hand(0, catalog::zukos_conviction());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: zc, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bears).expect("reanimated onto battlefield");
+    assert!(b.tapped, "enters tapped");
+}
+
+/// Barrels of Blasting Jelly sacrifices to deal 5 to a creature.
+#[test]
+fn barrels_of_blasting_jelly_burns() {
+    let mut g = two_player_game();
+    let barrels = g.add_card_to_battlefield(0, catalog::barrels_of_blasting_jelly());
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: barrels, ability_index: 1, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate sac-burn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "5 damage kills the 4/4");
+    assert!(g.battlefield_find(barrels).is_none(), "Barrels sacrificed");
+}
