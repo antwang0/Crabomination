@@ -3894,6 +3894,46 @@ pub fn the_last_agni_kai() -> CardDefinition {
     }
 }
 
+/// Allies at Last — {2}{G} Instant. Affinity for Allies. Up to two target
+/// creatures you control (slots 0/1) each deal damage equal to their power to
+/// target creature an opponent controls (slot 2).
+pub fn allies_at_last() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let opp_target = || Selector::TargetFiltered {
+        slot: 2,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+    };
+    CardDefinition {
+        name: "Allies at Last",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "Affinity for Allies (this spell costs {1} less to cast for each Ally you control).",
+            effect: StaticEffect::SelfCostReducedPerPermanentMatching {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+                per: 1,
+            },
+        }],
+        effect: Effect::Seq(vec![
+            Effect::DealDamageEqualToPower {
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                target: opp_target(),
+            },
+            Effect::DealDamageEqualToPower {
+                source: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                target: opp_target(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Earth Rumble — {3}{G} Sorcery. Earthbend 2 (slot 0 = a land you control),
 /// then a creature you control (slot 1) fights a creature an opponent controls
 /// (slot 2).

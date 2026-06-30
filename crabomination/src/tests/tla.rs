@@ -2932,3 +2932,26 @@ fn earth_rumble_earthbends_and_fights() {
         "earthbend 2 on the land");
     assert!(g.battlefield_find(foe).is_none(), "the 2/2 died to the 4/4 fight");
 }
+
+/// Allies at Last: Affinity for Allies discounts it, and two creatures each
+/// deal their power to an opponent's creature.
+#[test]
+fn allies_at_last_affinity_and_double_strike_damage() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // Two Allies you control discount the {2}{G} spell by {2} → {G}.
+    let a1 = g.add_card_to_battlefield(0, catalog::kyoshi_warriors()); // 3/3 Ally
+    let a2 = g.add_card_to_battlefield(0, catalog::momo_friendly_flier()); // 1/1 Ally
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let spell = g.add_card_to_hand(0, catalog::allies_at_last());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1); // only {G} — affinity must cover the rest
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a1)),
+        additional_targets: vec![Target::Permanent(a2), Target::Permanent(foe)],
+        mode: None, x_value: None,
+    }).expect("cast at affinity-reduced cost");
+    drain_stack(&mut g);
+    // 3 + 1 = 4 damage to the 4/4 → it dies.
+    assert!(g.battlefield_find(foe).is_none(), "4 total damage kills the 4/4");
+}

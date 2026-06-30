@@ -497,6 +497,18 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             reduction = reduction.saturating_add(n.saturating_mul(*per));
         }
     }
+    // Card-intrinsic "costs {per} less for each [filter] permanent you control"
+    // — Affinity for [type] (Allies at Last). Generic-only, clamped by caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerPermanentMatching { filter, per } = &sa.effect {
+            let n = state
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == caster && state.evaluate_requirement_on_card(filter, c, caster))
+                .count() as u32;
+            reduction = reduction.saturating_add(n.saturating_mul(*per));
+        }
+    }
     // Card-intrinsic "costs {amount} less if a creature died this turn" (Bone
     // Picker). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

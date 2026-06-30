@@ -10972,6 +10972,8 @@ fn static_effect_to_effects(
             // SelfCostReducedPerGraveyardCardMatching (Serpent of the Pass) —
             // read in `cost_reduction_for_spell`; no layer effect.
             | StaticEffect::SelfCostReducedPerGraveyardCardMatching { .. }
+            // SelfCostReducedPerPermanentMatching (Allies at Last) — same.
+            | StaticEffect::SelfCostReducedPerPermanentMatching { .. }
             // SelfFlashIf (Serpent of the Pass) — consulted at the cast-timing
             // gate; no continuous-layer effect.
             | StaticEffect::SelfFlashIf { .. }

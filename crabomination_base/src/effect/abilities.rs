@@ -254,6 +254,13 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         per: u32,
     },
+    /// Card-intrinsic "This spell costs {`per`} less to cast for each permanent
+    /// you control matching `filter`" — Affinity for [type] (Allies at Last —
+    /// Affinity for Allies). Generic-only; clamped by the caller.
+    SelfCostReducedPerPermanentMatching {
+        filter: SelectionRequirement,
+        per: u32,
+    },
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
