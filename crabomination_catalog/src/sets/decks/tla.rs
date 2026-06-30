@@ -2712,3 +2712,54 @@ pub fn ty_lee_artful_acrobat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 10: firebending bodies ───────────────────────────────────────────
+
+/// Uncle Iroh — {1}{R/G}{R/G} 4/2 legendary Human Noble Ally. Firebending 1.
+/// Lesson spells you cast cost {1} less.
+pub fn uncle_iroh() -> CardDefinition {
+    CardDefinition {
+        name: "Uncle Iroh",
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::Green), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Noble, CreatureType::Ally]),
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Firebending(1)],
+        static_abilities: vec![StaticAbility {
+            description: "Lesson spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vindictive Warden — {2}{B/R} 2/3 Human Soldier. Menace, firebending 1. {3}:
+/// deals 1 damage to each opponent.
+pub fn vindictive_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Vindictive Warden",
+        cost: cost(&[generic(2), hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Menace, Keyword::Firebending(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

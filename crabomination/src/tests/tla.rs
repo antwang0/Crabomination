@@ -1663,3 +1663,31 @@ fn ty_lee_artful_pays_to_unblock() {
     assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock),
         "paid {{1}} → target can't block");
 }
+
+/// Uncle Iroh discounts your Lesson spells by {1}.
+#[test]
+fn uncle_iroh_discounts_lessons() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::uncle_iroh());
+    let lesson = crate::card::CardInstance::new(g.next_id(), catalog::firebending_lesson(), 0);
+    let nonlesson = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &lesson, None), 1, "Lesson costs {{1}} less");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &nonlesson, None), 0, "non-Lesson unaffected");
+}
+
+/// Vindictive Warden pings each opponent for 1.
+#[test]
+fn vindictive_warden_pings_opponents() {
+    let mut g = two_player_game();
+    let vw = g.add_card_to_battlefield(0, catalog::vindictive_warden());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "1 damage to the opponent");
+}
