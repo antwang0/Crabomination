@@ -3,12 +3,12 @@
 //! `crabomination/src/tests/tla.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EnchantmentSubtype, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, LandType,
-    Predicate, SelectionRequirement, Selector, SpellSubtype, StaticAbility, StaticEffect, Subtypes,
-    Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    DynamicPt, Effect, EnchantmentSubtype, EventKind, EventScope, EventSpec, ExileReturnZone,
+    Keyword, LandType, Predicate, SelectionRequirement, Selector, SpellSubtype, StaticAbility,
+    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crabomination_base::tokens::food_token;
+use crabomination_base::tokens::{clue_token, food_token};
 use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, raid_etb, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
@@ -3676,6 +3676,139 @@ pub fn iroh_grand_lotus() -> CardDefinition {
             description: "Each instant and sorcery card in your graveyard has flashback equal to its mana cost.",
             effect: StaticEffect::GraveyardInstantsSorceriesHaveFlashback,
         }],
+        ..Default::default()
+    }
+}
+
+/// Suki, Kyoshi Warrior — {2}{G/W}{G/W} */4 Human Warrior Ally. Power = the
+/// number of creatures you control; attacks → create a tapped, attacking 1/1
+/// white Ally.
+pub fn suki_kyoshi_warrior() -> CardDefinition {
+    CardDefinition {
+        name: "Suki, Kyoshi Warrior",
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        dynamic_pt: Some(DynamicPt::CreaturesControlledPower { base_p: 0, base_t: 4 }),
+        triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: ally_token(),
+            cleanup: Default::default(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Toph, the Blind Bandit — {2}{G} */3 Human Warrior Ally. ETB earthbend 2;
+/// power = the +1/+1 counters on lands you control.
+pub fn toph_the_blind_bandit() -> CardDefinition {
+    CardDefinition {
+        name: "Toph, the Blind Bandit",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        dynamic_pt: Some(DynamicPt::PlusCountersOnLandsControlledPower { base_p: 0, base_t: 3 }),
+        triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Cycle of Renewal — {2}{G} Instant — Lesson. Sacrifice a land, then search
+/// for up to two basic lands onto the battlefield tapped.
+pub fn cycle_of_renewal() -> CardDefinition {
+    CardDefinition {
+        name: "Cycle of Renewal",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: SelectionRequirement::Land },
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Zuko's Exile — {5} Instant — Lesson. Exile target artifact, creature, or
+/// enchantment; its controller creates a Clue token.
+pub fn zukos_exile() -> CardDefinition {
+    CardDefinition {
+        name: "Zuko's Exile",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::ONE,
+                definition: clue_token(),
+            },
+            Effect::Exile {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Enchantment),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sokka, Bold Boomeranger — {U}{R} 1/1 Human Warrior Ally. ETB loots up to
+/// two; gains a +1/+1 counter whenever you cast an artifact or Lesson spell.
+pub fn sokka_bold_boomeranger() -> CardDefinition {
+    CardDefinition {
+        name: "Sokka, Bold Boomeranger",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            // "Discard up to two" approximated as discard any number, draw that many.
+            etb(Effect::Seq(vec![
+                Effect::DiscardAnyNumber { who: Selector::You },
+                Effect::Draw { who: Selector::You, amount: Value::CardsDiscardedThisEffect },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Artifact
+                            .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)),
+                    },
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

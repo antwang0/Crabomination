@@ -2474,6 +2474,14 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of creatures the controller
     /// controls (counting the source itself). Burrowguard Mentor (base 0/0).
     CreaturesControlled { base: i32 },
+    /// Power = `base_p` + the number of creatures the controller controls;
+    /// toughness is the fixed `base_t` (`*`/N creatures — Suki, Kyoshi
+    /// Warrior `*`/4). The power-only sibling of `CreaturesControlled`.
+    CreaturesControlledPower { base_p: i32, base_t: i32 },
+    /// Power = `base_p` + the total +1/+1 counters on lands the controller
+    /// controls; toughness is the fixed `base_t` (Toph, the Blind Bandit
+    /// `*`/3, tracking earthbent lands).
+    PlusCountersOnLandsControlledPower { base_p: i32, base_t: i32 },
     /// Power = toughness = the number of creatures of `creature_type` the
     /// controller controls (counting the source). Pack Rat.
     CreaturesOfTypeControlled { creature_type: CreatureType },

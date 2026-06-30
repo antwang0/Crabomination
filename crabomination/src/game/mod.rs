@@ -4724,6 +4724,18 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::CreaturesControlledPower { base_p, base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && c.definition.is_creature()
+                    }).count() as i32;
+                    (base_p + n, base_t)
+                }
+                crate::card::DynamicPt::PlusCountersOnLandsControlledPower { base_p, base_t } => {
+                    let n: i32 = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && c.definition.is_land()
+                    }).map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne) as i32).sum();
+                    (base_p + n, base_t)
+                }
                 crate::card::DynamicPt::CreaturesOfTypeControlled { creature_type } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller

@@ -2248,3 +2248,88 @@ fn sun_warriors_firebends_per_creature() {
     attack_with(&mut g, sw);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "3 creatures → three {{R}}");
 }
+
+/// Suki's power tracks creatures you control; attacking mints a tapped Ally.
+#[test]
+fn suki_power_tracks_creatures_and_mints_ally() {
+    let mut g = two_player_game();
+    let suki = g.add_card_to_battlefield(0, catalog::suki_kyoshi_warrior());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(suki).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4), "2 creatures → 2/4");
+    g.clear_sickness(suki);
+    attack_with(&mut g, suki);
+    assert_eq!(count_named(&g, 0, "Ally"), 1, "attack minted an Ally token");
+}
+
+/// Toph earthbends on enter; her power equals counters on lands you control.
+#[test]
+fn toph_blind_bandit_power_tracks_land_counters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let toph = g.add_card_to_battlefield(0, catalog::toph_the_blind_bandit());
+    g.fire_self_etb_triggers(toph, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(toph).unwrap().power, 2, "earthbend 2 → power 2");
+}
+
+/// Cycle of Renewal sacrifices a land and fetches two basics tapped.
+#[test]
+fn cycle_of_renewal_sacs_then_fetches_two() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    let cr = g.add_card_to_hand(0, catalog::cycle_of_renewal());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(f1)),
+        crate::decision::DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: cr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cycle of Renewal");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "a land was sacrificed");
+    let lands = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands, 2, "fetched two basics (net: -1 sacced +2 fetched)");
+}
+
+/// Zuko's Exile exiles a permanent and gives its controller a Clue.
+#[test]
+fn zukos_exile_exiles_and_gifts_clue() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ze = g.add_card_to_hand(0, catalog::zukos_exile());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ze, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Zuko's Exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature exiled");
+    assert_eq!(count_named(&g, 1, "Clue"), 1, "its controller got a Clue");
+}
+
+/// Sokka gains a +1/+1 counter when you cast a Lesson spell.
+#[test]
+fn sokka_grows_on_lesson_cast() {
+    let mut g = two_player_game();
+    let sokka = g.add_card_to_battlefield(0, catalog::sokka_bold_boomeranger());
+    let lesson = g.add_card_to_hand(0, catalog::combustion_technique()); // {1}{R} Lesson
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: lesson, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lesson");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sokka).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
+        "Sokka grew from the Lesson cast");
+}
