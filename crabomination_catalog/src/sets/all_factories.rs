@@ -4492,6 +4492,8 @@ static DECKS: &[Factory] = &[
     super::decks::price_of_freedom,
     super::decks::realm_of_koh,
     super::decks::earthen_ally,
+    super::decks::leaves_from_the_vine,
+    super::decks::rumble_arena,
     super::decks::suki_kyoshi_warrior,
     super::decks::toph_the_blind_bandit,
     super::decks::cycle_of_renewal,

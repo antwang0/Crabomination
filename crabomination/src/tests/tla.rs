@@ -2524,3 +2524,45 @@ fn agna_qela_loots() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "drew 1, discarded 1 (net unchanged)");
 }
+
+/// Leaves from the Vine: chapter I mills three and makes a Food; chapter III
+/// draws because a creature/Lesson is in the graveyard.
+#[test]
+fn leaves_from_the_vine_saga_chapters() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); } // milled creatures
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // chapter II target
+    let id = g.add_card_to_hand(0, catalog::leaves_from_the_vine());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Food"), 1, "chapter I made a Food");
+    assert!(g.players[0].graveyard.iter().filter(|c| c.definition.is_creature()).count() >= 1,
+        "chapter I milled creatures");
+    g.saga_advance(id); // chapter II — +1/+1 on up to two creatures
+    drain_stack(&mut g);
+    let hand = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::forest()); // a card to draw
+    g.saga_advance(id); // chapter III — draw (creature in gy)
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "chapter III drew");
+}
+
+/// Rumble Arena scries on enter and taps for colorless or filtered any-color.
+#[test]
+fn rumble_arena_scries_and_taps() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let ra = g.move_card_to_battlefield_for_test(0, catalog::rumble_arena());
+    drain_stack(&mut g); // ETB scry resolves (auto-decider keeps top)
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for C");
+    assert!(g.players[0].mana_pool.colorless_amount() >= 1, "added colorless");
+}

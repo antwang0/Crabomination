@@ -4275,3 +4275,65 @@ pub fn earthen_ally() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Leaves from the Vine — {1}{G} Enchantment — Saga. I: mill 3, create a Food.
+/// II: +1/+1 on up to two target creatures you control. III: draw if a creature
+/// or Lesson card is in your graveyard.
+pub fn leaves_from_the_vine() -> CardDefinition {
+    CardDefinition {
+        name: "Leaves from the Vine",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: food_token() },
+            ])),
+            (2, Effect::SupportCounters {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            }),
+            (3, Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Creature
+                            .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)),
+                    },
+                    Value::ONE,
+                ),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rumble Arena — Land. When it enters, scry 1. {T}: Add {C}. {1}, {T}: Add one
+/// mana of any color.
+pub fn rumble_arena() -> CardDefinition {
+    CardDefinition {
+        name: "Rumble Arena",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
