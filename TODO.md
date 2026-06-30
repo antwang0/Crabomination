@@ -37,13 +37,11 @@ auto-picks a controlled land in delayed bodies), **Serpent of the Pass**
 (`StaticEffect::SelfCostReducedPerPermanentMatching` — Affinity-for-type),
 **Honest Work** (shrink-to-1/1 aura), **Bumi, King of Three Trials**
 (`Effect::ChooseUpToN { max: Value, modes }` — choose up to a live count of
-self-targeting modes). Deferred for want of a primitive:
-- **Joo Dee, One of Many** — card defn drafted (Surveil 1 + `CreateTokenCopyOf`
-  self + sacrifice an artifact/creature) but pulled: the deterministic test was
-  flaky because the surveil's `Decision::Scry` and the sacrifice's
-  `Decision::ChooseCards` consume scripted answers in an order that's awkward to
-  pin (auto-decider sacrifices the just-minted token). Re-add with a decider
-  that scripts ScryOrder + Cards together, or an empty-library variant.
+self-targeting modes), **Joo Dee, One of Many** (Surveil + `CreateTokenCopyOf`
+self + sacrifice; the test pins determinism via an empty library + the
+auto-picker's token-first sac heuristic). No primitive-blocked TLA cards remain;
+the rest of the `set:tla` backlog is DFC bombs / Sagas / Vehicles / quest-counter
+engines (see the Avatar card-backlog note below).
 
 ## Discovered follow-ups — Duskmourn/Foundations sweep (`decks::recent52`)
 

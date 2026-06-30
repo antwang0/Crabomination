@@ -3007,3 +3007,27 @@ fn bumi_no_lessons_chooses_nothing() {
     assert_eq!(g.battlefield_find(bumi).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 0,
         "no Lessons → no modes run");
 }
+
+/// Joo Dee surveils, mints a token copy of herself, then sacrifices a creature
+/// (empty library → no surveil decision). The auto-picker preferentially
+/// sacrifices the freshly-minted token over the non-token ornithopter, so the
+/// ornithopter surviving is proof the token was created.
+#[test]
+fn joo_dee_copies_then_sacrifices() {
+    let mut g = two_player_game();
+    let jd = g.add_card_to_battlefield(0, catalog::joo_dee_one_of_many());
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.clear_sickness(jd);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Joo Dee");
+    drain_stack(&mut g);
+    // Token minted then preferentially sacrificed → one Joo Dee left, and the
+    // non-token ornithopter is untouched (had no token been made, the only
+    // sac candidate would have been the ornithopter itself).
+    assert_eq!(count_named(&g, 0, "Joo Dee, One of Many"), 1, "token minted, then sacrificed");
+    assert!(g.battlefield_find(fodder).is_some(), "ornithopter survived (the token was the sac)");
+}

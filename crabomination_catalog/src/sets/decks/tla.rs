@@ -3894,6 +3894,47 @@ pub fn the_last_agni_kai() -> CardDefinition {
     }
 }
 
+/// Joo Dee, One of Many — {1}{B} 2/2 Human Advisor. {B}, {T}, sorcery-speed:
+/// surveil 1, create a token copy of her, then sacrifice an artifact or creature.
+pub fn joo_dee_one_of_many() -> CardDefinition {
+    CardDefinition {
+        name: "Joo Dee, One of Many",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
+                    legendary: false,
+                },
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bumi, King of Three Trials — {5}{G} 4/4 Legendary Human Noble Ally. ETB:
 /// choose up to X (X = Lessons in your graveyard) of — three +1/+1 counters on
 /// Bumi / scry 3 / earthbend 3. (The scry's "target player" is modeled as you.)
