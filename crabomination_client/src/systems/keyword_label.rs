@@ -118,6 +118,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         MustAttack => "Atk!",
         // Crew N on a Vehicle — a glanceable reminder it can be animated.
         Crew(_) => "Crew",
+        // Saddle N on a Mount (CR 702.171) — like Crew, a board reminder its
+        // saddled riders come online when it attacks.
+        Saddle(_) => "Sdl",
         // Resilience keywords — "this dies but comes back" reads at a glance and
         // changes how an opponent should attack/block into it.
         Persist => "Per",
@@ -294,6 +297,8 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
         assert_eq!(keyword_strip(&[Keyword::Prowess]), "Prw");
         assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
+        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
+        assert_eq!(keyword_strip(&[Keyword::Saddle(3)]), "Sdl");
     }
 
     #[test]

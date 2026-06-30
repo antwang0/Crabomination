@@ -175,7 +175,11 @@ Each unblocks a large swath of cards.
   creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
   spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil
   Serpent), and combat damage (CR 702.16e — `damage_prevented_by_protection`
-  on both attacker→blocker and blocker→attacker). Remaining: "target each".
+  on both attacker→blocker and blocker→attacker). Multi-kind slots ship —
+  a spell can target a permanent in one slot and a *player* in another, with
+  `Selector::ControlledBy { who: Target(n) }` declaring slot `n` as a player
+  target (How to Start a Riot, Sokka's Haiku's spell+land slots). Remaining:
+  "target each".
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg); layer-4 granted supertype ✅
   (`Modification::AddSupertype` — the Ring-bearer's Legendary rider, CR 701.54c);

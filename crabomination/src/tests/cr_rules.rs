@@ -5561,3 +5561,85 @@ fn cr_701_67_optional_waterbend_records_provenance() {
     // Provenance honored: drew 3, no discard (net +3 minus the lesson leaving hand).
     assert_eq!(g.players[0].hand.len(), before - 1 + 3, "SpellWasWaterbend → discard skipped");
 }
+
+// ── CR 115.1a / 601.2c — a spell may target objects of different kinds in
+// distinct slots (a permanent in one slot, a player in another). The
+// `ControlledBy { who: Target(n) }` selector declares slot n as a player
+// target (How to Start a Riot — "creatures target player controls get +2/+0").
+#[test]
+fn cr_115_spell_targets_a_creature_and_a_player() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let riot = g.add_card_to_hand(0, catalog::how_to_start_a_riot());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: riot,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).expect("two-kind targeting accepted");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crate::card::Keyword::Menace));
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 4, "the player slot resolved");
+}
+
+// ── CR 506.5 — a creature "attacks alone" only when it's the sole attacker.
+// Team Avatar's lone-attacker pump must NOT fire when two creatures attack.
+#[test]
+fn cr_506_5_attacks_alone_requires_a_sole_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::team_avatar());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("two attackers");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 2, "no lone-attacker pump with two attackers");
+}
+
+// ── CR 601.2c / 115.1 — a multi-target spell binds each slot to its own legal
+// object kind: Sokka's Haiku counters a *spell* (slot 0) and untaps a *land*
+// (slot 1).
+#[test]
+fn cr_601_2c_multitarget_spell_and_land_slots() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts");
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    let haiku = g.add_card_to_hand(0, catalog::sokkas_haiku());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: haiku,
+        target: Some(Target::Permanent(spell)),
+        additional_targets: vec![Target::Permanent(land)],
+        mode: None,
+        x_value: None,
+    }).expect("counter-spell + untap-land slots accepted");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_none(), "spell slot countered");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land slot untapped");
+}

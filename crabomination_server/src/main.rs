@@ -275,9 +275,9 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
             Err(reason) => {
                 let s = slots.snapshot();
                 eprintln!(
-                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/IP)",
+                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/peak {pmax}/IP)",
                     s.current, s.peak, s.refused_global, s.refused_per_ip,
-                    rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip,
+                    rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
                 );
                 let _ = stream.shutdown(std::net::Shutdown::Both);
                 continue;

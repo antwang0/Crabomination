@@ -34,6 +34,11 @@ pub(crate) struct SlotState {
     /// held at once. Lets operators size the global cap against real peak
     /// load rather than guessing.
     peak: usize,
+    /// High-water mark of any single IP's slot count over the server's
+    /// lifetime. The live `max_per_ip` resets when an abusive IP disconnects;
+    /// this persists the worst concentration ever seen, so a burst of
+    /// single-source abuse is still visible in telemetry after it clears.
+    peak_per_ip: usize,
     /// Cumulative connections refused because the global cap was full.
     refused_global: u64,
     /// Cumulative connections refused because the per-IP cap was full —
@@ -62,6 +67,9 @@ pub(crate) struct SlotSnapshot {
     /// approaching `current` while `distinct_ips` stays low is the clearest
     /// single-source-abuse signal — sharper than `distinct_ips` alone.
     pub(crate) max_per_ip: usize,
+    /// Lifetime high-water mark of any single IP's concurrent slots. Unlike
+    /// `max_per_ip` (a live read), this survives the abusive IP disconnecting.
+    pub(crate) peak_per_ip: usize,
     /// Lifetime accepted-connection count — the denominator for
     /// [`refusal_rate_pct`](Self::refusal_rate_pct).
     pub(crate) accepted: u64,
@@ -115,7 +123,10 @@ impl SlotManager {
         state.total += 1;
         state.peak = state.peak.max(state.total);
         state.accepted += 1;
-        *state.per_ip.entry(addr).or_insert(0) += 1;
+        let ip_count = state.per_ip.entry(addr).or_insert(0);
+        *ip_count += 1;
+        let ip_count = *ip_count;
+        state.peak_per_ip = state.peak_per_ip.max(ip_count);
         Ok(SlotGuard {
             inner: Arc::clone(&self.inner),
             addr,
@@ -133,6 +144,7 @@ impl SlotManager {
             refused_per_ip: state.refused_per_ip,
             distinct_ips: state.per_ip.len(),
             max_per_ip: state.per_ip.values().copied().max().unwrap_or(0),
+            peak_per_ip: state.peak_per_ip,
             accepted: state.accepted,
         }
     }
@@ -216,6 +228,22 @@ mod tests {
         assert_eq!(s.distinct_ips, 2);
         assert_eq!(s.max_per_ip, 2, "ip1 holds the most slots");
         assert_eq!(s.current, 3);
+    }
+
+    #[test]
+    fn peak_per_ip_survives_release() {
+        let mgr = SlotManager::new(0, 0);
+        {
+            let _a = mgr.try_acquire(ip(1)).expect("ip1 #1");
+            let _b = mgr.try_acquire(ip(1)).expect("ip1 #2");
+            let _c = mgr.try_acquire(ip(1)).expect("ip1 #3");
+            assert_eq!(mgr.snapshot().peak_per_ip, 3, "peaked at 3 from one IP");
+        }
+        // The abusive IP has disconnected: live max resets, but the lifetime
+        // high-water mark persists for operator telemetry.
+        let s = mgr.snapshot();
+        assert_eq!(s.max_per_ip, 0, "live concentration cleared");
+        assert_eq!(s.peak_per_ip, 3, "peak concentration remembered");
     }
 
     #[test]
