@@ -3406,3 +3406,120 @@ pub fn sokkas_haiku() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 15: Shrine cycle + mana rock ──────────────────────────────────────
+
+/// A 1/1 red Monk creature token with prowess (Crescent Island Temple).
+fn monk_prowess_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Monk".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Monk], ..Default::default() },
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
+/// Number of Shrines you control (counts the source Shrine on ETB).
+fn shrines_you_control() -> Value {
+    Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
+    }
+}
+
+/// "Whenever another Shrine you control enters, `effect`."
+fn on_another_shrine_enters(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
+            }),
+        effect,
+    }
+}
+
+/// Crescent Island Temple — {3}{R} Legendary Enchantment — Shrine. ETB: for
+/// each Shrine you control, make a 1/1 red Monk with prowess. Another Shrine
+/// enters → make one.
+pub fn crescent_island_temple() -> CardDefinition {
+    CardDefinition {
+        name: "Crescent Island Temple",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Shrine],
+            ..Default::default()
+        },
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: shrines_you_control(),
+                definition: monk_prowess_token(),
+            }),
+            on_another_shrine_enters(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: monk_prowess_token(),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Southern Air Temple — {3}{W} Legendary Enchantment — Shrine. ETB: put X
+/// +1/+1 counters on each creature you control (X = Shrines). Another Shrine
+/// enters → +1/+1 on each.
+pub fn southern_air_temple() -> CardDefinition {
+    let each_creature = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Southern Air Temple",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Shrine],
+            ..Default::default()
+        },
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: each_creature(),
+                kind: CounterType::PlusOnePlusOne,
+                amount: shrines_you_control(),
+            }),
+            on_another_shrine_enters(Effect::AddCounter {
+                what: each_creature(),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Waterbending Scroll — {1}{U} Artifact. {6}, {T}: draw a card. This ability
+/// costs {1} less to activate for each Island you control.
+pub fn waterbending_scroll() -> CardDefinition {
+    CardDefinition {
+        name: "Waterbending Scroll",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            tap_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            cost_reduction_per: Some(SelectionRequirement::HasLandType(LandType::Island)),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

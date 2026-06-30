@@ -2033,3 +2033,51 @@ fn sokkas_haiku_counters_and_untaps() {
     assert!(g.battlefield_find(spell).is_none(), "the creature spell was countered");
     assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
 }
+
+// ── Batch 15 ────────────────────────────────────────────────────────────────
+
+/// Crescent Island Temple mints one Monk per Shrine you control on ETB.
+#[test]
+fn crescent_island_temple_mints_per_shrine() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::southern_air_temple()); // a second Shrine
+    let crescent = g.add_card_to_battlefield(0, catalog::crescent_island_temple());
+    g.fire_self_etb_triggers(crescent, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Monk"), 2, "one Monk per Shrine (2 Shrines)");
+}
+
+/// Southern Air Temple counters each creature by the number of Shrines.
+#[test]
+fn southern_air_temple_counters_per_shrine() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crescent_island_temple()); // a second Shrine
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let temple = g.add_card_to_battlefield(0, catalog::southern_air_temple());
+    g.fire_self_etb_triggers(temple, 0);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        2,
+        "+1/+1 per Shrine (2 Shrines)"
+    );
+}
+
+/// Waterbending Scroll's draw ability is discounted by your Islands.
+#[test]
+fn waterbending_scroll_island_discount() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let scroll = g.add_card_to_battlefield(0, catalog::waterbending_scroll());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(4); // {6} - 2 Islands = {4}
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scroll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate at the discounted cost");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew after the Island discount");
+}
