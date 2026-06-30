@@ -5762,17 +5762,21 @@ impl GameState {
         }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).
         // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
-        if let Some((req, min)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
+        if let Some((req, min, excl)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
             Keyword::CantAttackOrBlockUnlessYouControlCount {
-                filter, min, attack_only: false, ..
-            } => Some((filter.clone(), *min)),
+                filter, min, attack_only: false, exclude_self, ..
+            } => Some((filter.clone(), *min, *exclude_self)),
             _ => None,
         }) {
             let owner = blocker.controller;
             let n = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == owner && self.evaluate_requirement_on_card(&req, c, owner))
+                .filter(|c| {
+                    c.controller == owner
+                        && !(excl && c.id == blocker.id)
+                        && self.evaluate_requirement_on_card(&req, c, owner)
+                })
                 .count();
             if (n as u32) < min {
                 return false;

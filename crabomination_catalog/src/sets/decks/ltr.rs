@@ -1374,6 +1374,7 @@ pub fn olog_hai_crusher() -> CardDefinition {
                 min: 1,
                 attack_only: false,
                 block_only: true,
+                exclude_self: false,
             },
         ],
         ..Default::default()

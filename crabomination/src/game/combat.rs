@@ -236,17 +236,19 @@ impl GameState {
                 }
                 // "Can't attack unless you control N+ [filter]" (Topiary
                 // Stomper — seven or more lands).
-                if let Some((req, min)) = computed_kw(id).iter().find_map(|kw| match kw {
+                if let Some((req, min, excl)) = computed_kw(id).iter().find_map(|kw| match kw {
                     Keyword::CantAttackOrBlockUnlessYouControlCount {
-                        filter, min, block_only: false, ..
-                    } => Some((filter.clone(), *min)),
+                        filter, min, block_only: false, exclude_self, ..
+                    } => Some((filter.clone(), *min, *exclude_self)),
                     _ => None,
                 }) {
                     let n = self
                         .battlefield
                         .iter()
                         .filter(|c| {
-                            c.controller == p && self.evaluate_requirement_on_card(&req, c, p)
+                            c.controller == p
+                                && !(excl && c.id == id)
+                                && self.evaluate_requirement_on_card(&req, c, p)
                         })
                         .count();
                     if (n as u32) < min {
@@ -715,17 +717,21 @@ impl GameState {
 
             // "Can't block unless you control N+ [filter]" (Topiary Stomper).
             // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
-            if let Some((req, min)) = kws_of(blocker_id).iter().find_map(|kw| match kw {
+            if let Some((req, min, excl)) = kws_of(blocker_id).iter().find_map(|kw| match kw {
                 Keyword::CantAttackOrBlockUnlessYouControlCount {
-                    filter, min, attack_only: false, ..
-                } => Some((filter.clone(), *min)),
+                    filter, min, attack_only: false, exclude_self, ..
+                } => Some((filter.clone(), *min, *exclude_self)),
                 _ => None,
             }) {
                 let owner = blocker.controller;
                 let n = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == owner && self.evaluate_requirement_on_card(&req, c, owner))
+                    .filter(|c| {
+                        c.controller == owner
+                            && !(excl && c.id == blocker_id)
+                            && self.evaluate_requirement_on_card(&req, c, owner)
+                    })
                     .count();
                 if (n as u32) < min {
                     return Err(GameError::CannotBlock(blocker_id));

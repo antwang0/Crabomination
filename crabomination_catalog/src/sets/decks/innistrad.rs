@@ -2824,6 +2824,7 @@ pub fn lambholt_pacifist() -> CardDefinition {
             min: 1,
             attack_only: true,
             block_only: false,
+            exclude_self: false,
         }],
         triggered_abilities: vec![werewolf_day_transform()],
         back_face: Some(Box::new(butcher)),

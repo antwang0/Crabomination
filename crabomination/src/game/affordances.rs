@@ -1269,6 +1269,12 @@ fn is_mana_ability_effect(effect: &Effect) -> bool {
     match effect {
         Effect::AddMana { .. } => true,
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability_effect),
+        // A board-state-conditional whose every branch only adds mana is still
+        // a mana ability (Ilysian Caryatid, Raucous Audience). Mirrors
+        // `actions::is_mana_ability`.
+        Effect::If { then, else_, .. } => {
+            is_mana_ability_effect(then) && is_mana_ability_effect(else_)
+        }
         _ => false,
     }
 }

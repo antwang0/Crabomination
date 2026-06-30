@@ -888,7 +888,9 @@ pub enum Keyword {
     /// (Lambholt Pacifist — "can't attack unless you control a creature with
     /// power 4 or greater"); `block_only` is the mirror — the gate applies to
     /// blocking only (Olog-hai Crusher — "can't block unless you control a
-    /// Goblin or Orc").
+    /// Goblin or Orc"). `exclude_self` drops the gated creature from the count
+    /// so "another [filter]" reads correctly (Tiger-Dillo — "…another creature
+    /// with power 4 or greater").
     CantAttackOrBlockUnlessYouControlCount {
         filter: Box<SelectionRequirement>,
         min: u32,
@@ -896,6 +898,8 @@ pub enum Keyword {
         attack_only: bool,
         #[serde(default)]
         block_only: bool,
+        #[serde(default)]
+        exclude_self: bool,
     },
     /// CR 702.166 — Offspring [cost]. An optional additional cast cost; if
     /// paid, the creature's ETB mints a 1/1 token copy of it. Reuses the

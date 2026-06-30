@@ -1731,6 +1731,9 @@ fn is_mana_ability(effect: &Effect) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => no_choice_payload(pool),
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
+        // Conditional fixed-output mana (Ilysian Caryatid, Raucous Audience):
+        // a mana source whenever both branches are no-choice mana abilities.
+        Effect::If { then, else_, .. } => is_mana_ability(then) && is_mana_ability(else_),
         _ => false,
     }
 }

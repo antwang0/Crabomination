@@ -424,3 +424,112 @@ fn combustion_technique_scales_with_lessons() {
     // 2 + 2 Lessons = 4 damage to the 5/5 (survives with 4 marked).
     assert_eq!(g.battlefield_find(foe).map(|c| c.damage), Some(4));
 }
+
+/// Iroh's Demonstration's default mode pings each opponent creature for 1.
+#[test]
+fn irohs_demonstration_sweep_mode() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::irohs_demonstration());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast (default sweep mode)");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).map(|c| c.damage), Some(1));
+    assert_eq!(g.battlefield_find(b).map(|c| c.damage), Some(1));
+}
+
+/// Iroh's Demonstration mode 1 deals 4 to a single target creature.
+#[test]
+fn irohs_demonstration_burn_mode() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    let id = g.add_card_to_hand(0, catalog::irohs_demonstration());
+    ready0(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast (burn mode)");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).map(|c| c.damage), Some(4));
+}
+
+/// Azula Always Lies runs both modes — a -1/-1 and a +1/+1 counter, each on its
+/// own target.
+#[test]
+fn azula_always_lies_both_modes() {
+    let mut g = two_player_game();
+    let shrink = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let grow = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::azula_always_lies());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(shrink)),
+        additional_targets: vec![Target::Permanent(grow)], mode: None, x_value: None,
+    }).expect("cast (both modes)");
+    drain_stack(&mut g);
+    let s = g.computed_permanent(shrink).unwrap();
+    assert_eq!((s.power, s.toughness), (1, 1), "-1/-1");
+    let gv = g.computed_permanent(grow).unwrap();
+    assert_eq!((gv.power, gv.toughness), (3, 3), "+1/+1 counter");
+}
+
+/// Tiger-Dillo can't attack alone, but can once another power-4 creature joins.
+#[test]
+fn tiger_dillo_gated_on_power_four() {
+    let mut g = two_player_game();
+    let td = g.add_card_to_battlefield(0, catalog::tiger_dillo());
+    g.clear_sickness(td);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: td, target: AttackTarget::Player(1),
+    }])).is_err(), "self doesn't satisfy 'another' power-4 creature");
+    let helper = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    g.clear_sickness(helper);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: td, target: AttackTarget::Player(1),
+    }])).expect("now a power-4 ally is present");
+}
+
+/// Raucous Audience taps for {G}, or {G}{G} with a power-4 creature out.
+#[test]
+fn raucous_audience_conditional_mana() {
+    let mut g = two_player_game();
+    let ra = g.add_card_to_battlefield(0, catalog::raucous_audience());
+    g.clear_sickness(ra);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "just {{G}}");
+    // Untap, add a power-4 creature, tap again → {G}{G}.
+    g.battlefield_find_mut(ra).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana again");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3, "1 + 2 = 3 green");
+}
+
+/// Great Divide Guide grants "{T}: Add any color" to your lands and Allies.
+#[test]
+fn great_divide_guide_grants_mana_ability() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::great_divide_guide());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ally = g.add_card_to_battlefield(0, catalog::kyoshi_warriors()); // an Ally
+    let nonally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Lands and Allies pick up an extra tap-for-any-color ability.
+    assert!(!g.granted_abilities_for(land).is_empty(), "land granted a mana ability");
+    assert!(!g.granted_abilities_for(ally).is_empty(), "Ally granted a mana ability");
+    assert!(g.granted_abilities_for(nonally).is_empty(), "non-Ally creature unchanged");
+}

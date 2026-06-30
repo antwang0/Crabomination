@@ -9,7 +9,7 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, target_any, target_filtered};
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost, ManaSymbol};
 
@@ -701,6 +701,153 @@ pub fn combustion_technique() -> CardDefinition {
                 },
             ]),
         },
+        ..Default::default()
+    }
+}
+
+/// Iroh's Demonstration — {1}{R} Sorcery (Lesson). Choose one — 1 damage to
+/// each creature your opponents control; or 4 damage to target creature.
+pub fn irohs_demonstration() -> CardDefinition {
+    CardDefinition {
+        name: "Iroh's Demonstration",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::DealDamage {
+                    to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(4),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Azula Always Lies — {1}{B} Instant (Lesson). Choose one or both — target
+/// creature gets -1/-1 until end of turn; and/or put a +1/+1 counter on target
+/// creature.
+pub fn azula_always_lies() -> CardDefinition {
+    CardDefinition {
+        name: "Azula Always Lies",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Tiger-Dillo — {1}{R} 4/3 Cat Armadillo. Can't attack or block unless you
+/// control another creature with power 4 or greater.
+pub fn tiger_dillo() -> CardDefinition {
+    CardDefinition {
+        name: "Tiger-Dillo",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Armadillo],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::CantAttackOrBlockUnlessYouControlCount {
+            filter: Box::new(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+            ),
+            min: 1,
+            attack_only: false,
+            block_only: false,
+            exclude_self: true,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Raucous Audience — {1}{G} 2/1 Human Citizen. {T}: Add {G}; add {G}{G}
+/// instead if you control a creature with power 4 or greater.
+pub fn raucous_audience() -> CardDefinition {
+    CardDefinition {
+        name: "Raucous Audience",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::ONE,
+                },
+                then: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Green, Value::Const(2)),
+                }),
+                else_: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Green, Value::ONE),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Great Divide Guide — {1}{G} 2/3 Human Scout Ally. Each land and Ally you
+/// control has "{T}: Add one mana of any color."
+pub fn great_divide_guide() -> CardDefinition {
+    CardDefinition {
+        name: "Great Divide Guide",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Scout]),
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Each land and Ally you control has \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Ally))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                ability: super::super::tap_add_any_color(),
+            },
+        }],
         ..Default::default()
     }
 }
