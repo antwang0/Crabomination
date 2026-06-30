@@ -2874,6 +2874,31 @@ fn cr_601_2f_thryx_discount_does_not_pay_colored() {
     }).is_err(), "discount can't cover a colored pip");
 }
 
+/// CR 601.2f — Gran-Gran's Lesson-gated player-wide reduction
+/// (`StaticEffect::CostReductionWhile`) discounts only generic mana: with 3+
+/// Lessons in the graveyard the reduction is active (cost_reduction = 1), yet a
+/// {U} Lesson still can't be cast for free — the colored pip survives the clamp.
+#[test]
+fn cr_601_2f_gran_gran_lesson_discount_is_generic_only() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gran_gran());
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::yip_yip()); } // 3 Lessons → reduction on
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // The reduction is live for a noncreature Lesson…
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::boomerang_basics(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 1, "reduction active");
+
+    // …but it can't pay the {U}: casting Boomerang Basics ({U}) with no mana fails.
+    let boomerang = g.add_card_to_hand(0, catalog::boomerang_basics());
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: boomerang, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "discount can't make a colored-only spell free");
+}
+
 /// CR 509.1h / 510.1c — once a creature is blocked it stays blocked even if its
 /// blocker leaves; Grasping Giant exiles its lone blocker yet deals no combat
 /// damage to the defending player.
