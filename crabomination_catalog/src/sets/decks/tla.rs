@@ -2182,3 +2182,72 @@ pub fn jets_brainwashing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 3: equipment + modal burn ────────────────────────────────────────
+
+/// Meteor Sword — {7} Equipment. When it enters, destroy target permanent.
+/// Equipped creature gets +3/+3. Equip {3}.
+pub fn meteor_sword() -> CardDefinition {
+    CardDefinition {
+        name: "Meteor Sword",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 3, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Permanent),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kyoshi Battle Fan — {2} Equipment. When it enters, create a 1/1 white Ally
+/// and attach this to it (living-weapon shape). Equipped creature gets +1/+0.
+/// Equip {2}.
+pub fn kyoshi_battle_fan() -> CardDefinition {
+    CardDefinition {
+        name: "Kyoshi Battle Fan",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 0, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: ally_token() },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Bumi Bash — {3}{R} Sorcery. Choose one — deal damage equal to the lands you
+/// control to target creature; or destroy target land creature or nonbasic land.
+pub fn bumi_bash() -> CardDefinition {
+    CardDefinition {
+        name: "Bumi Bash",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Land.and(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::IsNonbasicLand),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}

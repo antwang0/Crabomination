@@ -1312,3 +1312,45 @@ fn jets_brainwashing_kicked_steals() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(foe).unwrap().controller, 0, "stolen");
 }
+
+/// Meteor Sword destroys a permanent on ETB and buffs its wielder.
+#[test]
+fn meteor_sword_etb_destroys() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ms = g.add_card_to_battlefield(0, catalog::meteor_sword());
+    g.fire_self_etb_triggers(ms, 0); // sole legal target → auto-targeted
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "permanent destroyed");
+}
+
+/// Kyoshi Battle Fan mints an Ally and attaches to it on ETB.
+#[test]
+fn kyoshi_battle_fan_living_weapon() {
+    let mut g = two_player_game();
+    let fan = g.add_card_to_battlefield(0, catalog::kyoshi_battle_fan());
+    g.fire_self_etb_triggers(fan, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Ally"), 1, "minted an Ally");
+    // The Ally carries the +1/+0 from the attached Fan.
+    let ally = g.battlefield.iter().find(|c| c.definition.name == "Ally").unwrap().id;
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 2, "Ally is 2/1 with the Fan");
+}
+
+/// Bumi Bash mode 0 deals damage equal to the lands you control.
+#[test]
+fn bumi_bash_burns_for_lands() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::mountain()); }
+    let foe = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6
+    let bb = g.add_card_to_hand(0, catalog::bumi_bash());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 3, "3 lands → 3 damage");
+}
