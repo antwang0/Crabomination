@@ -4440,7 +4440,6 @@ static DECKS: &[Factory] = &[
     super::decks::bumi_bash,
     super::decks::rebellious_captives,
     super::decks::rough_rhino_cavalry,
-    super::decks::mai_jaded_edge,
     super::decks::spider_man_web_slinger,
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,

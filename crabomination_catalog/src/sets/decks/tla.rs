@@ -2304,31 +2304,4 @@ pub fn rough_rhino_cavalry() -> CardDefinition {
     }
 }
 
-/// Mai, Jaded Edge — {1}{R} 1/3 legendary Human Noble. Prowess. Exhaust — {3}:
-/// put a double strike counter on Mai.
-pub fn mai_jaded_edge() -> CardDefinition {
-    CardDefinition {
-        name: "Mai, Jaded Edge",
-        cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Creature],
-        supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Noble],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 3,
-        keywords: vec![Keyword::Prowess],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3)]),
-            exhaust: true,
-            effect: Effect::AddKeywordCounter {
-                what: Selector::This,
-                keyword: Keyword::DoubleStrike,
-                amount: Value::ONE,
-            },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
+// Mai, Jaded Edge already ships in `sets::eoe` (mis-filed there); reuse it.
