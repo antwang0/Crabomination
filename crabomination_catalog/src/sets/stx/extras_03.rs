@@ -93,12 +93,12 @@ pub fn lurking_deadeye() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Snake, CreatureType::Assassin],
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
             ..Default::default()
         },
         power: 4,
         toughness: 2,
-        keywords: vec![Keyword::Flash, Keyword::Deathtouch],
+        keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -232,12 +232,12 @@ pub fn pillardrop_warden() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dwarf],
             ..Default::default()
         },
         power: 1,
         toughness: 5,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayPay {
@@ -278,12 +278,12 @@ pub fn devourer_of_memory() -> CardDefinition {
         cost: cost(&[u(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Nightmare, CreatureType::Horror],
+            creature_types: vec![CreatureType::Nightmare],
             ..Default::default()
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![],
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
@@ -623,7 +623,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Specter, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Giant],
             ..Default::default()
         },
         power: 5,
@@ -669,7 +669,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Giant, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
@@ -707,12 +707,12 @@ pub fn inkfathom_divers() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Soldier],
             ..Default::default()
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Landwalk(LandType::Island)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DiscardChosen {
@@ -858,7 +858,7 @@ pub fn waker_of_waves() -> CardDefinition {
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
+            creature_types: vec![CreatureType::Whale],
             ..Default::default()
         },
         power: 7,
@@ -1064,7 +1064,7 @@ pub fn wandering_mind() -> CardDefinition {
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Horror],
             ..Default::default()
         },
         power: 2,
@@ -1247,7 +1247,7 @@ pub fn stormwild_capridor() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goat, CreatureType::Beast],
+            creature_types: vec![CreatureType::Bird, CreatureType::Goat],
             ..Default::default()
         },
         power: 1,
@@ -1770,15 +1770,9 @@ pub fn mind_drain() -> CardDefinition {
 
 // ── Hindering Light (Lorwyn reprint, STX flavor) ───────────────────────────
 
-/// Hindering Light — {W}{U} Instant (Lorwyn reprint, STX Silverquill /
-/// Quandrix hybrid flavor). "Counter target spell that targets you or
-/// a permanent you control. Draw a card."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Two-mana counter-cantrip.
-/// The printed "spell that targets you or permanent you control"
-/// target-restriction is engine-wide ⏳ (no "spell targeting X" filter);
-/// we collapse to "counter target spell" so the card ships a vanilla
-/// counter+cantrip. Tests:
+/// Hindering Light — {W}{U} Instant. "Counter target spell that targets you or
+/// a permanent you control. Draw a card." The target restriction rides
+/// `SelectionRequirement::SpellTargetsControllerOrControlled`. Tests:
 /// `hindering_light_counters_target_spell_and_draws`,
 /// `hindering_light_is_a_two_mana_wu_instant`.
 pub fn hindering_light() -> CardDefinition {
@@ -1788,7 +1782,7 @@ pub fn hindering_light() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                what: target_filtered(SelectionRequirement::SpellTargetsControllerOrControlled),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -2100,7 +2094,7 @@ pub fn library_larcenist() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
             ..Default::default()
         },
         power: 1,
@@ -2168,12 +2162,12 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Human, CreatureType::Ninja],
             ..Default::default()
         },
         power: 1,
         toughness: 2,
-        keywords: vec![Keyword::Menace],
+        keywords: vec![Keyword::Flying],
         ..Default::default()
     }
 }

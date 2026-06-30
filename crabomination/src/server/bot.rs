@@ -112,8 +112,8 @@ impl Bot for RandomBot {
                     }
                     // AutoDecider chooses nothing; the bot exiles opponents'
                     // graveyard cards (deny graveyard value) up to the cap.
-                    crate::decision::Decision::ChooseCards { candidates, max, .. } => {
-                        decide_choose_cards(state, seat, candidates, *max)
+                    crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
+                        decide_choose_cards(state, seat, candidates, *min, *max)
                     }
                     // A self-discard (cleanup over max hand size, rummaging, a
                     // discard cost): every offered card is in our own hand and
@@ -129,6 +129,14 @@ impl Bot for RandomBot {
                             }) =>
                     {
                         decide_self_discard(state, seat, hand, *count)
+                    }
+                    // AutoDecider blindly picks the first legal target. For
+                    // votes (Council's Judgment), edicts, and removal the bot
+                    // should instead hit the opponent's *most* valuable
+                    // permanent — or, when forced to choose among its own
+                    // permanents, give up the *least* valuable.
+                    crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
+                        decide_choose_target(state, seat, legal)
                     }
                     other => AutoDecider.decide(other),
                 };
@@ -228,6 +236,31 @@ impl Bot for RandomBot {
                                                 Keyword::CantAttackOrBlockUnlessEvenCounters => {
                                                     c.counters.values().sum::<u32>() % 2 == 0
                                                 }
+                                                Keyword::CantAttackOrBlockUnlessYouControlCount {
+                                                    filter,
+                                                    min,
+                                                    block_only,
+                                                    ..
+                                                } => {
+                                                    // A block-only gate never
+                                                    // restricts attacking.
+                                                    *block_only
+                                                        || state
+                                                            .battlefield
+                                                            .iter()
+                                                            .filter(|d| {
+                                                                d.controller == c.controller
+                                                                    && state
+                                                                        .evaluate_requirement_on_card(
+                                                                            filter,
+                                                                            d,
+                                                                            c.controller,
+                                                                        )
+                                                            })
+                                                            .count()
+                                                            as u32
+                                                            >= *min
+                                                }
                                                 _ => true,
                                             })
                                     })
@@ -262,6 +295,26 @@ impl Bot for RandomBot {
                             // Always attack on lethal swings — the bot
                             // would rather suicide than miss a kill.
                             if lethal_swing {
+                                return true;
+                            }
+                            // CR 615.1 — don't swing with a creature whose
+                            // combat damage is prevented this turn (Fog /
+                            // Inspire Awe's exception); attacking only risks it
+                            // for no damage.
+                            if state.combat_damage_prevented_for_dealer(c.id) {
+                                return false;
+                            }
+                            // Unblockable by the current board: if the
+                            // opponent has creatures but none can legally
+                            // block this attacker (Unblockable, "can't be
+                            // blocked by/except by" restrictions the board
+                            // can't satisfy), it's a free swing. Generalizes
+                            // the Flying/Menace evasion checks below.
+                            if !opp_blockers.is_empty()
+                                && opp_blockers
+                                    .iter()
+                                    .all(|b| !state.blocker_can_block_attacker(b.id, c.id))
+                            {
                                 return true;
                             }
                             let flying = c.has_keyword(&Keyword::Flying);
@@ -367,6 +420,17 @@ impl Bot for RandomBot {
                         })
                         .map(|c| c.id)
                         .collect();
+                    // CR 508.0 — drop a lone attacker that can't attack alone
+                    // (Militia Rallier): a single-attacker batch with
+                    // CantAttackAlone would be rejected, costing the bot its
+                    // whole combat. Only matters when it's the sole attacker.
+                    if attackers.len() == 1
+                        && state
+                            .computed_permanent(attackers[0])
+                            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantAttackAlone))
+                    {
+                        attackers.clear();
+                    }
                     // Find opponent planeswalkers in loyalty-ascending
                     // order. The bot will redirect attacks at PWs whose
                     // current loyalty is at-or-below our total attacking
@@ -458,9 +522,30 @@ impl Bot for RandomBot {
                 Some(main_phase_action(state, seat))
             }
             _ => Some(
-                pick_stack_response(state, seat).unwrap_or(GameAction::PassPriority),
+                pick_stack_response(state, seat)
+                    .or_else(|| pick_ability_counter_response(state, seat))
+                    .unwrap_or(GameAction::PassPriority),
             ),
         }
+    }
+}
+
+/// The combat-damage value an attacker on the battlefield actually assigns:
+/// its computed toughness when it has `AssignsCombatDamageByToughness` (Doran,
+/// the Siege Tower; CR 510.1c), otherwise its computed power. Falls back to the
+/// raw `CardInstance` value when no computed view is available. Used by the
+/// block planner so a Doran board's high-toughness attackers are scored at
+/// their real threat.
+fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
+    use crate::card::Keyword;
+    if let Some(cp) = state.computed_permanent(id) {
+        if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+            cp.toughness
+        } else {
+            cp.power
+        }
+    } else {
+        state.battlefield_find(id).map(|c| c.power()).unwrap_or(0)
     }
 }
 
@@ -515,6 +600,41 @@ fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
     None
 }
 
+/// React to a threatening opponent ability on the stack with a dedicated
+/// ability-counter card (Stifle / Disallow). The ability's source is the
+/// target slot. Held separate from `pick_stack_response`'s spell logic so a
+/// counter that can only hit abilities still gets used.
+fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::game::types::StackItem;
+    // Topmost opponent ability on the stack — counter the most recent one.
+    let source = state.stack.iter().rev().find_map(|si| match si {
+        StackItem::Trigger { source, controller, .. } if *controller != seat => Some(*source),
+        _ => None,
+    })?;
+    let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_counters_abilities(&c.definition.effect)
+        })
+        .collect();
+    counters.sort_by_key(|c| c.definition.cost.cmc());
+    for c in counters {
+        let action = GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(crate::game::Target::Permanent(source)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
 /// True when the effect tree's primary action counters a spell (the shapes
 /// a dedicated counterspell card uses — not buried `MayDo` riders).
 fn effect_counters_spells(eff: &Effect) -> bool {
@@ -524,6 +644,19 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         | Effect::CounterUnlessPaid { .. }
         | Effect::CounterUnless { .. } => true,
         Effect::Seq(v) => v.first().is_some_and(effect_counters_spells),
+        _ => false,
+    }
+}
+
+/// True when the effect can counter an activated/triggered ability (Stifle's
+/// `CounterAbility`, or a modal counter like Disallow whose `ChooseN`/
+/// `ChooseMode` carries a `CounterAbility` arm).
+fn effect_counters_abilities(eff: &Effect) -> bool {
+    match eff {
+        Effect::CounterAbility { .. } => true,
+        Effect::Seq(v) => v.first().is_some_and(effect_counters_abilities),
+        Effect::ChooseMode(modes) => modes.iter().any(effect_counters_abilities),
+        Effect::ChooseN { modes, .. } => modes.iter().any(effect_counters_abilities),
         _ => false,
     }
 }
@@ -555,6 +688,50 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
         accumulate_mana_colors(&ab.effect, &mut set);
     }
     set
+}
+
+/// Choose which land to play this turn. Among the lands the engine would
+/// accept, prefer the one that covers the most colors the bot's hand wants
+/// but can't yet produce from the lands it already controls — basic
+/// mana-fixing so a green hand doesn't strand its spells behind a Mountain.
+/// Falls back to the first playable land when nothing improves color
+/// coverage (or no land needs fixing).
+fn pick_land_to_play(state: &GameState, seat: usize) -> Option<CardId> {
+    use crate::mana::{Color, ColorSet};
+    const WUBRG: [Color; 5] =
+        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+
+    // Colors already producible from battlefield lands the bot controls.
+    let have = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land())
+        .fold(ColorSet::empty(), |acc, c| acc.union(land_color_output(&c.definition)));
+    // Colors the bot's nonland hand cards want to be cast.
+    let mut want = ColorSet::empty();
+    for c in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
+        for col in c.definition.cost.colors() {
+            want.insert(col);
+        }
+    }
+    // The colors still missing from the bot's mana base.
+    let needed: Vec<Color> =
+        WUBRG.into_iter().filter(|&col| want.contains(col) && !have.contains(col)).collect();
+
+    let mut best: Option<(CardId, usize)> = None;
+    for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
+        if !state.would_accept(GameAction::PlayLand(c.id)) {
+            continue;
+        }
+        let out = land_color_output(&c.definition);
+        let coverage = needed.iter().filter(|&&col| out.contains(col)).count();
+        // Higher coverage wins; the first playable land is the fallback (so a
+        // colorless/utility land still gets played when nothing needs fixing).
+        if best.is_none_or(|(_, s)| coverage > s) {
+            best = Some((c.id, coverage));
+        }
+    }
+    best.map(|(id, _)| id)
 }
 
 /// Bot policy for `Decision::OptionalTrigger`: take the trigger unless its
@@ -603,6 +780,26 @@ pub(crate) fn optional_trigger_beneficial(state: &GameState, source: CardId, des
             }
         }
     }
+    // Exploit (CR 702.105 — "Exploit: sacrifice a creature?"): the body is a
+    // Sacrifice that the generic self-cost screen would always decline. Accept
+    // it when the controller has a spare creature to feed it — a token, or the
+    // exploiter is one of several creatures so it can sacrifice the weakest (or
+    // itself for a strong ETB payoff). Card advantage off a token is a clean win.
+    if description.starts_with("Exploit") {
+        let ctrl = state.battlefield.iter().find(|c| c.id == source).map(|c| c.controller);
+        if let Some(seat) = ctrl {
+            let creatures: Vec<&crate::card::CardInstance> = state
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.definition.is_creature())
+                .collect();
+            let has_token = creatures.iter().any(|c| c.is_token);
+            // Accept with a sacrificial token, or when there's more than one
+            // creature so we don't have to give up the exploiter itself.
+            return has_token || creatures.len() > 1;
+        }
+        return false;
+    }
     // Take it unless the body is self-costly; default to taking when the
     // body can't be introspected (most "you may" on your own permanents is
     // upside).
@@ -621,11 +818,18 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
         {
             Some(body)
         }
+        // A reflexive tap-cost trigger (Caparocti Sunborn) surfaces the same
+        // `OptionalTrigger` prompt; its `then` payoff is what the bot screens.
+        Effect::MayTap { description, then, .. } if description == desc => Some(then),
         Effect::MayDo { body, .. }
         | Effect::MayPay { body, .. }
+        | Effect::MayTap { then: body, .. }
         | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
         Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
-        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+        Effect::ChooseMode(v)
+        | Effect::ChooseN { modes: v, .. }
+        | Effect::Escalate { modes: v, .. }
+        | Effect::EscalatingThisTurn { modes: v } => {
             v.iter().find_map(|e| find_maydo_body(e, desc))
         }
         Effect::If { then, else_, .. } => {
@@ -660,7 +864,10 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
         Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
         Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
-        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+        Effect::ChooseMode(v)
+        | Effect::ChooseN { modes: v, .. }
+        | Effect::Escalate { modes: v, .. }
+        | Effect::EscalatingThisTurn { modes: v } => {
             v.iter().any(effect_imposes_self_cost)
         }
         Effect::If { then, else_, .. } => {
@@ -672,9 +879,24 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::PayManaOrElse { otherwise, .. } | Effect::PayEnergyOrElse { otherwise, .. } => {
             effect_imposes_self_cost(otherwise)
         }
+        // Blight (CR 701.68) puts -1/-1 counters on a creature you control —
+        // a clear self-cost, so the bot declines "may blight N" upside riders
+        // rather than shrinking (or killing) its own board.
+        Effect::Blight { .. } => true,
         // "You may sacrifice/exile this" riders are a clear self-cost.
         Effect::SacrificeSource => true,
         Effect::Exile { what } => hits_self(what),
+        // "You may put this into exile / your graveyard / your library" is a
+        // self-cost too (returning it to *hand* is upside, so that's excluded).
+        Effect::Move { what, to } => {
+            hits_self(what)
+                && matches!(
+                    to,
+                    crate::effect::ZoneDest::Exile
+                        | crate::effect::ZoneDest::Graveyard
+                        | crate::effect::ZoneDest::Library { .. }
+                )
+        }
         Effect::PayOrLoseGame { .. } => true,
         _ => false,
     }
@@ -686,6 +908,67 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
 /// tutor (Fauna Shaman, Imperial Recruiter, Spellseeker) should fetch its
 /// most impactful hit, not the first one, and certainly not fizzle like the
 /// stock `AutoDecider`.
+/// Rough board value of a permanent for target selection: mana value + size,
+/// plus a loyalty term for planeswalkers and a small legendary premium.
+fn permanent_value(state: &GameState, id: crate::card::CardId) -> i32 {
+    use crate::card::{CardType, CounterType, Supertype};
+    let Some(c) = state.computed_permanent(id) else { return 0 };
+    let inst = state.battlefield_find(id);
+    let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0);
+    if c.card_types.contains(&CardType::Creature) {
+        v += c.power.max(0) + c.toughness.max(0);
+    }
+    if c.card_types.contains(&CardType::Planeswalker) {
+        v += inst.map(|c| c.counter_count(CounterType::Loyalty) as i32).unwrap_or(0);
+    }
+    if c.supertypes.contains(&Supertype::Legendary) {
+        v += 2;
+    }
+    v
+}
+
+/// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
+/// removal). Prefer destroying/exiling an opponent's **most** valuable
+/// permanent; if every legal permanent is our own (a "sacrifice/vote your own"
+/// choice), give up the **least** valuable. Player targets fall back to an
+/// opponent, then to the first legal option.
+fn decide_choose_target(
+    state: &GameState,
+    seat: usize,
+    legal: &[crate::game::types::Target],
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    use crate::game::types::Target;
+    let owner = |id: crate::card::CardId| state.battlefield_find(id).map(|c| c.controller);
+    // Opponent permanents — hit the biggest.
+    let best_opp = legal
+        .iter()
+        .filter_map(|t| match t {
+            Target::Permanent(id) if owner(*id).is_some_and(|o| o != seat) => Some(*id),
+            _ => None,
+        })
+        .max_by_key(|id| permanent_value(state, *id));
+    if let Some(id) = best_opp {
+        return DecisionAnswer::Target(Target::Permanent(id));
+    }
+    // Only our own permanents are legal — give up the smallest.
+    let worst_own = legal
+        .iter()
+        .filter_map(|t| match t {
+            Target::Permanent(id) if owner(*id) == Some(seat) => Some(*id),
+            _ => None,
+        })
+        .min_by_key(|id| permanent_value(state, *id));
+    if let Some(id) = worst_own {
+        return DecisionAnswer::Target(Target::Permanent(id));
+    }
+    // Player targets: prefer an opponent.
+    if let Some(t) = legal.iter().find(|t| matches!(t, Target::Player(p) if *p != seat)) {
+        return DecisionAnswer::Target(t.clone());
+    }
+    DecisionAnswer::Target(legal[0].clone())
+}
+
 fn decide_library_search(
     state: &GameState,
     seat: usize,
@@ -759,6 +1042,7 @@ fn decide_choose_cards(
     state: &GameState,
     seat: usize,
     candidates: &[(crate::card::CardId, String)],
+    min: u32,
     max: u32,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
@@ -780,18 +1064,52 @@ fn decide_choose_cards(
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
         return DecisionAnswer::Cards(chosen);
     }
+    // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
+    // and similar resolution-time multi-target taps): the AutoDecider declines,
+    // so the bot would tap nothing. Prefer opponents' untapped creatures — the
+    // biggest threats first — up to the cap.
+    let all_on_battlefield = candidates
+        .iter()
+        .all(|(id, _)| state.battlefield.iter().any(|c| c.id == *id));
+    if all_on_battlefield {
+        let mut ranked: Vec<(crate::card::CardId, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.battlefield.iter().find(|c| c.id == *id)?;
+                // Only enemy creatures; prefer untapped (tapping a tapped
+                // creature is wasted) and higher power.
+                (!state.same_team(c.controller, seat)).then_some((*id, c.power() + if c.tapped { -100 } else { 0 }))
+            })
+            .collect();
+        ranked.sort_by_key(|b| std::cmp::Reverse(b.1));
+        let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, _)| id).collect();
+        return DecisionAnswer::Cards(chosen);
+    }
     let owner_of = |id: crate::card::CardId| -> Option<usize> {
         state
             .players
             .iter()
             .position(|p| p.graveyard.iter().any(|c| c.id == id))
     };
-    let chosen: Vec<_> = candidates
+    let mut chosen: Vec<_> = candidates
         .iter()
         .filter(|(id, _)| owner_of(*id).is_some_and(|o| !state.same_team(o, seat)))
         .map(|(id, _)| *id)
         .take(max as usize)
         .collect();
+    // A mandatory pick (min ≥ 1) over our own graveyard — Cache Grab's "put a
+    // permanent card milled this way into your hand". Keep the biggest one.
+    if chosen.len() < min as usize {
+        let mut own: Vec<(crate::card::CardId, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.players[seat].graveyard.iter().find(|c| c.id == *id)?;
+                Some((*id, c.definition.cost.cmc() as i32))
+            })
+            .collect();
+        own.sort_by_key(|b| std::cmp::Reverse(b.1));
+        chosen = own.into_iter().take((min as usize).max(1)).map(|(id, _)| id).collect();
+    }
     DecisionAnswer::Cards(chosen)
 }
 
@@ -814,15 +1132,25 @@ fn decide_self_discard(
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_land())
         .count();
+    // We want about five total land sources; only that many lands in hand are
+    // "needed". Excess lands are pitched before spells even while mana-light —
+    // holding a fistful of duplicate lands shouldn't cost us our spells, and a
+    // flooded bot (≥5 in play) pitches every spare land first.
+    let mut lands_still_wanted = 5usize.saturating_sub(lands_in_play);
     // Score each offered card — LOWER is pitched sooner.
     let mut scored: Vec<(i64, crate::card::CardId)> = hand
         .iter()
         .filter_map(|(id, _)| {
             let card = state.players[seat].hand.iter().find(|c| c.id == *id)?;
             let score = if card.definition.is_land() {
-                // Surplus lands are worth the least; a land we still need is
-                // worth the most.
-                if lands_in_play >= 5 { -100 } else { 1_000 }
+                // Keep lands up to the buffer; surplus lands are worth the
+                // least so they're pitched first.
+                if lands_still_wanted > 0 {
+                    lands_still_wanted -= 1;
+                    1_000
+                } else {
+                    -100
+                }
             } else {
                 // Among spells, keep the cheap (castable) ones; pitch the
                 // most expensive first.
@@ -926,6 +1254,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             card_id: id,
             ability_index: 0,
             target: None,
+            additional_targets: Vec::new(),
             x_value: None,
         };
         if state.would_accept(action.clone()) {
@@ -943,6 +1272,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             card_id: id,
             ability_index: idx,
             target: None,
+            additional_targets: Vec::new(),
             x_value: None,
         };
         if state.would_accept(action.clone()) {
@@ -1063,11 +1393,68 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
-    // Kicker (CR 702.32): for any hand card with `Keyword::Kicker`, offer a
-    // `CastSpellKicked` candidate. Targets come from the effect tree, whose
-    // slot-0 filter resolves to the kicked (typically broader) branch, so a
-    // kicked Tear Asunder can aim at a creature. `would_accept` validates
-    // the full base+kicker cost, so this is only added when affordable.
+    // Conspire (CR 702.78): for any hand card with `Keyword::Conspire`, tap
+    // the first two untapped creatures sharing a color with it to copy the
+    // spell. The bot conspires whenever it can — the copy is strictly upside
+    // for the targeted/value spells it appears on. `would_accept` confirms the
+    // base cost is still payable after the (free, tap-only) conspire cost.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Conspire))
+    {
+        let spell_colors = c.definition.printed_colors();
+        let pair: Vec<CardId> = state
+            .battlefield
+            .iter()
+            .filter(|p| {
+                p.controller == seat
+                    && !p.tapped
+                    && p.definition.is_creature()
+                    && state
+                        .computed_permanent(p.id)
+                        .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                        .unwrap_or(false)
+            })
+            .map(|p| p.id)
+            .take(2)
+            .collect();
+        if pair.len() < 2 {
+            continue;
+        }
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellConspire {
+            card_id: c.id,
+            conspire_creatures: [pair[0], pair[1]],
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            // Prefer conspiring over the plain cast of the same card — the
+            // extra copy is value the bot's spell eval doesn't otherwise see.
+            let cid = c.id;
+            castable.retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
+            castable.push(action);
+        }
+    }
+
+    // Kicker / Offspring (CR 702.32 / 702.166): for any hand card with the
+    // optional additional cost, offer a `CastSpellKicked` candidate. Targets
+    // come from the effect tree, whose slot-0 filter resolves to the kicked
+    // (typically broader) branch, so a kicked Tear Asunder can aim at a
+    // creature. `would_accept` validates the full base+kicker cost, so this is
+    // only added when affordable.
     for c in state.players[seat]
         .hand
         .iter()
@@ -1092,6 +1479,15 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             x_value: None,
         };
         if state.would_accept(action.clone()) {
+            // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
+            // with no downside beyond the mana. When affordable, prefer it
+            // over the plain cast of the same card (mirrors Conspire above).
+            if c.definition.has_offspring().is_some() {
+                let cid = c.id;
+                castable.retain(
+                    |a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid),
+                );
+            }
             castable.push(action);
         }
     }
@@ -1185,6 +1581,50 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Omen (CR 702.183): for any hand card with an Omen half that *targets*
+    // something, offer a `CastOmen` candidate (the card shuffles back into the
+    // library on resolution, so the creature is still drawable later).
+    for c in state.players[seat].hand.iter() {
+        let Some(omen) = c.definition.has_omen() else { continue };
+        if !omen.effect.requires_target() {
+            continue;
+        }
+        let (target, additional_targets) =
+            state.auto_targets_for_effect_all_slots(&omen.effect, seat, None);
+        if target.is_none() {
+            continue;
+        }
+        let action = GameAction::CastOmen {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
+    // Prototype (CR 702.160): for any hand card with a prototype face, offer
+    // a `CastPrototype` candidate. The smaller colored cost is often the only
+    // affordable line early; the body's ETB auto-targets through the cast path.
+    for c in state.players[seat].hand.iter() {
+        if c.definition.has_prototype().is_none() {
+            continue;
+        }
+        let action = GameAction::CastPrototype {
+            card_id: c.id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Split cards (CR 709): for any hand card with a non-aftermath split,
     // offer a `CastSplitRight` candidate (the left half is already covered by
     // the plain `CastSpell` path). Auto-target the right half's effect.
@@ -1259,10 +1699,131 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             }
         }
         if c.definition.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))) {
-            let action = GameAction::CastDisturb { card_id: c.id };
+            // The back face goes on the stack; an Aura back needs an enchant
+            // target (creature backs need none).
+            let back = c.definition.back_face.as_deref();
+            let (target, additional_targets) = match back {
+                Some(b) if b.effect.requires_target() => {
+                    let (t, extras) =
+                        state.auto_targets_for_effect_all_slots(&b.effect, seat, None);
+                    (t, extras)
+                }
+                _ => (None, vec![]),
+            };
+            let needs_target = back.is_some_and(|b| b.effect.requires_target());
+            if !(needs_target && target.is_none()) {
+                let action = GameAction::CastDisturb {
+                    card_id: c.id, target, additional_targets,
+                };
+                if state.would_accept(action.clone()) {
+                    castable.push(action);
+                }
+            }
+        }
+        // Mayhem (CR 702.187): if the card was discarded this turn and has a
+        // mayhem cost, offer a graveyard cast for it. `would_accept` enforces
+        // the discarded-this-turn gate, cost, and timing.
+        if c.definition.mayhem_cost().is_some() {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                let (t, extras) =
+                    state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::CastMayhem {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            };
             if state.would_accept(action.clone()) {
                 castable.push(action);
             }
+        }
+        // Harmonize (CR 702.180): cast from the graveyard for the harmonize
+        // cost. The bot doesn't tap a creature to discount (a value call it
+        // can't weigh well); `would_accept` enforces cost / timing.
+        if c.definition.harmonize_cost().is_some() {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                let (t, extras) =
+                    state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::CastHarmonize {
+                card_id: c.id, tap_creature: None, target, additional_targets, mode: None, x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+        // Graveyard-activated abilities (CR 702.84 Unearth, and the SOS
+        // "return this from your graveyard" cycle): offer each `from_graveyard`
+        // activated ability. `would_accept` enforces zone / cost / sorcery
+        // timing, so these only surface when actually activatable.
+        for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
+            if !ab.from_graveyard {
+                continue;
+            }
+            let (target, additional_targets) = if ab.effect.requires_target() {
+                let (t, extras) = state.auto_targets_for_effect_all_slots(&ab.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: c.id, ability_index: idx, target, additional_targets, x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+    }
+
+    // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
+    // graveyard MDFC carrying the one-shot `may_cast_back_from_graveyard`
+    // permission (Pestilent Cauldron's "cast it transformed"). Targets come
+    // from the BACK face's effect; `would_accept` enforces cost / timing /
+    // zone, so these only surface when actually castable. (Land backs are
+    // played via PlayLandBack, handled by the land logic, so they're skipped
+    // here.)
+    let back_sources = state.players[seat].hand.iter().chain(
+        state.players[seat]
+            .graveyard
+            .iter()
+            .filter(|c| c.may_cast_back_from_graveyard),
+    );
+    for c in back_sources {
+        let Some(back) = c.definition.back_face.as_deref() else { continue };
+        if back.is_land() {
+            continue;
+        }
+        let (target, additional_targets) = if back.effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(&back.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellBack {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
         }
     }
 
@@ -1309,6 +1870,9 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 && a.exile_from_graveyard_count == 0
                 && a.life_cost == 0
                 && !a.evoke_sacrifice
+                // Offering (CR 702.48) sacrifices one of the bot's own
+                // creatures for a tempo cut it rarely wants — cast normally.
+                && a.offering.is_none()
         })
     }) {
         let effect = c
@@ -1367,9 +1931,9 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     // Exploration / Azusa-style ExtraLandPerTurn static lets the bot
     // play a second land in the same turn (CR 305.2).
     if state.can_player_play_land(seat)
-        && let Some(land) = state.players[seat].hand.iter().find(|c| c.definition.is_land())
+        && let Some(land_id) = pick_land_to_play(state, seat)
     {
-        let action = GameAction::PlayLand(land.id);
+        let action = GameAction::PlayLand(land_id);
         if state.would_accept(action.clone()) {
             return action;
         }
@@ -1420,12 +1984,33 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Crew (CR 702.122): turn an uncrewed Vehicle into an attacker by tapping
+    // the bot's least-valuable untapped creatures. Dry-run-gated.
+    if let Some(action) = pick_crew(state, seat) {
+        return action;
+    }
+
+    // Saddle (CR 702.171): tap the bot's least-valuable untapped creatures to
+    // saddle a Mount that's about to attack, so its "attacks while saddled"
+    // riders fire. Dry-run-gated.
+    if let Some(action) = pick_saddle(state, seat) {
+        return action;
+    }
+
     // Equip (CR 702.6): if the bot controls an Equipment that isn't yet
     // attached to one of its creatures, and it controls a creature to wear
     // it, move the Equipment onto the biggest such creature. Dry-run-gated
     // so the equip cost / sorcery timing / target legality all bottom out
     // in `would_accept`.
     if let Some(action) = pick_equip(state, seat) {
+        return action;
+    }
+
+    // Activated two-slot attach (Brass Squire's "{T}: attach target Equipment
+    // you control to target creature you control"). The native-equip pass
+    // above only covers `Keyword::Equip`; this drives the Equipment-mover
+    // creatures so the AI plays them.
+    if let Some(action) = pick_attach_ability(state, seat) {
         return action;
     }
 
@@ -1446,6 +2031,45 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Reanimate a creature from the graveyard via a battlefield permanent's
+    // activated ability (Seedship Broodtender's sac-to-return) when there's a
+    // worthwhile target. Dry-run-gated so cost / sorcery-speed timing bottom
+    // out in `would_accept`.
+    if let Some(action) = pick_battlefield_reanimate(state, seat) {
+        return action;
+    }
+
+    // Crack a Lander token (CR — `{2}, {T}, Sacrifice: fetch a basic land
+    // tapped`) for ramp when there's a basic still in the library and spare
+    // mana. Sequenced after spell-casting so the bot only ramps when it has
+    // nothing better to spend mana on. Dry-run-gated.
+    if let Some(action) = pick_crack_lander(state, seat) {
+        return action;
+    }
+
+    // Fire a "{cost}: deal damage to any target" value ability (Frostwielder's
+    // {T} ping, Kiku's tap-and-burn, Pain Kami-style sac burn) when it kills an
+    // opposing creature outright. Dry-run-gated so cost / timing / target
+    // legality bottom out in `would_accept`.
+    if let Some(action) = pick_removal_ping(state, seat) {
+        return action;
+    }
+
+    // Close the game: fire a "deal N to each opponent" / "drain N" / "each
+    // opponent loses N" ability when it's lethal to a living opponent
+    // (Hazoret's discard-burn, drain pingers). Lethal-only, so the bot never
+    // wastes the resource. Dry-run-gated via `would_accept`.
+    if let Some(action) = pick_reach_burn(state, seat) {
+        return action;
+    }
+
+    // Fire a "Sacrifice this: destroy target creature" ability (Pus Kami,
+    // Nezumi Bone-Reader-style sac-removal) on a favorable trade — only when
+    // the destroyed foe is at least as big as the creature being sacrificed.
+    if let Some(action) = pick_removal_sacrifice(state, seat) {
+        return action;
+    }
+
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
     // gated, so the cost / timing / "manifested noncreature can't turn up"
@@ -1454,7 +2078,220 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Pump the whole team before combat damage (Bearer of Glory's
+    // "{4}{W}: creatures you control get +1/+1") when the bot has two or more
+    // attacking creatures — the pump pays off on the swing. Dry-run-gated.
+    if let Some(action) = pick_team_pump(state, seat) {
+        return action;
+    }
+
+    // As a last resort before passing, sink spare mana into a "{cost}: draw a
+    // card" ability when card-starved (Bonders' Enclave, Arch of Orazca-style
+    // engines). Dry-run-gated, so cost / activation conditions bottom out in
+    // `would_accept`.
+    if let Some(action) = pick_card_draw_ability(state, seat) {
+        return action;
+    }
+
+    // Crew an uncrewed Vehicle so it can attack this turn (Vehicles are dead
+    // cards to the bot otherwise). Dry-run-gated.
+    if let Some(action) = pick_crew_vehicle(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Crew an uncrewed Vehicle the bot controls, paying with the smallest
+/// untapped creatures whose total power covers the crew cost — but only when
+/// the Vehicle is at least as big as the power tapped to crew it (a net combat
+/// gain). Dry-run-gated, so crew legality (CR 702.122) bottoms out in
+/// `would_accept`.
+fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::CardType;
+    let mut crewers: Vec<(CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && !c.tapped)
+        .filter_map(|c| {
+            let cp = state.computed_permanent(c.id)?;
+            cp.card_types.contains(&CardType::Creature).then_some((c.id, cp.power.max(0)))
+        })
+        .collect();
+    crewers.sort_by_key(|&(_, p)| p);
+
+    for v in state.battlefield.iter().filter(|c| c.controller == seat) {
+        let Some(cost) = v.definition.crew_cost() else { continue };
+        let Some(cp) = state.computed_permanent(v.id) else { continue };
+        // Already a creature (crewed/animated this turn) → nothing to do.
+        if cp.card_types.contains(&CardType::Creature) {
+            continue;
+        }
+        let mut chosen = Vec::new();
+        let mut total = 0i32;
+        for &(id, p) in crewers.iter().filter(|&&(id, _)| id != v.id) {
+            if total >= cost as i32 {
+                break;
+            }
+            chosen.push(id);
+            total += p;
+        }
+        // Worth it only if the cost is fully paid and the Vehicle is at least
+        // as big as the creatures tapped to crew it.
+        if chosen.is_empty() || total < cost as i32 || cp.power < total {
+            continue;
+        }
+        let action = GameAction::Crew { vehicle: v.id, crew_creatures: chosen };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
+/// Fire a "deal N damage to each opponent" / "drain N" / "each opponent loses
+/// N" activated ability when it's lethal to a living opponent. Only fixed
+/// (`Value::Const`) amounts are considered, and only when some opponent's life
+/// is at or below the amount, so the bot spends the resource (mana / a discard
+/// / a tap) exclusively to win — never to chip. Dry-run-gated via
+/// `would_accept`.
+fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{PlayerRef, Selector, Value};
+    // Amount an ability's effect would subtract from each opponent's life, if
+    // it's an each-opponent reach effect with a fixed amount.
+    fn reach_amount(effect: &Effect) -> Option<i32> {
+        match effect {
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
+            | Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
+            | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. } => {
+                Some(*n)
+            }
+            // Compound abilities (e.g. "do X; each opponent loses N") still
+            // count their each-opponent reach: sum a Seq's components, take the
+            // best mode of a modal. `would_accept` still gates legality, so a
+            // wrapped component that demands a target this call can't supply
+            // keeps the whole activation from firing.
+            Effect::Seq(parts) => {
+                let total: i32 = parts.iter().filter_map(reach_amount).sum();
+                (total > 0).then_some(total)
+            }
+            Effect::ChooseMode(modes) => modes.iter().filter_map(reach_amount).max(),
+            _ => None,
+        }
+    }
+    let lethal_threshold = state
+        .players
+        .iter()
+        .enumerate()
+        .filter(|(p, pl)| !state.same_team(*p, seat) && pl.is_alive())
+        .map(|(_, pl)| pl.life)
+        .min()?;
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Some(amount) = reach_amount(&ab.effect) else { continue };
+            if amount < lethal_threshold {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
+/// Activate a team-wide "creatures you control get +N/+N until end of turn"
+/// ability while the bot has two or more attacking creatures, so the pump
+/// connects on the swing. Only positive, no-target, non-sacrifice pumps are
+/// considered; dry-run-gated so cost / timing bottom out in `would_accept`.
+/// True when `req` constrains its subjects to creatures the controller owns
+/// (a `ControlledByYou` clause anywhere in its And/Or tree).
+fn requirement_restricts_to_your_creatures(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::ControlledByYou => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_restricts_to_your_creatures(a) || requirement_restricts_to_your_creatures(b)
+        }
+        _ => false,
+    }
+}
+
+fn pick_team_pump(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Selector, Value};
+    let attackers = state
+        .attacking
+        .iter()
+        .filter(|a| state.battlefield_find(a.attacker).is_some_and(|c| c.controller == seat))
+        .count();
+    if attackers < 2 {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.sac_cost {
+                continue;
+            }
+            let Effect::PumpPT { what: Selector::EachPermanent(req), power: Value::Const(p), .. } =
+                &ab.effect
+            else {
+                continue;
+            };
+            // Only a friendly-team pump (filter restricts to your creatures)
+            // with a real power boost.
+            if *p <= 0 || !requirement_restricts_to_your_creatures(req) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
+/// Activate a bare "{cost}: draw a card" ability (no target, doesn't sacrifice
+/// the source) when the bot is card-starved (≤2 cards in hand) and can afford
+/// it. Fired last, as a mana sink, so it never pre-empts casting spells or
+/// playing lands. Dry-run-gated through `would_accept`.
+fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::Selector;
+    if state.players[seat].hand.len() > 2 {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::Draw { who: Selector::You, .. } = &ab.effect else { continue };
+            if ab.sac_cost {
+                continue; // don't sacrifice the source just to draw
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Offer a `TurnFaceUp` for the first affordable face-down permanent the bot
@@ -1467,6 +2304,174 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
         .filter(|c| c.controller == seat && c.face_down && c.face_up_def.is_some())
         .map(|c| GameAction::TurnFaceUp { card_id: c.id })
         .find(|a| state.would_accept(a.clone()))
+}
+
+/// Fire a single-target "deal damage to any target" activated ability that
+/// kills an opposing creature outright. Handles a constant damage amount
+/// (Frostwielder, Pain Kami at fixed X) and the "damage equal to its own power"
+/// shape (Kiku, Night's Flower). Targets the highest-power killable opponent
+/// creature; dry-run-gated so cost / sorcery timing / target legality all
+/// bottom out in `would_accept`. Points the ability at an opponent's face only
+/// when the hit is exactly lethal (reach for the win); otherwise never chips a
+/// player and never targets the bot's own creatures.
+fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Selector, Value};
+    // Reach for the win first: if a constant-damage "any target" ability is
+    // lethal to an opponent, point it at their face. Only fires when the hit
+    // is actually lethal (life ≤ amount), so it's never a wasted chip ping.
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
+            // Must be an untyped "any target" slot (a creature-only filter
+            // can't be pointed at a player).
+            if !matches!(to, Selector::Target(_)) {
+                continue;
+            }
+            for opp in 0..state.players.len() {
+                if state.same_team(opp, seat) || state.players[opp].life > *n {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Player(opp)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    // Opposing creatures, highest computed power first (best removal value).
+    let mut foes: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
+        .collect();
+    foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            // The effect must be a bare single-target DealDamage whose target
+            // can be a creature (not a self/own-board selector).
+            let Effect::DealDamage { to, amount } = &ab.effect else { continue };
+            if !matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. }) {
+                continue;
+            }
+            for (foe, foe_pow) in &foes {
+                let Some(cp) = state.computed_permanent(*foe) else { continue };
+                // Lethal check: a constant amount, or "equal to its own power"
+                // (Kiku) where the creature dies if power ≥ toughness.
+                let lethal = match amount {
+                    Value::Const(n) => *n >= cp.toughness,
+                    Value::PowerOf(s) if matches!(**s, Selector::Target(_)) => {
+                        *foe_pow >= cp.toughness
+                    }
+                    _ => false,
+                };
+                if !lethal {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*foe)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    // Opposing planeswalkers, highest loyalty first — a constant-damage "any
+    // target" ability that's lethal to the loyalty removes the threat.
+    let mut walkers: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_planeswalker())
+        .map(|c| (c.id, c.counter_count(crate::card::CounterType::Loyalty) as i32))
+        .collect();
+    walkers.sort_by_key(|(_, loy)| std::cmp::Reverse(*loy));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
+            // Any target slot that could point at a planeswalker (would_accept
+            // re-checks the filter).
+            if !matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. }) {
+                continue;
+            }
+            for (walker, loy) in &walkers {
+                if *n < *loy {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*walker)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Activate a "Sacrifice this creature: Destroy target creature" ability
+/// (Pus Kami, Scuttling Death-style sac removal) on a *favorable* trade: the
+/// destroyed opposing creature must be at least as powerful as the creature
+/// being sacrificed, so the bot won't pitch a 3/3 to kill a 1/1. Targets the
+/// biggest qualifying foe. Dry-run-gated through `would_accept`.
+fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::Selector;
+    let mut foes: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
+        .collect();
+    foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        let src_power = state.computed_permanent(card.id).map(|cp| cp.power).unwrap_or(0);
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !ab.sac_cost {
+                continue;
+            }
+            let target_is_creature = match &ab.effect {
+                Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
+                    matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+                }
+                _ => false,
+            };
+            if !target_is_creature {
+                continue;
+            }
+            for (foe, foe_pow) in &foes {
+                // Only a favorable/even trade.
+                if *foe_pow < src_power {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*foe)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Find an affordable graveyard-activated ability whose cost exiles the source
@@ -1485,7 +2490,12 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
     own.sort_by_key(|c| std::cmp::Reverse(c.power()));
     for card in state.players[seat].graveyard.iter() {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if !(ab.from_graveyard && ab.exile_self_cost) {
+            // Graveyard-activated abilities worth firing: an exile-self payoff
+            // (Embalm-style value) or a self-return that replays the creature
+            // (Llanowar Greenwidow's "{7}{G}: return this from your graveyard").
+            if !(ab.from_graveyard
+                && (ab.exile_self_cost || effect_returns_self_to_battlefield(&ab.effect)))
+            {
                 continue;
             }
             // Only try a no-target activation when the effect needs none —
@@ -1501,11 +2511,116 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
                     card_id: card.id,
                     ability_index: idx,
                     target,
+                    additional_targets: Vec::new(),
                     x_value: None,
                 };
                 if state.would_accept(action.clone()) {
                     return Some(action);
                 }
+            }
+        }
+    }
+    None
+}
+
+/// True if `eff` returns its own source to the battlefield (a self-reanimating
+/// graveyard ability — Llanowar Greenwidow). Recurses into `Seq`.
+fn effect_returns_self_to_battlefield(eff: &Effect) -> bool {
+    use crate::effect::ZoneDest;
+    match eff {
+        Effect::Move { what: crate::card::Selector::This, to: ZoneDest::Battlefield { .. } } => true,
+        Effect::Seq(v) => v.iter().any(effect_returns_self_to_battlefield),
+        _ => false,
+    }
+}
+
+/// True if a `SelectionRequirement` tree constrains its target to a card in a
+/// graveyard (`InYourGraveyard` / `InGraveyard`).
+fn filter_targets_graveyard(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::InYourGraveyard | R::InGraveyard => true,
+        R::And(a, b) | R::Or(a, b) => filter_targets_graveyard(a) || filter_targets_graveyard(b),
+        _ => false,
+    }
+}
+
+/// True if `eff` moves a graveyard-targeted card onto the battlefield (a
+/// reanimation effect — Seedship Broodtender's sac-to-return). Recurses `Seq`.
+fn effect_reanimates_from_graveyard(eff: &Effect) -> bool {
+    use crate::effect::ZoneDest;
+    match eff {
+        Effect::Move {
+            what: crate::card::Selector::TargetFiltered { filter, .. },
+            to: ZoneDest::Battlefield { .. },
+        } => filter_targets_graveyard(filter),
+        Effect::Seq(v) => v.iter().any(effect_reanimates_from_graveyard),
+        _ => false,
+    }
+}
+
+/// Activate a battlefield permanent's ability that reanimates a card from the
+/// graveyard (Seedship Broodtender's "{cost}, Sacrifice this: return target
+/// creature/Spacecraft from your graveyard to the battlefield"), aimed at the
+/// engine's auto-picked best graveyard target. Skips when nothing legal exists.
+/// Dry-run-gated so cost / sorcery-speed timing bottom out in `would_accept`.
+fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameAction> {
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !effect_reanimates_from_graveyard(&ab.effect) {
+                continue;
+            }
+            let target = state.auto_target_for_effect(&ab.effect, seat);
+            if target.is_none() {
+                continue; // no graveyard creature worth returning
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
+/// Crack a Lander token for ramp: a `{2}, {T}, Sacrifice: search a basic land
+/// onto the battlefield tapped` ability. Only fires when the controller still
+/// has a basic land in their library (so the fetch isn't wasted) and the
+/// engine accepts the activation (mana/timing). Targets nothing — the fetch
+/// resolves via the library-search decider.
+fn pick_crack_lander(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::{ArtifactSubtype, SelectionRequirement};
+    let has_basic = state.players[seat]
+        .library
+        .iter()
+        .any(|c| state.evaluate_requirement_on_card(&SelectionRequirement::IsBasicLand, c, seat));
+    if !has_basic {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat && !c.tapped) {
+        let is_lander = card.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Lander);
+        if !is_lander {
+            continue;
+        }
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !ab.sac_cost || !matches!(ab.effect, Effect::Search { .. }) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
             }
         }
     }
@@ -1544,6 +2659,7 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
                 card_id: card.id,
                 ability_index: idx,
                 target: None,
+                additional_targets: Vec::new(),
                 x_value: None,
             };
             if state.would_accept(action.clone()) {
@@ -1560,13 +2676,140 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
 /// there's nothing worth equipping. Dry-run gated by the caller's
 /// `would_accept` is bypassed here (we gate inline) so the bot doesn't
 /// thrash re-equipping the same creature.
+/// Crew an uncrewed Vehicle (CR 702.122) the bot controls, tapping the
+/// smallest untapped creatures that together meet the crew cost. Skipped
+/// unless the Vehicle's power is worth more than the creatures spent on it
+/// (so the bot never taps a bigger attacker to animate a smaller Vehicle).
+fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
+    for vehicle in &state.battlefield {
+        if vehicle.controller != seat {
+            continue;
+        }
+        let Some(crew_n) = vehicle.definition.crew_cost() else { continue };
+        // Already a creature this turn (crewed / animated)? Don't re-crew.
+        if state
+            .computed_permanent(vehicle.id)
+            .is_some_and(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+        {
+            continue;
+        }
+        // Candidate crew members: the bot's untapped creatures, smallest first.
+        let mut crew: Vec<(CardId, u32)> = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.id != vehicle.id
+                    && c.definition.is_creature()
+                    && !c.tapped
+            })
+            // CR 702.122e/702.171 — count the crew-power rider (Cloudspire
+            // Captain / Deathless Pilot crew "as though power N greater").
+            .map(|c| (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32))
+            .collect();
+        crew.sort_by_key(|&(_, p)| p);
+        let mut picked = Vec::new();
+        let mut total = 0u32;
+        for (id, p) in &crew {
+            if total >= crew_n {
+                break;
+            }
+            picked.push(*id);
+            total += p;
+        }
+        if total < crew_n {
+            continue;
+        }
+        // Don't spend more board power than the Vehicle is worth.
+        if total > vehicle.power().max(0) as u32 {
+            continue;
+        }
+        let action = GameAction::Crew { vehicle: vehicle.id, crew_creatures: picked };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
+/// CR 702.171 — saddle a Mount the bot is about to attack with by tapping its
+/// least-valuable other untapped creatures (smallest power first). Only saddles
+/// a Mount that can attack this turn and isn't already saddled, and never spends
+/// more board power than the Mount itself is worth.
+fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
+    for mount in &state.battlefield {
+        if mount.controller != seat || mount.saddled || mount.tapped {
+            continue;
+        }
+        let Some(saddle_n) = mount.definition.saddle_cost() else { continue };
+        if !mount.can_attack() {
+            continue;
+        }
+        // Candidate saddlers: the bot's other untapped creatures that can't
+        // attack profitably themselves are tapped first — sort smallest power
+        // first (the crew-power rider counts, CR 702.171).
+        let mut riders: Vec<(CardId, u32)> = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.id != mount.id
+                    && c.definition.is_creature()
+                    && !c.tapped
+            })
+            .map(|c| (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32))
+            .collect();
+        riders.sort_by_key(|&(_, p)| p);
+        let mut picked = Vec::new();
+        let mut total = 0u32;
+        for (id, p) in &riders {
+            if total >= saddle_n {
+                break;
+            }
+            picked.push(*id);
+            total += p;
+        }
+        if total < saddle_n {
+            continue;
+        }
+        // Don't tap more board power than the Mount is worth.
+        if total > mount.power().max(0) as u32 {
+            continue;
+        }
+        let action = GameAction::Saddle { mount: mount.id, creatures: picked };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
 fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
-    // Best creature to wear an Equipment: highest current power.
-    let target = state
-        .battlefield
-        .iter()
-        .filter(|c| c.controller == seat && c.definition.is_creature())
+    // Best creature to wear an Equipment: highest current power, but skip
+    // attack-locked bodies (Defender / CantAttack) — an Equipment's combat
+    // bonus is wasted on them. Fall back to any creature only if every
+    // candidate is attack-locked (a board of Walls still wants the
+    // deathtouch/keyword grant for blocking).
+    use crate::card::Keyword;
+    let can_attack = |c: &crate::card::CardInstance| {
+        state
+            .computed_permanent(c.id)
+            .map(|cp| {
+                !cp.keywords.contains(&Keyword::Defender)
+                    && !cp.keywords.contains(&Keyword::CantAttack)
+            })
+            .unwrap_or(true)
+    };
+    let mine = || {
+        state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.definition.is_creature())
+    };
+    let target = mine()
+        .filter(|c| can_attack(c))
         .max_by_key(|c| c.power())
+        .or_else(|| mine().max_by_key(|c| c.power()))
         .map(|c| c.id)?;
     for eq in &state.battlefield {
         if eq.controller != seat || !eq.definition.is_equipment() {
@@ -1582,6 +2825,51 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         let action = GameAction::Equip { equipment: eq.id, target };
         if state.would_accept(action.clone()) {
             return Some(action);
+        }
+    }
+    None
+}
+
+/// Drive a "{cost}: attach target Equipment you control to target creature you
+/// control" activated ability (Brass Squire). Picks an Equipment not already on
+/// the chosen wearer for slot 0 and the highest-power creature for slot 1. The
+/// dry-run gate enforces the activation cost / target legality.
+fn pick_attach_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::Selector;
+    use crate::effect::Effect;
+    let wearer = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_creature())
+        .max_by_key(|c| c.power())
+        .map(|c| c.id)?;
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            // Two distinct target slots: `what` (slot 0) and `to` (slot 1).
+            let Effect::Attach {
+                what: Selector::TargetFiltered { slot: 0, .. },
+                to: Selector::TargetFiltered { slot: 1, .. },
+            } = &ab.effect
+            else {
+                continue;
+            };
+            let Some(equip) = state.battlefield.iter().find(|e| {
+                e.controller == seat
+                    && e.definition.is_equipment()
+                    && e.attached_to != Some(wearer)
+            }) else {
+                continue;
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: Some(crate::game::Target::Permanent(equip.id)),
+                additional_targets: vec![crate::game::Target::Permanent(wearer)],
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
         }
     }
     None
@@ -1691,7 +2979,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .map(|a| {
                     (
                         atk.attacker,
-                        a.power(),
+                        attacker_damage_value(state, atk.attacker),
                         a.toughness(),
                         a.has_keyword(&Keyword::Flying),
                         a.has_keyword(&Keyword::Deathtouch),
@@ -1699,7 +2987,48 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 })
         })
         .collect();
-    let total_incoming: i32 = attacker_info.iter().map(|(_, p, _, _, _)| *p).sum();
+    // Only attackers aimed at the *player* threaten our life total — damage
+    // to a planeswalker we control hits its loyalty, not our face. Summing
+    // every attacker here would over-state the life threat and trigger
+    // needless chump-blocks.
+    let total_incoming: i32 = state
+        .attacking()
+        .iter()
+        .filter(|atk| atk.target == AttackTarget::Player(seat))
+        .map(|atk| attacker_damage_value(state, atk.attacker))
+        .sum();
+    // Planeswalker defense (CR 306.7): for each planeswalker we control that
+    // is being attacked, if the attackers aimed at it would deal lethal
+    // (total power ≥ its loyalty), mark those attackers so the chump-block
+    // pass will trade idle blockers to save the walker.
+    let defend_attackers: std::collections::HashSet<CardId> = {
+        use crate::card::CounterType;
+        let mut pw_attackers: std::collections::HashMap<CardId, (u32, Vec<CardId>)> =
+            std::collections::HashMap::new();
+        for atk in state.attacking() {
+            if let AttackTarget::Planeswalker(pw) = atk.target
+                && state.battlefield_find(pw).map(|c| c.controller) == Some(seat)
+                && let Some(a) = state.battlefield.iter().find(|c| c.id == atk.attacker)
+            {
+                let e = pw_attackers.entry(pw).or_default();
+                e.0 += a.power().max(0) as u32;
+                e.1.push(atk.attacker);
+            }
+        }
+        let mut set = std::collections::HashSet::new();
+        for (pw, (incoming, atkrs)) in pw_attackers {
+            let loyalty = state
+                .battlefield_find(pw)
+                .and_then(|c| c.counters.iter().find_map(|(k, v)| {
+                    matches!(k, CounterType::Loyalty).then_some(*v)
+                }))
+                .unwrap_or(0);
+            if loyalty > 0 && incoming >= loyalty {
+                set.extend(atkrs);
+            }
+        }
+        set
+    };
     // Infect (CR 702.90) / Toxic (CR 702.180) make poison the lethal clock,
     // not life: a player with 10+ poison counters loses (CR 104.3d). The bot
     // must chump an infect/toxic attacker to avoid a poison-out even at a
@@ -1719,7 +3048,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .definition
                 .keywords
                 .iter()
-                .filter_map(|k| if let Keyword::Toxic(n) = k { Some(*n) } else { None })
+                .filter_map(|k| match k {
+                    Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
+                    _ => None,
+                })
                 .sum::<u32>();
             p
         })
@@ -1806,16 +3138,26 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // none (won't be killed). Factor both into the trade math.
             let blocker_takes_no_dmg = state.damage_prevented_by_protection(*a_id, b_id);
             let attacker_takes_no_dmg = state.damage_prevented_by_protection(b_id, *a_id);
+            // CR 702.12 — an indestructible permanent isn't destroyed by lethal
+            // damage (or deathtouch), so it never dies in a trade and can't be
+            // killed by a blocker. Block freely behind an indestructible body.
+            let blocker_indestructible =
+                state.battlefield_find(b_id).is_some_and(|c| c.is_indestructible());
+            let attacker_indestructible =
+                state.battlefield_find(*a_id).is_some_and(|c| c.is_indestructible());
             let dies_before_striking = atk_first_strike
                 && !blk_first_strike
                 && !blocker_takes_no_dmg
+                && !blocker_indestructible
                 && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
             let kills_attacker = !attacker_takes_no_dmg
+                && !attacker_indestructible
                 && !dies_before_striking
                 && (b_dt || b_pow >= (a_tough - queued));
             // A deathtouch attacker kills the blocker on any damage.
-            let dies_to_attacker =
-                !blocker_takes_no_dmg && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
+            let dies_to_attacker = !blocker_takes_no_dmg
+                && !blocker_indestructible
+                && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
             // Scoring: clean trade (kill, don't die) > kill-and-die >
             // chump (don't kill, die). Higher attacker power adds value.
             let score = if kills_attacker && !dies_to_attacker {
@@ -1830,12 +3172,18 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     continue;
                 }
                 500 + delta
-            } else if life_threatened {
-                // Chump-block to stop lethal damage. A trampler tramples
-                // over a chump (CR 702.19e), so a lone chump only stops
-                // `blocker_toughness` of its damage — score by the actual
-                // damage saved so the bot prefers fully blocking a
-                // non-trampler over partially blocking a trampler.
+            } else if blocker_indestructible && !dies_to_attacker && *a_pow >= 1 {
+                // An indestructible wall absorbs the attacker's damage at no
+                // cost (it survives and isn't tapped). Free value even with no
+                // life pressure — block the biggest attacker it can.
+                200 + *a_pow
+            } else if life_threatened || defend_attackers.contains(a_id) {
+                // Chump-block to stop lethal damage (or to save a doomed
+                // planeswalker). A trampler tramples over a chump
+                // (CR 702.19e), so a lone chump only stops `blocker_toughness`
+                // of its damage — score by the actual damage saved so the bot
+                // prefers fully blocking a non-trampler over partially
+                // blocking a trampler.
                 let a_trample = state
                     .battlefield
                     .iter()
@@ -1930,50 +3278,100 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         if !must_block || assignments.iter().any(|(_, aid)| aid == a_id) {
             continue;
         }
-        if let Some(idle) = state.battlefield.iter().find(|c| {
-            c.controller == seat
-                && c.can_block()
-                && !assignments.iter().any(|(bid, _)| *bid == c.id)
-                && (!a_flying
-                    || c.has_keyword(&Keyword::Flying)
-                    || c.has_keyword(&Keyword::Reach))
-        }) {
+        // Pick the cheapest (lowest-power) legal idle blocker so a forced block
+        // doesn't throw away the bot's best body.
+        if let Some(idle) = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.can_block()
+                    && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                    && (!a_flying
+                        || c.has_keyword(&Keyword::Flying)
+                        || c.has_keyword(&Keyword::Reach))
+                    && state.blocker_can_block_attacker(c.id, *a_id)
+            })
+            .min_by_key(|c| c.power())
+        {
             assignments.push((idle.id, *a_id));
         }
     }
 
-    // CR 509.1b — a Menace attacker can't be blocked except by two or more
-    // creatures. The greedy passes above assign one blocker at a time, so a
-    // lone block on a Menace attacker is illegal and the engine would reject
-    // the whole declaration. For each Menace attacker with exactly one
-    // assigned blocker, pull in a second legal idle blocker; if none is
-    // available, drop the lone block (better unblocked than illegal).
+    // CR 509.1b / 702.110b — Menace (≥2 blockers) and "can't be blocked
+    // except by N or more creatures" (CantBeBlockedExceptByN — Pathrazer of
+    // Ulamog) impose a minimum block count: an attacker so keyworded must be
+    // blocked by 0 or ≥N, never 1..N-1. The greedy passes assign one at a
+    // time, so an under-filled multi-block is illegal and the engine rejects
+    // the whole declaration. For each such attacker, top the block up to the
+    // minimum with legal idle blockers; if the minimum can't be reached,
+    // drop every block on it (better unblocked than an illegal batch).
     for (a_id, _a_pow, _a_tough, a_flying, _a_dt) in &attacker_info {
-        let is_menace = state
+        let min_blockers = state
             .battlefield
             .iter()
             .find(|c| c.id == *a_id)
-            .is_some_and(|a| a.has_keyword(&Keyword::Menace));
-        if !is_menace {
+            .map(min_blockers_required)
+            .unwrap_or(1);
+        if min_blockers <= 1 {
             continue;
         }
-        if assignments.iter().filter(|(_, aid)| aid == a_id).count() != 1 {
+        let mut count = assignments.iter().filter(|(_, aid)| aid == a_id).count();
+        if count == 0 || count >= min_blockers {
             continue;
         }
-        let second = state.battlefield.iter().find(|c| {
-            c.controller == seat
-                && c.can_block()
-                && !assignments.iter().any(|(bid, _)| *bid == c.id)
-                && (!a_flying
-                    || c.has_keyword(&Keyword::Flying)
-                    || c.has_keyword(&Keyword::Reach))
-        });
-        match second {
-            Some(c) => assignments.push((c.id, *a_id)),
-            None => assignments.retain(|(_, aid)| aid != a_id),
+        while count < min_blockers {
+            // Cheapest legal idle blocker first — minimise value lost to the
+            // forced multi-block.
+            let extra = state
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == seat
+                        && c.can_block()
+                        && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                        && (!a_flying
+                            || c.has_keyword(&Keyword::Flying)
+                            || c.has_keyword(&Keyword::Reach))
+                        && state.blocker_can_block_attacker(c.id, *a_id)
+                })
+                .min_by_key(|c| c.power());
+            match extra {
+                Some(c) => {
+                    assignments.push((c.id, *a_id));
+                    count += 1;
+                }
+                // Can't reach the minimum — drop all blocks on this attacker.
+                None => {
+                    assignments.retain(|(_, aid)| aid != a_id);
+                    break;
+                }
+            }
         }
     }
     assignments
+}
+
+/// Minimum number of creatures legally required to block `attacker` (CR
+/// 509.1b): 2 for Menace, N for `CantBeBlockedExceptByN(N)`, the max of any
+/// such requirement, else 1. Reads printed + EOT-granted keywords (the same
+/// set [`CardInstance::has_keyword`] consults).
+fn min_blockers_required(attacker: &crate::card::CardInstance) -> usize {
+    use crate::card::Keyword;
+    let mut min = 1usize;
+    for kw in attacker
+        .definition
+        .keywords
+        .iter()
+        .chain(attacker.granted_keywords_eot.iter())
+    {
+        match kw {
+            Keyword::Menace => min = min.max(2),
+            Keyword::CantBeBlockedExceptByN(n) => min = min.max(*n as usize),
+            _ => {}
+        }
+    }
+    min
 }
 
 /// Find an untapped, non-land permanent the bot controls whose first
@@ -2099,7 +3497,40 @@ pub fn max_affordable_x(
     let fixed_cmc = card.definition.cost.with_x_value(0).cmc();
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
     let needed = fixed_cmc + extra;
-    pool_total.saturating_sub(needed)
+    let affordable = pool_total.saturating_sub(needed);
+    // Don't overkill: an `{X}: deal X damage to target creature` spell
+    // (creature-only target — can't go to the face) never needs more X
+    // than the toughest opposing creature's toughness. Capping here frees
+    // the leftover mana for the rest of the turn instead of vanishing it
+    // into a 6-damage Disfigure on a 2/2.
+    if let Some(cap) = creature_only_x_damage_cap(state, seat, &card.definition) {
+        return affordable.min(cap);
+    }
+    affordable
+}
+
+/// For a single-target, creature-only `DealDamage` whose amount scales with
+/// X, the most X the bot ever needs: the greatest toughness among opposing
+/// creatures (so any legal target still dies). `None` for any other shape —
+/// player-targetable burn (Banefire) keeps dumping its whole pool into X.
+fn creature_only_x_damage_cap(state: &GameState, seat: usize, def: &CardDefinition) -> Option<u32> {
+    use crate::effect::Value;
+    use crate::effect::Selector;
+    let Effect::DealDamage { to, amount } = &def.effect else { return None };
+    if !matches!(amount, Value::XFromCost) || !matches!(to, Selector::TargetFiltered { .. }) {
+        return None;
+    }
+    // Must be a creature target that can't be redirected to a player.
+    let filter = def.effect.target_filter_for_slot(0)?;
+    if filter.can_match_player() {
+        return None;
+    }
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .map(|c| c.toughness().max(0) as u32)
+        .max()
 }
 
 /// True if X matters for this spell — either the cost has an `{X}` pip
@@ -2169,6 +3600,8 @@ fn effect_uses_x(eff: &Effect) -> bool {
             value_uses_x(count)
         }
         Effect::CreateToken { count, .. }
+        | Effect::CreateTokenCopyOf { count, .. }
+        | Effect::CreateTokenCopiesHasteSac { count, .. }
         | Effect::CopySpell { count, .. }
         | Effect::CopySpellMayChooseTargets { count, .. } => value_uses_x(count),
         Effect::RevealUntilFind { cap, .. } => value_uses_x(cap),
@@ -2306,6 +3739,23 @@ mod tests {
             "a pure-upside 'you may draw' is taken by the bot");
     }
 
+    /// The bot pays Offspring (CR 702.166) when it can afford it — the chosen
+    /// main-phase cast is the kicked variant, not the plain cast.
+    #[test]
+    fn bot_pays_offspring_when_affordable() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let recruit = g.add_card_to_hand(0, catalog::pawpatch_recruit()); // {G}, Offspring {2}
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(action, GameAction::CastSpellKicked { card_id, .. } if card_id == recruit),
+            "bot cast Pawpatch Recruit with Offspring paid, got {action:?}"
+        );
+    }
+
     #[test]
     fn bot_declines_optional_trigger_that_sacrifices_itself() {
         let mut g = two_player_game();
@@ -2363,6 +3813,26 @@ mod tests {
         }
     }
 
+    /// The bot activates The Wandering Emperor's +1 onto its OWN creature
+    /// (a friendly +1/+1 buff), not the opponent's.
+    #[test]
+    fn bot_wandering_emperor_plus_one_targets_own_creature() {
+        let mut g = two_player_game();
+        let emp = g.add_card_to_battlefield(0, catalog::the_wandering_emperor());
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let action = pick_loyalty_ability(&g, 0).expect("bot activates a loyalty ability");
+        match action {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, target, .. } => {
+                assert_eq!(card_id, emp);
+                assert_eq!(ability_index, 0, "the +1 (a self-buff) is preferred");
+                assert_eq!(target, Some(Target::Permanent(mine)),
+                    "buffs its own creature, not {theirs:?}");
+            }
+            _ => panic!("expected a loyalty activation"),
+        }
+    }
+
     #[test]
     fn bot_declines_self_costly_optional_trigger() {
         use crate::effect::{Selector, Value};
@@ -2395,6 +3865,20 @@ mod tests {
             "a 'you may mill yourself 3' optional trigger is declined");
     }
 
+    /// Blight (CR 701.68) shrinks the bot's own board, so a "may blight N for
+    /// upside" optional trigger is declined.
+    #[test]
+    fn bot_declines_blight_optional_trigger() {
+        use crate::effect::Value;
+        let mut g = two_player_game();
+        let blighter = g.add_card_to_battlefield(
+            0,
+            body_card("Blighter", Effect::Blight { n: Value::Const(2) }),
+        );
+        assert!(!optional_trigger_beneficial(&g, blighter, "you may"),
+            "a 'you may blight 2' optional trigger is declined");
+    }
+
     /// `MayPay` shares the `OptionalTrigger` decision shape with `MayDo`, so
     /// the bot's self-cost screen must introspect it too: a "pay {1}: you lose
     /// 3 life" body is declined even though it's reachable only via MayPay.
@@ -2422,6 +3906,29 @@ mod tests {
         let id = g.add_card_to_battlefield(0, def);
         assert!(!optional_trigger_beneficial(&g, id, "you may pay"),
             "a MayPay whose body costs the bot 3 life is declined");
+    }
+
+    /// Moving the source to exile/graveyard is a self-cost (decline); returning
+    /// it to hand (Recover-style upside) is accepted.
+    #[test]
+    fn bot_screens_self_move_bodies() {
+        use crate::effect::{PlayerRef, Selector, ZoneDest};
+        let mut g = two_player_game();
+        let exile_self = g.add_card_to_battlefield(
+            0,
+            body_card("ExileSelf", Effect::Move { what: Selector::This, to: ZoneDest::Exile }),
+        );
+        assert!(!optional_trigger_beneficial(&g, exile_self, "you may"),
+            "'you may exile this' reads as a self-cost");
+        let to_hand = g.add_card_to_battlefield(
+            0,
+            body_card("ToHand", Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        );
+        assert!(optional_trigger_beneficial(&g, to_hand, "you may"),
+            "returning self to hand is upside");
     }
 
     fn generic_spell(name: &'static str, cmc: u32) -> CardDefinition {
@@ -2478,6 +3985,27 @@ mod tests {
         assert_eq!(ids, vec![land], "a flooded bot pitches the surplus land");
     }
 
+    /// A lethal constant-damage ping ability aims at an opposing planeswalker
+    /// whose loyalty it can finish off.
+    #[test]
+    fn bot_pings_lethal_opposing_planeswalker() {
+        let mut g = two_player_game();
+        let tim = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer()); // {T}: 1 dmg any target
+        g.clear_sickness(tim);
+        let walker = g.add_card_to_battlefield(1, catalog::vivien_reid());
+        // Knock the walker down to 1 loyalty so a 1-damage ping is lethal.
+        let inst = g.battlefield_find_mut(walker).unwrap();
+        inst.counters.insert(crate::card::CounterType::Loyalty, 1);
+        let action = pick_removal_ping(&g, 0).expect("bot should ping the walker");
+        match action {
+            GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. } => {
+                assert_eq!(card_id, tim);
+                assert_eq!(t, walker, "aimed at the 1-loyalty planeswalker");
+            }
+            other => panic!("unexpected action: {other:?}"),
+        }
+    }
+
     /// Free, fixed-payload mana rocks like Sol Ring should be picked up by
     /// the bot's main-phase action loop after lands are exhausted.
     #[test]
@@ -2517,6 +4045,167 @@ mod tests {
         assert!(pick_energy_payoff(&g, 0).is_none(), "won't activate without enough energy");
     }
 
+    /// When card-starved, the bot sinks spare mana into Bonders' Enclave's
+    /// "{3}, {T}: Draw a card" — but only once its activation condition (a
+    /// 4-power creature) is met.
+    #[test]
+    fn bot_draws_with_value_ability_when_card_starved() {
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(0, catalog::bonders_enclave());
+        g.clear_sickness(land);
+        g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+        g.players[0].mana_pool.add_colorless(3);
+        // No 4-power creature → the draw ability's condition fails.
+        assert!(pick_card_draw_ability(&g, 0).is_none(),
+            "no draw without a 4-power creature");
+        g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+        match pick_card_draw_ability(&g, 0).expect("bot draws when card-starved") {
+            GameAction::ActivateAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, land);
+                assert_eq!(ability_index, 1, "the draw ability, not the mana ability");
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // A full hand → don't bother drawing.
+        for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
+        assert!(pick_card_draw_ability(&g, 0).is_none(), "won't draw with a full hand");
+    }
+
+    /// The bot fires Frostwielder's `{T}: 1 damage` ping to kill a 1/1, but
+    /// won't waste it when no opposing creature dies to it.
+    #[test]
+    fn bot_pings_a_killable_creature() {
+        let mut g = two_player_game();
+        let fw = g.add_card_to_battlefield(0, catalog::frostwielder());
+        g.clear_sickness(fw);
+        let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+        let action = pick_removal_ping(&g, 0).expect("bot pings the 1/1");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, fw);
+                assert_eq!(target, Some(Target::Permanent(frostling)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // A 2/2 survives a 1-damage ping → the bot holds the ability.
+        g.battlefield.retain(|c| c.id != frostling);
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        assert!(pick_removal_ping(&g, 0).is_none(), "won't waste a ping on a survivor");
+    }
+
+    /// The bot points a ping at the opponent's face when it's exactly lethal
+    /// (reach for the win), not at a creature.
+    #[test]
+    fn bot_pings_face_for_lethal() {
+        let mut g = two_player_game();
+        let fw = g.add_card_to_battlefield(0, catalog::frostwielder()); // {T}: 1 dmg any target
+        g.clear_sickness(fw);
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a 2/2 it can't kill
+        g.players[1].life = 1; // lethal to a 1-damage ping
+        let action = pick_removal_ping(&g, 0).expect("bot reaches for the win");
+        match action {
+            GameAction::ActivateAbility { target, .. } => {
+                assert_eq!(target, Some(Target::Player(1)), "ping aimed at the face");
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // Above 1 life it isn't lethal and there's no killable creature → hold.
+        g.players[1].life = 5;
+        assert!(pick_removal_ping(&g, 0).is_none(), "won't chip a non-lethal face");
+    }
+
+    /// The bot fires a team-pump ability (Bearer of Glory's {4}{W}) once it has
+    /// two attackers, but holds it with only one.
+    #[test]
+    fn bot_team_pumps_with_multiple_attackers() {
+        let mut g = two_player_game();
+        let bearer = g.add_card_to_battlefield(0, catalog::bearer_of_glory());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bearer);
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        // One attacker: not worth the pump.
+        g.attacking = vec![Attack { attacker: bearer, target: AttackTarget::Player(1) }];
+        assert!(pick_team_pump(&g, 0).is_none(), "holds the pump with one attacker");
+        // Two attackers: fire it.
+        g.attacking.push(Attack { attacker: bear, target: AttackTarget::Player(1) });
+        match pick_team_pump(&g, 0).expect("bot pumps the team") {
+            GameAction::ActivateAbility { card_id, .. } => assert_eq!(card_id, bearer),
+            _ => panic!("expected an activate-ability action"),
+        }
+    }
+
+    /// The bot crews a Vehicle with a spare small creature, but won't tap a
+    /// creature bigger than the Vehicle to do it.
+    #[test]
+    fn bot_crews_a_vehicle_with_a_small_creature() {
+        let mut g = two_player_game();
+        let chariot = g.add_card_to_battlefield(0, catalog::thundering_chariot()); // 3/3, Crew 1
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        g.clear_sickness(bear);
+        match pick_crew(&g, 0) {
+            Some(GameAction::Crew { vehicle, crew_creatures }) => {
+                assert_eq!(vehicle, chariot);
+                assert_eq!(crew_creatures, vec![bear]);
+            }
+            other => panic!("expected a crew action, got {other:?}"),
+        }
+        // Swap the bear for a 5/5: tapping it to animate a 3/3 isn't worth it.
+        g.battlefield.retain(|c| c.id != bear);
+        let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+        g.clear_sickness(dragon);
+        assert!(pick_crew(&g, 0).is_none(), "won't tap a bigger body to crew a smaller Vehicle");
+    }
+
+    /// The bot saddles a Mount it can attack with using a spare small creature,
+    /// but won't tap a creature bigger than the Mount to do it.
+    #[test]
+    fn bot_saddles_a_mount_with_a_small_creature() {
+        let mut g = two_player_game();
+        let ghoda = g.add_card_to_battlefield(0, catalog::gilded_ghoda()); // 2/2, Saddle 1
+        g.clear_sickness(ghoda);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        g.clear_sickness(bear);
+        match pick_saddle(&g, 0) {
+            Some(GameAction::Saddle { mount, creatures }) => {
+                assert_eq!(mount, ghoda);
+                assert_eq!(creatures, vec![bear]);
+            }
+            other => panic!("expected a saddle action, got {other:?}"),
+        }
+        // A summoning-sick Mount can't attack → don't waste a saddler on it.
+        g.battlefield_find_mut(ghoda).unwrap().summoning_sick = true;
+        assert!(pick_saddle(&g, 0).is_none(), "won't saddle a Mount that can't attack");
+    }
+
+    /// The bot sacrifices Pus Kami to destroy a bigger opposing creature, but
+    /// not to kill something smaller than the creature it would pitch.
+    #[test]
+    fn bot_sacs_to_destroy_a_favorable_trade() {
+        let mut g = two_player_game();
+        let kami = g.add_card_to_battlefield(0, catalog::pus_kami()); // 3/3
+        g.clear_sickness(kami);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        // A 5/5-equivalent opposing threat (nonblack) → favorable sac.
+        let dreadmaw = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6 green
+        let action = pick_removal_sacrifice(&g, 0).expect("bot sacs to kill the big threat");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, kami);
+                assert_eq!(target, Some(Target::Permanent(dreadmaw)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // Replace with a 1/1 — sacrificing a 3/3 for it is a bad trade.
+        g.battlefield.retain(|c| c.id != dreadmaw);
+        g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+        assert!(pick_removal_sacrifice(&g, 0).is_none(), "won't sac a 3/3 to kill a 1/1");
+    }
+
     /// The bot recurs a creature from the graveyard via Embalm when it can
     /// afford the cost.
     #[test]
@@ -2535,6 +4224,33 @@ mod tests {
         // With no mana it leaves the card alone.
         g.players[0].mana_pool.empty();
         assert!(pick_graveyard_recursion(&g, 0).is_none(), "won't Embalm without mana");
+    }
+
+    /// The bot reanimates a graveyard creature with a battlefield permanent's
+    /// sac-to-return ability (Seedship Broodtender), aimed at the dead creature.
+    #[test]
+    fn bot_reanimates_from_graveyard_via_battlefield_ability() {
+        use crate::TurnStep;
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let brood = g.add_card_to_battlefield(0, catalog::seedship_broodtender());
+        let dead = g.add_card_to_graveyard(0, catalog::colossal_dreadmaw()); // a worthy target
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_battlefield_reanimate(&g, 0).expect("bot reanimates from graveyard");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, brood);
+                assert_eq!(target, Some(Target::Permanent(dead)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // Empty graveyard → nothing to do.
+        g.players[0].graveyard.clear();
+        assert!(pick_battlefield_reanimate(&g, 0).is_none(), "no target → no activation");
     }
 
     /// The bot uses a *targeted* graveyard-activated ability (Scavenge),
@@ -2711,6 +4427,82 @@ mod tests {
         }
     }
 
+    /// Under a global fog (CR 615.1), the bot holds back a non-lethal
+    /// attacker whose combat damage would be prevented.
+    #[test]
+    fn bot_holds_back_attackers_under_fog() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        g.prevent_combat_damage_this_turn = true; // a Fog is active
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.is_empty(), "fogged attacker stays home");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// A forced block (MustBeBlocked) with no profitable trade uses the
+    /// cheapest legal body, not the bot's best creature.
+    #[test]
+    fn bot_forced_block_uses_cheapest_body() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        // Seat 0 attacks with a 5/5 that must be blocked.
+        let mut atk_def = catalog::grizzly_bears();
+        atk_def.name = "Provoker";
+        atk_def.power = 5;
+        atk_def.toughness = 5;
+        atk_def.keywords.push(crate::card::Keyword::MustBeBlocked);
+        let atk = g.add_card_to_battlefield(0, atk_def);
+        g.clear_sickness(atk);
+        // Seat 1 (bot) has a 1/1 chump and a 3/3 — neither can kill the 5/5.
+        let mut chump = catalog::grizzly_bears();
+        chump.name = "Chump"; chump.power = 1; chump.toughness = 1;
+        let chump = g.add_card_to_battlefield(1, chump);
+        let mut big = catalog::grizzly_bears();
+        big.name = "Big"; big.power = 3; big.toughness = 3;
+        let big = g.add_card_to_battlefield(1, big);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk, target: AttackTarget::Player(1),
+        }])).expect("declare attacker");
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(chump, atk)], "forced block uses the 1/1, sparing the 3/3");
+        assert!(!blocks.iter().any(|(b, _)| *b == big), "the 3/3 is not thrown away");
+    }
+
+    /// An indestructible blocker walls a big attacker for free (CR 702.12) —
+    /// it survives, so the bot blocks even with no life pressure.
+    #[test]
+    fn bot_walls_with_indestructible_blocker() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let mut atk_def = catalog::grizzly_bears();
+        atk_def.name = "Bruiser"; atk_def.power = 5; atk_def.toughness = 5;
+        let atk = g.add_card_to_battlefield(0, atk_def);
+        g.clear_sickness(atk);
+        let mut wall = catalog::grizzly_bears();
+        wall.name = "Indestructo"; wall.power = 1; wall.toughness = 1;
+        wall.keywords.push(crate::card::Keyword::Indestructible);
+        let wall = g.add_card_to_battlefield(1, wall);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk, target: AttackTarget::Player(1),
+        }])).expect("declare attacker");
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(wall, atk)], "indestructible 1/1 walls the 5/5 for free");
+    }
+
     /// The bot won't declare a CanAttackOnlyIfDefenderControls attacker
     /// (Dandân) into a defender whose board fails the filter — doing so
     /// would get the whole batch rejected by the engine.
@@ -2821,6 +4613,76 @@ mod tests {
         panic!("bot never cast the adventure half");
     }
 
+    /// CR 702.187 — the bot recasts a card discarded this turn from its
+    /// graveyard for the mayhem cost (Electro's Bolt as removal).
+    #[test]
+    fn bot_casts_mayhem_spell_from_graveyard() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let bolt = g.add_card_to_hand(0, catalog::electros_bolt());
+        // Discard the Bolt this turn so its Mayhem cast is legal.
+        let mut events = Vec::new();
+        g.discard_card(0, bolt, &mut events);
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastMayhem { card_id, .. } = action {
+                assert_eq!(card_id, bolt, "bot recasts Electro's Bolt via Mayhem");
+                let _ = bear;
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never cast the Mayhem spell");
+    }
+
+    /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on
+    /// Disruptive Stormbrood) when it can't yet afford the Dragon.
+    #[test]
+    fn bot_casts_omen_half_as_removal() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, catalog::disruptive_stormbrood());
+        // {1}{B}: enough for Petty Revenge, not the {4}{G} creature.
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastOmen { card_id, .. } = action {
+                assert_eq!(card_id, id, "bot casts Petty Revenge as removal");
+                let _ = bear;
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never cast the Omen half");
+    }
+
+    /// CR 702.78 — the bot conspires Burn Trail when it controls two untapped
+    /// creatures sharing its color, tapping them to copy the spell.
+    #[test]
+    fn bot_conspires_burn_trail_when_able() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::burn_trail());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.add_card_to_battlefield(0, catalog::goblin_guide());
+        g.add_card_to_battlefield(0, catalog::goblin_guide());
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastSpellConspire { card_id, .. } = action {
+                assert_eq!(card_id, id, "bot conspires Burn Trail");
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never conspired");
+    }
+
     /// When forced to chump (life threatened, no clean kill), the bot
     /// prefers fully blocking a non-trampler over a trampler — a chump
     /// against a trampler only stops `blocker_toughness` of its damage
@@ -2861,6 +4723,65 @@ mod tests {
             "chump the non-trampler (saves 4) over the trampler (saves only 3)");
     }
 
+    /// CR 306.7 — the bot chump-blocks to save a planeswalker it controls
+    /// when the attackers aimed at it are lethal to its loyalty, even at a
+    /// healthy life total. (Push claude/modern_decks.)
+    #[test]
+    fn bot_chumps_to_save_a_doomed_planeswalker() {
+        use crate::card::{CardDefinition, CardType, CounterType};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Raider", card_types: vec![CardType::Creature], power: 3, toughness: 3,
+            ..Default::default()
+        });
+        // The bot (seat 1) controls a low-loyalty planeswalker and a 0/3 wall.
+        let pw = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Walker", card_types: vec![CardType::Planeswalker], base_loyalty: 2,
+            ..Default::default()
+        });
+        if let Some(c) = g.battlefield_find_mut(pw) {
+            c.counters.insert(CounterType::Loyalty, 2);
+        }
+        let wall = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Wall", card_types: vec![CardType::Creature], power: 0, toughness: 3,
+            ..Default::default()
+        });
+        g.players[1].life = 20; // NOT life-threatened — only the walker is at risk.
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Planeswalker(pw) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(wall, atk)],
+            "the wall chumps to keep the 3-power attacker off the 2-loyalty walker");
+    }
+
+    /// The flip side of the above: when the planeswalker would survive the
+    /// swing (loyalty > incoming), the bot doesn't waste a blocker on it.
+    #[test]
+    fn bot_does_not_chump_for_a_safe_planeswalker() {
+        use crate::card::{CardDefinition, CardType, CounterType};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Raider", card_types: vec![CardType::Creature], power: 3, toughness: 3,
+            ..Default::default()
+        });
+        let pw = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Walker", card_types: vec![CardType::Planeswalker], base_loyalty: 5,
+            ..Default::default()
+        });
+        if let Some(c) = g.battlefield_find_mut(pw) {
+            c.counters.insert(CounterType::Loyalty, 5);
+        }
+        g.add_card_to_battlefield(1, CardDefinition {
+            name: "Wall", card_types: vec![CardType::Creature], power: 0, toughness: 3,
+            ..Default::default()
+        });
+        g.players[1].life = 20;
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Planeswalker(pw) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.is_empty(), "3 damage to a 5-loyalty walker isn't worth a chump");
+    }
+
     /// CR 702.147 — a Decayed creature can't block, so the bot must never
     /// offer it as a blocker even when life-threatened (an illegal block
     /// would get the whole DeclareBlockers batch rejected).
@@ -2888,6 +4809,69 @@ mod tests {
         g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(!blocks.iter().any(|(b, _)| *b == zombie), "decayed creature is never declared as a blocker");
+    }
+
+    /// CR 509.1b — facing a "can't be blocked except by three or more" lethal
+    /// attacker, the bot either commits ≥3 blockers or none. With exactly three
+    /// idle bodies and lethal incoming, it gangs all three (never an illegal
+    /// 1–2 block).
+    #[test]
+    fn bot_meets_min_block_count_for_cant_be_blocked_except_by_n() {
+        use crate::card::{CardDefinition, CardType, Keyword};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Ulamog Spawn",
+            card_types: vec![CardType::Creature],
+            power: 6,
+            toughness: 6,
+            keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+            ..Default::default()
+        });
+        let chumps: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, CardDefinition {
+            name: "Chump",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        })).collect();
+        g.players[1].life = 1; // lethal incoming
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        let on_atk = blocks.iter().filter(|(_, a)| *a == atk).count();
+        assert_eq!(on_atk, 3, "gangs all three to satisfy the 3-blocker minimum");
+        assert!(chumps.iter().all(|c| blocks.iter().any(|(b, _)| b == c)));
+    }
+
+    /// With only two bodies against the same "≥3 blockers" attacker, the bot
+    /// drops the block entirely rather than submit an illegal 2-creature batch.
+    #[test]
+    fn bot_drops_block_when_min_count_unreachable() {
+        use crate::card::{CardDefinition, CardType, Keyword};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Ulamog Spawn",
+            card_types: vec![CardType::Creature],
+            power: 6,
+            toughness: 6,
+            keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+            ..Default::default()
+        });
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, CardDefinition {
+                name: "Chump",
+                card_types: vec![CardType::Creature],
+                power: 1,
+                toughness: 1,
+                ..Default::default()
+            });
+        }
+        g.players[1].life = 1;
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks.iter().filter(|(_, a)| *a == atk).count(), 0,
+            "two blockers can't legally block a ≥3 attacker — declares none");
     }
 
     /// CR 702.16e — the bot treats a block by a protection-from-the-attacker's
@@ -3400,6 +5384,58 @@ mod tests {
         }
     }
 
+    /// The bot casts an MDFC's back face from hand when the front is
+    /// unaffordable: Wandering Archaic ({5} creature) // Explore the Vastlands
+    /// ({4} sorcery), with only {4} in the pool.
+    #[test]
+    fn bot_casts_mdfc_back_face_from_hand() {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let id = g.add_card_to_hand(0, catalog::wandering_archaic());
+        g.players[0].mana_pool.add_colorless(4); // affords the {4} back, not the {5} front
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellBack { card_id, .. } => assert_eq!(card_id, id),
+            other => panic!("expected a back-face cast, got {other:?}"),
+        }
+    }
+
+    /// The bot casts an MDFC's back face from the graveyard when it carries the
+    /// `may_cast_back_from_graveyard` permission (Pestilent Cauldron after its
+    /// sacrifice → Restorative Burst).
+    #[test]
+    fn bot_casts_mdfc_back_face_from_graveyard() {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let pc = g.add_card_to_graveyard(0, catalog::pestilent_cauldron());
+        g.players[0]
+            .graveyard
+            .iter_mut()
+            .find(|c| c.id == pc)
+            .unwrap()
+            .may_cast_back_from_graveyard = true;
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2); // {2}{B} for Restorative Burst
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellBack { card_id, .. } => assert_eq!(card_id, pc),
+            other => panic!("expected a graveyard back-face cast, got {other:?}"),
+        }
+    }
+
+    /// The bot activates an Unearth ability (CR 702.84) from its graveyard when
+    /// it can afford it (a `from_graveyard` activated ability).
+    #[test]
+    fn bot_unearths_from_graveyard() {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let dragger = g.add_card_to_graveyard(0, catalog::viscera_dragger());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1); // {1}{B} unearth cost
+        match main_phase_action(&g, 0) {
+            GameAction::ActivateAbility { card_id, .. } => assert_eq!(card_id, dragger),
+            other => panic!("expected an unearth activation, got {other:?}"),
+        }
+    }
+
     #[test]
     fn bot_does_not_try_to_tap_stolen_land() {
         let mut g = two_player_game();
@@ -3527,6 +5563,45 @@ mod tests {
             "bot fetches the Island (Blue uncovered) over a third Forest");
     }
 
+    /// The bot's ChooseTarget heuristic votes/targets the opponent's biggest
+    /// permanent, not the first legal one.
+    #[test]
+    fn bot_choose_target_hits_opponents_biggest() {
+        use crate::decision::DecisionAnswer;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        let mut dino = catalog::grizzly_bears();
+        dino.name = "Dino"; dino.power = 6; dino.toughness = 6;
+        let big = g.add_card_to_battlefield(1, dino);
+        let legal = vec![Target::Permanent(small), Target::Permanent(big)];
+        match decide_choose_target(&g, 0, &legal) {
+            DecisionAnswer::Target(Target::Permanent(id)) => {
+                assert_eq!(id, big, "bot targets the 6/6 over the 2/2");
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+    }
+
+    /// Forced to choose among its own permanents, the bot gives up the smallest.
+    #[test]
+    fn bot_choose_target_sacrifices_own_smallest() {
+        use crate::decision::DecisionAnswer;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let mut dino = catalog::grizzly_bears();
+        dino.name = "Dino"; dino.power = 6; dino.toughness = 6;
+        let big = g.add_card_to_battlefield(0, dino);
+        let legal = vec![Target::Permanent(big), Target::Permanent(small)];
+        match decide_choose_target(&g, 0, &legal) {
+            DecisionAnswer::Target(Target::Permanent(id)) => {
+                assert_eq!(id, small, "bot gives up its 2/2, keeps the 6/6");
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+    }
+
     /// With no basic land among the candidates the bot still fetches the
     /// first option rather than fizzling like AutoDecider.
     #[test]
@@ -3590,9 +5665,30 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, &candidates, 1) {
+        match decide_choose_cards(&g, 0, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// `decide_choose_cards` over battlefield creatures (Archipelagore's tap)
+    /// targets opponents' biggest creature, never the bot's own.
+    #[test]
+    fn bot_choose_cards_taps_enemy_creatures() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        let big = g.add_card_to_battlefield(1, catalog::shivan_dragon());   // 5/5
+        let candidates = vec![
+            (mine, "Grizzly Bears".to_string()),
+            (small, "Grizzly Bears".to_string()),
+            (big, "Shivan Dragon".to_string()),
+        ];
+        match decide_choose_cards(&g, 0, &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
+                "bot taps the opponent's biggest creature, not its own"),
             other => panic!("expected Cards, got {other:?}"),
         }
     }
@@ -3691,7 +5787,7 @@ mod stack_response_tests {
         g.priority.player_with_priority = 0;
         // P0 casts a 7-drop.
         let wurm = g.add_card_to_hand(0, catalog::pelakka_wurm());
-        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 3);
         g.players[0].mana_pool.add_colorless(5);
         g.perform_action(GameAction::CastSpell {
             card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -3730,5 +5826,223 @@ mod stack_response_tests {
         let action = bot.next_action(&g, 1).expect("bot acts");
         assert!(matches!(action, GameAction::PassPriority),
             "a 2-drop bear isn't worth the counter: {action:?}");
+    }
+
+    /// The bot plays a color-fixing land over an off-color one: with a green
+    /// spell in hand and no green source, it plays the Forest, not the Mountain.
+    #[test]
+    fn bot_plays_color_fixing_land() {
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let _mountain = g.add_card_to_hand(0, catalog::mountain());
+        let forest = g.add_card_to_hand(0, catalog::forest());
+        g.add_card_to_hand(0, catalog::grizzly_bears()); // wants green
+        assert_eq!(pick_land_to_play(&g, 0), Some(forest),
+            "fixes the missing green over the off-color Mountain");
+    }
+
+    /// A creature-only `{X}: deal X damage to target creature` spell caps X at
+    /// the toughest opposing creature — the bot doesn't overkill a 2/2.
+    #[test]
+    fn max_affordable_x_caps_creature_only_burn_at_lethal() {
+        use crate::card::{CardDefinition, CardType};
+        use crate::effect::shortcut::target_filtered;
+        use crate::effect::{Effect, Value};
+        use crate::card::SelectionRequirement;
+        let mut g = two_player_game();
+        let zap = CardDefinition {
+            name: "Test Creature Zap",
+            cost: crate::mana::cost(&[crate::mana::x(), crate::mana::r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::XFromCost,
+            },
+            ..Default::default()
+        };
+        let id = g.add_card_to_hand(0, zap);
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — toughest opp
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(6);
+        assert_eq!(max_affordable_x(&g, 0, &card), 2,
+            "X capped at the 2/2's toughness, not the full {{6}} pool");
+    }
+
+    /// Player-targetable burn (Banefire) is not capped — the bot still dumps
+    /// its whole pool into X.
+    #[test]
+    fn max_affordable_x_does_not_cap_any_target_burn() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::banefire()); // any target
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(6);
+        assert_eq!(max_affordable_x(&g, 0, &card), 6, "Banefire keeps the full X");
+    }
+
+    /// An Unblockable attacker swings even into a bigger blocker — no opposing
+    /// creature can legally block it, so the suicide filter doesn't hold it
+    /// back (generalized evasion check).
+    #[test]
+    fn bot_attacks_with_unblockable_into_bigger_blocker() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let mut ghost = catalog::grizzly_bears();
+        ghost.name = "Ghost";
+        ghost.power = 1;
+        ghost.toughness = 1;
+        ghost.keywords.push(crate::card::Keyword::Unblockable);
+        let atk = g.add_card_to_battlefield(0, ghost);
+        g.clear_sickness(atk);
+        // A lone 5/5 that would trade up against a naive ground attacker.
+        let mut big = catalog::grizzly_bears();
+        big.name = "Wall"; big.power = 5; big.toughness = 5;
+        g.add_card_to_battlefield(1, big);
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|d| d.attacker == atk),
+                    "unblockable attacker swings past a bigger blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// With only a couple of lands in play but a fistful of duplicate lands in
+    /// hand, a forced discard pitches a surplus land rather than a real spell.
+    #[test]
+    fn bot_discard_pitches_surplus_land_not_a_spell() {
+        let mut g = two_player_game();
+        // 2 lands in play → wants ~4 more; a 5th land in hand is surplus.
+        for _ in 0..2 { g.add_card_to_battlefield(0, catalog::forest()); }
+        let mut hand: Vec<(crate::card::CardId, String)> = Vec::new();
+        for _ in 0..5 {
+            let id = g.add_card_to_hand(0, catalog::forest());
+            hand.push((id, "Forest".to_string()));
+        }
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        hand.push((bear, "Grizzly Bears".to_string()));
+        let ans = decide_self_discard(&g, 0, &hand, 1);
+        match ans {
+            crate::decision::DecisionAnswer::Discard(ids) => {
+                assert_eq!(ids.len(), 1);
+                let pitched = g.players[0].hand.iter().find(|c| c.id == ids[0]).unwrap();
+                assert!(pitched.definition.is_land(), "pitched a surplus land, kept the spell");
+            }
+            other => panic!("expected Discard, got {:?}", other),
+        }
+    }
+
+    /// The bot accepts an exploit trigger when it has a spare creature (here a
+    /// second body), instead of always declining the sacrifice.
+    #[test]
+    fn bot_takes_exploit_with_a_spare_creature() {
+        let mut g = two_player_game();
+        let drowner = g.add_card_to_battlefield(0, catalog::gurmag_drowner());
+        // No other creature → keep it (would have to sacrifice itself; allowed
+        // only by a >1 count, so a lone exploiter declines).
+        assert!(!optional_trigger_beneficial(&g, drowner, "Exploit — sacrifice a creature?"),
+            "lone exploiter with nothing to spare declines");
+        g.add_card_to_battlefield(0, catalog::grizzly_bears()); // a spare body
+        assert!(optional_trigger_beneficial(&g, drowner, "Exploit — sacrifice a creature?"),
+            "with a spare creature the bot exploits for value");
+    }
+
+    /// The bot crews an uncrewed Vehicle with a spare creature so it can swing.
+    #[test]
+    fn bot_crews_a_vehicle() {
+        let mut g = two_player_game();
+        let veh = g.add_card_to_battlefield(0, catalog::broadcast_rambler()); // Crew 1, 5/4
+        // No creatures yet → nothing to crew with.
+        assert!(pick_crew_vehicle(&g, 0).is_none(), "no crewers, no crew");
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 ≥ 1
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        assert!(
+            matches!(pick_crew_vehicle(&g, 0),
+                Some(GameAction::Crew { vehicle, .. }) if vehicle == veh),
+            "crews the Vehicle with the spare creature",
+        );
+    }
+
+    /// The bot fires a "deal N to each opponent" ability for lethal, and only
+    /// then (not to chip).
+    #[test]
+    fn bot_reach_burn_only_for_lethal() {
+        let mut g = two_player_game();
+        let haz = g.add_card_to_battlefield(0, catalog::hazoret_the_fervent());
+        g.clear_sickness(haz);
+        g.add_card_to_hand(0, catalog::mountain()); // discard fodder
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        // Opponent at 5: the 2-damage burn isn't lethal, so the bot holds it.
+        g.players[1].life = 5;
+        assert!(pick_reach_burn(&g, 0).is_none(), "won't chip with a non-lethal burn");
+        // Opponent at 2: now it's lethal, so the bot fires it.
+        g.players[1].life = 2;
+        assert!(matches!(pick_reach_burn(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == haz),
+            "fires the burn for lethal");
+    }
+
+    /// The bot replays a self-returning graveyard creature (Llanowar Greenwidow)
+    /// even though its ability has no exile-self cost.
+    #[test]
+    fn bot_replays_self_returning_graveyard_creature() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_graveyard(0, catalog::llanowar_greenwidow());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(7);
+        assert!(matches!(pick_graveyard_recursion(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
+            "bot activates the graveyard self-return");
+    }
+
+    /// The bot drives Brass Squire's two-slot attach ability: an Equipment onto
+    /// the biggest creature.
+    #[test]
+    fn bot_activates_brass_squire_attach() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let squire = g.add_card_to_battlefield(0, catalog::brass_squire());
+        g.add_card_to_battlefield(0, catalog::bonesplitter());
+        g.clear_sickness(squire);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let action = pick_attach_ability(&g, 0).expect("bot drives the attach ability");
+        // Slot 1 (the wearer) is the highest-power creature — the bear, not the
+        // 1/3 Squire.
+        assert!(matches!(action,
+            GameAction::ActivateAbility { card_id, ref additional_targets, .. }
+                if card_id == squire && additional_targets == &vec![crate::game::Target::Permanent(bear)]));
+    }
+
+    /// The bot cracks a Lander token for ramp when it has spare mana and a basic
+    /// still in the library — but not when the library has no basic to fetch.
+    #[test]
+    fn bot_cracks_lander_for_ramp() {
+        let mut g = two_player_game();
+        let lander = g.add_token_to_battlefield(0, &crabomination_base::tokens::lander_token());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(2);
+        // No basic in library → don't waste the Lander.
+        assert!(pick_crack_lander(&g, 0).is_none(), "no basic to fetch → hold the Lander");
+        g.add_card_to_library(0, catalog::forest());
+        assert!(matches!(pick_crack_lander(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == lander),
+            "with a basic in library and spare mana, the bot ramps");
     }
 }

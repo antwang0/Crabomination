@@ -15,7 +15,8 @@ mod targeting;
 // Token factories now live in `crabomination_base`; re-exported here so the
 // engine's `game::effects::*_token` paths keep working.
 pub use crabomination_base::tokens::{
-    blood_token, clue_token, detective_token, food_token, token_to_card_definition, treasure_token,
+    blood_token, clue_token, detective_token, food_token, incubator_token,
+    token_to_card_definition, treasure_token,
 };
 pub(crate) use delayed::delayed_kind_from_effect;
 pub(crate) use events::{emblem_event_matches, event_matches_spec, event_subject};
@@ -136,6 +137,10 @@ pub struct EffectContext {
     /// the resolving `CardInstance.bargained` flag; read by
     /// `Predicate::SpellWasBargained`. Defaults to `false`.
     pub bargained: bool,
+    /// True if the resolving spell was cast for its Mayhem cost (CR 702.187).
+    /// Stamped from the resolving `CardInstance.cast_via_mayhem` flag; read by
+    /// `Predicate::SpellWasMayhem`. Defaults to `false`.
+    pub cast_via_mayhem: bool,
     /// True if the resolving spell was entwined (CR 702.41): its
     /// `ChooseMode` runs every mode in order. Defaults to `false`.
     pub entwined: bool,
@@ -157,6 +162,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -235,6 +241,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -258,6 +265,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -280,6 +288,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -559,7 +568,8 @@ impl GameState {
         if (!spec.extra_triggered.is_empty()
             || !spec.extra_keywords.is_empty()
             || !spec.extra_card_types.is_empty()
-            || spec.keep_name)
+            || spec.keep_name
+            || spec.non_legendary)
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             let def = std::sync::Arc::make_mut(&mut c.definition);
@@ -577,6 +587,10 @@ impl GameState {
             }
             if spec.keep_name {
                 def.name = original_name;
+            }
+            // CR 707.2e — strip Legendary so the copy dodges the legend rule.
+            if spec.non_legendary {
+                def.supertypes.retain(|s| *s != crate::card::Supertype::Legendary);
             }
         }
         true
@@ -618,6 +632,62 @@ impl GameState {
         }
     }
 
+    /// Rough estimate of how much a villainous-choice option hurts the chooser
+    /// (`ctx.controller`), used to pick the lesser evil (CR 701.55). Higher =
+    /// worse for the chooser. An option the chooser can't perform scores 0
+    /// (CR 701.55b — they may pick an impossible option and do nothing).
+    fn villainous_self_harm(&self, opt: &Effect, ctx: &EffectContext) -> i64 {
+        match opt {
+            Effect::LoseLife { who, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i64;
+                if self.resolve_selector(who, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller)) {
+                    n
+                } else {
+                    0
+                }
+            }
+            Effect::DealDamage { to, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i64;
+                if self.resolve_selector(to, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller)) {
+                    n
+                } else {
+                    0
+                }
+            }
+            Effect::Discard { who, amount, .. } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i64;
+                let hits_self = self.resolve_selector(who, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller));
+                if !hits_self { return 0; }
+                let have = self.players[ctx.controller].hand.len() as i64;
+                n.min(have) * 2
+            }
+            Effect::Sacrifice { who, filter, count } | Effect::SacrificeGreatestMV { who, filter, count, .. } => {
+                let n = self.evaluate_value(count, ctx).max(0) as i64;
+                let owns = self.resolve_selector(who, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller));
+                let have = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                ctx.controller,
+                                ctx.source,
+                            )
+                    })
+                    .count() as i64;
+                if owns { n.min(have) * 4 } else { 0 }
+            }
+            Effect::Mill { amount, .. } => self.evaluate_value(amount, ctx).max(0) as i64,
+            Effect::Seq(v) => v.iter().map(|e| self.villainous_self_harm(e, ctx)).sum(),
+            // Options that primarily benefit the *caster* (free cast, token
+            // copy of the chooser's creature, caster draws): a moderate fixed
+            // cost so the chooser weighs it against direct self-harm.
+            _ => 3,
+        }
+    }
+
     pub(crate) fn resolve_effect(
         &mut self,
         effect: &Effect,
@@ -628,6 +698,7 @@ impl GameState {
         self.sacrificed_power = None;
         self.sacrificed_toughness = None;
         self.sacrificed_mana_value = None;
+        self.tapped_for_cost_power = None;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
         // to tokens created by *this* resolution.
@@ -646,7 +717,9 @@ impl GameState {
         self.cards_discarded_per_player_this_resolution.clear();
         self.nonland_cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
+        self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
+        self.excess_damage_this_resolution = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         let mut events = vec![];
@@ -915,15 +988,6 @@ impl GameState {
             Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
-                // CR 706.6 — "whenever a player rolls one or more dice" fires
-                // once for the whole roll. Emitted before the per-die result
-                // dispatch so the roll-count is known to listeners.
-                if n > 0 {
-                    events.push(GameEvent::DiceRolled {
-                        player: ctx.controller,
-                        count: n as u32,
-                    });
-                }
                 // CR 706.2 — the flat result modifier applied to every die
                 // this resolution.
                 let modifier = self.evaluate_value(modifier, ctx);
@@ -941,6 +1005,8 @@ impl GameState {
                 };
                 // CR 706.5 — track natural faces to detect "doubles".
                 let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
+                // Greatest modified result this roll, for result-gated triggers.
+                let mut high_rolled: u8 = 0;
                 for _ in 0..n {
                     let mut natural = roll_one(self);
                     // CR 706.2b — reroll a low natural result exactly once.
@@ -953,6 +1019,7 @@ impl GameState {
                     // The result may exceed `sides`, letting a top "N+"
                     // arm catch boosted rolls.
                     let rolled = (natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
+                    high_rolled = high_rolled.max(rolled);
                     // CR 706.3a — first matching arm fires. If no arm
                     // matches the roll, the die has no result-table
                     // effect (per CR 706.3a "If the result was in this
@@ -975,6 +1042,17 @@ impl GameState {
                     if sorted.windows(2).any(|w| w[0] == w[1]) {
                         self.run_effect(doubles_effect, ctx, events)?;
                     }
+                }
+                // CR 706.6 — "whenever a player rolls one or more dice" fires
+                // once for the whole roll, after the results resolve. Carries
+                // the greatest result so result-gated triggers ("roll a 5 or
+                // higher") can filter on it via `event_amount`.
+                if n > 0 {
+                    events.push(GameEvent::DiceRolled {
+                        player: ctx.controller,
+                        count: n as u32,
+                        high: high_rolled,
+                    });
                 }
                 Ok(())
             }
@@ -1348,6 +1426,118 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Reflexive { body } => {
+                // CR 603.7 — a "when you do" reflexive payoff. Its targets are
+                // chosen now (after the gating cost was paid), not at the outer
+                // trigger. Auto-target the body fresh and thread the picks
+                // through a derived context, mirroring the descend/forage path.
+                let (slot0, additional) =
+                    self.auto_targets_for_effect_all_slots(body, ctx.controller, None);
+                let mut body_ctx = ctx.clone();
+                body_ctx.targets = slot0.into_iter().chain(additional).collect();
+                self.run_effect(body, &body_ctx, events)?;
+                Ok(())
+            }
+
+            Effect::MaySacrifice {
+                description,
+                filter,
+                count,
+                then,
+                else_,
+            } => {
+                // Reflexive sacrifice cost: ask yes/no (only when the
+                // controller actually has a legal sacrifice), then sacrifice
+                // the weakest non-source matching permanent(s) and run `then`.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let source_id = ctx.source;
+                let candidates = self.sacrifice_candidates(ctx.controller, filter, source_id);
+                if n == 0 || candidates.len() < n {
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                    return Ok(());
+                }
+                let source = source_id.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
+                    let ids = self.auto_pick_sacrifices(&candidates, n, source_id, false, false);
+                    for id in ids {
+                        self.sacrifice_one(id, ctx.controller, events);
+                    }
+                    self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::MayTap {
+                description,
+                filter,
+                count,
+                then,
+                else_,
+            } => {
+                // Reflexive tap cost: ask yes/no (only when the controller has
+                // enough untapped matches), tap the lowest-impact ones, run `then`.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && !c.tapped
+                            && self.evaluate_requirement_static(
+                                filter, &Target::Permanent(c.id), ctx.controller, ctx.source,
+                            )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if n == 0 || candidates.len() < n {
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor, ctx.controller, description.clone(), source, effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
+                    // Tap non-lands first (preserve mana), then lowest mana value.
+                    candidates.sort_by_key(|id| {
+                        self.battlefield_find(*id)
+                            .map(|c| (c.definition.is_land(), c.definition.cost.cmc()))
+                            .unwrap_or((true, 0))
+                    });
+                    for id in candidates.into_iter().take(n) {
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: id });
+                        }
+                    }
+                    self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::DealDamage { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
@@ -1355,6 +1545,34 @@ impl GameState {
                     // CR 702.90b — pass the source so infect routes
                     // player-target damage to poison counters.
                     self.deal_damage_to_from(ent, amt, ctx.source, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            // CR 120.10 — deal `amount` to a creature; damage past its
+            // remaining toughness (lethal) spills onto its controller.
+            Effect::DealDamageExcessToController { to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                for ent in self.resolve_selector(to, ctx) {
+                    let EntityRef::Permanent(id) = ent else { continue };
+                    let Some(c) = self.battlefield_find(id) else { continue };
+                    if !c.definition.is_creature() { continue; }
+                    let controller = c.controller;
+                    let already = c.damage;
+                    let lethal = self
+                        .computed_permanent(id)
+                        .map(|cp| cp.toughness.max(0) as u32)
+                        .unwrap_or(0)
+                        .saturating_sub(already);
+                    let excess = amt.saturating_sub(lethal);
+                    self.deal_damage_to_from(ent, amt, ctx.source, events);
+                    if excess > 0 {
+                        self.deal_damage_to_from(
+                            EntityRef::Player(controller), excess, ctx.source, events);
+                    }
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -1384,6 +1602,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(CardId(0)),
                     total: amt,
                     targets: targets.clone(),
+                    noun: "damage".into(),
                 };
                 let answer = match self.stashed_resolution_answer.take() {
                     Some(a) => a,
@@ -1430,16 +1649,104 @@ impl GameState {
                     .collect();
                 for id in targets {
                     let ctrl = self.battlefield_find(id).map(|c| c.controller);
-                    let mut n = 1u32;
-                    if let Some(ctrl) = ctrl {
-                        for _ in 0..self.counter_doublers_for(ctrl) {
-                            n = n.saturating_mul(2);
-                        }
-                    }
+                    let n = ctrl
+                        .map(|c| self.scaled_counter_count(c, CounterType::PlusOnePlusOne, 1, true))
+                        .unwrap_or(1);
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded {
                             card_id: id, counter_type: CounterType::PlusOnePlusOne, count: n,
+                        });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(id);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            // "Do X to each of up to N target permanents." Targets were
+            // collected into `ctx.targets` across slots `0..max_targets` at
+            // cast time; run the inner effect once per still-present target
+            // with `Selector::Target(0)` rebound to it.
+            Effect::ApplyToTargets { effect: inner, .. } => {
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| match t {
+                        Target::Player(p) => *p < self.players.len(),
+                        // Accept any still-locatable card target — not just
+                        // battlefield permanents — so an inner Move can relocate
+                        // a targeted graveyard/exile card (Monastery Messenger's
+                        // "put a card from your graveyard on top of your library").
+                        Target::Permanent(id) => self.find_card_anywhere(*id).is_some(),
+                    })
+                    .cloned()
+                    .collect();
+                for t in targets {
+                    let mut sub = ctx.clone();
+                    sub.targets = vec![t];
+                    self.run_effect(inner, &sub, events)?;
+                }
+                Ok(())
+            }
+
+            // CR 601.2d — distribute `total` counters among the chosen
+            // targets. Mirrors `DealDamageDivided`: targets occupy slots
+            // `0..max_targets`; the split is decided here (reusing the
+            // DivideDamage decision) so a wants-UI seat / test can choose
+            // it (AutoDecider spreads evenly).
+            Effect::DistributeCounters { total, counter, .. } => {
+                let counter = *counter;
+                let amt = self.evaluate_value(total, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| matches!(t, Target::Permanent(id) if self.battlefield_find(*id).is_some()))
+                    .cloned()
+                    .collect();
+                if targets.is_empty() { return Ok(()); }
+                let decision = Decision::DivideDamage {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    total: amt,
+                    targets: targets.clone(),
+                    noun: counter_noun(counter).into(),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::DivisionAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let mut division = match answer {
+                    crate::decision::DecisionAnswer::DamageDivision(v) => v,
+                    _ => vec![],
+                };
+                if division.len() != targets.len() || division.iter().sum::<u32>() != amt {
+                    division = crate::decision::even_damage_split(amt, targets.len());
+                }
+                for (t, n) in targets.iter().zip(division) {
+                    if n == 0 { continue; }
+                    let Target::Permanent(id) = t else { continue };
+                    let id = *id;
+                    // CR 614.16 — counter replacement effects (Doubling Season,
+                    // Hardened Scales) scale the placement.
+                    let n = self
+                        .battlefield_find(id)
+                        .map(|c| (c.controller, c.definition.is_creature()))
+                        .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, counter, n, cre))
+                        .unwrap_or(n);
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(counter, n);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: id, counter_type: counter, count: n,
                         });
                     }
                     self.permanents_gained_counter_this_turn.insert(id);
@@ -1497,6 +1804,32 @@ impl GameState {
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::DealDamageEqualToPower { source, target } => {
+                let src_id = self.resolve_selector(source, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) => Some(c),
+                    _ => None,
+                });
+                let tgt_id = self.resolve_selector(target, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) => Some(c),
+                    _ => None,
+                });
+                let (Some(src_id), Some(tgt_id)) = (src_id, tgt_id) else {
+                    return Ok(());
+                };
+                let power = self.computed_permanent(src_id).map(|cp| cp.power).unwrap_or(0);
+                if power > 0 {
+                    self.deal_damage_to_from(
+                        EntityRef::Permanent(tgt_id),
+                        power as u32,
+                        Some(src_id),
+                        events,
+                    );
+                    let mut sba = self.check_state_based_actions();
+                    events.append(&mut sba);
+                }
                 Ok(())
             }
 
@@ -1572,6 +1905,24 @@ impl GameState {
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::DealHalfLifeDamage { to, rounded_up } => {
+                // Per-player: each takes damage equal to half their own total.
+                let seats: Vec<usize> = self
+                    .resolve_selector(to, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let life = self.players[p].life.max(0);
+                    let amt = if *rounded_up { (life + 1) / 2 } else { life / 2 } as u32;
+                    if amt == 0 { continue; }
+                    self.deal_damage_to_from(EntityRef::Player(p), amt, ctx.source, events);
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -1726,10 +2077,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LifeGainLockGame { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].cannot_gain_life = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantSpellsUncounterableThisTurn { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
                         self.players[p].spells_uncounterable_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantHexproofFromColorThisTurn { who, colors } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for c in colors {
+                            if !self.players[p].hexproof_from_colors_this_turn.contains(c) {
+                                self.players[p].hexproof_from_colors_this_turn.push(*c);
+                            }
+                        }
                     }
                 }
                 Ok(())
@@ -1787,9 +2160,12 @@ impl GameState {
             }
 
             Effect::AddEnergy(amount) => {
-                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
-                if amt == 0 { return Ok(()); }
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
+                if base == 0 { return Ok(()); }
                 let p = ctx.controller;
+                // CR 122 / 614.16 — Winding Constrictor's player half also boosts
+                // {E} a player gets ("that many plus one").
+                let amt = base.saturating_add(self.extra_any_kind_adders_for(p));
                 self.players[p].energy = self.players[p].energy.saturating_add(amt);
                 events.push(GameEvent::EnergyGained { player: p, amount: amt });
                 Ok(())
@@ -1800,6 +2176,77 @@ impl GameState {
                 if self.players[p].energy >= *amount {
                     self.players[p].energy -= *amount;
                     self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::PayAnyEnergyDealDamage { to } => {
+                let p = ctx.controller;
+                let avail = self.players[p].energy;
+                if avail == 0 { return Ok(()); }
+                // Resolve the (single) target.
+                let Some(ent) = self.resolve_selector(to, ctx).into_iter().next() else {
+                    return Ok(());
+                };
+                // Heuristic: pay exactly lethal to a creature, else dump it all.
+                let want = match ent {
+                    EntityRef::Permanent(cid) => self
+                        .computed_permanent(cid)
+                        .filter(|c| c.card_types.contains(&CardType::Creature))
+                        .map(|c| {
+                            let marked = self.battlefield_find(cid).map_or(0, |i| i.damage);
+                            (c.toughness.max(0) as u32).saturating_sub(marked)
+                        })
+                        .unwrap_or(avail),
+                    _ => avail,
+                };
+                let pay = want.max(1).min(avail);
+                self.players[p].energy -= pay;
+                self.run_effect(
+                    &Effect::DealDamage { to: to.clone(), amount: crate::effect::Value::Const(pay as i32) },
+                    ctx,
+                    events,
+                )?;
+                Ok(())
+            }
+
+            Effect::TimeTravel { who } => {
+                let Some(p) = self
+                    .resolve_selector(&Selector::Player(who.clone()), ctx)
+                    .into_iter()
+                    .find_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                else {
+                    return Ok(());
+                };
+                // Suspended cards p owns in exile → remove a time counter (cast
+                // sooner); removal-to-zero casts via the suspend funnel.
+                let suspended: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.owner == p && c.counter_count(CounterType::Time) > 0)
+                    .map(|c| c.id)
+                    .collect();
+                for id in suspended {
+                    let mut evs = self.remove_suspend_time_counter(id);
+                    events.append(&mut evs);
+                }
+                // Permanents p controls with time counters → add one (vanishing
+                // lives longer).
+                let perms: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.counter_count(CounterType::Time) > 0)
+                    .map(|c| c.id)
+                    .collect();
+                for id in perms {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(CounterType::Time, 1);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: id,
+                            counter_type: CounterType::Time,
+                            count: 1,
+                        });
+                    }
                 }
                 Ok(())
             }
@@ -1895,6 +2342,33 @@ impl GameState {
                                 self.lose_to_empty_draw(p);
                                 return Ok(());
                             }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DiscardHandDrawThatMany { who } => {
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for p in seats {
+                    // Capture the pre-discard hand size, then dump the whole hand.
+                    let hand: Vec<crate::card::CardId> =
+                        self.players[p].hand.iter().map(|c| c.id).collect();
+                    let n = hand.len();
+                    for cid in hand {
+                        self.discard_card(p, cid, events);
+                    }
+                    for _ in 0..n {
+                        if !self.draw_one(p, events) {
+                            self.lose_to_empty_draw(p);
+                            break;
                         }
                     }
                 }
@@ -2053,6 +2527,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileFromHand { who, amount } => {
+                // Player exiles `amount` cards from their hand. Auto-picks by
+                // hand order (a wants_ui client could surface a picker; the
+                // bot harness only cares which cards leave). Ashiok −3.
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            let Some(cid) = self.players[p].hand.first().map(|c| c.id) else {
+                                break;
+                            };
+                            let card = self.players[p].hand.remove(0);
+                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Mill { who, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -2078,6 +2572,46 @@ impl GameState {
             }
 
             Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
+
+            Effect::MillThenToHand { amount, filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
+                let mut milled: Vec<CardId> = Vec::new();
+                for _ in 0..n {
+                    if self.players[p].library.is_empty() { break; }
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
+                    milled.push(cid);
+                }
+                // Candidates: cards milled this way that are still in the
+                // graveyard and match `filter`.
+                let cands: Vec<(CardId, String)> = self.players[p].graveyard.iter()
+                    .filter(|c| milled.contains(&c.id)
+                        && crate::game::layers::requirement_matches_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if cands.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Put which card milled this way into your hand?".to_string(),
+                    candidates: cands,
+                    min: 1,
+                    max: 1,
+                });
+                if let DecisionAnswer::Cards(picked) = answer
+                    && let Some(cid) = picked.first()
+                    && let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid)
+                {
+                    let card = self.players[p].graveyard.remove(pos);
+                    self.players[p].hand.push(card);
+                }
+                Ok(())
+            }
 
 
             Effect::MillTwoRepeatSharedColor { who } => self.resolve_mill_two_repeat_shared_color(who, ctx, events),
@@ -2255,14 +2789,11 @@ impl GameState {
                 if already {
                     return Ok(());
                 }
-                // CR 614.16 — counter doublers scale monstrosity counters too.
+                // CR 614.16 — counter replacement effects scale monstrosity.
                 let ctrl = self.battlefield_find(src).map(|c| c.controller);
-                let mut count = base;
-                if let Some(ctrl) = ctrl {
-                    for _ in 0..self.counter_doublers_for(ctrl) {
-                        count = count.saturating_mul(2);
-                    }
-                }
+                let count = ctrl
+                    .map(|c| self.scaled_counter_count(c, CounterType::PlusOnePlusOne, base, true))
+                    .unwrap_or(base);
                 if let Some(c) = self.battlefield_find_mut(src) {
                     c.monstrous = true;
                     if count > 0 {
@@ -2293,6 +2824,16 @@ impl GameState {
                         && !c.goaded_by.contains(&goader)
                     {
                         c.goaded_by.push(goader);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::RemoveFromCombat { what } => {
+                // CR 506.4 — pull each targeted creature out of combat.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.remove_from_combat(cid);
                     }
                 }
                 Ok(())
@@ -2481,6 +3022,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MustBlockSource { what } => {
+                // CR 509.1c — force the target to block the source this turn
+                // if able (no untap, unlike Provoke). Matsu-Tribe Decoy.
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                    {
+                        c.must_block = source;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Explore { who } => {
                 // CR 701.40 — each resolved permanent explores: reveal the
                 // top card of its controller's library; a land goes to hand,
@@ -2512,11 +3068,9 @@ impl GameState {
                         self.players[controller].hand.push(card);
                     } else {
                         // Nonland revealed (or empty library): +1/+1 counter.
-                        // CR 614.1c — Hardened Scales-style doublers apply.
-                        let mut n = 1u32;
-                        for _ in 0..self.counter_doublers_for(controller) {
-                            n = n.saturating_mul(2);
-                        }
+                        // CR 614.16 — counter replacement effects apply.
+                        let n =
+                            self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, 1, true);
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.add_counters(CounterType::PlusOnePlusOne, n);
                             events.push(GameEvent::CounterAdded {
@@ -2527,7 +3081,11 @@ impl GameState {
                             self.permanents_gained_counter_this_turn.insert(cid);
                         }
                     }
-                    events.push(GameEvent::Explored { card_id: cid, controller });
+                    events.push(GameEvent::Explored {
+                        card_id: cid,
+                        controller,
+                        explored_land: is_land == Some(true),
+                    });
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -2587,7 +3145,13 @@ impl GameState {
                     ManaPayload::Colorless(v) => {
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         for _ in 0..n {
-                            self.players[p].mana_pool.add_colorless(mult);
+                            match restriction {
+                                // Powerstone tokens — restricted {C}.
+                                Some(r) => self.players[p]
+                                    .mana_pool
+                                    .add_restricted_colorless(mult, r),
+                                None => self.players[p].mana_pool.add_colorless(mult),
+                            }
                             events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                         }
                     }
@@ -2931,6 +3495,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DestroyEachNonlandWithManaValue { value } => {
+                use crate::card::SelectionRequirement as R;
+                let n = self.evaluate_value(value, ctx).max(0) as u32;
+                let req = R::Nonland.and(R::ManaValueExactly(n));
+                self.run_effect(
+                    &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::Regenerate { what } => {
                 // CR 701.15 — add one regeneration shield per resolved
                 // permanent. The shield is consumed by the next destruction
@@ -3079,6 +3654,47 @@ impl GameState {
                         bound_token: None,
                         fires_once: true,
                     });
+                }
+                Ok(())
+            }
+
+            Effect::HauntCreature { body } => {
+                // CR 702.55 — pick a creature to haunt (prefer an opponent's),
+                // exile the source card, and register the death-watch trigger.
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let Some(src) = ctx.source else { return Ok(()); };
+                let ctrl = ctx.controller;
+                let haunted = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && c.id != src)
+                    .min_by_key(|c| (c.controller == ctrl) as u8)
+                    .map(|c| c.id);
+                let Some(haunted) = haunted else { return Ok(()); };
+                // Creature haunt: the card is already in a graveyard (it died
+                // before this dies-trigger resolved) — move it straight to
+                // exile and register now. Spell haunt: the card is still mid-
+                // resolution off-stack, so stash for the post-resolution route.
+                let in_gy = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src));
+                if let Some(p) = in_gy {
+                    let pos = self.players[p].graveyard.iter().position(|c| c.id == src).unwrap();
+                    let card = self.players[p].graveyard.remove(pos);
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: src });
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctrl,
+                        source: src,
+                        kind: DelayedKind::WhenHauntedCreatureDies(haunted),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                } else {
+                    self.haunt_pending = Some((haunted, (**body).clone()));
                 }
                 Ok(())
             }
@@ -3253,6 +3869,73 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WillOfTheCouncilExile { filter } => {
+                // CR 701.31 — gather the candidate permanents (relative to the
+                // controller), then collect one vote per player.
+                let candidates: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // Vote order: controller first, then their opponents.
+                let mut seats = vec![ctx.controller];
+                seats.extend(self.opponents_of(ctx.controller));
+                let legal: Vec<Target> =
+                    candidates.iter().map(|id| Target::Permanent(*id)).collect();
+                let mut tally: std::collections::HashMap<CardId, u32> =
+                    std::collections::HashMap::new();
+                for seat in seats {
+                    let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        legal: legal.clone(),
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: format!("P{seat}: vote for a permanent"),
+                    });
+                    let voted = match answer {
+                        DecisionAnswer::Target(Target::Permanent(id))
+                            if candidates.contains(&id) =>
+                        {
+                            id
+                        }
+                        _ => candidates[0],
+                    };
+                    *tally.entry(voted).or_insert(0) += 1;
+                }
+                let max_votes = tally.values().copied().max().unwrap_or(0);
+                let losers: Vec<CardId> = candidates
+                    .iter()
+                    .copied()
+                    .filter(|id| tally.get(id).copied().unwrap_or(0) == max_votes && max_votes > 0)
+                    .collect();
+                for id in losers {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ExileChosenFromHandOrGraveyard { who, filter } => {
+                for p in self.resolve_players(who, ctx) {
+                    // Candidates across both zones; auto-pick the highest MV.
+                    let pick = self.players[p].hand.iter()
+                        .chain(self.players[p].graveyard.iter())
+                        .filter(|c| {
+                            self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source)
+                        })
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    if let Some(id) = pick {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSameNameAsTarget { what } => {
                 // Crumble to Dust / Surgical Extraction: exile the anchor
                 // (battlefield permanent or graveyard card), then exile every
@@ -3356,15 +4039,323 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RemoveFromCombat { what } => {
-                // CR 506.4 — the picked permanents stop attacking/blocking.
-                let ids: Vec<crate::card::CardId> = self
-                    .resolve_selector(what, ctx)
+            Effect::CycleRecurFromGraveyard { threshold } => {
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let Some(src) = ctx.source else { return Ok(()) };
+                // The cycled card must still be in its owner's graveyard.
+                let Some(card) = self.players[ctx.controller].graveyard.iter().find(|c| c.id == src)
+                else { return Ok(()) };
+                let name = card.definition.name.to_string();
+                let count = self.cycled_count_by_name.get(&name).copied().unwrap_or(0);
+                let dest = if count >= *threshold {
+                    ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }
+                } else {
+                    ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top }
+                };
+                self.move_card_to(src, &dest, ctx, events);
+                if count < *threshold {
+                    use rand::seq::SliceRandom;
+                    self.players[ctx.controller].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
+            Effect::ExileTopUntilPermanentToBattlefieldOrHand => {
+                use crate::card::{CardType, Zone};
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let permanent_types = [
+                    CardType::Artifact, CardType::Creature, CardType::Enchantment,
+                    CardType::Planeswalker, CardType::Battle,
+                ];
+                let mut hit: Option<crate::card::CardId> = None;
+                while !self.players[p].library.is_empty() {
+                    let top = &self.players[p].library[0];
+                    let cid = top.id;
+                    let is_land = top.definition.card_types.contains(&CardType::Land);
+                    let is_perm = top.definition.card_types.iter().any(|t| permanent_types.contains(t));
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if !is_land && is_perm {
+                        hit = Some(cid);
+                        break;
+                    }
+                }
+                if let Some(cid) = hit {
+                    let src = ctx.source.unwrap_or(CardId(0));
+                    let to_bf = matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: src,
+                            description: "Put the exiled card onto the battlefield? (else into hand)".to_string(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                    let dest = if to_bf {
+                        ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }
+                    } else {
+                        ZoneDest::Hand(PlayerRef::You)
+                    };
+                    if self.find_card_zone(cid) == Some(Zone::Exile) {
+                        self.move_card_to(cid, &dest, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReturnGraveyardCreaturesUpToTotalPower { max_total } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_total, ctx).max(0);
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
                     .iter()
-                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|c| c.definition.card_types.contains(&crate::card::CardType::Creature))
+                    .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
-                for id in ids {
-                    self.remove_permanent_from_combat(id);
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Return creatures with total power {cap} or less"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: candidates.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                // Accept greedily while the running total stays within the cap.
+                let mut total = 0i32;
+                for cid in chosen {
+                    let Some(c) = self.players[p].graveyard.iter().find(|c| c.id == cid) else { continue };
+                    let pw = c.definition.power.max(0);
+                    if total + pw > cap { continue; }
+                    total += pw;
+                    self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnGraveyardCreaturesUpToTotalManaValue { max_total, max_count, counters } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_total, ctx).max(0);
+                let count_cap = self.evaluate_value(max_count, ctx).max(0) as usize;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Return up to {count_cap} creatures with total mana value {cap} or less"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: count_cap as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                let mut total = 0i32;
+                let mut returned = 0usize;
+                for cid in chosen {
+                    if returned >= count_cap { break; }
+                    let Some(c) = self.players[p].graveyard.iter().find(|c| c.id == cid) else { continue };
+                    let mv = c.definition.cost.cmc() as i32;
+                    if total + mv > cap { continue; }
+                    total += mv;
+                    returned += 1;
+                    self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                    if *counters > 0 {
+                        let n = self.scaled_counter_count(p, crate::card::CounterType::PlusOnePlusOne, *counters, true);
+                        if let Some(inst) = self.battlefield_find_mut(cid) {
+                            *inst.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += n;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReturnGraveyardPermanentsDifferentNames => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Return permanent cards with different names".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: candidates.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                let mut seen: Vec<String> = Vec::new();
+                for cid in chosen {
+                    let Some(name) = candidates.iter().find(|(c, _)| *c == cid).map(|(_, n)| n.clone())
+                    else { continue };
+                    if seen.contains(&name) { continue; }
+                    seen.push(name);
+                    self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnGraveyardCardsToHand { filter, max } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = self.evaluate_value(max, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                // Returning cards to hand is pure upside, so a non-UI seat
+                // (bot/AutoDecider, which would otherwise pick the min of 0)
+                // grabs the `n` highest-mana-value matches instead of whiffing.
+                let chosen: Vec<CardId> = if self.players[p].wants_ui {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: format!("Return up to {n} cards to your hand"),
+                        candidates: candidates.clone(),
+                        min: 0,
+                        max: n,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(ids) => ids
+                            .into_iter()
+                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                            .take(n as usize)
+                            .collect(),
+                        _ => Vec::new(),
+                    }
+                } else {
+                    let mut matches: Vec<&crate::card::CardInstance> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| candidates.iter().any(|(id, _)| *id == c.id))
+                        .collect();
+                    matches.sort_by_key(|c| std::cmp::Reverse(c.definition.cost.cmc()));
+                    matches.into_iter().take(n as usize).map(|c| c.id).collect()
+                };
+                for cid in chosen {
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::LookTopNDeployPermanentsRestToHand { count } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top: Vec<CardId> = self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top.is_empty() { return Ok(()); }
+                let permanents: Vec<(CardId, String)> = top
+                    .iter()
+                    .filter_map(|id| self.players[p].library.iter().find(|c| c.id == *id))
+                    .filter(|c| c.definition.is_permanent())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let chosen: Vec<CardId> = if permanents.is_empty() {
+                    Vec::new()
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Put any number of permanent cards onto the battlefield".to_string(),
+                        candidates: permanents.clone(),
+                        min: 0,
+                        max: permanents.len() as u32,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(ids) => ids.into_iter().filter(|id| permanents.iter().any(|(c, _)| c == id)).collect(),
+                        _ => Vec::new(),
+                    }
+                };
+                for id in &top {
+                    if chosen.contains(id) {
+                        self.move_card_to(*id, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                    } else {
+                        self.move_card_to(*id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TapUpToValue { count, filter, skip_untap } => {
+                // Archipelagore — tap up to N permanents the controller chooses
+                // at resolution, N evaluated now (e.g. mutate count). Optional
+                // "don't untap next turn" rider.
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Tap up to {n} target creatures"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: n,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    crate::decision::DecisionAnswer::Cards(ids) => ids
+                        .into_iter()
+                        .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                        .take(n as usize)
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                for cid in chosen {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        if !c.tapped {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: cid });
+                        }
+                        if *skip_untap {
+                            c.skip_next_untap = true;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TapAndUntapLock { what } => {
+                // Entrancing Lyre — tap the target and lock it from untapping
+                // while the source stays tapped (cleared in the untap step once
+                // the source untaps or leaves).
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            if !c.tapped {
+                                c.tapped = true;
+                                events.push(GameEvent::PermanentTapped { card_id: cid });
+                            }
+                            c.untap_locked_by = source;
+                        }
                 }
                 Ok(())
             }
@@ -3673,6 +4664,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetBasePower { what, power, duration } => {
+                use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer};
+                let p = self.evaluate_value(power, ctx);
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetPower(p),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GrantTriggeredAbility { what, trigger, duration: _ } => {
                 // Currently only EOT-duration grants are honored; the
                 // entry is cleared in `do_cleanup`. Permanent-duration
@@ -3742,6 +4754,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SkipPlayerUntapStep { player } => {
+                for ent in self.resolve_selector(&Selector::Player(player.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].skip_next_untap_step =
+                            self.players[p].skip_next_untap_step.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LandsDontUntapNextUntapStep { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].lands_dont_untap_next_untap =
+                            self.players[p].lands_dont_untap_next_untap.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };
@@ -3769,6 +4801,45 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnSelfTappedWithCounters { kind, amount } => {
+                let Some(src) = ctx.source else { return Ok(()); };
+                let owner = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src));
+                let Some(owner) = owner else { return Ok(()); };
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: true };
+                let ret_ctx = EffectContext::for_ability(src, owner, None);
+                self.move_card_to(src, &dest, &ret_ctx, events);
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                    *c.counters.entry(*kind).or_insert(0) += *amount;
+                }
+                Ok(())
+            }
+
+            Effect::ReturnTopCreatureFromGraveyard { who } => {
+                use crate::card::CardType;
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // The source itself (e.g. Mistmoon Griffin, which "exiles it,
+                // then returns the top creature card") is excluded so it never
+                // raises itself.
+                let top = self.players[seat]
+                    .graveyard
+                    .iter()
+                    .rev()
+                    .find(|c| {
+                        c.definition.card_types.contains(&CardType::Creature)
+                            && Some(c.id) != ctx.source
+                    })
+                    .map(|c| c.id);
+                if let Some(id) = top {
+                    let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(seat), tapped: false };
+                    let ret_ctx = EffectContext::for_ability(id, seat, None);
+                    self.move_card_to(id, &dest, &ret_ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Transform { what } => {
                 // CR 712 — toggle each targeted DFC permanent to its other face
                 // in place (same object: counters / tapped / attachments persist).
@@ -3779,6 +4850,37 @@ impl GameState {
                     .collect();
                 for id in ids {
                     self.transform_permanent(id, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::BecomeRenowned { what } => {
+                // CR 702.93 — mark each resolved permanent as renowned.
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.renowned = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Flip { what } => {
+                // CR 711.2 — flip each matching flip-card permanent to its
+                // flipped face in place (counters / tapped / attachments persist).
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    self.flip_permanent(id, events);
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -3988,6 +5090,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeCreatureType { what, creature_types, duration } => {
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetCreatureTypes(creature_types.clone()),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ChooseColorForSelf => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
@@ -4089,6 +5210,137 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Blight { n } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let amt = self.evaluate_value(n, ctx).max(0);
+                if amt == 0 { return Ok(()); }
+                // CR 701.68a/b — the controller chooses one creature they
+                // control; with none, they can't blight (no-op).
+                let candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let chosen = if candidates.len() == 1 {
+                    candidates[0]
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseTarget {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: format!("blight {amt}: choose a creature you control"),
+                    });
+                    match answer {
+                        DecisionAnswer::Target(Target::Permanent(id)) if candidates.contains(&id) => id,
+                        _ => candidates[0],
+                    }
+                };
+                let mut sub = ctx.clone();
+                sub.targets = vec![Target::Permanent(chosen)];
+                self.run_effect(
+                    &Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::MinusOneMinusOne,
+                        amount: crate::effect::Value::Const(amt),
+                    },
+                    &sub,
+                    events,
+                )?;
+                Ok(())
+            }
+
+            Effect::Earthbend { n } => {
+                let amt = self.evaluate_value(n, ctx).max(0);
+                // CR 701.66a — target land you control (slot 0). No land → no-op.
+                let Some(Target::Permanent(land)) = ctx.targets.first().cloned() else {
+                    return Ok(());
+                };
+                if self.battlefield_find(land).is_none() { return Ok(()); }
+                // Becomes a 0/0 land creature with haste (in addition to its
+                // other types), indefinitely.
+                self.run_effect(
+                    &Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: crate::effect::Value::Const(0),
+                        toughness: crate::effect::Value::Const(0),
+                        creature_types: vec![],
+                        keywords: vec![Keyword::Haste],
+                        duration: Duration::Permanent,
+                    },
+                    ctx,
+                    events,
+                )?;
+                if amt > 0 {
+                    self.run_effect(
+                        &Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: crate::effect::Value::Const(amt),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                // CR 701.66a — delayed return only "when it dies or is
+                // exiled": bring it back tapped under its earthbender's
+                // control. A bounce to hand / library (any other leave) must
+                // NOT return it, so the body guards on the card landing in a
+                // graveyard or exile.
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::WhenCardLeavesBattlefield(land),
+                    effect: Effect::If {
+                        cond: crate::effect::Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::InGraveyard
+                                .or(SelectionRequirement::InExile),
+                        },
+                        then: Box::new(Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                                tapped: true,
+                            },
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::Airbend { what } => {
+                // CR 701.65a — exile each object; while exiled its owner may
+                // cast it for {2} rather than its mana cost (a never-expiring
+                // WhileExiled may-play grant + a {2} alt-cast cost).
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let turn = self.turn_number;
+                for cid in ids {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if let Some(card) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        let owner = card.owner;
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: owner,
+                            granted_turn: turn,
+                            duration: crate::card::MayPlayDuration::WhileExiled,
+                            exile_after: false,
+                        });
+                        card.granted_alt_cast_cost_eot =
+                            Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }
@@ -4107,23 +5359,10 @@ impl GameState {
                             // controllers.
                             let target_ctrl = self.battlefield_find(cid).map(|c| c.controller);
                             let n = if let Some(ctrl) = target_ctrl {
-                                let doublers = self.counter_doublers_for(ctrl);
-                                let mut scaled = base;
-                                for _ in 0..doublers {
-                                    scaled = scaled.saturating_mul(2);
-                                }
-                                // CR 614.5 — Vizier of Remedies: each copy
-                                // shaves one -1/-1 counter bound for a
-                                // creature its controller controls.
-                                if *kind == CounterType::MinusOneMinusOne
-                                    && self
-                                        .battlefield_find(cid)
-                                        .is_some_and(|c| c.definition.is_creature())
-                                {
-                                    scaled = scaled
-                                        .saturating_sub(self.minus_counter_reduction_for(ctrl));
-                                }
-                                scaled
+                                let is_creature = self
+                                    .battlefield_find(cid)
+                                    .is_some_and(|c| c.definition.is_creature());
+                                self.scaled_counter_count(ctrl, *kind, base, is_creature)
                             } else {
                                 base
                             };
@@ -4169,6 +5408,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddCountersForPowerOverBase { filter } => {
+                // CR 122.1 — Solemnity locks counter placement entirely.
+                if self.counters_locked() { return Ok(()); }
+                let ids: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    let Some(c) = self.battlefield_find(cid) else { continue };
+                    // Base power = printed/CDA base plus any SetBasePower
+                    // (perm_power_bonus); pumps + counters are "above base".
+                    let base = c.definition.base_power() + c.perm_power_bonus;
+                    let diff = (c.power() - base).max(0);
+                    if diff == 0 { continue; }
+                    let ctrl = c.controller;
+                    let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, diff as u32, true);
+                    if n == 0 { continue; }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.add_counters(CounterType::PlusOnePlusOne, n);
+                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: n });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::DoubleCountersOnEach { what, kind } => {
                 // CR 122.1 — Solemnity locks counter placement entirely.
                 if self.counters_locked() { return Ok(()); }
@@ -4186,15 +5454,12 @@ impl GameState {
                     .collect();
                 for (cid, cur) in targets {
                     // Adding `cur` doubles the total (N → 2N), routed through the
-                    // CR 614.16 counter-doubling replacement like any other add.
-                    let doublers = self
-                        .battlefield_find(cid)
-                        .map(|c| self.counter_doublers_for(c.controller))
-                        .unwrap_or(0);
-                    let mut add = cur;
-                    for _ in 0..doublers {
-                        add = add.saturating_mul(2);
-                    }
+                    // CR 614.16 counter replacement chain like any other add.
+                    let bf = self.battlefield_find(cid);
+                    let add = bf
+                        .map(|c| (c.controller, c.definition.is_creature()))
+                        .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, *kind, cur, cre))
+                        .unwrap_or(cur);
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(*kind, add);
                         events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add });
@@ -4302,6 +5567,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddRandomMissingCounter { what, keyword_options, plus_one_plus_one } => {
+                use crate::card::CounterType;
+                if self.counters_locked() { return Ok(()); } // CR 122.1 — Solemnity
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(c) = self.battlefield_find(cid) else { continue };
+                    // Counter kinds this permanent doesn't already have on it.
+                    let mut missing_kw: Vec<crate::card::Keyword> = keyword_options
+                        .iter()
+                        .filter(|kw| c.keyword_counters.get(kw).copied().unwrap_or(0) == 0)
+                        .cloned()
+                        .collect();
+                    let missing_pp = *plus_one_plus_one
+                        && c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0) == 0;
+                    let total = missing_kw.len() + usize::from(missing_pp);
+                    if total == 0 { continue; }
+                    let pick = (rand::random::<u64>() % total as u64) as usize;
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                    if pick < missing_kw.len() {
+                        let kw = missing_kw.swap_remove(pick);
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            *c.keyword_counters.entry(kw.clone()).or_insert(0) += 1;
+                        }
+                        events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1 });
+                    } else if let Some(c) = self.battlefield_find_mut(cid) {
+                        *c.counters.entry(CounterType::PlusOnePlusOne).or_insert(0) += 1;
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: 1,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             // CR 122.1b — Remove keyword counters from `what`. Clamped at
             // the source's actual count; the host loses the keyword
             // (assuming no other source) when the last counter is
@@ -4336,10 +5635,19 @@ impl GameState {
                 if let (Some(src), Some(dst)) = (src, dst)
                     && src != dst
                 {
-                    let taken = self
-                        .battlefield_find_mut(src)
-                        .map(|c| std::mem::take(&mut c.counters))
-                        .unwrap_or_default();
+                    // CR 603.10 — for a dies trigger the source has already
+                    // left the battlefield; read its counters off the death
+                    // LKI snapshot so "when this dies, move its counters …"
+                    // (Parish-Blade Trainee) still relocates them.
+                    let taken = if let Some(c) = self.battlefield_find_mut(src) {
+                        std::mem::take(&mut c.counters)
+                    } else {
+                        self.died_card_snapshots
+                            .get(&src)
+                            .or_else(|| self.leaves_bf_lki.get(&src))
+                            .map(|c| c.counters.clone())
+                            .unwrap_or_default()
+                    };
                     if let Some(d) = self.battlefield_find_mut(dst) {
                         for (kind, n) in taken {
                             if n > 0 {
@@ -4562,31 +5870,69 @@ impl GameState {
 
 
             Effect::CreateToken { who, count, definition } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
-                // CR 614.13 token-doubling replacement: each
-                // `StaticEffect::DoubleTokens` permanent the controller has on
-                // the battlefield (Adrix and Nev, Twincasters; Doubling Season
-                // for the token half) doubles the count. Stacking doublers
-                // multiply (2^k where k is the number of active doublers).
-                let doublers = self.token_doublers_for(p);
-                for _ in 0..doublers {
-                    n = n.saturating_mul(2);
-                }
+                // Resolve every matched player so multi-player refs (EachPlayer
+                // / EachOpponent — "each player creates a Lander") each mint
+                // their own tokens, not just the controller.
+                let players = self.resolve_players(who, ctx);
+                let base = self.evaluate_value(count, ctx).max(0) as u32;
                 // Mint-time dynamic P/T (Shark Typhoon's X/X): resolved once
                 // against this resolution's context, stamped as the token's
                 // printed P/T (a mint-time rider, CR 707.2-stable).
                 let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
                     (self.evaluate_value(pv, ctx), self.evaluate_value(tv, ctx))
                 });
-                for _ in 0..n {
-                    let mut def = token_to_card_definition(definition);
-                    if let Some((pw, tn)) = dyn_pt {
-                        def.power = pw;
-                        def.toughness = tn;
+                for p in players {
+                    let mut n = base;
+                    // CR 614.13 token-doubling replacement: each
+                    // `StaticEffect::DoubleTokens` permanent that player has on
+                    // the battlefield (Adrix and Nev, Twincasters; Doubling
+                    // Season for the token half) doubles the count. Stacking
+                    // doublers multiply (2^k for k active doublers).
+                    let doublers = self.token_doublers_for(p);
+                    for _ in 0..doublers {
+                        n = n.saturating_mul(2);
                     }
-                    self.mint_token_onto_battlefield(def, p, false, events);
+                    for _ in 0..n {
+                        let mut def = token_to_card_definition(definition);
+                        if let Some((pw, tn)) = dyn_pt {
+                            def.power = pw;
+                            def.toughness = tn;
+                        }
+                        self.mint_token_onto_battlefield(def, p, definition.tapped, events);
+                    }
                 }
+                Ok(())
+            }
+
+            Effect::Incubate { who, amount } => {
+                use crate::card::CounterType;
+                let players = self.resolve_players(who, ctx);
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                for p in players {
+                    // CR 614.13 — token doublers apply to the Incubator mint.
+                    let doublers = self.token_doublers_for(p);
+                    let copies = 1u32 << doublers.min(16);
+                    for _ in 0..copies {
+                        let def = token_to_card_definition(&incubator_token());
+                        let id = self.mint_token_onto_battlefield(def, p, false, events);
+                        if n > 0 && self.battlefield.iter().any(|c| c.id == id) {
+                            // CR 614.16 — counter replacements apply to the +1/+1s.
+                            let scaled =
+                                self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
+                            if let Some(c) = self.battlefield_find_mut(id) {
+                                c.add_counters(CounterType::PlusOnePlusOne, scaled);
+                            }
+                            events.push(GameEvent::CounterAdded {
+                                card_id: id,
+                                counter_type: CounterType::PlusOnePlusOne,
+                                count: scaled,
+                            });
+                            self.permanents_gained_counter_this_turn.insert(id);
+                        }
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
                 Ok(())
             }
 
@@ -4621,12 +5967,10 @@ impl GameState {
                         self.mint_token_onto_battlefield(def, p, false, events)
                     }
                 };
-                // CR 614.16 — counter doubling applies to the amassed counters.
+                // CR 614.16 — counter replacement effects apply to the amass.
                 if n > 0 && self.battlefield.iter().any(|c| c.id == army) {
-                    let mut scaled = n;
-                    for _ in 0..self.counter_doublers_for(p) {
-                        scaled = scaled.saturating_mul(2);
-                    }
+                    let scaled =
+                        self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
                     if let Some(c) = self.battlefield_find_mut(army) {
                         c.add_counters(CounterType::PlusOnePlusOne, scaled);
                     }
@@ -4680,6 +6024,44 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::JoinCombatAttacking { what } => {
+                use crate::game::types::{Attack, AttackTarget};
+                // Only meaningful while a combat is in progress.
+                if self.attacking.is_empty() {
+                    return Ok(());
+                }
+                let movers = self.resolve_selector(what, ctx);
+                // Attack the same defender the source is attacking; else the
+                // controller's first opponent.
+                for t in movers {
+                    let Some(id) = t.as_card_id() else { continue };
+                    // Skip if it isn't on the battlefield or is already attacking.
+                    let Some(controller) = self.battlefield_find(id).map(|c| c.controller) else {
+                        continue;
+                    };
+                    if self.attacking.iter().any(|a| a.attacker == id) {
+                        continue;
+                    }
+                    let target = ctx
+                        .source
+                        .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                        .map(|a| a.target)
+                        .or_else(|| {
+                            (0..self.players.len())
+                                .find(|&q| !self.same_team(q, controller))
+                                .map(AttackTarget::Player)
+                        });
+                    let Some(target) = target else { continue };
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                        c.tapped = true;
+                        c.attacked_this_turn = true;
+                    }
+                    self.attacking.push(Attack { attacker: id, target });
+                    events.push(GameEvent::AttackerDeclared(id));
+                }
+                Ok(())
+            }
+
             Effect::Myriad => {
                 use crate::game::types::{Attack, AttackTarget};
                 // Source must currently be attacking a player.
@@ -4691,6 +6073,9 @@ impl GameState {
                     AttackTarget::Player(p) => p,
                     AttackTarget::Planeswalker(pw) => {
                         self.battlefield_find(pw).map(|c| c.controller).unwrap_or(usize::MAX)
+                    }
+                    AttackTarget::Battle(b) => {
+                        self.battlefield_find(b).and_then(|c| c.protected_by).unwrap_or(usize::MAX)
                     }
                 };
                 let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
@@ -4763,8 +6148,10 @@ impl GameState {
                 count,
                 source,
                 extra_creature_types,
+                extra_card_types,
                 override_pt,
                 non_legendary,
+                legendary,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;
@@ -4807,6 +6194,11 @@ impl GameState {
                     }
                 }
                 def.subtypes.creature_types = extra_types;
+                for t in extra_card_types.iter() {
+                    if !def.card_types.contains(t) {
+                        def.card_types.push(t.clone());
+                    }
+                }
                 if let Some((p_o, t_o)) = override_pt {
                     def.power = *p_o;
                     def.toughness = *t_o;
@@ -4814,8 +6206,43 @@ impl GameState {
                 if *non_legendary {
                     def.supertypes.clear();
                 }
+                if *legendary && !def.supertypes.contains(&crate::card::Supertype::Legendary) {
+                    def.supertypes.push(crate::card::Supertype::Legendary);
+                }
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, false, events);
+                }
+                Ok(())
+            }
+
+            Effect::CreateTokenCopiesHasteSac { who, count, source } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
+                for _ in 0..self.token_doublers_for(p) {
+                    n = n.saturating_mul(2);
+                }
+                let src_id = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    });
+                let Some(src_id) = src_id else { return Ok(()); };
+                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| (*c.definition).clone())
+                else { return Ok(()); };
+                for _ in 0..n {
+                    let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
+                    self.grant_keyword_eot(tid, Keyword::Haste);
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: tid,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::SacrificeSource,
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
                 }
                 Ok(())
             }
@@ -4873,6 +6300,35 @@ impl GameState {
                 for pos in to_remove {
                     if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
                         self.route_to_graveyard(*card, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CounterSpellDrawIfUnderpaid { what } => {
+                let targets = self.resolve_selector(what, ctx);
+                let mut hit: Option<(usize, bool)> = None;
+                for t in &targets {
+                    if let Some(cid) = t.as_card_id()
+                        && let Some(pos) = self.stack.iter().position(|si| matches!(
+                            si,
+                            StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                        ))
+                    {
+                        let underpaid = matches!(&self.stack[pos],
+                            StackItem::Spell { card, mana_spent, .. }
+                                if (*mana_spent as i32) < card.definition.cost.cmc() as i32);
+                        hit = Some((pos, underpaid));
+                        break;
+                    }
+                }
+                if let Some((pos, underpaid)) = hit {
+                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                        self.route_to_graveyard(*card, events);
+                    }
+                    if underpaid {
+                        let draw = Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(1) };
+                        self.resolve_effect(&draw, ctx)?;
                     }
                 }
                 Ok(())
@@ -4939,6 +6395,35 @@ impl GameState {
                                 self.exile.push(*card);
                             }
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CounterSpellExileNameLock { what } => {
+                // Ashiok's Erasure: lift target spell off the stack, exile the
+                // card linked to the source (return to owner's hand on leave),
+                // and stamp the source's `named_card` so its
+                // `OpponentsCantCastNamed` static locks that name.
+                let Some(source) = ctx.source else { return Ok(()); };
+                let targets = self.resolve_selector(what, ctx);
+                let target_id = targets.iter().find_map(|t| t.as_card_id());
+                let Some(cid) = target_id else { return Ok(()); };
+                let Some(pos) = self.stack.iter().position(|si| matches!(
+                    si,
+                    StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                )) else { return Ok(()); };
+                if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                    let name = card.definition.name.to_string();
+                    let mut card = *card;
+                    card.exiled_by = Some(crate::card::ExileLink {
+                        source,
+                        return_to: crate::card::ExileReturnZone::Hand,
+                    });
+                    events.push(GameEvent::PermanentExiled { card_id: card.id });
+                    self.exile.push(card);
+                    if let Some(src) = self.battlefield_find_mut(source) {
+                        src.named_card = Some(name);
                     }
                 }
                 Ok(())
@@ -5099,6 +6584,35 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::Blight(n) => {
+                        // Ward—Blight N (CR 701.68): the warding player puts N
+                        // -1/-1 counters on a creature they control. Auto-pay
+                        // picks their highest-toughness creature so the body
+                        // is likeliest to survive; unpayable with none.
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == affected_controller && c.definition.is_creature()
+                            })
+                            .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.toughness).unwrap_or(0))
+                            .map(|c| c.id);
+                        if let Some(cid) = pick {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.add_counters(CounterType::MinusOneMinusOne, *n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: CounterType::MinusOneMinusOne,
+                                    count: *n,
+                                });
+                            }
+                            let mut sba = self.check_state_based_actions();
+                            events.append(&mut sba);
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     WardCost::SacrificeCreature => {
                         let pick = self
                             .battlefield
@@ -5128,6 +6642,20 @@ impl GameState {
                             for sac_id in picks {
                                 self.sacrifice_one(sac_id, affected_controller, events);
                             }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::LifeSourcePower => {
+                        // Ward—Pay life equal to this creature's power.
+                        let n = ctx
+                            .source
+                            .and_then(|sid| self.computed_permanent(sid))
+                            .map(|c| c.power.max(0))
+                            .unwrap_or(0);
+                        if self.effective_life(affected_controller) >= n {
+                            self.pay_life_cost(affected_controller, n as u32);
                             true
                         } else {
                             false
@@ -5279,6 +6807,148 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LivingDeath => {
+                // 1. Each player exiles all creature cards from their graveyard.
+                let mut exiled: Vec<(usize, CardId)> = Vec::new();
+                for p in 0..self.players.len() {
+                    let ids: Vec<CardId> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.is_creature())
+                        .map(|c| c.id)
+                        .collect();
+                    for id in ids {
+                        self.move_card_to(id, &crate::effect::ZoneDest::Exile, ctx, events);
+                        exiled.push((p, id));
+                    }
+                }
+                // 2. Each player sacrifices all creatures they control.
+                let sac: Vec<(CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.controller))
+                    .collect();
+                for (id, who) in sac {
+                    if self.battlefield_find(id).is_some() {
+                        self.sacrifice_one(id, who, events);
+                    }
+                }
+                // 3. Each exiled card returns to the battlefield under its
+                //    owner's control.
+                for (owner, id) in exiled {
+                    let octx = EffectContext::for_ability(id, owner, None);
+                    self.move_card_to(
+                        id,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                        &octx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::EscalatingThisTurn { modes } => {
+                if modes.is_empty() { return Ok(()); }
+                let key = ctx.source.unwrap_or(CardId(0));
+                let n = *self.ability_resolutions_this_turn.get(&key).unwrap_or(&0) as usize;
+                let idx = n.min(modes.len() - 1);
+                let mode = modes[idx].clone();
+                *self.ability_resolutions_this_turn.entry(key).or_insert(0) += 1;
+                self.run_effect(&mode, ctx, events)?;
+                Ok(())
+            }
+
+            Effect::SacrificeOthersThenReanimate => {
+                // 1. Snapshot existing graveyard creature cards per player —
+                //    these are eligible to return; the about-to-die ones won't be.
+                let mut eligible: Vec<(usize, CardId)> = Vec::new();
+                for p in 0..self.players.len() {
+                    for c in &self.players[p].graveyard {
+                        if c.definition.is_creature() {
+                            eligible.push((p, c.id));
+                        }
+                    }
+                }
+                // 2. Each player sacrifices all OTHER creatures (source survives).
+                let src = ctx.source;
+                let sac: Vec<(CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && Some(c.id) != src)
+                    .map(|c| (c.id, c.controller))
+                    .collect();
+                for (id, who) in sac {
+                    if self.battlefield_find(id).is_some() {
+                        self.sacrifice_one(id, who, events);
+                    }
+                }
+                // 3. Return the pre-sac graveyard creatures under their owners'
+                //    control (still present — the just-sacrificed ones are new).
+                for (owner, id) in eligible {
+                    if self.players[owner].graveyard.iter().any(|c| c.id == id) {
+                        let octx = EffectContext::for_ability(id, owner, None);
+                        self.move_card_to(
+                            id,
+                            &crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::You,
+                                tapped: false,
+                            },
+                            &octx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerMayPutPermanentFromHand { filter } => {
+                // APNAP order (active player first).
+                let order = self.apnap_sort((0..self.players.len()).collect());
+                for p in order {
+                    let candidates: Vec<CardId> = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| {
+                            c.definition.is_permanent()
+                                && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    if candidates.is_empty() {
+                        continue;
+                    }
+                    // Auto-pick the highest-mana matching card (bots/tests); a
+                    // `wants_ui` seat keeps the same auto-pick for now.
+                    let pick = candidates
+                        .iter()
+                        .copied()
+                        .max_by_key(|id| {
+                            self.players[p]
+                                .hand
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0)
+                        })
+                        .unwrap();
+                    let octx = EffectContext::for_ability(pick, p, None);
+                    self.move_card_to(
+                        pick,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                        &octx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::Sacrifice { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
@@ -5389,6 +7059,23 @@ impl GameState {
                     events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
                     let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                     events.append(&mut die_evs);
+                }
+                Ok(())
+            }
+
+            Effect::SacrificePermanent { what } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(id) => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                for id in ids {
+                    if let Some(p) = self.battlefield_find(id).map(|c| c.controller) {
+                        self.sacrifice_one(id, p, events);
+                    }
                 }
                 Ok(())
             }
@@ -5531,10 +7218,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::VillainousChoice { who, option_a, option_b } => {
+                // CR 701.55 — each chooser (APNAP order) picks A or B; the
+                // chosen option's actions run with the chooser as controller.
+                let mut choosers: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                choosers = self.apnap_sort(choosers);
+                for p in choosers {
+                    let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
+                    // The chooser picks the option that harms them least
+                    // (CR 701.55b lets an impossible option be chosen, which
+                    // the harm estimate scores at 0).
+                    let harm_a = self.villainous_self_harm(option_a, &opt_ctx);
+                    let harm_b = self.villainous_self_harm(option_b, &opt_ctx);
+                    let pick = if harm_b < harm_a { option_b } else { option_a };
+                    self.run_effect(pick, &opt_ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::AddPoison { who, amount } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        // CR 122 / 614.16 — Winding Constrictor's player half:
+                        // "if you would get one or more counters, you get that
+                        // many plus one."
+                        let n = if base > 0 {
+                            base.saturating_add(self.extra_any_kind_adders_for(p))
+                        } else {
+                            0
+                        };
                         self.players[p].poison_counters += n;
                         events.push(GameEvent::PoisonAdded { player: p, amount: n });
                     }
@@ -5634,6 +7354,56 @@ impl GameState {
 
             Effect::DestroyTargetsPolymorph { filter } => self.resolve_destroy_targets_polymorph(filter, ctx, events),
 
+            Effect::DestroyLandOfEachBasicType => {
+                use crate::card::LandType;
+                let owner = ctx.controller;
+                let mut chosen: Vec<CardId> = Vec::new();
+                for t in [
+                    LandType::Plains,
+                    LandType::Island,
+                    LandType::Swamp,
+                    LandType::Mountain,
+                    LandType::Forest,
+                ] {
+                    let req = crate::card::SelectionRequirement::HasLandType(t);
+                    // Candidate lands of this basic type, preferring an
+                    // opponent's (the controller picks; opponents' lands are
+                    // the natural target). Deterministic by id within a tier.
+                    let mut cands: Vec<(bool, CardId)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            self.evaluate_requirement_static(
+                                &req,
+                                &Target::Permanent(c.id),
+                                owner,
+                                ctx.source,
+                            )
+                        })
+                        .map(|c| (self.same_team(c.controller, owner), c.id))
+                        .collect();
+                    cands.sort_by_key(|(mine, id)| (*mine, *id));
+                    if let Some((_, id)) = cands.first()
+                        && !chosen.contains(id)
+                    {
+                        chosen.push(*id);
+                    }
+                }
+                if !chosen.is_empty() {
+                    let mut sub = ctx.clone();
+                    sub.targets = chosen.iter().map(|id| Target::Permanent(*id)).collect();
+                    sub.x_value = 0;
+                    self.run_effect(
+                        &Effect::DestroyTargets {
+                            filter: crate::card::SelectionRequirement::Any,
+                        },
+                        &sub,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::DestroyTargets { filter } => {
                 // Destroy the X chosen targets (slots 0..X) matching `filter`;
                 // without an {X} in the cost, every given target.
@@ -5674,6 +7444,38 @@ impl GameState {
             }
 
             Effect::SacrificeAllButOnePerType { who } => self.resolve_sacrifice_all_but_one_per_type(who, ctx, events),
+
+            Effect::EachPlayerKeepsOneSacrificeRest { who, filter } => {
+                // Deadly Vanity — each resolved player keeps one `filter`
+                // permanent (auto-pick: highest mana value) and sacrifices the
+                // rest of their `filter` permanents.
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let keep = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    let to_sac: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && Some(c.id) != keep
+                                && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for id in to_sac {
+                        self.sacrifice_one(id, p, events);
+                    }
+                }
+                Ok(())
+            }
 
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
@@ -5738,6 +7540,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchUpToN { who, filter, to, count } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                if n == 0 { return Ok(()); }
+                // Run one Search; chain the remaining picks as the suspend
+                // continuation (or run them inline under AutoDecider). The
+                // single-Search arm already handles tax/limit/zone routing.
+                let one = Effect::Search { who: who.clone(), filter: filter.clone(), to: to.clone() };
+                let rest = Effect::SearchUpToN {
+                    who: who.clone(),
+                    filter: filter.clone(),
+                    to: to.clone(),
+                    count: crate::effect::Value::Const(n - 1),
+                };
+                self.run_effect(&one, ctx, events)?;
+                // If the single Search suspended (wants_ui), splice the
+                // remaining picks after it; otherwise loop inline.
+                if let Some((d, p, tail)) = self.suspend_signal.take() {
+                    let chained = Effect::Seq(vec![tail, rest]);
+                    self.suspend_signal = Some((d, p, chained));
+                    return Ok(());
+                }
+                self.run_effect(&rest, ctx, events)
+            }
+
             e @ (Effect::Search { .. } | Effect::SearchPickedBy { .. }) => {
                 use crate::decision::Decision;
                 let (who, picker_ref, filter, to) = match e {
@@ -5794,6 +7620,29 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::Seek { who, filter, count, to } => {
+                use rand::seq::IndexedRandom;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
+                for _ in 0..n {
+                    // CR 701.52a — randomly choose from the matching cards.
+                    let ids: Vec<crate::card::CardId> = self.players[p]
+                        .library
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                        .map(|c| c.id)
+                        .collect();
+                    let Some(&pick) = ids.choose(&mut rand::rng()) else { break };
+                    let Some(idx) = self.players[p].library.iter().position(|c| c.id == pick)
+                    else { break };
+                    let card = self.players[p].library.remove(idx);
+                    self.place_card_in_dest(card, p, to, events);
+                    self.last_moved_cards.push(pick);
+                }
                 Ok(())
             }
 
@@ -6014,10 +7863,25 @@ impl GameState {
                             .map(|c| (*id, c.definition.name.to_string()))
                     })
                     .collect();
-                let decision = Decision::SearchLibrary {
-                    player: p,
-                    candidates,
-                    eligible: eligible.clone(),
+                // A single pick rides the SearchLibrary picker; a multi-pick
+                // (Dig Through Time's "put two of them into your hand") gets
+                // a real `ChooseCards` subset decision instead of
+                // auto-filling the remainder.
+                let eligible_count = eligible.as_ref().map_or(top_ids.len(), |v| v.len());
+                let decision = if take > 1 {
+                    Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        prompt: format!("Put {take} cards into your hand"),
+                        candidates,
+                        min: take.min(eligible_count) as u32,
+                        max: take.min(eligible_count) as u32,
+                    }
+                } else {
+                    Decision::SearchLibrary {
+                        player: p,
+                        candidates,
+                        eligible: eligible.clone(),
+                    }
                 };
                 let pending = PendingEffectState::ImpulsePending {
                     player: p,
@@ -6026,6 +7890,7 @@ impl GameState {
                     eligible,
                     take,
                     to_battlefield: *to_battlefield,
+                    keep_on_top: false,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -6034,6 +7899,99 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::LookTopKeepOneRestToGraveyard { count } => {
+                use crate::decision::Decision;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top_ids: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top_ids.is_empty() {
+                    return Ok(());
+                }
+                let candidates: Vec<(crate::card::CardId, String)> = top_ids
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let decision = Decision::SearchLibrary { player: p, candidates, eligible: None };
+                let pending = PendingEffectState::ImpulsePending {
+                    player: p,
+                    revealed: top_ids,
+                    rest_to_graveyard: true,
+                    eligible: None,
+                    take: 1,
+                    to_battlefield: false,
+                    keep_on_top: true,
+                };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::RevealTopPayOrTake { count, life } => {
+                // Sword-Point Diplomacy: per revealed card, opponents (turn
+                // order) may pay `life` to deny it; unpaid cards go to hand
+                // (not drawn, CR 121.5), denied cards are exiled.
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let life_amt = self.evaluate_value(life, ctx).max(0);
+                let top: Vec<CardId> = self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let me = Effect::RevealTopPayOrTake { count: count.clone(), life: life.clone() };
+                let opponents: Vec<usize> = self.apnap_sort(
+                    (0..self.players.len())
+                        .filter(|&q| q != p && !self.players[q].eliminated && !self.same_team(q, p))
+                        .collect(),
+                );
+                let mut cursor = 0usize;
+                let mut denied: Vec<CardId> = Vec::new();
+                for cid in &top {
+                    let name = self.players[p].library.iter()
+                        .find(|c| c.id == *cid)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    for &opp in &opponents {
+                        // CR 119.4 — can't offer a payment the player can't make.
+                        if self.players[opp].life < life_amt { continue; }
+                        let Some(yes) = self.ask_seat_bool(
+                            &mut cursor,
+                            opp,
+                            format!("Pay {life_amt} life to deny {name}?"),
+                            source,
+                            &me,
+                        ) else { return Ok(()); };
+                        if yes {
+                            let applied = self.adjust_life_applied(opp, -life_amt);
+                            if applied < 0 {
+                                events.push(GameEvent::LifeLost { player: opp, amount: (-applied) as u32 });
+                            }
+                            denied.push(*cid);
+                            break;
+                        }
+                    }
+                }
+                self.clear_answer_log();
+                for cid in &top {
+                    let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) else { continue };
+                    let card = self.players[p].library.remove(pos);
+                    if denied.contains(cid) {
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    } else {
+                        self.players[p].hand.push(card);
+                    }
+                }
                 Ok(())
             }
 
@@ -6459,7 +8417,6 @@ impl GameState {
             }
 
             Effect::RevealTopTakeOnePerType { who, count } => {
-                use crate::card::CardType;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let revealed: Vec<crate::card::CardId> =
@@ -6467,42 +8424,33 @@ impl GameState {
                 if revealed.is_empty() {
                     return Ok(());
                 }
-                // For each card type, take the first revealed (not-yet-taken)
-                // card bearing that type.
-                const TYPES: [CardType; 8] = [
-                    CardType::Artifact, CardType::Battle, CardType::Creature,
-                    CardType::Enchantment, CardType::Instant, CardType::Land,
-                    CardType::Planeswalker, CardType::Sorcery,
-                ];
-                let mut taken: Vec<crate::card::CardId> = Vec::new();
-                for ty in TYPES {
-                    if let Some(id) = revealed.iter().copied().find(|id| {
-                        !taken.contains(id)
-                            && self.players[p].library.iter()
-                                .find(|c| c.id == *id)
-                                .is_some_and(|c| c.definition.card_types.contains(&ty))
-                    }) {
-                        taken.push(id);
-                    }
+                // "Up to one card of each card type": a wants_ui controller
+                // picks the subset via ChooseCards (validated one-per-type at
+                // apply time); bots keep the greedy first-of-each-type fill.
+                let candidates: Vec<(crate::card::CardId, String)> = revealed
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let decision = crate::decision::Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    prompt: "Put up to one card of each card type into your hand".into(),
+                    candidates,
+                    min: 0,
+                    max: revealed.len() as u32,
+                };
+                let pending = PendingEffectState::TakeOnePerTypePending { player: p, revealed: revealed.clone() };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
                 }
-                // Pull taken cards into hand (preserve library order otherwise).
-                for id in &taken {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *id) {
-                        let card = self.players[p].library.remove(pos);
-                        self.players[p].hand.push(card);
-                    }
-                }
-                // Bottom the remaining revealed cards in a random order (CR 401.4).
-                use rand::seq::SliceRandom;
-                let mut rest: Vec<crate::card::CardId> =
-                    revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
-                rest.shuffle(&mut rand::rng());
-                for id in rest {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
-                        let card = self.players[p].library.remove(pos);
-                        self.players[p].library.push(card);
-                    }
-                }
+                // Auto path: greedy first-of-each-type (the apply step
+                // re-validates, so over-asking is harmless).
+                let answer = crate::decision::DecisionAnswer::Cards(revealed);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
                 Ok(())
             }
 
@@ -6526,6 +8474,72 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LookTopMayDeployAttacking { count, filter } => {
+                use crate::game::types::{Attack, AttackTarget};
+                // Only meaningful mid-combat.
+                if self.attacking.is_empty() {
+                    return Ok(());
+                }
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                // Auto-pick the highest-power matching card among those revealed.
+                let pick = revealed
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
+                    })
+                    .max_by_key(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| c.definition.power).unwrap_or(0)
+                    });
+                if let Some(id) = pick {
+                    // Attack the defender the triggering creature is attacking,
+                    // else the controller's first opponent.
+                    let target = ctx
+                        .trigger_source
+                        .and_then(|e| e.as_permanent_id())
+                        .and_then(|src| self.attacking.iter().find(|a| a.attacker == src).map(|a| a.target))
+                        .or_else(|| {
+                            (0..self.players.len())
+                                .find(|&q| !self.same_team(q, p))
+                                .map(AttackTarget::Player)
+                        });
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(p),
+                        tapped: true,
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                    if let Some(target) = target
+                        && self.battlefield.iter().any(|c| c.id == id)
+                    {
+                        self.attacking.push(Attack { attacker: id, target });
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.attacked_this_turn = true;
+                            c.granted_keywords_eot.push(crate::card::Keyword::Indestructible);
+                        }
+                        events.push(GameEvent::AttackerDeclared(id));
+                    }
+                }
+                // Bottom the rest in a random order (CR 401.4).
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    revealed.iter().copied().filter(|id| Some(*id) != pick).collect();
                 rest.shuffle(&mut rand::rng());
                 for id in rest {
                     if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
@@ -6660,6 +8674,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RingTempts { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.ring_tempts(p, events);
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeAtEndOfCombat { what } => {
+                use crate::effect::AttackingTokenCleanup;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(id) = ent
+                        && !self.attacking_token_cleanup.iter().any(|(cid, _)| *cid == id)
+                    {
+                        self.attacking_token_cleanup
+                            .push((id, AttackingTokenCleanup::SacrificeAtEndOfCombat));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeDay => {
                 self.set_day_night(crate::game::types::DayNight::Day, events);
                 Ok(())
@@ -6697,6 +8731,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnExiledBySourceToBattlefield { decayed } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let ids: Vec<crate::card::CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src) && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                for id in ids {
+                    self.move_card_to(
+                        id,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ctx,
+                        events,
+                    );
+                    if *decayed
+                        && let Some(c) = self.battlefield_find_mut(id)
+                        && !c.definition.keywords.contains(&crate::card::Keyword::Decayed)
+                    {
+                        std::sync::Arc::make_mut(&mut c.definition)
+                            .keywords
+                            .push(crate::card::Keyword::Decayed);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::StudyTopCard { counter } => {
                 let p = ctx.controller;
                 let Some(top) = self.players[p].library.first().map(|c| c.id) else {
@@ -6725,6 +8786,37 @@ impl GameState {
                     self.move_card_to(id, &ZoneDest::Exile, ctx, events);
                     if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
                         c.add_counters(*counter, 1);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantPlayFromTopThisTurn => {
+                self.players[ctx.controller].play_from_top_this_turn = true;
+                Ok(())
+            }
+
+            Effect::CastUpToNFromOpponentsExile { count } => {
+                // Grant the controller a free end-of-turn cast permission on
+                // up to `count` opponent-owned cards in exile. Ashiok −7.
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let ids: Vec<crate::card::CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.owner != p && !self.same_team(c.owner, p))
+                    .take(n)
+                    .map(|c| c.id)
+                    .collect();
+                let granted_turn = self.turn_number;
+                for id in ids {
+                    if let Some(card) = self.exile.iter_mut().find(|c| c.id == id) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: p,
+                            granted_turn,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            exile_after: false,
+                        });
                     }
                 }
                 Ok(())
@@ -6968,6 +9060,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopThenIf { who, filter, then } => {
+                let mut matched = false;
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: top.definition.name,
+                        is_land: top.definition.is_land(),
+                    });
+                    if self.evaluate_requirement_on_card(filter, top, ctx.controller) {
+                        matched = true;
+                    }
+                }
+                if matched {
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
@@ -6982,6 +9093,43 @@ impl GameState {
                             &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
                             ctx,
                             events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::RevealTopNPutMatchingToBattlefield { who, count, filter } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                for p in self.resolve_players(who, ctx) {
+                    let top_ids: Vec<CardId> =
+                        self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                    let mut to_bf = Vec::new();
+                    let mut to_bottom = Vec::new();
+                    for cid in &top_ids {
+                        let Some(card) = self.players[p].library.iter().find(|c| c.id == *cid) else { continue };
+                        events.push(GameEvent::TopCardRevealed {
+                            player: p, card_name: card.definition.name, is_land: card.definition.is_land(),
+                        });
+                        if self.evaluate_requirement_on_card(filter, card, p) {
+                            to_bf.push(*cid);
+                        } else {
+                            to_bottom.push(*cid);
+                        }
+                    }
+                    for cid in to_bf {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            ctx, events,
+                        );
+                    }
+                    for cid in to_bottom {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Bottom },
+                            ctx, events,
                         );
                     }
                 }
@@ -7062,6 +9210,53 @@ impl GameState {
 
                     if self.players[picker].wants_ui {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::DiscardChosen {
+                            from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
+            Effect::BottomChosenFromHandAndDraw { from, count, filter } => {
+                // Same caster-picks-from-hand shape as `DiscardChosen`
+                // (Vendilion Clique), but the apply step bottoms the chosen
+                // card and draws a replacement for the chosen card's owner.
+                use crate::decision::Decision;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::BottomChosenFromHandAndDrawPending { target_player };
+                    if self.players[picker].wants_ui {
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::BottomChosenFromHandAndDraw {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),
@@ -7175,9 +9370,15 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WithSacrificedPt { power, toughness, body } => {
+            Effect::WithSacrificedPt { power, toughness, mana_value, body } => {
                 self.sacrificed_power = Some(*power);
                 self.sacrificed_toughness = Some(*toughness);
+                self.sacrificed_mana_value = Some(*mana_value);
+                self.run_effect(body, ctx, events)
+            }
+
+            Effect::WithTappedPower { power, body } => {
+                self.tapped_for_cost_power = Some(*power);
                 self.run_effect(body, ctx, events)
             }
 
@@ -7220,6 +9421,25 @@ impl GameState {
                     events.append(&mut die);
                 }
                 Ok(())
+            }
+
+            Effect::DestroyAndRemember { what } => {
+                // Record the target permanent's P/T/MV (like
+                // `SacrificeAndRemember`) before destroying it, so a following
+                // `Value::SacrificedToughness`/`SacrificedPower` reads it —
+                // Orzhov Charm's "destroy target creature and lose life equal
+                // to its toughness".
+                let entities = self.resolve_selector(what, ctx);
+                let stats = entities.iter().find_map(|e| e.as_permanent_id()).and_then(|cid| {
+                    self.battlefield_find(cid)
+                        .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc()))
+                });
+                if let Some((power, toughness, mv)) = stats {
+                    self.sacrificed_power = Some(power);
+                    self.sacrificed_toughness = Some(toughness);
+                    self.sacrificed_mana_value = Some(mv);
+                }
+                self.run_effect(&Effect::Destroy { what: what.clone() }, ctx, events)
             }
 
             Effect::SacrificeAnyNumber { who, filter, per_each } => {
@@ -7649,6 +9869,243 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FactOrFiction { count } => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = (self.evaluate_value(count, ctx).max(0) as usize)
+                    .min(self.players[p].library.len());
+                if n == 0 {
+                    return Ok(());
+                }
+                // Reveal the top `n` cards (top = index 0).
+                let revealed: Vec<(CardId, u32)> = self.players[p].library[..n]
+                    .iter()
+                    .map(|c| (c.id, c.definition.cost.cmc()))
+                    .collect();
+                // Opponent isolates the single highest-MV card (pile A); the
+                // rest form pile B. You keep the pile with the greater total
+                // mana value; ties keep the larger pile.
+                let best = revealed.iter().enumerate().max_by_key(|(_, (_, mv))| *mv).map(|(i, _)| i);
+                let (mut pile_a, mut pile_b): (Vec<CardId>, Vec<CardId>) = (Vec::new(), Vec::new());
+                let (mut sum_a, mut sum_b) = (0u32, 0u32);
+                for (i, (cid, mv)) in revealed.iter().enumerate() {
+                    if Some(i) == best {
+                        pile_a.push(*cid);
+                        sum_a += *mv;
+                    } else {
+                        pile_b.push(*cid);
+                        sum_b += *mv;
+                    }
+                }
+                let take_a = sum_a > sum_b || (sum_a == sum_b && pile_a.len() >= pile_b.len());
+                let (to_hand, to_gy) = if take_a { (pile_a, pile_b) } else { (pile_b, pile_a) };
+                for cid in to_hand {
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                }
+                for cid in to_gy {
+                    self.move_card_to(cid, &ZoneDest::Graveyard, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::AllureOfTheUnknown => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = 6.min(self.players[p].library.len());
+                if n == 0 {
+                    return Ok(());
+                }
+                let opp = (0..self.players.len()).find(|s| !self.same_team(*s, p));
+                let top: Vec<(CardId, bool, u32)> = self.players[p].library[..n]
+                    .iter()
+                    .map(|c| (c.id, c.definition.is_land(), c.definition.cost.cmc()))
+                    .collect();
+                // The opponent exiles a nonland — heuristic: deny the highest-MV
+                // nonland card. If there's no nonland, nothing is exiled.
+                let candidate = top
+                    .iter()
+                    .filter(|(_, is_land, _)| !is_land)
+                    .max_by_key(|(_, _, mv)| *mv)
+                    .map(|(id, _, _)| *id);
+                let mut removed: Option<CardId> = None;
+                if let (Some(eid), Some(opp)) = (candidate, opp)
+                    && let Some(pos) = self.players[p].library.iter().position(|c| c.id == eid)
+                {
+                    let mut card = self.players[p].library.remove(pos);
+                    card.exiled_with = ctx.source;
+                    // "That opponent may cast it without paying its mana cost" —
+                    // a free may-play for the opponent while it stays exiled.
+                    card.may_play_until = Some(crate::card::MayPlayPermission {
+                        player: opp,
+                        granted_turn: self.turn_number,
+                        duration: crate::card::MayPlayDuration::WhileExiled,
+                        exile_after: false,
+                    });
+                    card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: eid });
+                    removed = Some(eid);
+                }
+                // The rest of the revealed cards go to your hand.
+                for (cid, _, _) in top {
+                    if Some(cid) == removed {
+                        continue;
+                    }
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::PossibilityStorm => {
+                use crate::card::Zone;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::{LibraryPosition, ZoneDest};
+                // The just-cast spell is the trigger source.
+                let Some(spell_id) = ctx.trigger_source.and_then(|e| e.as_card_id()) else {
+                    return Ok(());
+                };
+                let Some(pos) = self
+                    .stack
+                    .iter()
+                    .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == spell_id))
+                else {
+                    return Ok(());
+                };
+                let (caster, types) = match &self.stack[pos] {
+                    StackItem::Spell { card, caster, .. } => {
+                        (*caster, card.definition.card_types.clone())
+                    }
+                    _ => return Ok(()),
+                };
+                // Exile the spell (it bottoms with the rest at the end).
+                let mut exiled: Vec<CardId> = Vec::new();
+                if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                    let mut c = *card;
+                    c.exiled_with = ctx.source;
+                    let eid = c.id;
+                    self.exile.push(c);
+                    events.push(GameEvent::PermanentExiled { card_id: eid });
+                    exiled.push(eid);
+                }
+                // Dig until a card sharing a card type with the spell is exiled.
+                let mut hit: Option<CardId> = None;
+                while !self.players[caster].library.is_empty() {
+                    let top = &self.players[caster].library[0];
+                    let cid = top.id;
+                    let shares = top.definition.card_types.iter().any(|t| types.contains(t));
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    exiled.push(cid);
+                    if shares {
+                        hit = Some(cid);
+                        break;
+                    }
+                }
+                if let Some(cid) = hit {
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    if let Some(card_def) = card_def {
+                        let src = ctx.source.unwrap_or(CardId(0));
+                        let cast = matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Possibility Storm: cast the exiled card without \
+                                              paying its mana cost?"
+                                    .to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        );
+                        if cast {
+                            exiled.retain(|&x| x != cid);
+                            let auto_target =
+                                self.auto_target_for_effect_avoiding(&card_def.effect, caster, Some(cid));
+                            let cast_events = self.cast_card_for_free(
+                                caster, cid, Zone::Exile, auto_target, vec![], None, None, false,
+                            )?;
+                            events.extend(cast_events);
+                        }
+                    }
+                }
+                // Bottom every card still exiled this way (random order ≈ bottom).
+                for cid in exiled {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(caster),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReanimateAurasExileEot => {
+                use crate::effect::ZoneDest;
+                use crate::game::types::Target;
+                let p = ctx.controller;
+                let aura_ids: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_aura())
+                    .map(|c| c.id)
+                    .collect();
+                let creatures: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && c.controller == p)
+                    .map(|c| c.id)
+                    .collect();
+                for aid in aura_ids {
+                    let filter = self.players[p]
+                        .graveyard
+                        .iter()
+                        .find(|c| c.id == aid)
+                        .and_then(|c| c.definition.aura_enchant_filter().cloned());
+                    let target = creatures.iter().copied().find(|&cid| {
+                        filter
+                            .as_ref()
+                            .is_none_or(|f| self.evaluate_requirement_static(f, &Target::Permanent(cid), p, Some(aid)))
+                    });
+                    let Some(tgt) = target else { continue };
+                    self.move_card_to(
+                        aid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                        ctx,
+                        events,
+                    );
+                    if let Some(c) = self.battlefield_find_mut(aid) {
+                        c.attached_to = Some(tgt);
+                    }
+                    events.push(GameEvent::AttachmentMoved { attachment: aid, attached_to: Some(tgt) });
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: aid,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Exile { what: Selector::This },
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::OnYourNextNamedSpellThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextNamedSpellThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::PayOrLoseGame { mana_cost, life_cost } => {
                 let p = ctx.controller;
                 // Try to pay mana via auto-tap, then deduct life. If any of
@@ -7807,6 +10264,45 @@ impl GameState {
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::ExileUntilDuplicateName { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut seen: Vec<String> = Vec::new();
+                loop {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = &self.players[p].library[0];
+                    let cid = card.id;
+                    let name = card.definition.name.to_string();
+                    let dup = seen.contains(&name);
+                    // Exile the top card (face up).
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if dup {
+                        // Same name as a card already exiled this way → the
+                        // process ends with this card exiled, none to hand.
+                        break;
+                    }
+                    seen.push(name);
+                    // Unique name → the controller may take it into hand
+                    // (ending the process) or keep digging. AutoDecider takes
+                    // it; a `Bool(true)` answer declines and continues.
+                    let keep_digging = matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source,
+                            description: "Tainted Pact: decline this card and keep digging?".to_string(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                    if !keep_digging {
+                        self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                        break;
+                    }
+                }
                 Ok(())
             }
 
@@ -8291,10 +10787,96 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameOpponentCastLock => {
+                // Academic Probation mode 0 — the controller names a nonland
+                // card; their opponents can't cast spells with that name until
+                // their next turn. Suggestions: the names showing in opponents'
+                // hands (best guess at what they'd want to cast).
+                use crate::decision::Decision;
+                let caster = ctx.controller;
+                let suggestions = rank_names_by_frequency(
+                    self.players
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| !self.same_team(*i, caster))
+                        .flat_map(|(_, pl)| pl.hand.iter().map(|c| c.definition.name)),
+                );
+                let source_id = ctx.source.unwrap_or(CardId(0));
+                let decision = Decision::NameCard {
+                    source: source_id,
+                    source_name: "Academic Probation".to_string(),
+                    suggestions,
+                };
+                let pending = PendingEffectState::OpponentNameLockPending { caster };
+                if self.players[caster].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::LockTargetNameUntilYourNextTurn { what } => {
+                // Reflector Mage — the bounced creature's owner can't cast
+                // spells with that name until the controller's next turn.
+                // Reads the targeted card's name (it's now in hand after the
+                // bounce, but resolves by id from any zone) and records it in
+                // the controller's `opponents_cant_cast_named` lock.
+                let name = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => self
+                            .find_card_anywhere(c)
+                            .map(|ci| ci.definition.name.to_string()),
+                        _ => None,
+                    });
+                if let Some(name) = name {
+                    let caster = ctx.controller;
+                    if !name.is_empty()
+                        && !self.players[caster].opponents_cant_cast_named.contains(&name)
+                    {
+                        self.players[caster].opponents_cant_cast_named.push(name);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantCastBackFromGraveyard { what } => {
+                // Flag the resolved card (typically Selector::This, now in the
+                // graveyard after a sac cost) so its back face becomes castable
+                // from the graveyard. No-op if it has no back face.
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                for id in ids {
+                    if let Some(c) = self.find_card_anywhere_mut(id)
+                        && c.definition.back_face.is_some()
+                    {
+                        c.may_cast_back_from_graveyard = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageThisTurn => {
                 // CR 615.1 — set the engine-wide flag the combat damage
                 // resolver consults. Cleared in `do_cleanup` (CR 514.2).
                 self.prevent_combat_damage_this_turn = true;
+                Ok(())
+            }
+
+            Effect::PreventCombatDamageExceptDealtBy { except } => {
+                // CR 615.1 fog with a per-dealer exception (Inspire Awe).
+                self.prevent_combat_damage_this_turn = true;
+                self.prevent_combat_damage_except = Some(except.clone());
                 Ok(())
             }
 
@@ -8321,18 +10903,32 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextDamageFromChosenSource { filter } => {
+            Effect::PreventNextDamageFromChosenSource { filter, reflect } => {
                 // CR 615.7 — Circle of Protection: a one-event shield around
-                // the controller, restricted to the chosen source.
+                // the controller, restricted to the chosen source. With
+                // `reflect` (Deflecting Palm) the prevented damage is dealt
+                // to the source's controller.
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
+                // Stamp the source's controller now — by damage time a
+                // resolving spell is in no visible zone.
+                let src_ctrl = self
+                    .battlefield_find(chosen)
+                    .map(|c| c.controller)
+                    .or_else(|| self.stack.iter().find_map(|si| match si {
+                        crate::game::StackItem::Spell { card, caster, .. }
+                            if card.id == chosen => Some(*caster),
+                        _ => None,
+                    }));
                 self.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Player(ctx.controller),
                     remaining: None,
                     gain_life: false,
                     source: Some(chosen),
                     one_event: true,
+                    reflect: *reflect,
+                    source_controller: src_ctrl,
                 });
                 Ok(())
             }
@@ -8380,6 +10976,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AttackDespiteDefenderThisTurn { what } => {
+                // CR 508.1a — let the resolved creatures attack despite Defender
+                // for the rest of the turn (Krotiq Nestguard).
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent
+                        && !self.attack_despite_defender_this_turn.contains(&id)
+                    {
+                        self.attack_despite_defender_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventNextDamage { target, amount } => {
                 // CR 615.7 — push a "prevent the next N damage to target"
                 // shield consumed by `apply_prevention_shields`.
@@ -8392,6 +11001,8 @@ impl GameState {
                             gain_life: false,
                             source: None,
                             one_event: false,
+                        reflect: false,
+                            source_controller: None,
                         });
                     }
                 }
@@ -8410,6 +11021,8 @@ impl GameState {
                             gain_life: true,
                             source: None,
                             one_event: false,
+                        reflect: false,
+                            source_controller: None,
                         });
                     }
                 }
@@ -8425,6 +11038,8 @@ impl GameState {
                         gain_life: false,
                         source: None,
                         one_event: false,
+                        reflect: false,
+                        source_controller: None,
                     });
                 }
                 Ok(())
@@ -8715,6 +11330,68 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Ripple { n } => {
+                // CR 702.20: reveal the top N cards; cast any with the same
+                // name as the rippling spell for free (from exile, like
+                // Cascade); bottom the rest. A rippled copy re-fires its own
+                // cast trigger, so ripple-of-ripples recurses naturally.
+                use crate::card::Zone;
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let p = ctx.controller;
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(name) = self.find_card_anywhere(src).map(|c| c.definition.name) else {
+                    return Ok(());
+                };
+                let count = self.evaluate_value(n, ctx).max(0) as u32;
+                let mut revealed: Vec<crate::card::CardId> = Vec::new();
+                for _ in 0..count {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let cid = self.players[p].library[0].id;
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    revealed.push(cid);
+                }
+                // Offer each same-named revealed card for a free cast.
+                for cid in revealed.clone() {
+                    let same_name = self
+                        .exile
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .is_some_and(|c| c.definition.name == name);
+                    if !same_name {
+                        continue;
+                    }
+                    use crate::decision::{Decision, DecisionAnswer};
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    let Some(card_def) = card_def else { continue };
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: src,
+                        description: "Ripple: cast the revealed copy without paying its mana cost?"
+                            .to_string(),
+                    });
+                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                        let auto_target =
+                            self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(cid));
+                        let cast_events =
+                            self.cast_card_for_free(p, cid, Zone::Exile, auto_target, vec![], None, None, false)?;
+                        events.extend(cast_events);
+                    }
+                }
+                // Bottom whatever's still in exile (didn't get cast).
+                for cid in revealed {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library { who: PlayerRef::Seat(p), pos: LibraryPosition::Bottom },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Discover { n, filter } => {
                 // CR 701.57: exile cards from the top of the controller's
                 // library until a nonland card with MV ≤ n is exiled; the
@@ -8726,6 +11403,9 @@ impl GameState {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let p = ctx.controller;
                 let cap = self.evaluate_value(n, ctx).max(0) as u32;
+                // CR 701.57 — the discover itself is an event; "whenever you
+                // discover" payoffs (Curator of Sun's Creation) fire off this.
+                events.push(GameEvent::Discovered { player: p, value: cap });
                 let mut exiled: Vec<crate::card::CardId> = Vec::new();
                 let mut hit: Option<crate::card::CardId> = None;
                 while !self.players[p].library.is_empty() {
@@ -9179,12 +11859,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CreateEmblem { who, name, triggered } => {
+            Effect::CreateEmblem { who, name, triggered, statics } => {
                 for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
                     if let EntityRef::Player(p) = ent {
                         self.players[p].emblems.push(crate::player::Emblem {
                             name: name.clone(),
                             triggered: triggered.clone(),
+                            statics: statics.clone(),
                         });
                     }
                 }
@@ -9198,6 +11879,16 @@ impl GameState {
                     if let EntityRef::Player(p) = ent {
                         self.players[p].skip_turns =
                             self.players[p].skip_turns.saturating_add(n);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SkipNextCombatPhase { who } => {
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].skip_next_combat =
+                            self.players[p].skip_next_combat.saturating_add(1);
                     }
                 }
                 Ok(())
@@ -9226,6 +11917,48 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 self.additional_post_main_combats =
                     self.additional_post_main_combats.saturating_add(n);
+                Ok(())
+            }
+
+            Effect::UnlockRoomDoor { what } => {
+                // CR 709.5 — unlock one still-locked door of each resolved Room
+                // (left first, else right). `set_room_door_unlocked` fires the
+                // door's own triggers and the Eerie RoomFullyUnlocked event.
+                let rooms: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                for room in rooms {
+                    let Some(c) = self.battlefield_find(room) else { continue };
+                    if c.definition.room.is_none() {
+                        continue;
+                    }
+                    // bit 1 = left, bit 2 = right; unlock the lowest still-locked door.
+                    let right = if c.unlocked_doors & 0b01 == 0 {
+                        false
+                    } else if c.unlocked_doors & 0b10 == 0 {
+                        true
+                    } else {
+                        continue; // already fully unlocked
+                    };
+                    self.set_room_door_unlocked(room, right, events);
+                }
+                Ok(())
+            }
+
+            Effect::AtEachCombatThisTurn { body } => {
+                // Register a turn-scoped delayed trigger that re-fires at the
+                // start of every Begin-Combat step for the controller's turn.
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::EachCombatThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: false,
+                });
                 Ok(())
             }
 
@@ -9395,6 +12128,18 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
+            Selector::BlockingCreatures => ctx
+                .source
+                .map(|attacker| {
+                    self.block_map
+                        .iter()
+                        .filter(|(_, aid)| **aid == attacker)
+                        .map(|(bid, _)| *bid)
+                        .filter(|bid| self.battlefield.iter().any(|c| c.id == *bid))
+                        .map(EntityRef::Permanent)
+                        .collect()
+                })
+                .unwrap_or_default(),
             Selector::CardExiledWithSource => self
                 .exile
                 .iter()
@@ -9484,12 +12229,17 @@ impl GameState {
             }
 
             Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
-            Selector::EachPermanent(filter) => self
-                .battlefield
-                .iter()
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
-                .map(|c| EntityRef::Permanent(c.id))
-                .collect(),
+            Selector::EachPermanent(filter) => {
+                // Concretize `{X}`-from-cost filters against the paid X so
+                // "destroy each artifact with mana value X" (Dauntless
+                // Dismantler) and similar sweeps read the activation's X.
+                let filter = filter.resolve_x(ctx.x_value);
+                self.battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
 
             Selector::ControlledBy { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
@@ -9516,6 +12266,32 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
                 .max_by_key(|c| c.power())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
+            Selector::GreatestPowerControlledMatching(filter) => self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == ctx.controller
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source)
+                })
+                .max_by_key(|c| c.power())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
+            // The controller's greatest-toughness *other* creature.
+            Selector::GreatestToughnessYouControl => self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == ctx.controller
+                        && c.definition.is_creature()
+                        && Some(c.id) != ctx.source
+                })
+                .max_by_key(|c| c.toughness())
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
@@ -9665,6 +12441,22 @@ impl GameState {
                     let card = self.players.iter()
                         .find_map(|p| p.graveyard.iter().find(|c| c.id == cid));
                     if let Some(c) = card
+                        && self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                    {
+                        out.push(EntityRef::Card(cid));
+                    }
+                }
+                out
+            }
+
+            Selector::ExiledThisResolution { filter } => {
+                // Walk the IDs captured in `exiled_card_ids_this_resolution` and
+                // look them up in the exile zone, filtering via the card-level
+                // evaluator (the cards aren't on the battlefield).
+                let ids = self.exiled_card_ids_this_resolution.clone();
+                let mut out: Vec<EntityRef> = Vec::new();
+                for cid in ids {
+                    if let Some(c) = self.exile.iter().find(|c| c.id == cid)
                         && self.evaluate_requirement_on_card(filter, c, ctx.controller)
                     {
                         out.push(EntityRef::Card(cid));
@@ -9951,6 +12743,17 @@ fn target_to_entity(t: &Target) -> EntityRef {
     match t {
         Target::Player(p) => EntityRef::Player(*p),
         Target::Permanent(c) => EntityRef::Permanent(*c),
+    }
+}
+
+/// UI noun for an `Effect::DistributeCounters` division (Jugan → "+1/+1
+/// counter"). Falls back to the debug name for exotic counter kinds.
+fn counter_noun(counter: CounterType) -> &'static str {
+    match counter {
+        CounterType::PlusOnePlusOne => "+1/+1 counter",
+        CounterType::MinusOneMinusOne => "-1/-1 counter",
+        CounterType::Loyalty => "loyalty counter",
+        _ => "counter",
     }
 }
 

@@ -111,7 +111,7 @@ fn pest_marrowfeast_b123_etb_mints_pest_and_drains_on_other_pest_death() {
     g.clear_sickness(cult);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cult, ability_index: 0, target: None, x_value: None,
+        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Cultcaller activation");
     drain_stack(&mut g);
     // Cultcaller's drain: opp -1. Marrowfeast Pest-death drain: opp -1.
@@ -213,7 +213,7 @@ fn witherbloom_bonesplitter_b123_sacs_other_to_shrink_target() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: wb, ability_index: 0,
-        target: Some(Target::Permanent(target)), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -277,7 +277,7 @@ fn witherbloom_beetlecaller_b123_grows_on_other_creature_death() {
     g.clear_sickness(cult);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cult, ability_index: 0, target: None, x_value: None,
+        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Cultcaller activation");
     drain_stack(&mut g);
     let p_after = g.battlefield_find(wb).expect("Beetlecaller alive").power();
@@ -2839,6 +2839,7 @@ fn lorehold_stoneglyph_b129_activated_ability_pings() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sg, ability_index: 0,
         target: Some(Target::Player(1)),
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("Stoneglyph ability activates");
     drain_stack(&mut g);

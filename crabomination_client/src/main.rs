@@ -9,8 +9,9 @@ use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalA
 use bevy::anti_alias::contrast_adaptive_sharpening::ContrastAdaptiveSharpening;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::post_process::bloom::Bloom;
-use bevy::render::view::Hdr;
-use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
+use bevy::camera::Hdr;
+use bevy::render::view::{ColorGrading, ColorGradingGlobal, ColorGradingSection};
+use bevy::{anti_alias::smaa::Smaa, prelude::*};
 
 mod audit;
 mod card;
@@ -705,6 +706,17 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
+        .init_resource::<systems::chat::ChatInputState>()
+        .add_systems(
+            Update,
+            (
+                systems::chat::drain_chat_inbox,
+                systems::chat::handle_chat_input,
+                systems::chat::sync_chat_ui,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         .add_systems(
             Update,
             (
@@ -915,7 +927,7 @@ fn setup(
     commands.spawn((
         Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, 1.0, -PI / 4.)),
         DirectionalLight {
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             illuminance: gfx.key_light_illuminance,
             ..default()
         },
@@ -931,16 +943,18 @@ fn setup(
     commands.spawn((
         Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, -2.0, -PI / 6.)),
         DirectionalLight {
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             illuminance: gfx.fill_light_illuminance,
             ..default()
         },
     ));
 
-    // Ground plane
+    // Ground plane. Dark slate keeps glare off the card faces and lets the
+    // (lit) cards read as the brightest thing on the table.
+    const TABLE_COLOR: Color = Color::srgb(0.20, 0.20, 0.23);
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(90.0, 90.0).subdivisions(quality.ground_subdivisions()))),
-        MeshMaterial3d(materials.add(Color::from(SILVER))),
+        MeshMaterial3d(materials.add(TABLE_COLOR)),
         GroundPlane,
     ));
 
@@ -948,6 +962,7 @@ fn setup(
         Camera3d::default(),
         Transform::from_xyz(0.0, 32.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y),
         quality.msaa(),
+        scene_color_grading(),
         MainCamera,
     )).id();
     // Only attach SMAA when the current quality preset asks for it. Low
@@ -967,6 +982,34 @@ fn setup(
     if let Some(cas) = quality.sharpening() {
         commands.entity(cam).insert(cas);
     }
+}
+
+/// Post-tonemap colour grading for the main 3-D camera.
+///
+/// The card faces are **unlit** so they show their art as-authored, but the
+/// camera still runs the default `TonyMcMapface` tonemapper, which is a filmic
+/// curve tuned for HDR scenes — on flat SDR card art it slightly desaturates
+/// and lifts mid-tones, reading as "washed out" next to the un-tonemapped
+/// Alt-zoom popup. A gentle post-tonemap saturation lift plus a touch of
+/// section contrast pulls the rendered cards (and their dark text) back toward
+/// the authored look without the risk of disabling tonemapping wholesale
+/// (which would clip the lit ground/lights). Applies scene-wide; the ground is
+/// a flat table colour, so the boost is harmless there.
+///
+/// `post_saturation 0.9` read better than the default look (visual tuning via
+/// the temporary render-debug scrubber). Section `contrast` is left neutral:
+/// Bevy applies it pre-tonemap in log space, so it's a near-inert lever for
+/// flat SDR card art — `ColorGradingSection::lift` (black level) and the
+/// camera `Tonemapping` choice are the effective de-wash knobs, exposed live
+/// in the scrubber for further tuning.
+fn scene_color_grading() -> ColorGrading {
+    ColorGrading::with_identical_sections(
+        ColorGradingGlobal {
+            post_saturation: 0.9,
+            ..default()
+        },
+        ColorGradingSection::default(),
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -991,17 +1034,17 @@ fn apply_render_quality_change(
     let segments = new_quality.corner_segments();
 
     if let Some(assets) = &card_assets
-        && let Some(mesh) = meshes.get_mut(&assets.card_mesh) {
+        && let Some(mut mesh) = meshes.get_mut(&assets.card_mesh) {
             *mesh = create_rounded_rect_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, segments);
         }
 
     if let Some(assets) = &highlight_assets
-        && let Some(mesh) = meshes.get_mut(&assets.border_mesh) {
+        && let Some(mut mesh) = meshes.get_mut(&assets.border_mesh) {
             *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments);
         }
 
     if let Ok(ground_mesh) = ground_query.single()
-        && let Some(mesh) = meshes.get_mut(&ground_mesh.0) {
+        && let Some(mut mesh) = meshes.get_mut(&ground_mesh.0) {
             *mesh = Plane3d::default().mesh().size(90.0, 90.0)
                 .subdivisions(new_quality.ground_subdivisions())
                 .into();

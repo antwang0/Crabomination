@@ -21,21 +21,57 @@ pub(crate) enum Format {
 
 impl Format {
     pub(crate) fn from_env() -> Self {
-        match env::var("CRAB_FORMAT").ok().as_deref() {
+        Self::parse(env::var("CRAB_FORMAT").ok().as_deref())
+    }
+
+    /// Pure parser for `CRAB_FORMAT` (case-insensitive, whitespace-trimmed) so
+    /// `"Cube"`, `" commander "`, etc. all resolve. Unknown values warn and
+    /// fall back to demo. Split out from `from_env` for unit testing.
+    pub(crate) fn parse(raw: Option<&str>) -> Self {
+        let value = raw.map(|s| s.trim().to_ascii_lowercase());
+        match value.as_deref() {
             Some("cube") => Self::Cube,
             Some("sos") | Some("strixhaven") => Self::Sos,
             Some("commander") | Some("edh") => Self::Commander,
-            Some("demo") | None => Self::Demo,
-            Some(other) => {
+            Some("demo") | Some("") | None => Self::Demo,
+            Some(_) => {
                 eprintln!(
-                    "warning: CRAB_FORMAT={other:?} not recognized — \
-                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\" | \"commander\"."
+                    "warning: CRAB_FORMAT={:?} not recognized — \
+                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\" | \"commander\".",
+                    raw.unwrap_or_default()
                 );
                 Self::Demo
             }
         }
     }
+    /// Decklist-override env keys that this format will silently ignore.
+    /// Only the demo format honors `CRAB_DECK` / `CRAB_BOT_DECK`; the cube /
+    /// SOS / commander formats build their own decks. Pure (takes the set of
+    /// present keys) so it's unit-testable without touching the environment.
+    pub(crate) fn ignored_override_keys<'a>(&self, set_keys: &[&'a str]) -> Vec<&'a str> {
+        if matches!(self, Self::Demo) {
+            return Vec::new();
+        }
+        ["CRAB_DECK", "CRAB_BOT_DECK"]
+            .into_iter()
+            .filter(|k| set_keys.contains(k))
+            .collect()
+    }
+
     pub(crate) fn build(&self) -> GameState {
+        // Warn (don't silently misconfigure) when deck overrides are set for a
+        // format that won't use them — mirrors `load_deck_env`'s philosophy.
+        let present: Vec<&str> = ["CRAB_DECK", "CRAB_BOT_DECK"]
+            .into_iter()
+            .filter(|k| env::var(k).is_ok())
+            .collect();
+        for key in self.ignored_override_keys(&present) {
+            eprintln!(
+                "warning: {key} is set but ignored in {} format \
+                 (deck overrides apply only to the demo format).",
+                self.label(),
+            );
+        }
         match self {
             Self::Demo => {
                 let overrides = deck_overrides();
@@ -115,12 +151,21 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
         std::process::exit(1);
     }
     let defs: Vec<_> = parsed.main.iter().map(|f| f()).collect();
-    if let Err(errs) = crabomination::format::validate_deck(&defs, crabomination::format::Format::Modern) {
+    let format = crabomination::format::Format::Modern;
+    if let Err(errs) = crabomination::format::validate_deck(&defs, format) {
         eprintln!("{key}: deck is not Modern-legal:");
         for e in &errs {
             eprintln!("  - {e}");
         }
         std::process::exit(1);
+    }
+    // CR 702.139c — a sideboard companion must legalise the main deck.
+    let side: Vec<_> = parsed.sideboard.iter().map(|f| f()).collect();
+    for c in side.iter().filter(|c| c.companion.is_some()) {
+        if let Err(e) = crabomination::format::companion_restriction_met(c, &defs, format.rules().min_deck_size) {
+            eprintln!("{key}: {e}");
+            std::process::exit(1);
+        }
     }
     eprintln!("{key}: loaded {} cards from {path}", parsed.main.len());
     Some(parsed.main)
@@ -197,3 +242,24 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::Format;
+
+    #[test]
+    fn format_parse_is_case_and_whitespace_insensitive() {
+        assert!(matches!(Format::parse(Some("Cube")), Format::Cube));
+        assert!(matches!(Format::parse(Some("  commander ")), Format::Commander));
+        assert!(matches!(Format::parse(Some("EDH")), Format::Commander));
+        assert!(matches!(Format::parse(Some("strixhaven")), Format::Sos));
+    }
+
+    #[test]
+    fn format_parse_defaults_and_unknown_fall_back_to_demo() {
+        assert!(matches!(Format::parse(None), Format::Demo));
+        assert!(matches!(Format::parse(Some("")), Format::Demo));
+        assert!(matches!(Format::parse(Some("   ")), Format::Demo));
+        assert!(matches!(Format::parse(Some("pauper")), Format::Demo));
+    }
+}

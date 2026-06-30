@@ -2043,6 +2043,7 @@ fn move_counter_transfers_counters_between_permanents() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        cast_via_mayhem: false,
         entwined: false,
     };
     let effect = Effect::MoveCounter {
@@ -2085,6 +2086,7 @@ fn move_counter_clamps_at_source_pool() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        cast_via_mayhem: false,
         entwined: false,
     };
     let effect = Effect::MoveCounter {
@@ -2768,7 +2770,7 @@ fn lorehold_memorial_taps_for_red_or_white() {
     drain_stack(&mut g);
     // Activate the Red mana ability (index 0).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Memorial Red mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Memorial Red mana ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     let body = g.battlefield_find(id).unwrap();
     assert!(body.tapped);

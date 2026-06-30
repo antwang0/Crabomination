@@ -265,11 +265,14 @@ pub fn handle_audit_buttons(
 pub fn handle_auto_pass_toggle(
     keyboard: Res<ButtonInput<KeyCode>>,
     debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    chat: Res<crate::systems::chat::ChatInputState>,
     mut ff: ResMut<FastForward>,
     btn: Query<&Interaction, (Changed<Interaction>, With<AutoPassButton>)>,
     mut label_q: Query<&mut Text, With<AutoPassButtonLabel>>,
 ) {
-    let key = !debug_console.card_input_focused && keyboard.just_pressed(KeyCode::KeyH);
+    let key = !debug_console.card_input_focused
+        && !chat.open
+        && keyboard.just_pressed(KeyCode::KeyH);
     let pressed = btn.iter().any(|i| *i == Interaction::Pressed);
     if key || pressed {
         ff.manual_priority = !ff.manual_priority;
@@ -297,11 +300,12 @@ pub fn handle_export_keypress(
     btns: Res<ButtonState>,
     mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
     debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    chat: Res<crate::systems::chat::ChatInputState>,
 ) {
     if state.active {
         return;
     }
-    if debug_console.card_input_focused {
+    if debug_console.card_input_focused || chat.open {
         return;
     }
     if keyboard.just_pressed(KeyCode::KeyX) || btns.export {

@@ -50,3 +50,6 @@ crabomination_client/assets/cards/
 *.pyc
 .claude/scheduled_tasks.lock
 *.log
+
+# Session scratch files (oracle dumps, set diffs) — never tracked.
+scratch_*

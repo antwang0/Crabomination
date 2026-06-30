@@ -166,7 +166,8 @@ pub fn vandalblast() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -434,7 +435,7 @@ pub fn reckless_charge() -> CardDefinition {
 pub fn boil() -> CardDefinition {
     CardDefinition {
         name: "Boil",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::HasLandType(LandType::Island)),
@@ -482,7 +483,7 @@ pub fn demolish() -> CardDefinition {
 pub fn mind_sculpt() -> CardDefinition {
     CardDefinition {
         name: "Mind Sculpt",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Mill {
             who: Selector::Player(PlayerRef::EachOpponent),
@@ -516,7 +517,7 @@ pub fn cabal_therapy() -> CardDefinition {
 pub fn wear_down() -> CardDefinition {
     CardDefinition {
         name: "Wear Down",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: target_filtered(
@@ -599,7 +600,7 @@ pub fn archdruids_charm() -> CardDefinition {
 pub fn awaken_the_honored_dead() -> CardDefinition {
     CardDefinition {
         name: "Awaken the Honored Dead",
-        cost: cost(&[generic(5), w(), b()]),
+        cost: cost(&[b(), g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: Selector::EachMatching {
@@ -625,7 +626,7 @@ pub fn explore() -> CardDefinition {
     use crate::effect::{PlayerRef, Value};
     CardDefinition {
         name: "Explore",
-        cost: cost(&[g()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::GrantExtraLandPlay {
@@ -992,7 +993,7 @@ pub fn flame_sweep() -> CardDefinition {
 pub fn tidings() -> CardDefinition {
     CardDefinition {
         name: "Tidings",
-        cost: cost(&[generic(4), u()]),
+        cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
         ..Default::default()
@@ -1014,7 +1015,7 @@ pub fn mind_spring() -> CardDefinition {
 pub fn foresee() -> CardDefinition {
     CardDefinition {
         name: "Foresee",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
@@ -1039,7 +1040,7 @@ pub fn final_judgment() -> CardDefinition {
 pub fn planar_cleansing() -> CardDefinition {
     CardDefinition {
         name: "Planar Cleansing",
-        cost: cost(&[generic(3), w(), w()]),
+        cost: cost(&[generic(3), w(), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DestroyNoRegen {
             what: Selector::EachPermanent(SelectionRequirement::Not(Box::new(
@@ -1095,7 +1096,7 @@ pub fn terminus() -> CardDefinition {
     use crate::effect::LibraryPosition;
     CardDefinition {
         name: "Terminus",
-        cost: cost(&[generic(4), w()]),
+        cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: Selector::EachPermanent(SelectionRequirement::Creature),
@@ -1113,7 +1114,7 @@ pub fn terminus() -> CardDefinition {
 pub fn gerrards_wisdom() -> CardDefinition {
     CardDefinition {
         name: "Gerrard's Wisdom",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::GainLife {
             who: Selector::You,
@@ -1247,7 +1248,7 @@ pub fn jeskas_will() -> CardDefinition {
     use crate::mana::Color;
     CardDefinition {
         name: "Jeska's Will",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
             Effect::AddMana {
@@ -1271,7 +1272,7 @@ pub fn jeskas_will() -> CardDefinition {
 pub fn conflagrate() -> CardDefinition {
     CardDefinition {
         name: "Conflagrate",
-        cost: cost(&[x(), r()]),
+        cost: cost(&[x(), x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
             total: Value::XFromCost,
@@ -1294,8 +1295,10 @@ pub fn rite_of_replication() -> CardDefinition {
         count: Value::Const(n),
         source: target_filtered(SelectionRequirement::Creature),
         extra_creature_types: vec![],
+        extra_card_types: vec![],
         override_pt: None,
         non_legendary: false,
+        legendary: false,
     };
     CardDefinition {
         name: "Rite of Replication",

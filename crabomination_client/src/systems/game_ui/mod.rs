@@ -80,6 +80,7 @@ pub struct GameInputResources<'w> {
     pub card_names: ResMut<'w, crate::game::CardNames>,
     pub export_prompt: ResMut<'w, crate::systems::export_prompt::ExportPromptState>,
     pub debug_console: ResMut<'w, crate::systems::debug_console::DebugConsoleState>,
+    pub chat: ResMut<'w, crate::systems::chat::ChatInputState>,
     pub legal_targets: ResMut<'w, crate::game::LegalTargets>,
     pub modal_cast: ResMut<'w, crate::game::PendingModalCast>,
     pub pay_times: ResMut<'w, crate::game::PayTimesState>,
@@ -1579,8 +1580,14 @@ fn apply_hint(
     if color.0 != new_color {
         *color = TextColor(new_color);
     }
-    if (font.font_size - new_size).abs() > f32::EPSILON {
-        font.font_size = new_size;
+    // `TextFont::font_size` is a `FontSize` enum in Bevy 0.19; the UI sets
+    // sizes in logical pixels, so compare/normalize on the `Px` value.
+    let cur_px = match font.font_size {
+        FontSize::Px(v) => v,
+        _ => f32::INFINITY,
+    };
+    if (cur_px - new_size).abs() > f32::EPSILON {
+        font.font_size = FontSize::Px(new_size);
     }
 }
 
@@ -1951,14 +1958,18 @@ pub fn update_combat_preview_panel(
         let new_life = p.life - dmg + gain;
         let who = if seat == cv.your_seat { "You".to_string() } else { player_name(cv, seat) };
         let note = if gain > 0 { format!("  (+{gain} lifelink)") } else { String::new() };
-        let color = if new_life < p.life {
+        // Flag a projected death (CR 104.3a — life ≤ 0 loses) so the player
+        // sees a lethal swing at a glance instead of decoding a negative total.
+        let lethal = new_life <= 0;
+        let color = if lethal || new_life < p.life {
             theme::TEXT_DANGER
         } else if new_life > p.life {
             theme::TEXT_GOOD
         } else {
             theme::TEXT_BODY
         };
-        rows.push((format!("{who}:  {} → {}{}", p.life, new_life, note), color));
+        let lethal_tag = if lethal { "  ☠ LETHAL" } else { "" };
+        rows.push((format!("{who}:  {} → {}{}{}", p.life, new_life, note, lethal_tag), color));
     }
 
     // One row per attacked planeswalker projected to lose loyalty.
@@ -3275,6 +3286,7 @@ pub fn auto_advance_p0(
     // auto-passing and surface the window so the player gets priority.
     let has_instant_play = !cv.castable_hand.is_empty()
         || !cv.back_castable_hand.is_empty()
+        || !cv.prototypable_hand.is_empty()
         || !cv.prepare_castable.is_empty()
         || !cv.activatable_permanents.is_empty()
         || !cv.kickable_hand.is_empty()
@@ -3403,6 +3415,11 @@ pub fn handle_game_input(
     // typing into the buffer shouldn't fire `KeyCode::KeyA` (Attack All)
     // or other gameplay shortcuts.
     if r.debug_console.card_input_focused {
+        return;
+    }
+
+    // And while the chat input bar is open.
+    if r.chat.open {
         return;
     }
 
@@ -3610,7 +3627,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None });
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3640,6 +3657,9 @@ pub fn handle_game_input(
                         let action = build_pending_cast(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
+                            targeting.pending_gift,
+                            targeting.pending_omen,
+                            targeting.pending_kicked,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3659,7 +3679,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None });
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3689,6 +3709,9 @@ pub fn handle_game_input(
                         let action = build_pending_cast(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
+                            targeting.pending_gift,
+                            targeting.pending_omen,
+                            targeting.pending_kicked,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3723,6 +3746,7 @@ pub fn handle_game_input(
                             card_id: src,
                             ability_index: idx,
                             target: Some(target),
+                            additional_targets: Vec::new(),
                             x_value: None,
                         });
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3750,6 +3774,9 @@ pub fn handle_game_input(
                     let action = build_pending_cast(
                         pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
+                            targeting.pending_gift,
+                            targeting.pending_omen,
+                            targeting.pending_kicked,
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3808,6 +3835,49 @@ pub fn handle_game_input(
                         r.pay_times.times = 1;
                     } else if cv.splittable_right_hand.contains(&card_id) {
                         r.split_cast.pending = Some(card_id);
+                    } else if k.has_gift {
+                        // CR 702.165 — right-click a Gift card promises its gift
+                        // and casts via `CastGift`. Arm targeting first when the
+                        // gifted effect needs a target; otherwise fire now.
+                        if k.gift_needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_gift = true;
+                        } else {
+                            outbox.submit(GameAction::CastGift {
+                                card_id, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
+                        }
+                    } else if k.has_omen && cv.omenable_hand.contains(&card_id) {
+                        // CR 702.183 — right-click an Omen card casts its Omen
+                        // half via `CastOmen`. Arm targeting first when the omen
+                        // effect needs a target; otherwise fire now.
+                        if k.omen_needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_omen = true;
+                        } else {
+                            outbox.submit(GameAction::CastOmen {
+                                card_id, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
+                        }
+                    } else if cv.kickable_hand.contains(&card_id) {
+                        // CR 702.32 / 702.166 — right-click a Kicker/Offspring
+                        // card casts it with the optional cost paid
+                        // (`CastSpellKicked`). Arm targeting when the effect
+                        // needs a target; otherwise fire now.
+                        if k.needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_kicked = true;
+                        } else {
+                            outbox.submit(GameAction::CastSpellKicked {
+                                card_id, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
+                        }
                     } else if k.back_face_name.is_some()
                         && !r.flipped_hand.flipped.insert(card_id) {
                             r.flipped_hand.flipped.remove(&card_id);
@@ -4034,6 +4104,13 @@ pub fn handle_game_input(
                                 *legal_targets = l;
                             }
                         }
+                    } else if cv.prototypable_hand.contains(&card.id)
+                        && !cv.castable_hand.contains(&card.id)
+                    {
+                        // CR 702.160 — the full cost isn't affordable but the
+                        // prototype cost is; click casts it for the smaller,
+                        // colored face (no on-cast target).
+                        outbox.submit(GameAction::CastPrototype { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                     } else {
                         outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                     }
@@ -4069,6 +4146,7 @@ pub fn handle_game_input(
                         card_id: perm.id,
                         ability_index: mana_abilities[0].index,
                         target: None,
+                        additional_targets: Vec::new(),
                         x_value: None,
                     });
                 }
@@ -4195,7 +4273,29 @@ fn build_pending_cast(
     cast_back: bool,
     pay_times: Option<(u32, crate::game::PayTimesMechanic)>,
     split: Option<crate::game::SplitCastChoice>,
+    gift: bool,
+    omen: bool,
+    kicked: bool,
 ) -> GameAction {
+    // CR 702.165 — a promised Gift is its own cast action; it can't combine
+    // with the split / pay-times / back-face shapes.
+    if gift {
+        return GameAction::CastGift {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
+    // CR 702.183 — an Omen half is its own cast action.
+    if omen {
+        return GameAction::CastOmen {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
+    // CR 702.32 / 702.166 — Kicker / Offspring paid via the kicked cast path.
+    if kicked {
+        return GameAction::CastSpellKicked {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
     match (split, pay_times) {
         (Some(crate::game::SplitCastChoice::Right), _) => GameAction::CastSplitRight {
             card_id, target, additional_targets: vec![], mode, x_value: None,
@@ -4232,6 +4332,9 @@ fn cancel_targeting(
     targeting.pending_prepare_source = None;
     targeting.pending_pay_times = None;
     targeting.pending_split = None;
+    targeting.pending_gift = false;
+    targeting.pending_omen = false;
+    targeting.pending_kicked = false;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

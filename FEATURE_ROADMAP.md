@@ -1,848 +1,587 @@
 # Feature Roadmap — MTGO / Arena / XMage parity
 
-A prioritized, exhaustive summary of capabilities to add, derived from a
-codebase analysis against the three reference clients. This is a
-*capabilities* roadmap (engine fidelity + UX + infra); per-card status
-lives in `CUBE_FEATURES.md` / `DECK_FEATURES.md` / `STRIXHAVEN2.md` and the
-approximations log in `TODO.md`.
+A prioritized capabilities roadmap (engine fidelity + UX + infra), derived from
+a codebase analysis against the three reference clients. Per-card status lives
+in `CUBE_FEATURES.md` / `DECK_FEATURES.md` / `STRIXHAVEN2.md`; the
+approximations log is `TODO.md`.
 
-Legend: ✅ done · 🟡 partial · ⏳ not started. Markers reflect a point-in-time
-read of the code and should be re-verified before picking up an item.
+Legend: ✅ done · 🟡 partial · ⏳ not started. Markers are a point-in-time read —
+re-verify before picking up an item.
 
 ---
 
 ## Already shipped (don't re-propose)
 
-A terse capability checklist — these are wired; don't re-propose them. The
-exhaustive primitive-by-primitive list (and every card that exercises each) was
-elided in a doc-compaction pass; recover it from `git log -p -- FEATURE_ROADMAP.md`
-and the rules-coverage audit in `TODO.md`.
+A terse checklist. The exhaustive primitive-by-primitive list (and every card
+exercising each) was elided in a compaction pass; recover it from
+`git log -p -- FEATURE_ROADMAP.md`.
 
-- **Core loop:** real LIFO stack, multiplayer priority loop, state-based
-  actions, delayed triggers, intervening-`if` (603.4), the layer system (613),
-  split first-strike / regular combat-damage steps, APNAP ordering.
+- **Core loop:** LIFO stack, multiplayer priority, state-based actions, delayed
+  triggers, intervening-`if` (603.4), the layer system (613), split
+  first-strike / regular combat-damage steps, APNAP ordering.
 - **Keywords (~120):** evasion + combat (Flying/Reach/Menace/First+Double
-  Strike/Trample/Deathtouch/Lifelink/Vigilance/Defender/Protection/Hexproof/
-  Shroud/Ward/Indestructible/Bushido/Flanking/Rampage/Provoke/Melee/Dash/Boast/
-  Afflict/Enlist/Mobilize/Myriad/Ninjutsu/Goad/Lure…); ETB/value (Persist/
-  Undying/Riot/Fabricate/Afterlife/Explore/Exploit/Extort/Investigate/Support/
-  Embalm/Eternalize/Backup/Soulbond/Mentor); counter-matters (Proliferate/
-  Bolster/Adapt/Training/Evolve/Modular/Graft/Outlast/Renown/Bloodthirst/
-  Monstrosity/Devour/Amass); cast-mode + alt-cost (Kicker/Casualty/Connive/
-  Offspring/Plot/Saddle/Blitz/Spectacle/Escalate/Buyback/Bestow/Foretell/
-  Suspend/Flashback/Madness/Escape/Adventure/Cascade/Storm/Convoke/Delve);
-  Absorb; plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
-  Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash,
-  Devoid (CDA colorless), Ingest.
+  Strike/Trample/Deathtouch/Lifelink/Vigilance/Protection/Hexproof/Shroud/Ward/
+  Bushido/Flanking/Rampage/Provoke/Melee/Dash/Boast/Afflict/Enlist/Mobilize/
+  Myriad/Ninjutsu/Goad/Lure/Poisonous…); ETB/value (Persist/Undying/Riot/Fabricate/
+  Afterlife/Explore/Exploit/Extort/Investigate/Embalm/Eternalize/Backup/
+  Soulbond/Mentor); counter-matters (Proliferate/Bolster/Adapt/Training/Evolve/
+  Modular/Graft/Outlast/Renown/Bloodthirst/Monstrosity/Devour/Amass); cast-mode
+  + alt-cost (Kicker/Casualty/Connive/Offspring/Plot/Saddle/Blitz/Spectacle/
+  Escalate/Buyback/Bestow/Foretell/Suspend/Flashback/Madness/Escape/Adventure/
+  Cascade/Storm/Convoke/Delve); plus Fading/Vanishing, Cumulative Upkeep, Echo,
+  Dredge, Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift,
+  Unleash, Devoid, Ingest, Absorb, Warp, Station (CR 702.184/721 — charge-counter
+  `{N+}` Spacecraft/Planet striations: keyword + base-P/T + static, triggered
+  **and activated** bands — `StationBand.activated`, surfaced via
+  `granted_abilities_for` so a Planet's `12+ | {cost}: …` band is usable once
+  charged), Incubate (CR 701.53 — Incubator DFC token via `TokenDefinition.back_face`).
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
-  Convoke/Delve generic reduction; Commander tax; alternative (pitch) costs;
+  Convoke/Delve reduction; Commander tax; alternative (pitch) costs;
   energy-gated mana abilities; X-cost activated abilities.
 - **Resource systems:** Energy {E}, Poison/Toxic, Devotion, Ascend/city's
   blessing, Monarch, Day/Night, coin-flip + die-roll randomization.
-- **Objects:** tokens (Treasure/Clue/Blood/Food/Map/Army/Germ), counters
-  (incl. keyword/shield/stun/finality/rad), planeswalkers + loyalty + **emblems**,
-  MDFC front/back, split // fuse // aftermath, adventure, command zone + Commander,
-  manlands (`BecomeCreature`), living weapon, clones/token-copies/spell-copies.
-- **Replacement effects:** enters-tapped, enters-with-counters, token/counter/
-  damage **doubling**, **mana-doubling** (CR 701.10f, `ManaProductionDoubled`),
-  regeneration, EtbTriggerTax, Maze-of-Ith per-source combat-damage prevention,
-  prevention shields, finality exile-instead. Counters cease on zone change
-  (CR 122.2). Counter types incl. `-0/-1` / `-1/-0`.
-- **Statics (misc):** no-maximum-hand-size, play-lands-from-graveyard
-  (`PlayLandFromGraveyard` action), artifact/creature non-mana-ability locks,
-  spell-tax (`AdditionalCost`, incl. nonartifact). Two-player coin-flip-off
-  (`Effect::ManaClash`), reveal-top-land-to-battlefield-else-hand.
-- **Misc primitives:** per-card board-bounce to each owner
-  (`PlayerRef::OwnerOfMoved`; Aetherize/Evacuation), set-all-life-to-lowest
-  (`Value::LowestLifeTotal`; Repay in Kind), step-gated activated abilities
-  (`Predicate::CurrentStepIs`; Mirror Universe/Magus of the Mirror upkeep gate),
-  sacrifice-unless-pay-mana (`Effect::PayManaOrElse`; Archway Commons),
-  single-player graveyard exile (`Effect::ExilePlayerGraveyard`; Go Blank),
-  exchange-control of two permanents (`Effect::ExchangeControl`, CR 701.12;
-  Switcheroo).
-- **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
-  singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
-  sideboard, full-state serde snapshots (save/restore + replay foundation).
-- **Ability/trigger riders:** statics-granted triggered abilities
-  (`StaticEffect::GrantTriggeredAbility` — "all artifacts have …", Kataki;
-  wired in both trigger dispatchers), conditional aura riders
-  (`EquipBonus.conditional` — Shield of the Oversoul), rhystic taxes
-  (`UnlessPlayerPays` + `WardCost::GenericSourcePower` — Esper Sentinel),
-  once-per-turn triggers (`EventSpec::once_per_turn`,
-  CR 603.3d), opponents-only activations (`ActivatedAbility.opponents_only`, CR
-  602.5), discard-self activation cost (`discard_self_cost`), counter-to-exile
-  (`CounterUnlessPaid.exile`), `Predicate::PlayerSacrificedThisResolution`,
-  slot-parameterized `WhenTargetDiesThisTurn`, `Effect::DoublePower`,
-  `Effect::ExileReturnNextEndStep` (blink-return-EOT), `Value::CountMatching`.
-- **Client:** 3D board, game-log panel (player names, not seat indices),
-  targeting + decision UI (incl. resolution-time modes/amounts/divided-damage/
-  creature-type modals), attack-all + per-attacker picking, priority-aware
-  Pass/Respond with per-step stop/skip overrides on the clickable phase
-  chart, counter tooltips, card-zoom hover preview with type-line + keyword
-  reminder panel, animations, keyboard cursor (incl. WUBRG hotkeys),
-  commander-damage HUD, legal-play highlighting, monarch/day-night/blessing
-  chips, reconnect banner, decklist import.
+- **Objects:** tokens (Treasure/Clue/Blood/Food/Map/Army/Germ; colored via the
+  CR 105.2c color indicator), counters
+  (incl. keyword/shield/stun/finality/rad), planeswalkers + loyalty + emblems,
+  MDFC, split // fuse // aftermath, adventure, command zone + Commander,
+  manlands, living weapon, clones/token-copies/spell-copies.
+- **Replacement effects:** enters-tapped, enters-with-counters,
+  token/counter/damage/mana doubling, regeneration, EtbTriggerTax, Maze-of-Ith
+  per-source prevention, prevention shields, finality exile-instead, fog
+  (CR 615.1) incl. a per-dealer exception (`prevent_combat_damage_except` —
+  Inspire Awe "except enchanted/enchantment creatures"). Counters cease on
+  zone change (122.2).
+- **Statics (misc):** no-max-hand-size, play-lands-from-graveyard,
+  artifact/creature non-mana-ability locks, spell-tax, two-player coin-flip-off
+  (Mana Clash), reveal-top-land-else-hand, opponents'-turn cost reduction
+  (`CostReductionDuringOpponentsTurn` — Naiad of Hidden Coves); per-turn
+  spell-cast locks by type (`OneSpellPerTurn` / `OneNoncreatureSpellPerTurn` /
+  `OneNonartifactSpellPerTurn` — Rule of Law / Deafening Silence / Ethersworn
+  Canonist, surfaced via `PlayerView.spell_cast_lock`); off-turn spell tax
+  (`SpellsCostMoreExceptOnControllerTurn` — Defense Grid).
+- **CDA / cost / predicate primitives (recent52):**
+  `DynamicPt::CardTypesInControllerGraveyard` (Nethergoyf */1+*),
+  `SpendRestriction::AbilitiesOnly` (Omen Hawker — abilities-only mana, surfaced
+  as a mana ability in the view), `Predicate::ValueIsPrime` (Zimone's prime-land
+  end-step check).
+- **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
+  the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
+  (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),
+  `SelectionRequirement::ManaValueParity` (Extinction Event's odd/even sweep);
+  CDA P/T for creatures-in-your-graveyard and other-flyers-you-control
+  (`DynamicPt::BasePlusCreaturesInControllerGraveyard` — Fiend Artisan;
+  `BasePlusOtherFlyersControlled` — Skycat Sovereign), and creature-cards-in-
+  **all**-graveyards (`DynamicPt::CreatureCardsInAllGraveyards` — Lhurgoyf,
+  Mortivore); `SelectionRequirement::OwnedByYou` (CR 108.3 — Gruul Charm's
+  "gain control of all permanents you own"); `Effect::DestroyAndRemember`
+  (destroy + record P/T like `SacrificeAndRemember` — Orzhov Charm);
+  `Selector::GreatestPowerControlledMatching(filter)` read through `Value::PowerOf`
+  + `Value::Max` for "N or the greatest power among [type] you control" floors
+  (Triumphant Chomp).
+- **Ability/trigger riders:** statics-granted triggered abilities (Kataki),
+  conditional aura riders, rhystic taxes (Esper Sentinel), once-per-turn
+  triggers (603.3d), opponents-only activations, discard-self cost,
+  counter-to-exile, blink-return-EOT, "when enchanted creature dies" Aura LKI
+  triggers (`EventScope::EnchantedBySource` — Minion's Return) and
+  auras-on-dying-creature payoffs (`auras_at_death` +
+  `Value::AurasYouControlledOnDyingSubject` — Hateful Eidolon, Dawn Evangel);
+  name-gated first-cast-this-turn delayed trigger
+  (`DelayedKind::YourNextNamedSpellThisTurn` — Medomai's Prophecy);
+  next-spell delayed triggers expose the cast spell's mana value
+  (`event_amount` → `ManaValueLessThanEventAmount` — Vivien, Monsters'
+  Advocate's lesser-MV tutor); conditional defender-bypass
+  (`StaticEffect::CanAttackIgnoringDefenderWhile` — Drowsing Tyrannodon);
+  bounty-counter dies payoff (`CounterType::Bounty` — Chevill);
+  token-created triggers (CR 111.10 — `EventKind::TokenCreated`, fires once per
+  token incl. doubled tokens — Voldaren Bloodcaster's five-Blood transform);
+  reflexive "when you do" payoffs (CR 603.7 — `Effect::Reflexive`, opaque to the
+  cast/trigger-time target walk, auto-targets at resolution; composes with
+  `MayPay`/`MaySacrifice` — Itzquinth, Glorifier of Suffering, Inti);
+  counter-added triggers bind `Selector::TriggerSource` to the counter-receiving
+  permanent (CR 122/603.6 — Auntie Ool's Ward—Blight drain off an opponent).
+- **Protection / locks / piles (THB batch):** protection from each mana value
+  other than N (`Keyword::ProtectionFromManaValueExcept`, all DEBT facets —
+  Haktos); permanent opponents-can't-cast-named lock + linked counter-exile
+  (`StaticEffect::OpponentsCantCastNamed` + `Effect::CounterSpellExileNameLock`
+  — Ashiok's Erasure); source-tapped untap-lock (`CardInstance.untap_locked_by`
+  + `SelectionRequirement::PowerAtMostXFromCost` — Entrancing Lyre); heuristic
+  pile-split (`Effect::FactOrFiction` — Fact or Fiction, Atris); gy aura
+  mass-reanimate + delayed exile (`Effect::ReanimateAurasExileEot` — Storm
+  Herald); reveal-6 / opponent-exile / free may-play (`Effect::AllureOfTheUnknown`).
+  Protection from instants / from everything (`Keyword::ProtectionFrom{Instants,
+  Everything}` — Hexdrinker). Voting / "will of the council"
+  (`Effect::WillOfTheCouncilExile`, untargeted — Council's Judgment, CR 701.31).
+- **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant; vs-bot,
+  networked TCP multiplayer, draft + cube, Learn/Lessons sideboard, full-state
+  serde snapshots (save/restore + replay foundation).
+- **Client:** 3D board, game-log panel (player names), targeting + decision UI
+  (resolution-time modes/amounts/divided-damage/type modals), attack-all +
+  per-attacker picking, priority-aware Pass/Respond with per-step stop/skip on a
+  clickable phase chart, card-zoom hover preview + reminder panel, animations,
+  keyboard cursor (WUBRG hotkeys), commander-damage HUD, legal-play
+  highlighting, monarch/day-night/blessing chips, reconnect banner, decklist
+  import.
 
 ---
 
 ## Tier 1 — High-leverage engine primitives
 
-Each unblocks a large swath of cards and removes the most visible "that's
-not how Magic works" moments.
+Each unblocks a large swath of cards.
 
-1. 🟡 **Replacement-effect framework.** A `replacement.rs` framework exists
-   but only models zone-change replacements (Commander "→ command zone
-   instead", CR 903.9b); the rest is stubbed per-card. Still to generalize:
-   ETB replacement (enters with counters / as a copy / under your
-   control; **enters tapped** now ships via `StaticEffect::EntersTapped` +
-   `apply_enters_tapped_replacement` (CR 614.13 — Imposing Sovereign,
-   Authority of the Consuls, Blind Obedience, Kismet; **also self-source**
-   `EntersTapped { This }` so a permanent can enter tapped on its own —
-   Overlord of the Hauntwoods' "Everywhere" omniland); "exile non-cast
-   nontoken creatures instead" ships via
-   `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest;
-   **opponent's nontoken creature would-die → exile instead** ships via
-   `StaticEffect::ExileDyingOpponentCreatures { when_you_do }` checked at the
-   shared `remove_from_battlefield_to_graveyard` funnel, with an optional
-   reflexive "when you do" — Valentin, Dean of the Vein),
-   damage *redirection* (Maze of Ith) and draw replacement. **Skip-step**
-   (CR 614.10) ships via `StaticEffect::SkipStep` (Eon Hub, Stasis);
-   skip-*turn* remains.
-   **Creature-ETB control replacement** ships via
-   `Effect::StealCreatureEtbThisTurn` + `apply_etb_control_replacement`
-   (Gather Specimens; token mints don't consult it yet).
-   **Graveyard→exile hate** ships via
-   `StaticEffect::ExileCardsBoundForGraveyard { opponents_only }` +
-   `GameState::route_to_graveyard` (CR 614.6 — Rest in Peace, Leyline of
-   the Void), centralizing every graveyard-placement site. Counter
-   placement can be globally locked via `StaticEffect::CountersCantBePlaced`
-   (CR 122.1 — Solemnity). Counter-doubling (Doubling Season,
-   Hardened Scales — `StaticEffect::DoubleCounters`) and damage-**doubling**
-   (Furnace of Rath — `StaticEffect::DoubleDamageDealt`, applied to both the
-   non-combat and combat damage paths, CR 614.2) now ship as multiplier
-   replacements. Damage **prevention** is modeled as shields
-   (`prevention_shields` + `Effect::PreventNextDamage` /
-   `PreventAllDamageThisTurn` / `DamageCantBePreventedThisTurn`, CR
-   615.1/615.7/615.12) for the non-combat damage path, plus the existing
-   `prevent_combat_damage_this_turn` flag for combat fogs. **Per-source
-   combat shields** now ship via `Effect::PreventAllCombatDamageInvolving`
-   + `GameState.combat_damage_prevented_creatures` (Maze of Ith — prevent
-   all combat damage to and by a creature this turn, CR 614.9). **Damage
-   redirection** (CR 614.9) ships via `StaticEffect::RedirectDamageToSelf`
-   at both damage funnels — Palisade Giant. **Draw replacement** (CR 121.2a)
-   ships via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought
-   Reflection; stacks per 614.5). Damage *halving* ✅ (614.5 —
-   `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent). Skip-step ✅;
-   skip-*turn* ✅ (`Player.skip_turns`).
-2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
-   wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). "Pick from
-   revealed cards" is also wired: `Effect::LookPickToHand` (Impulse /
-   Strategic Planning / Flow State) presents the peeked top-of-library set
-   through the `SearchLibrary` decision; auto-decider keeps the top card.
+1. 🟡 **Replacement-effect framework.** `replacement.rs` models zone-change
+   replacements (Commander → command zone); the rest is per-card. Shipped:
+   enters-tapped (`StaticEffect::EntersTapped`, incl. self-source) and the
+   enters-*untapped* override (`StaticEffect::LandsEnterUntapped` — Spelunking),
+   exile-instead
+   for non-cast creatures (Containment Priest), opponent-creature-dies → exile
+   (Valentin), graveyard → exile hate (`ExileCardsBoundForGraveyard` via
+   `route_to_graveyard` — Rest in Peace, Leyline of the Void), counter-lock
+   (Solemnity), counter/damage doubling (Doubling Season, Furnace of Rath),
+   damage prevention as shields (`prevention_shields`), per-source combat shields
+   (Maze of Ith), damage redirection (Palisade Giant), draw doubling (Thought
+   Reflection), damage halving (Ghosts of the Innocent), creature-ETB control
+   steal (Gather Specimens), skip-step and skip-turn. Still to generalize: as-a-copy
+   ETB, draw replacement breadth.
+2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
+   pick-from-revealed via `Effect::LookPickToHand` (Impulse, Strategic Planning).
 3. ✅ **Player-chosen combat damage assignment order.**
-   `Decision::CombatDamageOrder { attacker, blockers }` prompts the attacker
-   (`combat.rs`, CR 510.1c) instead of sorting by CardId. (Trample-over-
-   lethal / deathtouch spread math rides on top — see Tier 6.)
-4. ✅ **Linked "until this leaves play" exile** (CR 603.6e).
-   `Effect::ExileUntilSourceLeaves` (target a permanent) and
-   `Effect::ExileChosenUntilSourceLeaves` (pick from a hand) stamp
-   `CardInstance.exiled_by`; `return_linked_exiles` (called from every
-   battlefield-removal path) returns the card to battlefield or hand when
-   the source leaves. Wired Banisher Priest, Fiend Hunter, Oblivion Ring,
-   Brain Maggot, Tidehollow Sculler.
-5. 🟡 **Copy of a permanent (clone).** `Effect::BecomeCopyOf` (CR 707.2,
-   one-shot definition rewrite) + the `CardDefinition.enters_as_copy` ETB
-   hook (applied before SBA so a 0/0 copier never dies first) ship Clone
-   and Phantasmal Image (Illusion + sacrifice-when-targeted rider), Mirror
-   Image, Stunt Double. Copied ETB triggers re-fire (CR 707.5). Token
-   copies ride `CreateTokenCopyOf` (Cackling Counterpart). Remaining:
-   "becomes a copy" *continuous* layer-1 effects (Helm of the Host's
-   haste-token loop, Mirrorform aura) and copied enters-with-counters.
+   `Decision::CombatDamageOrder` prompts the attacker (510.1c).
+4. ✅ **Linked "until this leaves play" exile** (603.6e).
+   `Effect::ExileUntilSourceLeaves` + `return_linked_exiles` (Banisher Priest,
+   Fiend Hunter, Oblivion Ring, Brain Maggot, Tidehollow Sculler).
+5. 🟡 **Copy of a permanent (clone).** `Effect::BecomeCopyOf` +
+   `enters_as_copy` ship Clone, Phantasmal Image, Mirror Image, Stunt Double;
+   token copies via `CreateTokenCopyOf`. Remaining: continuous layer-1
+   "becomes a copy" effects (Helm of the Host loop, Mirrorform aura).
 6. ✅ **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
-   `CopySpellUnlessPaid` ship Storm / sac-to-copy cards (copy keeps the
-   original's targets), and `Effect::CopySpellMayChooseTargets`
-   (CR 707.12 / 115.7) adds **new-target choice** on the copy — the copy's
-   controller may repoint the primary target (original offered first, so
-   AutoDecider keeps it). Ships Reverberate, Fork.
+   `CopySpellMayChooseTargets` (new-target choice) — Storm cards, Reverberate, Fork.
 
 ## Tier 2 — Engine rules fidelity (beyond Tier 1)
 
-- ✅ **APNAP trigger ordering** — inter-player APNAP (`apnap_rank` sort,
-  CR 603.3b) plus same-controller ordering with a real server suspend:
-  `continue_trigger_ordering` parks the dispatch in
-  `ResumeContext::TriggerOrder` and sets `pending_decision =
-  OrderTriggers`, so a networked `wants_ui` seat is prompted; the client
-  modal applies the order on resume.
-- 🟡 **Divided damage** across N targets — `Effect::DealDamageDivided` +
-  `Decision::DivideDamage` ship Forked Bolt, Pyrokinesis, Crackle with Power,
-  Magma Opus (AutoDecider spreads evenly; UI/scripted deciders choose the
-  split). Remaining: divided *non-damage* riders ("tap up to N", split-mill)
-  and true "choose targets as it resolves".
-- 🟡 **Targeting refinements:** resolution-time legality re-check (CR 608.2b)
-  ships for single-target spells aimed at battlefield permanents (zone-gone /
-  filter-mismatch / granted Hexproof-Shroud → fizzle to graveyard), **for
-  multi-target spells (all-illegal → fizzle; any legal target → resolve)**,
-  and **for Aura spells** (illegal enchant target → countered, never enters;
-  bestow exempt per CR 702.103e). Remaining: "up to N targets", "target
-  each", "another target", protection-from-color re-check.
-- 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (CR 612 —
-  `ReplaceColorWord`/`ReplaceBasicLandType`; Trait Doctoring, Mind Bend);
-  land-type statics ✅ (`StaticEffect::LandTypeChanger` — Blood Moon, Magus
-  of the Moon, Urborg, Yavimaya). Remaining: CDA corner cases, full
-  text-box swaps, "becomes a copy of" layer interaction.
+- ✅ **APNAP trigger ordering** — inter-player (`apnap_rank`) plus
+  same-controller ordering with a real server suspend (`ResumeContext::
+  TriggerOrder`), so networked seats are prompted.
+- 🟡 **Divided damage / counters** — `Effect::DealDamageDivided` +
+  `Effect::DistributeCounters` (Jugan) share `Decision::DivideDamage` (the modal
+  is noun-aware). Forked Bolt, Pyrokinesis, Crackle with Power. Remaining:
+  "choose targets as it resolves".
+- 🟡 **Targeting refinements:** resolution-time legality re-check (608.2b) ships
+  for single/multi-target spells and Auras, and now resolves `{X}`-from-cost
+  target filters (Hearth Kami's "artifact with mana value X" via
+  `ManaValueExactlyXFromCost`). "Up to N targets" ships via
+  `Effect::ApplyToTargets` (Sea God's Scorn bounce-3, Wrap in Flames
+  1-to-each-of-3, Elemental Expressionism bounce-2). Protection now gates spells
+  *and* abilities (CR 702.16c — `ability_target_has_protection`) across color /
+  creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
+  spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil
+  Serpent), and combat damage (CR 702.16e — `damage_prevented_by_protection`
+  on both attacker→blocker and blocker→attacker). Remaining: "target each".
+- 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
+  land-type statics ✅ (Blood Moon, Urborg); layer-4 granted supertype ✅
+  (`Modification::AddSupertype` — the Ring-bearer's Legendary rider, CR 701.54c);
+  layer-4 set-creature-types ✅ as a one-shot (`Effect::BecomeCreatureType` —
+  Turn to Frog / Snakeform / Polymorphist's Jest) **and** the CR 613.8 type-lord
+  dependency (a retyped creature is now seen by `AllWithCreatureType` lords via
+  a `gate_types` second pass). Remaining: CDA corners, full text-box swaps,
+  "becomes a copy of" layer interaction, type-gated `CardMatch` lords.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
-  permissions from permanents, "creatures you control have X", anthem
-  stacking — wired, including **disjunctive multi-type "other … you control"
-  anthems** (the `affected_from_requirement` / `CardMatch` path now matches
-  `Or`-of-creature-type filters and applies `OtherThanSource` against the live
-  source id — Blex, Vexing Pest's Pest/Bat/Insect/Snake/Spider lord).
-  Devotion-gated creature states (Nyx gods) ship via
-  `StaticEffect::NotCreatureWhileDevotionBelow` (CR 700.5). Keyword **loss**
-  ships via `StaticEffect::LoseKeyword` (layer-6 `RemoveKeyword`; Nowhere to
-  Run strips opponents' Hexproof/Shroud), and `check_target_legality` reads
-  layer-computed Hexproof/Shroud so granted *and* stripped evasion both
-  affect targeting (fixes Lightning Greaves' granted Shroud). Remaining:
-  broader "you may play" permissions and devotion-gated *non-type* states.
-- 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
-- ✅ **Regeneration shields & "the next time" prevention** as proper shields
-  (`regeneration_shields`, `prevention_shields`).
-- ⏳ **Damage marking vs. wither/-1/-1**, lethal/indestructible interplay
-  audited against CR 120 / 704.
-- ⏳ **Loyalty fidelity:** activate at sorcery speed once/turn (have), but
-  also loyalty-set effects, "can be activated any time" riders, proliferate
-  on loyalty, attacking planeswalkers redirect rules.
-- 🟡 **State-based action coverage audit:** +1/-1 counter annihilation ✅
-  (CR 122.3), counter caps ✅ (CR 122.4), legend rule ✅, saga-chapter
-  sacrifice ✅, world rule ✅ (CR 704.5k — timestamp-keyed, ties bin all;
-  Concordant Crossroads / Nether Void). Remaining: attached-Aura orphan
-  corners.
+  permissions, anthem stacking incl. disjunctive multi-type lords (Blex);
+  devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion
+  bonuses (`StaticEffect::DevotionBonus` — Altar of the Pantheon, CR 700.5);
+  keyword loss (`LoseKeyword` — Nowhere to Run); live-recompute `GrantKeyword`
+  statics over combat state (`IsAttacking` — Bone-Cairn Butcher's "attacking
+  tokens you control have deathtouch"). Remaining: broader "you may play",
+  devotion-gated non-type states.
+- 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1). Life-loss
+  doubling (`OpponentLifeLossDoubledDuringYourTurn` — Bloodletter) and scoped
+  unpreventable combat damage (`ControllerCreaturesCombatDamageCantBePrevented`
+  — Questing Beast) now ride the `adjust_life` / prevention chokepoints.
+  Noncombat-only damage doubling (`DoubleNoncombatDamageToOpponents` — Solphim,
+  Mayhem Dominus) rides the `deal_damage_to_from` funnel and stacks with the
+  global Furnace-of-Rath doubler (combat damage stays exempt).
+- ✅ **Regeneration shields & "next time" prevention** as proper shields.
+- 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
+  CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power
+  `StaticEffect::LethalDamageByPower` — Zilortha — now overrides the toughness
+  threshold in the SBA. **Excess damage** (CR 120.10) is tracked per resolution
+  in `deal_damage_to_from` — `Predicate::ExcessDamageDealtThisResolution` gates
+  "if excess damage was dealt this way" (Orbital Plunge). Remaining: the broader
+  marking-interplay audit, and excess-to-another-permanent redirection (120.4a).)
+- 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
+  (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`).
+  Remaining: "any time" activation riders, attacking-planeswalker redirect.
+- 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
+  legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
+  (704.5n — host fails the printed enchant filter). Remaining: Battle/Dungeon
+  SBAs.
 
 ## Tier 3 — Object model & zones
 
-- ⏳ **Battle card type** (CR 110.4) + defense counters +
-  `AttackTarget::Battle` (noted in `TODO.md`).
-- 🟡 **Sagas** (CR 714). `CardDefinition.saga_chapters: Vec<(u32, Effect)>` +
-  `GameState::saga_advance`: enters with one lore counter (chapter I fires),
-  gains one each precombat main (turn-based action), and is sacrificed by SBA
-  once lore counters reach the final chapter and no chapter ability is still on
-  the stack. Ships History of Benalia, The Eldest Reborn. Remaining ⏳: DFC
-  sagas (transforming back face) and read-ahead/chapter-choice variants.
-- ✅ **Split cards** (CR 709) + **Fuse** (CR 702.102). The left half lives on
-  the main `CardDefinition` (cast via the normal path); `CardDefinition.split:
-  Some(SplitCard{ right, fuse })` carries the right half + Fuse flag. Cast the
-  right half via `GameAction::CastSplitRight`, or both fused via
-  `CastSplitFused` (combined cost; left target rides `target`, right target
-  rides `additional_targets` slot 0, resolved in a second pass). `CardInstance.
-  split_cast` marks which half(s) are on the stack. Affordance surfaced via
-  `HandAffordances.splittable_right` → `PlayerView.splittable_right_hand`.
-  Ships Wear // Tear.
-- ✅ **Adventure** (CR 715) — `CardDefinition.adventure` + `CardInstance.
-  {adventuring,on_adventure}` + `GameAction::CastAdventure` /
-  `CastAdventureCreature`. The adventure half resolves down the spell path
-  (its own effect, instant/sorcery type for Prowess/Magecraft), then exiles
-  the card with permission to cast the creature half from exile. Ships
-  Bonecrusher Giant // Stomp, Brazen Borrower // Petty Theft, Murderous
-  Rider // Swift End, Foulmire Knight // Profane Insight, Order of Midnight
-  // Alter Fate, Rimrock Knight // Boulder Rush, Garenbrig Carver // Shield's
-  Might.
-- 🟡 **Classes / Cases / Backgrounds** (enchantment subtypes with level
-  mechanics). **Rooms ship** (CR 709.5 — `CardDefinition.room` +
-  `CardInstance.unlocked_doors`; `GameAction::CastRoomDoor` /
-  `UnlockRoomDoor`, door-scoped abilities via live definition rebuild,
-  `EventKind::DoorUnlocked`; Unholy Annex // Ritual Chamber).
-- ✅ **Leveler cards** (CR 702.87 — `CardDefinition.level_bands` sets base
-  P/T (7a CDA) + grants keywords by Level-counter count; the level-up
-  activation is a plain sorcery-speed `ActivatedAbility`. Student of
-  Warfare).
-- ✅ **Transforming DFCs** (CR 712) — `Effect::Transform` toggles a
-  permanent's active face in place (`CardInstance.{transformed,front_face}`,
-  same object: counters/tapped/attachments persist), fires
-  `EventKind::Transformed` for "when this transforms" triggers, and round-trips
-  through both the serde and `GameSnapshot` paths (front name + flag rebuild
-  the back face). Ships Concealing Curtains, Delver of Secrets, The Everflowing
-  Well. Remaining: Daybound/Nightbound auto-flip, DFC sagas.
-- ✅ **Meld** (CR 701.37/712.16) — `Effect::Meld` exiles both own+controlled
-  components and mints the melded card with the parts stashed in
-  `CardInstance.meld_parts`; every leave-battlefield funnel unmelds back into
-  both cards. Urza, Lord Protector + The Mightstone and Weakstone → Urza,
-  Planeswalker (loyalty-twice-each-turn override, CR 606.3).
-- ⏳ **Flip cards** (Kamigawa), **Prototype**, **Omen**.
-- 🟡 **Face-down permanents** — the 2/2-face-down object ships (CR 708):
-  `CardInstance.face_up_def` stashes the real card while `definition` is the
-  vanilla 2/2 (`facedown_creature_definition`), restored on leaving the
-  battlefield (708.10) and round-tripped through serde. `Effect::Manifest` /
-  `ManifestDread` (701.34 / 702.166) + `GameAction::TurnFaceUp` (708.5,
-  Morph/manifest cost) + `EventKind::TurnedFaceUp` (708.8). Hauntwoods
-  Shrieker, Ainok Survivalist (Morph/Megamorph cast-face-down ✅ via
-  `GameAction::CastFaceDown`). Remaining ⏳: Disguise/Cloak.
-- ⏳ **Ante / conspiracy / dungeon (venture) / sticker / attraction** zones
-  (low priority; only for novelty formats).
-- ✅ **Emblems** as command-zone objects (planeswalker ultimates) —
-  `Player.emblems` + `Effect::CreateEmblem`; triggers dispatch event-keyed
-  (`emblem_event_matches`) and step-keyed (`fire_step_triggers`); surfaced in
-  `PlayerView.emblems`. Wired Dellian Fel -6, Dakkon -6, Saheeli Rai -7.
+- ✅ **Battle card type** (CR 310) — `CardType::Battle` + `BattleSubtype::Siege`,
+  defense counters (CR 310.7), protector choice (CR 310.6), attack-your-own-Siege
+  (`AttackTarget::Battle`), combat damage removes defense counters (CR 310.10),
+  defeat→exile/transform SBA (CR 704.5x). 6 MOM Invasions in `decks::mom`; tests
+  in `tests/mom.rs`. Remaining: multiplayer protector choice.
+- 🟡 **Sagas** (714). `saga_chapters` + `saga_advance` (History of Benalia, The
+  Eldest Reborn). Remaining: DFC sagas, read-ahead/chapter-choice.
+- ✅ **Split cards** (709) + **Fuse** — `CardDefinition.split`,
+  `CastSplitRight`/`CastSplitFused` (Wear // Tear).
+- ✅ **Adventure** (715) — `CardDefinition.adventure` + `CastAdventure` (Bonecrusher
+  Giant, Brazen Borrower, Murderous Rider, …).
+- 🟡 **Classes / Cases / Backgrounds.** **Rooms ship** (709.5 — `room` +
+  `CastRoomDoor`/`UnlockRoomDoor`; Unholy Annex // Ritual Chamber).
+- ✅ **Leveler cards** (702.87 — `level_bands`; Student of Warfare).
+- ✅ **Transforming DFCs** (712) — `Effect::Transform` toggles the active face in
+  place, round-trips through serde/snapshot (Delver, Concealing Curtains).
+  Remaining: DFC sagas.
+- ✅ **Meld** (701.37) — `Effect::Meld` + `meld_parts`, unmelds on leave (Urza +
+  Mightstone/Weakstone → Urza, Planeswalker).
+- ✅ **Flip cards** (Kamigawa, CR 711) — `flip_face` + `Effect::Flip` +
+  `GameEvent::Flipped`; ki counters; flip in place, revert off-battlefield
+  (711.6); `damaged_by_this_turn` source tracking; `flip_when_has_keyword`
+  CR 603.8 state-triggered flip (Student of Elements). Whole CHK flip cycle
+  ships (Cunning Bandit … Bushi Tenderfoot, Kitsune Mystic + Autumn-Tail's
+  two-target aura-move, Nezumi Graverobber, Student of Elements).
+  **Prototype** (CR 702.160) ✅ — `CardDefinition.prototype` +
+  `GameAction::CastPrototype`: cast a colorless artifact creature for its
+  smaller, colored prototype cost/size, keeping abilities/types (the BRO
+  cycle: Goring Warplow, Steel Seraph, Phyrexian Fleshgorger, …).
+  **Omen** still ⏳.
+- 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
+  / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
+  Disguise/Cloak edge cases (both core paths ship — see Tier 4).
+- ⏳ **Ante / conspiracy / dungeon / sticker / attraction** zones (novelty only).
+- ✅ **Emblems** as command-zone objects — `Player.emblems` + `CreateEmblem`,
+  carrying both triggered and **static (anthem) abilities** (Vivien Reid's −8;
+  synthesized into continuous effects in `gather_continuous_effects`).
 - ⏳ **Sideboard zone** + "from outside the game" (wishes, companions).
 
 ## Tier 4 — Keyword & ability mechanics (the long tail)
 
-Grouped roughly by how many cards each unlocks. Each is a small, targeted
-feature; sweep card-batch by card-batch.
+Each a small targeted feature; sweep batch by batch.
 
-- **High frequency / modern staples:** ✅ Madness (`Keyword::Madness`,
-  discard→exile→offer-cast in `discard_card`/`offer_madness_cast`, CR
-  702.35), ✅ Escape (`Keyword::Escape(cost, n)` + `GameAction::CastEscape`,
-  CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
-  instants/sorceries re-escape), ✅ Adventure (CR 715, see Tier 3),
-  ✅ Soulbond (see CUBE_FEATURES — `SoulbondBonus`, pairs auto-resolve), ⏳ Mutate, 🟡 Companion (CR 702.139 — `Keyword::Companion` + `GameAction::CompanionToHand`, {3} sideboard→hand; deck validation ⏳), ✅ Foretell
-  (`CardDefinition.foretell_cost` + `GameAction::Foretell` /
-  `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile
-  for the foretell cost on a later turn; Saw It Coming, Doomskar, Behold the
-  Multiverse), ✅ Disturb (CR 702.146 — `Keyword::Disturb` +
-  `GameAction::CastDisturb`, cast transformed from the graveyard; 702.146e
-  exile rider at the graveyard funnels),
-  ⏳ Daybound/Nightbound, ✅ Decayed (`Keyword::Decayed` — CR 702.147: can't
-  block + sacrifice at end of combat via the attacking-token cleanup queue),
-  ✅ Blitz (`shortcut::blitz` /
-  `AlternativeCost.blitz` — CR 702.152: alt-cost haste + "when this dies,
-  draw a card" + sacrifice at next end step via `Effect::SacrificeSource`;
-  Tenacious Underdog, Ardent Elementalist, Goldhound), ✅ Casualty
-  (CR 702.153 — `Keyword::Casualty(n)` + `GameAction::CastSpellCasualty`:
-  optional sacrifice-a-creature-of-power-≥-n additional cost that copies the
-  spell on cast via `copy_stack_spell`; Cut of the Profits),
-  ✅ Connive (`shortcut::connive` — CR 702.158, draw/discard +
-  +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix
-  Cryptomancer), ✅ Backup (CR 702.164 — `shortcut::backup` /
-  `backup_with`; ETB +N/+N + granted keywords *and* triggered abilities to a
-  backed-up other creature; Conclave Sledge-Captain, Bola Slinger),
-  ✅ Bargain (CR 702.176 — `Keyword::Bargain` + `GameAction::CastSpellBargain`:
-  optional sacrifice-an-artifact/enchantment/token additional cost;
-  `Predicate::SpellWasBargained` gates the payoff; Torch the Tower, Candy
-  Grapple, Archon's Glory), ⏳ Craft, ⏳ Disguise/Cloak, ✅ Plot (CR 702.170 —
-  `CardDefinition.plot_cost` + `GameState.{plotted_cards,plotted_this_turn}`
-  + `GameAction::Plot` / `CastPlotted`: exile face-up for the plot cost, cast
-  free on a later turn; Spinewoods Paladin, Vault Plunderer),
-  ✅ Saddle (CR 702.171 — `Keyword::Saddle(n)` + `CardInstance.saddled` +
-  `GameAction::Saddle` + `shortcut::attacks_while_saddled`; Stingerback
-  Terror), ⏳ Gift,
-  ✅ Offspring (CR 702.166 — `Keyword::Offspring(cost)` reuses the Kicker
-  pipeline; `SpellWasKicked` gates an ETB 1/1 token-copy; Thundertrap Trainer),
-  ✅ Impending (CR 702.183 — `Keyword::Impending(n)` + `AlternativeCost.impending`:
-  enters with N time counters, not a creature until they tick off at end step;
-  Duskmourn Overlord cycle), ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
-  `GameAction::Ninjutsu` — declare-blockers special action that returns an
-  unblocked attacker and swaps the ninja in tapped + attacking; Fallen
-  Shinobi), ✅ Embalm (CR 702.88) / Eternalize (CR 702.91) —
-  `shortcut::embalm` / `eternalize` ride the from-graveyard exile-self
-  activation + `CreateTokenCopyOf` (Zombie type, 4/4 for Eternalize); `sets::akh`.
-- **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
-  reducer-wired + tested in `tests::classic`), ✅ Bolster
-  (`shortcut::bolster` — CR 701.21, +N/+N on the controller's
-  `Selector::LeastToughnessYouControl`),
-  ✅ Adapt (`shortcut::adapt` — CR 702.108, +N/+N if no +1/+1 counters;
-  Pteramander), ✅ Training (`shortcut::training` — CR 702.149, +1/+1 when
-  attacking with a higher-power creature via `PowerGreaterThanSource`;
-  Pridemalkin), ✅ Evolve (`shortcut::evolve` +
-  `SelectionRequirement::GreaterPowerOrToughnessThanSource` — Cloudfin
-  Raptor, Experiment One, Fathom Mage), ✅ Mentor (`shortcut` — Sunhome
-  Stalwart, CR 702.135),
-  ✅ Modular (`shortcut::modular_dies` — CR 702.43, enters with N +1/+1
-  counters + last-known-info counter transfer on death; Arcbound cycle),
-  ✅ Graft (`shortcut::graft` — CR 702.57, move-a-counter when another
-  creature enters; Aquastrand Spider, Plaxcaster Frogling, Cytoplast
-  Root-Kin), ✅ Outlast (`shortcut::outlast` — CR 702.97, sorcery-speed
-  tap-to-grow + `AllWithCounter` anthems; Abzan Falconer, Ainok Bond-Kin,
-  Tuskguard Captain, Mer-Ek Nightblade), ✅ Renown (`shortcut::renown` —
-  CR 702.111, +N on first combat damage; Topan Freeblade, Stalwart Aven,
-  Skyraker Giant),
-  ✅ Bloodthirst (`shortcut::bloodthirst` — CR 702.54, ETB-`If` gated on
-  `Predicate::PlayerDamagedThisTurn` + `Player.was_dealt_damage_this_turn`;
-  Scab-Clan Mauler, Gorehorn Minotaurs, Bloodfray Giant),
-  ✅ Monstrosity (`shortcut::monstrosity` + `Effect::Monstrosity` +
-  `CardInstance.monstrous` + `EventKind::BecameMonstrous`; Nessian Wilds
-  Ravager, Ember Swallower),
-  ✅ Devour (`shortcut::devour(n)` — CR 702.83, ETB `SacrificeAnyNumber`
-  over other creatures, each sacrifice dropping N +1/+1 counters on the
-  devourer via `Selector::This`), ✅ Amass (`shortcut::amass(n)` /
-  `Effect::Amass` — CR 701.43; see Combat-flavor list).
-- **Cast-from-elsewhere:** ✅ cast/play-from-library-top statics (CR
-  401.5/401.6 — `StaticEffect::PlayFromLibraryTop` + `TopOfLibraryRevealed`,
-  `LibraryView.known_top`; Courser of Kruphix, Oracle of Mul Daya, Mystic
-  Forge; impulse-style exile-top already shipped), ✅ Suspend (`Keyword::Suspend(n, cost)` +
-  `GameAction::Suspend` + `process_suspend` — CR 702.62: pay the suspend cost
-  to exile from hand with N time counters, tick one off per owner's upkeep,
-  free-cast when the last is removed; Rift Bolt, Ancestral Vision, Lotus
-  Bloom. Creature-suspend haste + a UI prompt for the free cast's targets are
-  TODO.md follow-ups), ✅ Forecast (CR 702.56 — rides the `from_hand`
-  activated-ability path gated to the controller's upkeep + once-per-turn;
-  Steeling Stance), ✅ Hideaway (CR 702.76 — `Effect::Hideaway { count }` +
-  `Selector::CardExiledWithSource`; Shelldock Isle), ⏳ Aftermath.
-- **Combat-flavor:** ✅ Bushido / ✅ Flanking / ✅ Rampage
-  (`Keyword::{Bushido,Flanking,Rampage}` — combat-step rules in
-  `declare_blockers`),
-  ✅ Provoke (`shortcut::provoke` — CR 702.39, on-attack untap + force-block
-  via `Effect::Provoke` + `CardInstance.must_block`),
-  ✅ Battle Cry (`shortcut::battle_cry` — Goblin Wardriver),
-  ✅ Exalted (`shortcut::exalted` — Akrasan/Aven Squire, Silverquill
-  Duelmaster), ✅ Frenzy (`shortcut::frenzy` — CR 702.68),
-  ✅ Melee (`shortcut::melee` — CR 702.121, +1/+1 on attack; per-opponent
-  tally collapses to one in the common single-defender case),
-  ✅ Dash (`shortcut::dash` — CR 702.110, alt-cost haste + return-to-hand
-  at next end step; Khans `sets::ktk`),
-  ✅ Boast (`shortcut::boast` — CR 702.142, once-per-turn activated ability
-  gated on `Predicate::SourceAttackedThisTurn`; Kaldheim `sets::khm`),
-  ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
-  ✅ Enlist (`shortcut::enlist` / `Effect::Enlist` — CR 702.151, on-attack
-  taps the highest-power eligible creature and adds its power EOT),
-  ✅ Mobilize (`shortcut::mobilize(n)` — CR 702.169, on-attack
-  mints N 1/1 red Warriors tapped + attacking via `Effect::CreateTokenAttacking`
-  with `AttackingTokenCleanup::SacrificeAtEndOfCombat`), ✅ Myriad
-  (`shortcut::myriad` / `Effect::Myriad` — CR 702.115, on-attack mints a
-  tapped+attacking copy of the source for each other opponent, exiled at end
-  of combat), ✅ Amass (`shortcut::amass(n)` / `Effect::Amass` — CR 701.43,
-  grows or creates a 0/0 black Army with N +1/+1 counters).
-- **Value/ETB:** ✅ Investigate (`shortcut::investigate(n)` — CR 701.13,
-  mints `clue_token()`s; Thraben Inspector. Sac-Clue payoff rides the
-  token's printed `{2}, Sac: Draw`), ✅ Fabricate (`shortcut::fabricate` — CR 702.122, ETB
-  `ChooseMode([+1/+1 counters, 1/1 Servo tokens])`), ✅ Riot
-  (`shortcut::riot` — CR 702.137, ETB choose Haste-permanent or a +1/+1
-  counter; Zhur-Taa Goblin, Frenzied Arynx),
-  ✅ Raid (`shortcut::raid_etb` — CR 702.108 ability word, ETB gated on
-  `Predicate::PlayerAttackedThisTurn`; Mardu Heart-Piercer),
-  ✅ Afterlife (`shortcut::afterlife` — CR 702.135),
-  ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
-  Branchwalker, Jadelight Ranger, Wildgrowth Walker, Seekers' Squire,
-  Emperor's Vanguard, Path of Discovery), ✅ Squad (CR 702.157 —
-  `Keyword::Squad(cost)` + `GameAction::CastSpellSquad { times }` +
-  `shortcut::squad_etb` + `Value::SquadCount`: pay the squad cost any number
-  of times, mint that many token copies on ETB; Galadhrim Brigade, Vanguard
-  Suppressor, Wasteland Raider, Zephyrim),
-  ✅ Forage (CR 701.61 — `Effect::Forage { then }`: exile three graveyard
-  cards or sacrifice a Food, then run the payoff; Treetop Sentries, Bushy
-  Bodyguard), ✅ Endure (CR 701.63 — `Effect::Endure { target, n }`: counters
-  or an N/N Spirit; Fortress Kin-Guard, Dusyut Earthcarver),
-  ✅ Exploit (`shortcut::exploit(payoff)` — CR 702.105, ETB `MayDo`
-  sacrifice-a-creature → run payoff; declining skips it),
-  ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast
-  `MayPay({W/B}, drain 1)`; Basilica Screecher, Syndic of Tithes, Tithe
-  Drinker, Kingpin's Pet), ⏳ Cohort, ✅ Support (`shortcut::support(n)` /
-  `Effect::SupportCounters` — CR 701.32, a +1/+1 counter on each of up to N
-  target creatures via the slot-based "up to N targets" machinery),
-  ✅ Suspect (`Effect::Suspect` + `CardInstance.suspected` → computed Menace +
-  CantBlock, CR 701.60; Barbed Servitor, Repeat Offender, Reasonable Doubt,
-  Person of Interest), ✅ Discover (`Effect::Discover { n }` — CR 701.57,
-  cascade-style exile-until-MV≤N then cast-free-or-to-hand; Geological
-  Appraiser, Trumpeting Carnosaur), ✅ Collect Evidence
-  (`Effect::CollectEvidence { amount, then }` — CR 701.59; `wants_ui` controller
-  picks the exiled cards via a sum-validated `ChooseCards`, bots auto-pick the
-  cheapest set; Sample Collector, Izoni),
-  ✅ Expend (`EventKind::Expend` + `Predicate::ExpendReached(n)` over the
-  per-turn `mana_spent_on_spells_this_turn`, CR 700.14; Roughshod Duo),
-  ✅ Valiant (`BecameTarget + YourControl` + `once_per_turn`, CR 603.3d;
-  Heartfire Hero).
-- **Leaves-battlefield LKI:** ✅ CR 603.10 — `Value::PowerOf`/`ToughnessOf`
-  read a dying object's last-known counter/pump-boosted P/T (`leaves_bf_lki`
-  + `resolving_lki_source`); Goldvein Hydra, Cacophony Scamp, Heartfire Hero.
-- **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
-  cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
-  per extra mode; Collective Brutality's discard-a-card), ✅ Splice (CR 702.47 — `Keyword::Splice(cost, quality)` + `GameAction::CastSpellSpliced`: pay splice costs additionally, spliced rules text resolves after the main effect, card stays in hand; Glacial Ray, Kodama's Might onto Arcane spells),
-  ✅ Replicate (CR 702.107 — `Keyword::Replicate(cost)` +
-  `GameAction::CastSpellReplicate { times }`: pay the replicate cost any number
-  of times, copy the spell that many times via `copy_stack_spell`; Pyromatics,
-  Train of Thought, Shattering Spree), ⏳ Overload (note: already shipped as
-  an alt-cost `effect_override`; see Tier 1), ✅ Cipher (CR 702.46 — `Effect::Cipher` + `CardInstance.encoded_on`; Shadow Slice), ✅ Surge (`shortcut::surge`, CR 702.108 — OGW batch), ✅ Spectacle
-  (`shortcut::spectacle` / `AlternativeCost.condition` —
-  `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
-  702.111: cast for the spectacle cost if an opponent lost life this turn;
-  Skewer the Critics, Light Up the Stage), ✅ Addendum
-  (`shortcut::addendum` / `cast_during_your_main` — CR 702.124; resolution-time
-  main-phase gate; Sphinx's Insight, Precognitive Perception),
-  ⏳ Conspire, ✅ Demonstrate (CR 702.150 — `Effect::Demonstrate` +
-  `shortcut::demonstrate`: a SpellCast/SelfSource trigger copies the spell for
-  its caster and an opponent, each copy may choose new targets; the STX
-  Technique cycle + Transforming Flourish).
-- **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
-  `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`
-  + HUD chip; bot spends surplus via `pick_energy_payoff`. Wired the
-  Kaladesh set (`sets::kld`: Longtusk Cub, Bristling Hydra, Dynavolt Tower,
-  Aether Swooper, Glimmer of Genius, …). Energy-gated *mana* abilities now
-  ship via `ActivatedAbility.energy_cost` (Aether Hub's `{T}: Add {C}` +
-  `{T}, Pay {E}: Add any color`, Servant of the Conduit). ⏳ Experience
-  counters,
-  ✅ Poison/Toxic (`Keyword::Toxic(N)` adds N poison on combat damage,
-  CR 702.180c; 10-poison loss SBA wired),
-  ✅ Devotion (CR 700.5 — `Value::DevotionTo`,
-  `StaticEffect::NotCreatureWhileDevotionBelow` god gate,
-  `ManaPayload::DevotionOfChosenColor`; surfaced in `PlayerView.devotion`
-  + HUD chip), ✅ **Ascend / city's blessing** (CR 702.131 / 700.6 —
-  `Effect::Ascend` grants `Player.city_blessing` at ten+ permanents,
-  `Predicate::HasCityBlessing` gates payoffs; surfaced in
-  `PlayerView.has_city_blessing` + `CityBlessingGained` log event),
-  🟡 **Day/Night** (CR 731 + 502.2 — `GameState.day_night` +
-  `Effect::BecomeDay`/`BecomeNight` + `Predicate::IsDay`/`IsNight`; the
-  502.2 turn-based day↔night transition is wired off the previous turn's
-  active-player spell count; surfaced in `ClientView.day_night` +
-  `DayNightChanged` log. Remaining: Daybound/Nightbound DFC transform),
-  🟡 Initiative / **monarch ✅** (CR 724 — `GameState.monarch` +
-  `Effect::BecomeMonarch`; the monarch draws at their end step, combat damage
-  to the monarch steals the crown, leaves-game transfer per 724.3; surfaced in
-  `PlayerView.is_monarch` + `MonarchChanged` log event. The Initiative/
-  Undercity dungeon is still ⏳), ⏳ Day/Night,
-  ⏳ Ring-bearer (the Ring tempts you).
-- **Fading family:** ✅ Fading (`Keyword::Fading(N)`, CR 702.32),
-  ✅ Vanishing (`Keyword::Vanishing(N)`, CR 702.62) — enter with N fade/time
-  counters; `process_fading_vanishing` ticks them down at the controller's
-  upkeep and sacrifices when empty. Parallax Nexus / Parallax Tide ship the
-  keyword (Tide uses `ExileReturnZone::BattlefieldTapped` linked exile).
-  Remaining: Parallax Dementia's steal-on-leave rider.
-- **Older mechanics:** ✅ Soulshift (`shortcut::soulshift(n)` — CR 702.46,
-  dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering,
-  ✅ Epic (CR 702.50 — `Keyword::Epic` + `Player.epic_spells` snapshot:
-  permanent cast lock + per-upkeep copy via `process_epic`; Enduring Ideal),
-  ✅ Umbra armor (CR 702.89 — `Keyword::UmbraArmor` + `apply_umbra_armor` at
-  both destroy funnels; Hyena/Spider Umbra), ⏳ Absorb,
-  ✅ Affinity for artifacts (`CardDefinition.affinity_filter` generic reduction;
-  Frogmite, Myr Enforcer, Thoughtcast, Somber Hoverguard, Qumulox, Sojourner's
-  Companion, Carapace Forger), ✅ Entwine (CR 702.41 —
-  `Keyword::Entwine(cost)` + `CastSpellEntwine`; entwined `ChooseMode` runs
-  every mode; Tooth and Nail + the Mirrodin entwine batch),
-  ✅ Buyback (`Keyword::Buyback(cost)` + `GameAction::CastSpellBuyback` —
-  CR 702.27, optional additional cost; bought-back spell returns to its
-  owner's hand instead of the graveyard on resolution; surfaced in
-  `PlayerView.buyback_hand`; Corpse Dance), ✅ Miracle
-  (CR 702.94 — `CardDefinition.miracle = Some(cost)`; the turn's first draw
-  stamps the miracle alt-cost + may-play window via `maybe_grant_miracle`,
-  cast for that cost through `CastFromZoneWithoutPaying`; Bonfire of the
-  Damned, Temporal Mastery, Reforge the Soul),
-  ✅ Bloodrush (CR 702.78 — a from-hand activated ability with
-  `from_hand` + `discard_self_cost`; `{R}{G}, Discard this: target attacking
-  creature gets +4/+4 + trample` — Ghor-Clan Rampager),
-  ✅ Unleash (`Keyword::Unleash` + `shortcut::unleash()` — CR
-  702.98: ETB "may enter with a +1/+1 counter" + computed `CantBlock` while it
-  has one; Rakdos Cackler, Gore-House Chainwalker, Spawn of Rix Maadi),
-  ✅ Scavenge (`shortcut::scavenge` — CR 702.97, gy-activated exile-self for
-  +1/+1 counters = the exiled card's power; Dreg Mangler),
-  ✅ Transmute (`shortcut::transmute` — CR 702.53, from-hand discard-self MV
-  tutor; Drift of Phantasms),
-  ✅ Bestow (`CardDefinition.bestow` + `GameAction::CastBestow` +
-  `CardInstance.bestowed` — CR 702.103; cast an enchantment-creature as an
-  Aura for its bestow cost, granting its `equipped_bonus`; not a creature
-  while bestowed (`compute_permanent` strips the type); reverts to a
-  creature when its host leaves (SBA); surfaced in `PlayerView.
-  bestowable_hand`; Baleful Eidolon), ✅ Tribute (CR 702.104 — `Effect::Tribute` + `shortcut::tribute`; opponent answers via the synchronous decider; Fanatic of Xenagos, Oracle of Bones).
+- **High frequency / modern staples:** ✅ Madness, ✅ Escape, ✅ Adventure,
+  ✅ Soulbond, ✅ Mutate (CR 702.140 — `CardDefinition.mutate` +
+  `GameAction::CastMutate`; merges onto a non-Human host you own, unions
+  abilities, scatters on leave, `EventKind::Mutated` triggers — the Ikoria
+  cycle), ✅ Companion ({3} sideboard→hand + `companion`
+  deck-construction validation, full Ikoria cycle),
+  ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
+  502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
+  ✅ Backup, ✅ Bargain,
+  ✅ Craft (CR 702.169 — `shortcut::craft`: sorcery-speed activated ability
+    pairing `craft_exile_cost` (exile N other objects from among permanents you
+    control and/or graveyard cards) with `Effect::ExileSelfReturnTransformed`;
+    LCI batch in `sets::lci` — Tithing Blade, Visage of Dread, Spring-Loaded
+    Sawblades, Waterlogged Hulk),
+  ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
+  ✅ Gift (CR 702.165 — `CardDefinition.gift` + `GameAction::CastGift`; promise
+  the gift and resolve the enhanced `gifted_effect`, incl. target-broadening —
+  Into the Flood Maw, Long River's Pull),
+  ✅ Survival (CR 702.180 — "at your second main phase, if tapped …" as a
+  `StepBegins(PostCombatMain)`/`ActivePlayer` trigger under a tapped
+  intervening-`if`; Bloomburrow Survivor batch),
+  ✅ Omen (CR 702.183 — `CardDefinition.omen` + `GameAction::CastOmen` +
+    `CardInstance.omen_casting`; cast the creature card as its instant/sorcery
+    Omen half, which shuffles into the owner's library on resolution *or*
+    counter via the `route_to_graveyard` funnel — the Tarkir Regent/Stormbrood
+    Dragon cycle),
+  ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
+  ✅ Exhaust (activate-only-once activated abilities — Camera Launcher),
+  ✅ Mayhem (CR 702.187 — `Keyword::Mayhem` + `GameAction::CastMayhem` reusing
+    the flashback exile-after machinery, gated on `Player.discarded_this_turn`;
+    "if the mayhem cost was paid" riders via `cast_via_mayhem`/`SpellWasMayhem`),
+  ✅ Harmonize (CR 702.180 — `Keyword::Harmonize` + `GameAction::CastHarmonize`:
+    graveyard recast with optional tap-a-creature generic discount, exile-after),
+  ✅ Web-slinging (CR 702.188 — alt-cost: pay cost + return a tapped creature),
+  ✅ Flurry (`shortcut::flurry` — "your second spell each turn" trigger over
+    `SpellsCastThisTurnEquals`),
+  ✅ Job Select (CR 702.182 — living-weapon-shaped Equipment minting a 1/1 Hero),
+  ✅ Renew (graveyard-exile activated ability via `from_graveyard` +
+    `exile_self_cost`), ✅ Mobilize / Mobilize X (`shortcut::mobilize`,
+    `mobilize_value`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick),
+    ✅ Time Travel (CR 701.56 — `Effect::TimeTravel`: removes time counters from
+    the player's suspended cards / adds to vanishing permanents; bot heuristic,
+    per-object UI choice is a follow-up),
+    ✅ Villainous Choice (CR 701.55 — `Effect::VillainousChoice`: each chooser
+    in APNAP order takes the lesser-self-harm option; impossible options dodge),
+    ✅ **The Ring tempts you / Ring-bearer** (CR 701.54 — `Effect::RingTempts`
+    + `Player.{ring_temptations,ring_bearer}`; the four cumulative emblem
+    abilities applied off the level: can't-be-blocked-by-greater-power (1+),
+    attack-loot (2+), blocked-creature-sacrifice (3+, via
+    `Effect::SacrificeAtEndOfCombat`), combat-damage drain (4+). `decks::ltr`
+    LTR batch + `EventKind::RingTempted` for "choose a Ring-bearer" payoffs.
+    Bearer auto-picked (highest power); per-player UI choice is a TODO.md
+    follow-up).
+- **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
+  Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,
+  Amass — all via `shortcut::*` builders.
+- **Cast-from-elsewhere:** ✅ play-from-library-top statics (Courser, Oracle of
+  Mul Daya, Mystic Forge), ✅ Suspend (creature-suspend haste + free-cast target
+  UI are follow-ups), ✅ Forecast, ✅ Hideaway, ⏳ Aftermath,
+  ✅ Unearth (CR 702.84 — `shortcut::unearth`: a `from_graveyard` sorcery-speed
+  ability that returns the card with haste + an end-step exile; the bot offers
+  graveyard-activated abilities, the client hover panel labels them).
+- **Combat-flavor:** ✅ Bushido, Flanking, Rampage, Provoke, Battle Cry, Exalted,
+  Frenzy, Melee, Dash, Boast, Afflict, Enlist, Mobilize, Myriad, Amass,
+  Assigns-combat-damage-by-toughness (`AssignsCombatDamageByToughness`, CR 510.1c
+  — Doran, Tapestry Warden, Bill the Pony).
+- **Value/ETB:** ✅ Investigate, Fabricate, Riot, Raid, Afterlife, Explore, Squad,
+  Forage, Endure, Exploit, Extort, Support, Suspect, Discover, Collect Evidence,
+  Expend, Valiant, Cohort (Munda's Vanguard, Drana's Chosen — tap-another-Ally
+  activation cost).
+- **Leaves-battlefield LKI:** ✅ 603.10 — `Value::PowerOf`/`ToughnessOf` read a
+  dying object's last-known P/T (Goldvein Hydra, Cacophony Scamp).
+- **Spell-matters:** ✅ Escalate, Splice, Replicate, Cipher, Surge, Spectacle,
+  Addendum, Demonstrate, Conspire; Overload ships as an alt-cost.
+- **Resource systems:** ✅ Energy ({E} pool + HUD chip; Kaladesh set; energy-gated
+  mana abilities); ⏳ Experience counters → actually **✅** (`CounterType::
+  Experience`); ✅ Poison/Toxic, Devotion, Ascend/city's blessing; ✅ Monarch;
+  ✅ Day/Night (502.2 turn-based transition + Daybound/Nightbound DFC auto-flip
+  + `EventKind::DayNightChanged` "day becomes night / night becomes day"
+  triggers — Brimstone Vandal); ✅ Coven (`Predicate::CovenActive` — 3+ creatures
+  with different powers; HUD "✸ coven" chip);
+  ✅ **Descend** (LCI — `SelectionRequirement::ControllerDescend(n)` +
+  `Predicate::{DescendActive,DescendedThisTurn}` count permanent cards in the
+  graveyard / "descended this turn" per CR 700.11; `DynamicPt::
+  PermanentCardsInControllerGraveyard` for fathomless descent; PlayerView
+  `descend_count` + HUD "⛏ descend N" chip; `sets::lci` batch);
+  ✅ **Speed / "Start your engines!"** (CR 702.179 — `Player.speed` 0–4,
+  `Keyword::StartYourEngines`, life-loss increment, `Predicate::SpeedAtLeast`
+  for "Max speed —"; DFT batch in `decks::recent`); ✅ Ring-bearer (CR 701.54,
+  `decks::ltr`);
+  ✅ **Commit a crime** (CR 700.13 — `EventKind::CommittedCrime` fires when you
+  cast a spell / activate an ability targeting an opponent, their permanents/
+  cards, or a spell they control; `Player.committed_crime_this_turn` +
+  `Predicate::CommittedCrimeThisTurn`), ✅ **Pack tactics**
+  (`Predicate::AttackedWithTotalPowerAtLeast`), ✅ **Outlaws**
+  (`SelectionRequirement::IsOutlaw` + `Predicate::ControlsOutlaw`) — OTJ batch in
+  `decks::recent20`.
+- **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
+  Parallax Dementia's steal-on-leave rider.
+- **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,
+  Miracle, Bloodrush, Unleash, Scavenge, Transmute, Bestow, Tribute, Offering
+  (CR 702.48 — `AlternativeCost.offering` + `ManaCost::reduce_by_cost`; the
+  Kamigawa Patron cycle), ✅ Recover (CR 702.58 — `shortcut::recover`: a
+  `CreatureDied / FromYourGraveyard` trigger gating a `MayPay` that returns the
+  card from the graveyard or exiles it; Coldsnap I/S in `decks::recent`).
+  Spiritcraft "cast a Spirit or Arcane spell" triggers
+  ride `SelectionRequirement::HasSpellSubtype` + `shortcut::spiritcraft`.
+  ✅ Blight (CR 701.68 — `Effect::Blight`: put N -1/-1 counters on a creature
+  you control; `WardCost::Blight` is the Ward—Blight variant — Auntie Ool,
+  Blighted Blackthorn, TLA).
+  ✅ Haunt (CR 702.55 — `Effect::HauntCreature` + `DelayedKind::
+  WhenHauntedCreatureDies`: a dying creature / resolved I/S is exiled haunting a
+  creature, firing its haunt body when that creature dies; Guildpact cycle in
+  `catalog::sets::gpt`). ✅ Ripple (CR 702.20 — `Effect::Ripple` +
+  `shortcut::ripple`: a cast trigger that reveals the top N, free-casts
+  same-named copies, and bottoms the rest; Coldsnap Surging cards).
 
 ## Tier 5 — Mana & cost system
 
-- ✅ **Typed spend restrictions / provenance riders** — `SpellKind` is a
-  spend-context struct (instant/sorcery, artifact, creature types) and
-  `SpendRestriction` gained `ArtifactOnly` + `CreatureOfTypeUncounterable`;
-  `pay_for_spell` reports which restricted buckets paid, so Cavern of Souls'
-  uncounterable rider rides actual mana provenance and Power Depot's
-  artifact-only mana works for artifact spells *and* abilities
-  (`CardDefinition::ability_spend_kind`). Fellwar Stone / Locus scaling were
-  already separately wired. Remaining ⏳: per-source restrictions beyond
-  these (filter lands' "spend only on activated abilities" etc.).
-- ⏳ **Minimum-cost floor** (Trinisphere) and **cost-increase statics**
-  beyond the existing first-spell tax (Thalia, Sphere of Resistance).
-- ⏳ **Conditional / additional costs** as a general modal layer (sacrifice,
-  discard, pay life, exile-from-gy as alt/escape costs, tap creatures).
+- ✅ **Typed spend restrictions / provenance riders** — `SpellKind` +
+  `SpendRestriction` (Cavern of Souls, Power Depot). Remaining ⏳: per-source
+  restrictions beyond these (filter lands).
+- ⏳ **Minimum-cost floor** (Trinisphere) and **cost-increase statics** beyond the
+  first-spell tax. (Note: Trinisphere floor actually ships — see CUBE_FEATURES.)
+- 🟡 **Conditional / additional costs** as a general modal layer. Card-intrinsic
+  target-conditional reduction ships (`self_cost_reduction_if_target` — Ride's
+  End's "{3} less if it targets a tapped permanent", generic-only / colored-pip
+  safe). Board-state / per-turn-counter scaling reductions ship too
+  (`self_cost_reduction_if_control` — Pearl of Wisdom;
+  `StaticEffect::SelfCostReducedPer{Discard,CreatureAttacked}ThisTurn` — Hollow
+  One, Search Party Captain). Remaining: per-mode Spree costs.
 - ⏳ **{X} in activated abilities** generalized; **delve/convoke colored**
-  contribution (currently generic-only).
+  contribution.
 - ⏳ **Snow-mana-only** and **mana-value-X** cost gates.
 
 ## Tier 6 — Combat fidelity
 
-- ⏳ **Damage assignment order** (Tier-1 #3) and **trample math** with
-  multiple/deathtouch blockers.
-- ⏳ **Banding** combat rules (keyword exists; rules not wired).
-- ✅ **Multiple combat phases / extra attack steps.** `Effect::Additional
-  CombatPhase` + `GameState.additional_combat_phases` (CR 505.1b) loop the
-  turn back to Begin Combat when the active player leaves End of Combat with
-  a phase banked (Hellkite Charger). Post-main insertion ships too:
-  `Effect::AdditionalCombatPhaseAfterMain` + `additional_post_main_combats`
-  re-enter Begin Combat when the postcombat main ends, with the follow-up
-  main from the normal EndCombat → PostMain flow (Relentless Assault, plus
-  `SelectionRequirement::AttackedThisTurn` for its untap clause).
-- 🟡 **"Must attack/block", "can't attack alone", "attacks each combat"**
-  restrictions and requirements. `Keyword::CantAttack` / `CantBlock`
-  (Pacifism), `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties),
-  `Keyword::MustBeBlocked` (CR 509.1c — "must be blocked", Academic
-  Dispute), `Keyword::AllMustBlock` (CR 509.1c true Lure — every able
-  creature must block; Lure aura), `Keyword::MustAttack`
-  (CR 508.1d — "attacks each combat if able", Juggernaut), and
-  `Keyword::CanAttackOnlyIfDefenderControls(filter)` (per-attacker attack
-  gate on the defending player's board — Dandân's "can't attack unless
-  defending player controls an Island") are wired from
-  computed keywords in `declare_attackers`/`declare_blockers`. **Goad**
-  (CR 701.38) is wired via `CardInstance.goaded_by` + `Effect::Goad`
-  (treated as must-attack, clears at the goader's next untap — Disrupt
-  Decorum). Still open: *granted* must-attack with a future-turn-scoped
-  duration ("attacks next turn if able" — Big Play mode 0); the
-  goaded "attack a player other than the goader" clause in multiplayer;
-  cost-to-block (509.1d-f). **Blocker-side `Keyword::MustBlock`** (CR 509.1c
-  — "blocks each combat if able") is now wired in `declare_blockers`.
+- ✅ **Damage assignment order** (Tier-1 #3) + **trample math** with
+  multiple/deathtouch blockers — `default_damage_split` assigns lethal in
+  order (deathtouch lethal = 1, CR 702.2e) and tramples the remainder
+  (CR 510.1c/702.19g). Tests: `cr_702_2e_trample_deathtouch_*`,
+  `cr_702_19g_*`.
+- 🟡 **Banding** (CR 509.2 / 510.1c) — a banding blocker routes the attacker's
+  combat-damage order + assignment to the *defending* player (Benalish Hero).
+  Remaining: attacking-band formation + "bands with other".
+- ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
+  post-main insertion (Relentless Assault).
+- ✅ **"Whenever you attack"** (CR 508) — `EventKind::YouAttack` fires once per
+  combat for the attacking player (not per-attacker), via `shortcut::on_you_attack`.
+  Replaces the old `Attacks/YourControl + once_per_turn` approximation on
+  Razorkin Hordecaller, Inti, Gut, Raffine, Most Valuable Slayer, Lionheart Glimmer.
+- 🟡 **"Must/can't attack/block" restrictions** — `Keyword::{CantAttack,CantBlock,
+  AttacksAlone,CantAttackAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad;
+  power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker;
+  fixed-threshold `CantBeBlockedByPowerAtMost(n)` — Questing Beast);
+  turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq
+  Nestguard); count-gated attack+block (`CantAttackOrBlockUnlessYouControlCount`
+  — Topiary Stomper's "unless you control seven or more lands", with `attack_only` / `block_only` facets
+  (Lambholt Pacifist / Olog-hai Crusher), honored in combat, affordances, bot,
+  and the legal-blocker gate); hand-size-gated
+  (`CantAttackOrBlockUnlessHandSizeAtMost` — Hazoret), delirium-gated
+  (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie) and descend-gated
+  (`CantAttackOrBlockUnlessDescend(n)` — The Ancient One, via `descend_count`).
+  Open: granted
+  must-attack with future-turn duration, multiplayer goad-target clause,
+  cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
-- ✅ **Goad** (above). ✅ **Lure** (`Keyword::AllMustBlock`).
-  ✅ **Provoke** (`shortcut::provoke`, CR 702.39).
-  ✅ **Ninjutsu attacking-creature swap** (`GameAction::Ninjutsu`, CR 702.49).
+- ✅ **Goad**, **Lure**, **Provoke**, **Ninjutsu swap**.
 
 ## Tier 7 — UI / UX core (the Arena "feel" gap)
 
-Mostly buildable on existing `ClientView` / `StackItemView` data.
-
-1. ✅ **Big card-zoom preview on hover** — `hover_card_preview`
-   (`systems::ui`) shows an enlarged copy of the hovered card's face beside
-   the cursor (flipping to whichever side has more room so it never covers
-   the card), with no board-dimming. Alt-hold still drives the centered
-   detailed peek + counter/P-T tooltip.
-2. ✅ **Stops / auto-yield configuration** — `auto_advance_p0` already
-   provided the smart default ("yield until something needs me": pass
-   bookkeeping windows, hold when you could act or an opponent spell is on
-   the stack). Now layered on top: per-step **stop overrides**
-   (`systems::phase_bar::StopConfig`) — click a phase-chart row to cycle
-   Auto → **Stop** (always hold, MTGO-style) → **Skip** (pass even with
-   plays), tracked separately for your turns vs. opponents'. Markers render
-   in the chart rows; fast-forwards and opponent spells still override
-   Skip safely.
-3. 🟡 **Combat math / damage preview** — `combat_preview` (`server::view`)
-   projects each player's life swing (damage + lifelink) and the dying
-   creatures off the declared attackers/blocks, honoring first/double strike,
-   deathtouch lethal-spread, trample overflow, indestructible, and
-   protection. Now **layer-aware**: P/T and keywords read the computed
-   battlefield, so anthems and granted/stripped evasion are reflected. The
-   client surfaces the life rows + a "Dying: N theirs / N yours" summary
-   (`update_combat_preview_panel`), plus **planeswalker-target rows**
-   (`CombatPreview.damage_to_planeswalkers` → loyalty projections).
-   Remaining: multi-blocker damage-order nuance.
-4. ⏳ **Undo / mana-tap rollback** — undo un-committed taps before a spell
-   locks in (`ManualTapRequired` already signals partial manual-tap model).
-5. ✅ **Targeting arrows on the stack** — `draw_stack_arrows` renders the
-   primary target plus every `additional_targets` slot (dimmer secondary
-   arrows), and resolves stack→stack targets so counter magic points at the
-   spell it counters.
-6. ✅ **Hold-priority toggle** — `H` key / "Auto-pass" toolbar button flips
-   `FastForward::manual_priority`; while on, `auto_advance_p0` never passes
-   for the player (explicit End Turn / Next Turn / click-to-advance still
-   override). Shift-hold-after-your-spell remains ⏳.
-7. ✅ **Stack visualization** — the stack panel renders as a visual zone
-   (see main's stack-panel work); per-item "respond / let resolve"
-   affordances remain ⏳.
-8. ✅ **Phase bar / step indicator** — the left-edge phase chart shows every
-   step with the current one highlighted, carries clickable stop markers
-   (see #2), and right-click arms click-to-advance ("pass until this
-   step", cleared on arrival or re-click).
-9. 🟡 **Resolution-time decision coverage for humans.** Most of these
-   decisions used to be answered silently by the AutoDecider even for a
-   `wants_ui` seat. Now shipped via the **stash-and-rerun suspend** (the
-   suspend re-queues the originating effect as its continuation;
-   `apply_pending_effect_answer` validates and stashes the answer in
-   `GameState.stashed_resolution_answer` for the re-run to consume):
-   ✅ `ChooseModes` (choose-N / Escalate, with `mode_texts` labels on the
-   wire), ✅ `ChooseMode` for modal *triggers* (deferred to resolution via
-   the `MODE_PICK_DEFERRED` sentinel when no mode targets — Riot/Fabricate
-   humans actually choose now), ✅ `Effect::MayDo` (yes/no modal instead of
-   auto-decline), ✅ `DivideDamage` (per-target stepper modal),
-   ✅ `ChooseAmount` (sacrifice-any-number / pay-life), ✅ creature-type
-   choices incl. the Crippling Fear sweep (+ engine-ranked `suggestions`
-   on the wire; this also fixes the `ChooseCreatureType` client softlock —
-   the engine suspended but no modal existed), ✅ **seat-routed yes/no
-   asks** (`ask_seat_bool` + the replayable answer log — rhystic taxes,
-   Tribute, Browbeat/Tempting Offer, Clash bottoming, MayPay all prompt
-   the right `wants_ui` seat). Remaining ⏳: `CommanderRedirect` and
-   `ChooseLegendToKeep` (raised inside damage application / SBA
-   processing, outside the effect-resolution suspend machinery), modal
-   triggers with *targeting* modes (target slots are assigned at push
-   time, so those still pick synchronously), and non-Bool opponent-owned
-   picks (searches, Fateseal).
+1. ✅ **Card-zoom hover preview** — `hover_card_preview` (flips side to avoid
+   covering the card); Alt-hold drives the centered detailed peek.
+2. ✅ **Stops / auto-yield config** — `auto_advance_p0` smart default + per-step
+   Stop/Skip overrides on the phase chart (`StopConfig`), separate for your turns
+   vs. opponents'.
+3. 🟡 **Combat math / damage preview** — `combat_preview` projects life swing +
+   dying creatures (first/double strike — incl. double strike's two damage steps
+   for face/trample/lifelink — deathtouch spread, trample, protection),
+   layer-aware, with planeswalker-target rows; the client HUD flags a projected
+   life total ≤ 0 with a "☠ LETHAL" tag. Remaining: multi-blocker damage-order
+   nuance.
+4. ⏳ **Undo / mana-tap rollback** — undo un-committed taps before a spell locks in.
+5. ✅ **Targeting arrows on the stack** — `draw_stack_arrows` (primary +
+   additional-target slots; counter magic points at its spell).
+6. ✅ **Hold-priority toggle** — `H` / "Auto-pass" flips
+   `FastForward::manual_priority`. Shift-hold-after-your-spell ⏳.
+7. ✅ **Stack visualization** — the stack renders as a visual zone; per-item
+   respond/resolve affordances ⏳.
+8. ✅ **Phase bar / step indicator** — left-edge chart, clickable stop markers,
+   right-click "pass until this step".
+9. 🟡 **Resolution-time decisions for humans** — via the stash-and-rerun suspend:
+   ✅ ChooseModes, modal triggers, MayDo, DivideDamage, ChooseAmount, creature-type
+   choices, seat-routed yes/no asks (rhystic, Tribute, Browbeat, MayPay).
+   Remaining ⏳: CommanderRedirect, ChooseLegendToKeep (raised inside SBA/damage),
+   modal triggers with targeting modes, non-Bool opponent-owned picks.
 
 ## Tier 8 — UI / UX quality-of-life
 
-- ✅ Browsable **graveyard / exile** zones — click any player's graveyard
-  pile for a scrollable browser overlay (`systems::ui::graveyard_browser`);
-  `V` toggles the exile browser with per-card source annotations (linked
-  exile, cipher, foretell…). Library shows a count chip only (by design —
-  hidden zone).
-- ✅ **Search / Scry / Surveil / Mulligan** dedicated picker UIs —
-  grid pickers with top/bottom toggles and ← → reorder buttons
-  (`systems::decision_ui`: `spawn_scry_modal`, `spawn_search_modal`,
-  `spawn_mulligan_modal`). Remaining ⏳: drag-and-drop reordering.
-- ✅ **London mulligan** bottoming — after Keep, the `PutOnLibrary` picker
-  collects the N cards to bottom; Serum Powder gets its own button.
-- 🟡 **Floating life deltas** ✅ (rising/fading +N/−N numerals next to each
-  life total — `game_ui::player_stats`); per-turn life-history graph ⏳.
-- ✅ **Commander-damage HUD readout** (CR 903.10a) — `PlayerView.
-  commander_damage_taken` (projected in `server::view`) drives a per-source
-  `⚔ <commander> N/21` chip next to each player's life in the stat strip,
-  graded amber→red as it nears the 21-from-a-single-commander loss. Only
-  present in Commander games.
-- ⏳ **Hand sorting / auto-tap preferences / "play tapped land" prompt**.
-- ✅ **Squad / Replicate pay-N-times stepper** — right-click modal feeding
-  `CastSpellSquad`/`CastSpellReplicate`; impending countdown badge; NameCard
-  picker modal with engine-ranked suggestions.
-- ✅ **Reminder text & rules tooltips** — the hover preview carries an
-  info panel resolved from the catalog by name (`ui::hover_info_lines`):
-  type line, P/T, each printed keyword with CR reminder text, **and an
-  oracle-ish ability panel** — static-ability descriptions plus
-  triggered/activated/loyalty abilities phrased from their event + effect
-  shapes (`event_phrase` + `Effect::effect_short_text`), and the spell
-  effect line for instants/sorceries. Phrasings the engine can't render
-  are skipped rather than shown raw.
-- 🟡 **Hotkey legend / help overlay** ✅ (F1 / `?` toggles a two-column
-  shortcut reference — `systems::ui`); remappable keys ⏳.
-- 🟡 **Highlight legal plays** (castable cards, legal attackers/blockers,
-  legal targets) — `ClientView` now carries `castable_hand`,
-  `pitchable_hand`, `kickable_hand`, **`activatable_permanents`**, and
-  **`legal_attackers` / `legal_blockers`** (step-aware; honor
-  tapped/sickness/Defender and per-attacker block legality). Remaining:
-  per-target hint layers (`legal_target_filter` exists to build on).
-- ⏳ **Animations & SFX** polish; **board-state pings / alerts**
-  (low life, triggers waiting, your turn).
-- ✅ **Settings menu** — main-menu Settings panel (window mode, resolution,
-  quality, gameplay; persisted). Audio/accessibility tabs ⏳.
-- ✅ **Battlefield organization** — identical tokens cascade into piles
-  with ×N badges.
+- ✅ Browsable **graveyard / exile** zones (`V` toggles exile, with source
+  annotations); library shows a count chip only.
+- ✅ **Search / Scry / Surveil / Mulligan** picker UIs (top/bottom toggles, reorder
+  buttons). Drag-and-drop reorder ⏳.
+- ✅ **London mulligan** bottoming; Serum Powder gets its own button.
+- 🟡 **Floating life deltas** ✅; per-turn life-history graph ⏳.
+- ✅ **Commander-damage HUD** (903.10a) — per-source `⚔ <cmdr> N/21` chip,
+  amber→red near loss.
+- ⏳ **Hand sorting / auto-tap prefs / "play tapped land" prompt**.
+- ✅ **Squad / Replicate pay-N stepper**; impending countdown badge; NameCard
+  picker.
+- ✅ **Reminder text & rules tooltips** — hover info panel from the catalog
+  (type line, P/T, keyword reminders, oracle-ish ability panel).
+- 🟡 **Hotkey legend** ✅ (F1 / `?`); remappable keys ⏳.
+- 🟡 **Highlight legal plays** — `ClientView` carries castable/pitchable/kickable
+  hand, activatable permanents, legal attackers/blockers (step-aware). Remaining:
+  per-target hint layers.
+- ⏳ **Animations & SFX** polish; board-state pings/alerts.
+- ✅ **Settings menu** (window/resolution/quality/gameplay, persisted);
+  audio/accessibility tabs ⏳.
+- ✅ **Battlefield organization** — identical tokens pile with ×N badges.
 
 ## Tier 9 — Multiplayer & social
 
-- ✅ **Lobby / matchmaking** — LAN lobby browser (`systems::lobby_ui`):
-  create with format selection (Modern/Cube/SoS/Commander), join, spectate
-  running matches, host-side bot add/remove. Remaining ⏳: join-by-code over
-  the internet, quick-match.
-- ✅ **Reconnect / resume** — resume tokens + exponential-backoff retry
-  (up to 10 attempts) with full `GameSnapshot` state restore
-  (`net_plugin.rs`). Remaining ⏳: surface it — a "reconnecting (N/10)…"
-  banner instead of today's silent background retries.
-- ✅ **Spectator mode** — read-only `ClientView` stream via the lobby's
-  spectate list, with a "Spectating: …" banner.
-- ✅ **Player identity** — the menu's display name (editable, seeded from
-  the OS username) now reaches every entry point: local vs-bot / audit /
-  host-LAN seats are stamped via `menu::name_seats` (bots labeled "Bot" /
-  "Bot N", spectated matches "Bot 1/2", rematches re-stamped), the draft
-  match uses it for the human seat, and the LAN lobby already carried it
-  via `JoinMatch`. The log formatter (`GameEventWire::fmt_for_log`) takes
-  a seat-name resolver, so log lines read "Alice drew…" instead of "P0
-  drew…". The display name (plus join address and deck path) now persists
-  in the config file across launches.
-- ⏳ **Chat + emotes** (Arena's canned phrases; XMage free chat).
-- 🟡 **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
-  The per-action rope ships server-side (`CRAB_ACTION_TIMEOUT_SECS` →
-  `run_match_inner`'s `action_timeout`; on expiry the actor auto-answers
-  the pending decision via AutoDecider or passes priority). The seat now
-  sees it: `ServerMsg::Rope` on arming + a client countdown banner at
-  ≤15s and a "server acted for you" notice. Remaining: per-game chess
-  clock.
-- ⏳ **Friends / invites / ratings / leaderboards** (server-side).
-- ⏳ **Free-for-all politics** UI (deals, voting, monarch/initiative
-  passing) for 3+ player tables.
+- ✅ **Lobby / matchmaking** — LAN lobby browser (create/join/spectate, host bot
+  add/remove). Remaining ⏳: join-by-code over internet, quick-match.
+- ✅ **Reconnect / resume** — resume tokens + backoff retry + full snapshot
+  restore. Remaining ⏳: surface a "reconnecting (N/10)…" banner.
+- ✅ **Spectator mode** (read-only `ClientView` stream).
+- ✅ **Player identity** — editable display name reaches every seat + log lines,
+  persisted across launches.
+- 🟡 **Chat** — free in-match chat ships (`T`). Remaining ⏳: emotes, mute,
+  lobby-phase chat.
+- 🟡 **Timers** — per-action rope ships server-side + client countdown banner.
+  Remaining: per-game chess clock.
+- ⏳ **Friends / invites / ratings / leaderboards**.
+- ⏳ **Free-for-all politics** UI for 3+ player tables.
 
 ## Tier 10 — Formats & match structure
 
-- ⏳ **Best-of-3 + sideboarding** flow (core competitive structure).
-- 🟡 **Deck legality validation** per format — size / copy caps / singleton
-  / Commander color identity ✅ (`format::validate_deck`,
-  `validate_commander_deck`), ban + Vintage-restricted lists ✅
-  (`Format::banned_cards` / `restricted_cards`, enforced in
-  `validate_deck`; wired into the menu deck import + server config).
-  Remaining: per-set legality pools (Standard rotation), Pauper rarity.
-- ⏳ **More 60-card formats:** Modern, Pioneer, Legacy, Vintage, Pauper
-  (mostly banlist/pool config on top of existing rules).
+- ⏳ **Best-of-3 + sideboarding** flow.
+- 🟡 **Deck legality validation** — size/copy/singleton/Commander-identity ✅,
+  ban + restricted lists ✅ (`format::validate_deck`), companion deck
+  restrictions ✅ (`format::companion_restriction_met`, CR 702.139c). Remaining:
+  per-set legality pools (Standard rotation), Pauper rarity.
+- ⏳ **More 60-card formats** (Modern/Pioneer/Legacy/Vintage/Pauper — mostly
+  banlist/pool config).
 - ⏳ **Limited match rules** (40-card, basic-land access).
-- ⏳ **Multiplayer variants:** Planechase (planar deck + dice),
-  Archenemy (scheme deck), Commander variants (Oathbreaker, Brawl exists),
-  Star, Emperor.
-- ⏳ **Casual toggles:** free mulligans, starting-hand rules, vanguard.
+- ⏳ **Multiplayer variants** (Planechase, Archenemy, Oathbreaker, Star, Emperor).
+- ⏳ **Casual toggles** (free mulligans, vanguard).
 
 ## Tier 11 — Limited (draft / sealed)
 
 - ✅/🟡 **Draft + cube** exist. Extend with:
-- ⏳ **Sealed** (open packs, build pool).
-- ⏳ **Bot drafters** with signal/pick heuristics (beyond random).
-- ⏳ **Draft variants:** Winston, Rochester, Grid, Solomon, Glimpse, Team.
-- ⏳ **Set-based draft** (pack composition by rarity/collation).
-- ⏳ **Draft replay / pick history / pool export.**
+- ⏳ **Sealed**, ⏳ **bot drafters** (signal/pick heuristics), ⏳ **draft variants**
+  (Winston/Rochester/Grid/…), ⏳ **set-based draft**, ⏳ **draft replay / pick
+  history / pool export**.
 
 ## Tier 12 — Deckbuilding & collection
 
-- ⏳ **In-app deck builder** (search by name/type/cost/keyword, curve view,
-  legality check, sample-hand tester).
-- 🟡 **Import / export** — **import ships**: `crabomination::decklist::
-  parse_decklist` reads Arena / MTGO text (counts, `4x`, bare names,
-  set/collector suffixes, `SB:`, section headers, blank-line sideboard
-  convention), resolves case-insensitively against the full registry, and
-  reports unknown names instead of dropping them. The menu's "Play Deck vs
-  Bot" + deck-file field loads a list, refuses partial decks (unknown
-  cards / <40 cards, with feedback in the menu), and starts a local-bot
-  match via the draft match builder. Remaining ⏳: export, .dec/.cod,
-  paste-from-clipboard, choosing the opponent's deck.
-- ⏳ **Deck stats** (mana curve, color pips, type breakdown).
-- ⏳ **Collection / ownership tracking** (if a progression layer is wanted).
-- ⏳ **Card search engine** over the catalog (Scryfall-like syntax).
+- ⏳ **In-app deck builder** (search, curve view, legality, sample-hand).
+- 🟡 **Import / export** — import ships (`decklist::parse_decklist`, Arena/MTGO
+  text; menu "Play Deck vs Bot" loads and validates). Remaining ⏳: export,
+  .dec/.cod, paste-from-clipboard, choosing opponent's deck.
+- ⏳ **Deck stats** (curve, pips, type breakdown).
+- ⏳ **Collection tracking**; ⏳ **Scryfall-like card search** over the catalog.
 
 ## Tier 13 — AI
 
-- 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value
-  trades, first-strike/deathtouch/trample awareness, gang-block-to-survive
-  lethal) and attacking has a suicide filter plus evasion awareness
-  (first-strike, deathtouch, menace, lifelink, trample, indestructible) and
-  planeswalker redirection. Remaining: race math / when-to-hold-back across
-  turns, multi-blocker attacker math, and attacking-into-open-mana respect.
-- ⏳ **Better sequencing** (land drops, hold-up interaction, when to cast).
-- 🟡 **Mulligan decisions** — `RandomBot` ships flooded/screwed opening
-  hands via `decide_mulligan`: keep 2–5 lands **and** at least one nonland
-  spell castable early (mana value ≤ lands + 1, with **color-screw
-  awareness** — the lands must produce the spell's colored pips), stop after
-  two mulligans. Remaining: transitive fetch/dual color sources (a lone
-  fetchland still reads as colorless).
-- ⏳ **Targeting / mode / X-value choices** by evaluation, not first-legal.
-- ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over the
-  deterministic engine + snapshot cloning).
+- 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
+  first-strike/deathtouch/trample/**indestructible** awareness — an
+  indestructible body walls the biggest attacker for free and an indestructible
+  attacker can't be cleanly traded — gang-block-to-survive, **and
+  chump-blocking to save a planeswalker we control when its attackers are
+  lethal to its loyalty — the life-threat calc counts only player-bound
+  damage**); attacking has a suicide filter + evasion awareness + planeswalker
+  redirection. Value-ping removal also aims an "any target" ping at an opponent's
+  face when that hit is exactly lethal (reach for the win). The bot crews
+  Vehicles (`pick_crew`) **and now saddles Mounts** (`pick_saddle`) before
+  combat so attacks-while-saddled riders fire. Remaining: race math,
+  multi-blocker math, attacking-into-open-mana respect.
+- ⏳ **Better sequencing** (land drops, hold-up, when to cast).
+- 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
+  color-screw awareness. Remaining: transitive fetch/dual sources.
+- ⏳ **Targeting / mode / X-value choices** by evaluation.
+- ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
 
-- ⏳ **Action-log replay viewer** (step forward/back; snapshots + the
-  `GameEvent` stream are the foundation).
+- ⏳ **Action-log replay viewer** (snapshots + `GameEvent` stream are the
+  foundation).
 - ⏳ **Game history / match results** persistence.
-- ⏳ **Export game to shareable file**; import to reproduce bugs (the audit
-  workflow already uses snapshots — formalize it).
-- ⏳ **In-game "what happened" event filtering** in the log (by player,
-  zone, type).
+- ⏳ **Export game to shareable file** (formalize the audit-snapshot workflow).
+- ⏳ **In-game "what happened" log filtering** (by player/zone/type).
 
 ## Tier 15 — Accessibility
 
-- ⏳ **Colorblind-safe** mana/color indicators (not color alone).
-- ⏳ **Text scaling / high-contrast / reduced-motion** options.
-- ⏳ **Full keyboard play** (cursor exists; complete the coverage).
-- ⏳ **Screen-reader / narration** of board state and prompts.
-- ⏳ **"Full control" mode** (XMage) — never auto-skip priority/steps.
+- ⏳ **Colorblind-safe** indicators, **text scaling / high-contrast /
+  reduced-motion**, **full keyboard play**, **screen-reader narration**, **"full
+  control" mode** (never auto-skip).
 
 ## Tier 16 — Infra, correctness & content tooling
 
-- ⏳ **Seeded / deterministic RNG** surfaced for reproducible games & tests.
-- ⏳ **Snapshot round-trip property tests** + **fuzzing** of action
-  sequences against SBA invariants.
+- ⏳ **Seeded / deterministic RNG** surfaced for reproducible games.
+- ⏳ **Snapshot round-trip property tests** + **action-sequence fuzzing**.
 - ⏳ **Crash-recovery / autosave** from snapshots.
-- ⏳ **Card-scripting DSL or macro layer** to reduce catalog boilerplate
-  (the catalog is large and hand-written).
-- ⏳ **Set / Scryfall import pipeline** + automated data verification
-  (`scripts/verify_cards.py` exists — extend it).
-- ⏳ **Card art / image pipeline** for the client.
-- ⏳ **Rules-engine conformance suite** mapped to CR section numbers.
+- ⏳ **Card-scripting DSL** to reduce catalog boilerplate.
+- ⏳ **Set / Scryfall import pipeline** (`scripts/verify_cards.py` exists — extend).
+- ⏳ **Card art / image pipeline**.
+- ⏳ **Rules-engine conformance suite** mapped to CR sections.
 
 ---
 
 ## Suggested sequencing
 
-1. **Replacement-effect framework** (Tier-1 #1) — the highest-leverage
-   primitive still open. (Combat damage-order, multi-pick "choose N",
-   damage redirection, and draw doubling are now wired; layer-1 continuous
-   copies ship via `Effect::BecomeCopyOfFor`.)
-2. **Card-zoom preview + stops/auto-yield + combat-math preview**
-   (Tier-7 #1–3) — the trio that most closes the "feels like Arena" gap.
-3. **Best-of-3 + sideboard + deck legality** (Tier 10) — makes draft/cube
-   and constructed competitive.
-4. **Static-ability framework + mana provenance** — broad correctness wins
-   that unblock many cards at once. (APNAP + same-controller trigger
-   ordering are fully wired, including the server suspend.)
+1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
+   open.
+2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
+   that most closes the Arena "feel" gap.
+3. **Best-of-3 + sideboard + deck legality** (Tier 10) — makes constructed
+   competitive.
+4. **Static-ability framework + mana provenance** — broad correctness wins.
 5. **Smarter AI blocking** (Tier 13) — biggest single-player upgrade.
-6. Then the **Tier-4 mechanic sweep** and **Tier-3 object-model** features,
-   card batch by card batch, promoting entries in the per-card trackers.
+6. Then the **Tier-4 mechanic sweep** and **Tier-3 object-model** features, batch
+   by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.

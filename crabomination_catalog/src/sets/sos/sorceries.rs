@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
-use crate::mana::{Color, b, cost, generic, w};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
@@ -89,12 +89,7 @@ pub use crabomination_base::tokens::spirit_token;
 
 /// Dig Site Inventory — {W} Sorcery.
 /// "Put a +1/+1 counter on target creature you control. It gains vigilance
-/// until end of turn."
-///
-/// Approximation: the Flashback {W} clause ("you may cast this card from
-/// your graveyard for its flashback cost. Then exile it.") is omitted —
-/// the engine has no cast-from-graveyard pipeline yet. The face-up effect
-/// is wired faithfully.
+/// until end of turn." Flashback {W} via `Keyword::Flashback`.
 pub fn dig_site_inventory() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::effect::Duration;
@@ -304,25 +299,14 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
 
 /// Group Project — {1}{W} Sorcery.
 /// "Create a 2/2 red and white Spirit creature token."
-///
-/// Approximation: the Flashback "Tap three untapped creatures you
-/// control" clause is omitted (the engine has no cast-from-graveyard
-/// pipeline, and the engine has no "tap three creatures as additional
-/// cost" primitive yet). The face-up token-creation half is wired
-/// faithfully.
+/// Flashback—Tap three untapped creatures you control: via
+/// `Keyword::FlashbackTap(3)` + `GameAction::CastFlashbackTap` (taps the
+/// three as the whole cost, casts from gy, exiles after — CR 702.34d).
 pub fn group_project() -> CardDefinition {
     CardDefinition {
         name: "Group Project",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        // Push (modern_decks, batch 83): "Flashback—Tap three untapped
-        // creatures you control" is wired via the new
-        // `Keyword::FlashbackTap(3)` keyword + `GameAction::
-        // CastFlashbackTap` action. The action validates the caller has
-        // listed exactly 3 untapped creatures they control, then taps
-        // them as the entire flashback cost (no mana paid) and casts
-        // the spell out of the graveyard. Routes the resolved spell to
-        // exile via `cast_via_flashback` (CR 702.34d).
         keywords: vec![Keyword::FlashbackTap(3)],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
@@ -700,7 +684,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
 /// graveyard.
 pub fn pursue_the_past() -> CardDefinition {
     use crate::card::Keyword;
-    use crate::mana::{ManaCost, ManaSymbol, r, w as w_mana};
+    use crate::mana::{ManaCost, ManaSymbol, r};
     let flashback_cost = ManaCost {
         symbols: vec![
             ManaSymbol::Generic(2),
@@ -710,7 +694,7 @@ pub fn pursue_the_past() -> CardDefinition {
     };
     CardDefinition {
         name: "Pursue the Past",
-        cost: cost(&[r(), w_mana()]),
+        cost: cost(&[r(), w()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
@@ -1270,10 +1254,10 @@ pub fn killians_confidence() -> CardDefinition {
 /// the auto-decider picks each basic in turn.
 pub fn planar_engineering() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::g as gm;
+    
     CardDefinition {
         name: "Planar Engineering",
-        cost: cost(&[generic(3), gm()]),
+        cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
@@ -2121,17 +2105,10 @@ pub fn follow_the_lumarets() -> CardDefinition {
 
 /// Echocasting Symposium — {4}{U}{U} Sorcery — Lesson.
 /// "Target player creates a token that's a copy of target creature you
-/// control. / Paradigm — ..."
+/// control." Paradigm offers a free repeat each pre-combat main.
 ///
-/// Body: approximated as you-create-a-copy of your own chosen creature
-/// via `Effect::CreateToken` over a "vanilla mirror" 3/3 Wizard
-/// placeholder (no permanent-copy primitive yet — same gap as Applied
-/// Geometry). The printed "target player creates the copy" slot
-/// collapses to "you" (no multi-target prompt yet).
-///
-/// Push (modern_decks): **Paradigm rider** now wired via
-/// `Effect::RegisterParadigm` + `exile_on_resolve: true`. Each of the
-/// controller's pre-combat main phases offers a free copy.
+/// `CreateTokenCopyOf` of the targeted creature; the "target player
+/// creates" slot collapses to "you" (no two-typed-target-slot primitive).
 pub fn echocasting_symposium() -> CardDefinition {
     use crate::card::SpellSubtype;
     use crate::effect::shortcut::target_filtered;
@@ -2144,15 +2121,6 @@ pub fn echocasting_symposium() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        // Push (modern_decks, batch 81): "Target player creates a token
-        // that's a copy of target creature you control." Wired via
-        // `Effect::CreateTokenCopyOf { who: You, source: target Creature
-        // ∧ ControlledByYou, no P/T override }`. The printed
-        // "target player creates" is approximated as "you create" — the
-        // engine has no two-target-slots-with-different-types primitive
-        // to thread the player target through; in practice the caster
-        // wouldn't gift the token to an opp. Paradigm still wired via
-        // `RegisterParadigm` + `exile_on_resolve: true`.
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
@@ -2162,8 +2130,10 @@ pub fn echocasting_symposium() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByYou),
                 ),
                 extra_creature_types: vec![],
+                extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
+                legendary: false,
             },
             Effect::RegisterParadigm,
         ]),
@@ -2290,8 +2260,10 @@ pub fn applied_geometry() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByYou),
                 ),
                 extra_creature_types: vec![crate::card::CreatureType::Fractal],
+                extra_card_types: vec![],
                 override_pt: Some((0, 0)),
                 non_legendary: false,
+                legendary: false,
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

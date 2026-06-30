@@ -7,11 +7,28 @@
 //! and aren't part of the chrome.
 
 use bevy::prelude::*;
+use bevy::text::{FontFeatureTag, FontFeatures};
 
 // ── Fonts ────────────────────────────────────────────────────────────────────
 
 /// Path to the single UI font. All HUD/menu/modal text uses this.
 pub const FONT_PATH: &str = "fonts/MiranoExtendedFreebie-Light.ttf";
+
+/// Tabular (uniform-width) figures for HUD numbers. This game changes numbers
+/// in place constantly — life totals, P/T, counters, mana, timers — and with
+/// proportional digits each change reflows the text node's width, jittering
+/// neighbours. `tnum` keeps every digit the same advance width so a `20 → 9 →
+/// 19` swing doesn't shift layout.
+///
+/// NOTE: this is an OpenType *font* feature — it only takes effect if the
+/// active font ships a `tnum` table. The bundled `MiranoExtendedFreebie-Light`
+/// currently exposes only `kern`, so this is **inert until a tnum-capable font
+/// is used**; the hook lives here so it activates automatically on a font swap.
+fn ui_font_features() -> FontFeatures {
+    FontFeatures::builder()
+        .enable(FontFeatureTag::TABULAR_FIGURES)
+        .build()
+}
 
 /// Loaded handles for the UI font. Insert at startup, then accept
 /// `Res<UiFonts>` in any UI setup system and call `ui_fonts.tf(size)`
@@ -25,8 +42,9 @@ impl UiFonts {
     /// Build a `TextFont` using the project's standard font at `size` px.
     pub fn tf(&self, size: f32) -> TextFont {
         TextFont {
-            font: self.sans.clone(),
-            font_size: size,
+            font: self.sans.clone().into(),
+            font_size: FontSize::Px(size),
+            font_features: ui_font_features(),
             ..default()
         }
     }

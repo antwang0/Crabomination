@@ -117,3 +117,99 @@ fn banlist_and_restricted_list_enforced() {
     let errs = validate_deck(&deck, Format::Vintage).unwrap_err();
     assert!(errs.iter().any(|e| matches!(e, DeckError::RestrictedCard { card_name, found: 2 } if *card_name == "Treasure Cruise")));
 }
+
+// ── Companion deck restrictions (CR 702.139c) ─────────────────────────────
+
+use crate::format::companion_restriction_met;
+
+/// Lurrus — permanents must have mana value ≤ 2; nonpermanents and lands are
+/// exempt; an MV-5 permanent breaks it.
+#[test]
+fn lurrus_permanents_mv_two_or_less() {
+    let lurrus = catalog::lurrus_of_the_dream_den();
+    let mut ok: Vec<_> = make_deck(catalog::grizzly_bears, 8); // MV-2 creatures
+    ok.extend(make_deck(catalog::lightning_bolt, 4)); // MV-1 instants (nonpermanent)
+    ok.extend(make_deck(catalog::forest, 20));
+    assert!(companion_restriction_met(&lurrus, &ok, 60).is_ok());
+    ok.push(catalog::serra_angel()); // MV-5 permanent
+    assert!(companion_restriction_met(&lurrus, &ok, 60).is_err());
+}
+
+/// Keruga — every nonland card must have MV ≥ 3; lands exempt.
+#[test]
+fn keruga_nonland_mv_three_or_more() {
+    let keruga = catalog::keruga_the_macrosage();
+    let mut ok = make_deck(catalog::serra_angel, 8); // MV-5
+    ok.extend(make_deck(catalog::forest, 20));
+    assert!(companion_restriction_met(&keruga, &ok, 60).is_ok());
+    ok.push(catalog::grizzly_bears()); // MV-2 nonland
+    assert!(companion_restriction_met(&keruga, &ok, 60).is_err());
+}
+
+/// Gyruda — even mana values only (lands exempt); Obosh — odd only.
+#[test]
+fn gyruda_even_obosh_odd_parity() {
+    let gyruda = catalog::gyruda_doom_of_depths();
+    let obosh = catalog::obosh_the_preypiercer();
+    let even = make_deck(catalog::grizzly_bears, 8); // MV-2
+    let odd = make_deck(catalog::lightning_bolt, 8); // MV-1
+    assert!(companion_restriction_met(&gyruda, &even, 60).is_ok());
+    assert!(companion_restriction_met(&gyruda, &odd, 60).is_err());
+    assert!(companion_restriction_met(&obosh, &odd, 60).is_ok());
+    assert!(companion_restriction_met(&obosh, &even, 60).is_err());
+}
+
+/// Jegantha — no card may contain two of the same mana symbol.
+#[test]
+fn jegantha_no_duplicate_mana_symbols() {
+    let jegantha = catalog::jegantha_the_wellspring();
+    let ok = make_deck(catalog::grizzly_bears, 8); // {1}{G} — one G
+    assert!(companion_restriction_met(&jegantha, &ok, 60).is_ok());
+    let mut bad = ok.clone();
+    bad.push(catalog::serra_angel()); // {3}{W}{W} — two W
+    assert!(companion_restriction_met(&jegantha, &bad, 60).is_err());
+}
+
+/// Lutri — singleton; basics are exempt from the no-duplicates clause.
+#[test]
+fn lutri_singleton_with_basic_exemption() {
+    let lutri = catalog::lutri_the_spellchaser();
+    let mut ok = make_deck(catalog::lightning_bolt, 1);
+    ok.extend(make_deck(catalog::forest, 30)); // basics: duplicates allowed
+    assert!(companion_restriction_met(&lutri, &ok, 60).is_ok());
+    ok.extend(make_deck(catalog::lightning_bolt, 1)); // second Bolt
+    assert!(companion_restriction_met(&lutri, &ok, 60).is_err());
+}
+
+/// Kaheera — every creature card must be one of the named types.
+#[test]
+fn kaheera_creature_type_restriction() {
+    let kaheera = catalog::kaheera_the_orphanguard();
+    let beasts = make_deck(catalog::garruks_companion, 8); // Beast
+    assert!(companion_restriction_met(&kaheera, &beasts, 60).is_ok());
+    let mut bad = beasts.clone();
+    bad.push(catalog::grizzly_bears()); // Bear — not a permitted type
+    assert!(companion_restriction_met(&kaheera, &bad, 60).is_err());
+}
+
+/// Yorion — the deck must hold at least 20 cards beyond the format minimum.
+#[test]
+fn yorion_deck_size_over_minimum() {
+    let yorion = catalog::yorion_sky_nomad();
+    let big = make_deck(catalog::forest, 80);
+    assert!(companion_restriction_met(&yorion, &big, 60).is_ok());
+    let small = make_deck(catalog::forest, 79);
+    assert!(companion_restriction_met(&yorion, &small, 60).is_err());
+}
+
+/// Umori — every nonland card must share one card type.
+#[test]
+fn umori_shared_card_type() {
+    let umori = catalog::umori_the_collector();
+    let mut creatures = make_deck(catalog::grizzly_bears, 8);
+    creatures.extend(make_deck(catalog::forest, 20));
+    assert!(companion_restriction_met(&umori, &creatures, 60).is_ok());
+    let mut mixed = creatures.clone();
+    mixed.push(catalog::lightning_bolt()); // instant breaks the shared type
+    assert!(companion_restriction_met(&umori, &mixed, 60).is_err());
+}

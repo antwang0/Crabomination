@@ -2140,7 +2140,7 @@ fn strixhaven_crucible_activation_drains_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: Some(crate::game::types::Target::Player(1)), x_value: None })
+        target: Some(crate::game::types::Target::Player(1)), additional_targets: Vec::new(), x_value: None })
     .expect("Crucible activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 1);

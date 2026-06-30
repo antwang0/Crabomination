@@ -156,6 +156,13 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Type: {}", p.creature_types.join(" ")));
     }
 
+    // Legendary marker (CR 704.5j legend rule) — the peek art shows the type
+    // line, but on the crowded board a one-word reminder helps players spot a
+    // second copy that's about to die to the legend rule.
+    if p.is_legendary {
+        lines.push(String::from("Legendary"));
+    }
+
     // Chosen color for "choose-a-color" mana rocks (Coldsteel Heart): show
     // which color this source now taps for.
     if let Some(c) = p.chosen_color {
@@ -246,6 +253,28 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         for r in reminders {
             lines.push(r);
         }
+    }
+
+    // Saddled (CR 702.171) — flag that the Mount's attacks-while-saddled riders
+    // are armed for this combat.
+    if p.saddled {
+        lines.push("⛨ saddled".to_string());
+    }
+
+    // Station progress (CR 721) — show the next {N+} charge threshold so the
+    // player can see how close the Spacecraft is to its next striation.
+    if let Some(threshold) = p.station_next_threshold {
+        let charges = p
+            .counters
+            .iter()
+            .find(|(k, _)| matches!(k, CounterType::Charge))
+            .map(|(_, n)| *n)
+            .unwrap_or(0);
+        lines.push(format!(
+            "Station → {} ({} more)",
+            threshold,
+            threshold.saturating_sub(charges)
+        ));
     }
 
     // Effective keywords (after layer effects). Show these so anthem
@@ -464,10 +493,19 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.monstrous {
         lines.push(String::from("(monstrous)"));
     }
+    // CR 702.93 Renown — its renown trigger has already fired (it became
+    // renowned), so it won't add more counters on later combat hits.
+    if p.renowned {
+        lines.push(String::from("(renowned)"));
+    }
     // CR 701.35 Detain — can't attack/block and its abilities can't be
     // activated until the detaining player's next turn.
     if p.detained {
         lines.push(String::from("(detained — can't attack/block/activate)"));
+    }
+    // Entrancing Lyre — locked from untapping while the source stays tapped.
+    if p.untap_locked {
+        lines.push(String::from("(won't untap)"));
     }
 
     // CR 714 — Saga chapter progress. The current chapter is the Lore counter
@@ -520,6 +558,24 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
 }
 
 
+/// Printed deck-construction restriction for a companion (CR 702.139c),
+/// for the card-info panel. Mirrors `format::companion_restriction_met`.
+pub(crate) fn companion_restriction_text(rule: &crabomination::card::CompanionRule) -> &'static str {
+    use crabomination::card::CompanionRule as C;
+    match rule {
+        C::PermanentsManaValueAtMost(_) => "Each permanent card in your starting deck has a low enough mana value.",
+        C::NonlandManaValueAtLeast(_) => "Your starting deck contains only high-mana-value cards and lands.",
+        C::NonlandEvenManaValue => "Your starting deck contains only cards with even mana values and lands.",
+        C::NonlandOddManaValue => "Your starting deck contains only cards with odd mana values and lands.",
+        C::NoDuplicateManaSymbols => "No card in your starting deck has more than one of the same mana symbol in its cost.",
+        C::Singleton => "Each nonland card in your starting deck has a different name.",
+        C::CreatureTypesAmong(_) => "Each creature card in your starting deck is one of the named types.",
+        C::NonlandShareACardType => "Each nonland card in your starting deck shares a card type.",
+        C::DeckSizeAtLeastOverMinimum(_) => "Your starting deck is well above the minimum size.",
+        C::PermanentsHaveActivatedAbility => "Each permanent card in your starting deck has an activated ability.",
+    }
+}
+
 /// Render a `Keyword` as a short human string for the tooltip. Keeps
 /// the labels short ("Lifelink", "First Strike") so a card with several
 /// granted keywords doesn't blow out the tooltip line.
@@ -543,6 +599,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Haste => "Can attack and tap the turn it comes under your control.",
         K::Indestructible => "Can't be destroyed by damage or \"destroy\" effects.",
         K::Hexproof => "Can't be the target of spells or abilities opponents control.",
+        K::HexproofFromColor(_) => "Can't be targeted by that color's spells or abilities opponents control.",
         K::Shroud => "Can't be the target of any spells or abilities.",
         K::Infect => "Damages creatures with -1/-1 counters and players with poison.",
         K::Wither => "Damages creatures as -1/-1 counters instead.",
@@ -560,6 +617,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantBeBlockedExceptByN(_) => "Can't be blocked except by that many or more creatures.",
         K::CantBeBlockedExceptBy(_) => "Can only be blocked by creatures matching the named quality.",
         K::CantBeBlockedBy(_) => "Can't be blocked by creatures matching the named quality.",
+        K::CantBeBlockedByPowerLess => "Can't be blocked by creatures with less power than it.",
+        K::CantBeBlockedByPowerAtMost(_) => "Can't be blocked by creatures with that much power or less.",
         K::Changeling => "Is every creature type.",
         K::Flash => "You may cast it any time you could cast an instant.",
         K::Flanking => "Creatures without flanking blocking it get -1/-1 until end of turn.",
@@ -568,6 +627,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Phasing => "Phases out (and back in) during its controller's untap step; while phased out it's treated as though it doesn't exist.",
         K::Toxic(_) => "Players it deals combat damage to also get that many poison counters.",
         K::Annihilator(_) => "Whenever it attacks, the defending player sacrifices that many permanents.",
+        K::Firebending(_) => "Whenever it attacks, add that much {R}; the mana lasts until end of combat.",
         K::Convoke => "You may tap untapped creatures to help pay this spell's cost.",
         K::Delve => "You may exile cards from your graveyard, each paying for {1} of this spell's cost.",
         K::Cascade => "When you cast it, exile cards from the top of your library until you hit a cheaper nonland card; you may cast that card for free.",
@@ -597,17 +657,97 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Unleash => "You may have it enter with a +1/+1 counter; if it has one, it can't block.",
         K::Bargain => "You may sacrifice an artifact, enchantment, or token as you cast this spell.",
         K::AttacksAlone => "Can only attack alone.",
+        K::CantAttackAlone => "Can't attack alone (another creature must also attack).",
+        K::CantAttackOrBlockAlone => {
+            "Can't attack or block alone (another creature must also attack/block)."
+        }
         K::CantBlock => "Can't block.",
         K::CantAttack => "Can't attack.",
         K::MustAttack => "Attacks each combat if able.",
         K::MustBlock | K::AllMustBlock | K::MustBeBlocked => "Is forced into combat by a block/attack requirement.",
         K::CantBeCopied => "Can't be copied.",
         K::DealsNoCombatDamage => "Assigns no combat damage.",
+        K::AssignsCombatDamageByToughness => {
+            "Assigns combat damage equal to its toughness rather than its power."
+        }
         K::Offspring(_) => {
             "You may pay an additional cost as you cast this; if you do, it enters making a 1/1 token copy of itself."
         }
         K::Daybound => "If it's neither day nor night, it becomes day; transforms when it becomes night.",
         K::Nightbound => "Transforms back when it becomes day.",
+        K::Conspire => "As you cast it, you may tap two untapped creatures that share a color with it to copy it.",
+        K::Disturb(_) => "You may cast it from your graveyard transformed for its disturb cost.",
+        K::Entwine(_) => "Choose both modes if you pay the entwine cost.",
+        K::Epic => "Copy this spell at the start of each of your upkeeps; you can't cast other spells.",
+        K::Improvise => "You may tap untapped artifacts to help pay this spell's cost.",
+        K::JumpStart => "You may cast it from your graveyard by also discarding a card, then exile it.",
+        K::Replicate(_) => "As you cast it, pay its replicate cost any number of times to copy it that many times.",
+        K::Splice(_, _) => "As you cast an Arcane spell, you may reveal this from hand and pay its splice cost to add its effects.",
+        K::Squad(_) => "As you cast it, pay its squad cost any number of times to make that many extra token copies.",
+        K::UmbraArmor => "If enchanted creature would be destroyed, instead remove all damage and destroy this Aura.",
+        K::Companion => "If your deck meets its condition, you may play it from outside the game once per game.",
+        K::ProtectionFromColoredSpells => "Can't be targeted, blocked, or damaged by colored spells.",
+        K::ProtectionFromSpells => "Can't be targeted or damaged by spells.",
+        K::ProtectionFromCreatures => "Can't be blocked, targeted, or damaged by creatures.",
+        K::ProtectionFromMulticolored => "Can't be blocked, targeted, or damaged by multicolored sources.",
+        K::ProtectionFromInstants => "Can't be targeted or damaged by instant spells.",
+        K::ProtectionFromEverything => "Can't be blocked, targeted, enchanted, equipped, or damaged by anything.",
+        K::ProtectionFromManaValueExcept(_) => "Has protection from each mana value other than the named one.",
+        K::ProtectionFromManaValueParity { odd } => if *odd {
+            "Has protection from each odd mana value."
+        } else {
+            "Has protection from each even mana value."
+        },
+        K::ProtectionFromCreatureType(_) => "Can't be blocked, targeted, or damaged by sources of the named creature type.",
+        K::ProtectionFromSpellSubtype(_) => "Can't be targeted or damaged by spells of the named subtype.",
+        K::Cycling(_) => "Pay its cycling cost and discard it to draw a card, any time you could cast an instant.",
+        K::CyclingLife(_) => "Pay that much life and discard it to draw a card.",
+        K::Kicker(_) | K::Multikicker(_) => "You may pay an additional kicker cost as you cast it for a bonus effect.",
+        K::Flashback(_) | K::FlashbackTap(_) => "You may cast it from your graveyard for its flashback cost, then exile it.",
+        K::Suspend(_, _) => "You may exile it with that many time counters and pay its suspend cost; remove one each upkeep and cast it free when the last is gone.",
+        K::SuspendAccelerant => "While this is suspended, an opponent's action removes time counters from it.",
+        K::Echo(_) => "Pay its echo cost at the beginning of your next upkeep after it enters, or sacrifice it.",
+        K::Impending(_) => "Cast for its impending cost to enter with that many time counters; it isn't a creature until the last is removed.",
+        K::Casualty(_) => "As you cast it, you may sacrifice a creature with that much power to copy it.",
+        K::Saddle(_) => "Tap other creatures with total power N to saddle it; saddled abilities work when it attacks.",
+        K::Buyback(_) => "You may pay an additional buyback cost; if you do, it returns to your hand instead of the graveyard.",
+        K::CumulativeUpkeep(_) => "At your upkeep, put an age counter on it, then pay its cumulative upkeep cost for each age counter or sacrifice it.",
+        K::Devoid => "It has no color.",
+        K::Morph(_) => "You may cast it face down as a 2/2; turn it face up any time for its morph cost.",
+        K::Megamorph(_) => "You may cast it face down as a 2/2; turn it face up for its megamorph cost, entering with a +1/+1 counter.",
+        K::Disguise(_) => "You may cast it face down as a 2/2 with ward {2}; turn it face up any time for its disguise cost.",
+        K::Equip(_) => "Pay its equip cost to attach it to a creature you control, any time you could cast a sorcery.",
+        K::Fortify(_) => "Pay its fortify cost to attach it to a land you control.",
+        K::Reconfigure(_) => "Pay its reconfigure cost to attach it to a creature, or to unattach it; it's a creature while unattached.",
+        K::Escape(_, _) => "You may cast it from your graveyard for its escape cost, also exiling other cards from your graveyard.",
+        K::Retrace => "You may cast it from your graveyard by also discarding a land card.",
+        K::Regenerate(_) => "The next time it would be destroyed this turn, instead tap it, remove it from combat, and heal its damage.",
+        K::Reinforce(_, _) => "Pay its reinforce cost and discard it to put that many +1/+1 counters on a creature.",
+        K::Soulbond => "You may pair it with another unpaired creature when either enters; the pair shares a bonus.",
+        K::Inspired => "Whenever it becomes untapped, its inspired ability triggers.",
+        K::Landcycling(_, _) => "Pay its landcycling cost and discard it to search your library for a matching land.",
+        K::Typecycling(_) => "Pay its typecycling cost and discard it to search your library for a matching card.",
+        K::Mayhem(_) => "You may cast it from your graveyard for its mayhem cost if you discarded a card this turn; then exile it.",
+        K::Harmonize(_) => "You may cast it from your graveyard for its harmonize cost; you may tap an untapped creature to pay {1} of that cost. Then exile it.",
+        K::CantActivateAbilities => "Its activated abilities can't be activated.",
+        K::CantAttackUnlessCastCreatureThisTurn => "Can't attack unless you cast a creature spell this turn.",
+        K::CanAttackOnlyIfYouControl(_) => "Can attack only if you control a matching permanent.",
+        K::CantAttackOrBlockUnlessEvenCounters => "Can't attack or block unless it has an even number of counters on it.",
+        K::CantAttackOrBlockUnlessYouControlCount { attack_only: true, .. } => "Can't attack (but may still block) unless you control enough matching permanents.",
+        K::CantAttackOrBlockUnlessYouControlCount { block_only: true, .. } => "Can't block (but may still attack) unless you control enough matching permanents.",
+        K::CantAttackOrBlockUnlessYouControlCount { .. } => "Can't attack or block unless you control enough matching permanents.",
+        K::CantBeCounteredIfXAtLeast(_) => "Can't be countered if X was paid at or above the named amount.",
+        K::StartYourEngines => "When it enters, if you have no speed, your speed becomes 1. Your speed then increases by 1 the first time an opponent loses life on each of your turns (max 4).",
+        K::Poisonous(_) => "Whenever it deals combat damage to a player, that player gets that many poison counters.",
+        K::CanBlockOnlyFlying => "Can block only creatures with flying.",
+        K::CantAttackOrBlockUnlessHandSizeAtMost(_) => "Can't attack or block unless you have that many or fewer cards in hand.",
+        K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium (four or more card types among cards in your graveyard).",
+        K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
+        K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
+        K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
+        K::CantBeBlockedIfControllerCastSpells(_) => "Can't be blocked if you've cast that many or more spells this turn.",
+        K::Sneak(_) => "You may cast it for its sneak cost by returning an unblocked attacker you control to its owner's hand.",
+        K::CantAttackOrBlockUnlessCreatureDiedThisTurn => "Can't attack or block unless a creature died this turn.",
         _ => return None,
     })
 }
@@ -639,6 +779,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Decayed => "Decayed".into(),
         K::Indestructible => "Indestructible".into(),
         K::Hexproof => "Hexproof".into(),
+        K::HexproofFromColor(c) => format!("Hexproof from {c:?}"),
         K::Flash => "Flash".into(),
         K::Shroud => "Shroud".into(),
         // Surface Ward's cost as "Ward {2}" or "Ward—pay 2 life"
@@ -648,12 +789,16 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::Mana(c) => format!("Ward {}", c.summary()),
             crabomination::card::WardCost::Life(n) => format!("Ward—Pay {n} life"),
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
+            crabomination::card::WardCost::Blight(n) => format!("Ward—Blight {n}"),
             crabomination::card::WardCost::SacrificeCreature => "Ward—Sacrifice a creature".into(),
             crabomination::card::WardCost::SacrificePermanents(n) => {
                 format!("Ward—Sacrifice {n} permanents")
             }
             crabomination::card::WardCost::GenericSourcePower => {
                 "Pay {X}, X = its power".into()
+            }
+            crabomination::card::WardCost::LifeSourcePower => {
+                "Ward—Pay life equal to its power".into()
             }
         },
         // Protection rolls up the color name in lowercase to match
@@ -674,7 +819,10 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantAttack => "Can't attack".into(),
         K::CantActivateAbilities => "Activated abilities can't be activated".into(),
         K::AttacksAlone => "Attacks only alone".into(),
+        K::CantAttackAlone => "Can't attack alone".into(),
+        K::CantAttackOrBlockAlone => "Can't attack or block alone".into(),
         K::DealsNoCombatDamage => "Deals no combat damage".into(),
+        K::AssignsCombatDamageByToughness => "Assigns combat damage by toughness".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
         K::AllMustBlock => "All creatures able to block this do so".into(),
         K::Skulk => "Skulk".into(),
@@ -701,6 +849,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Delve => "Delve".into(),
         K::Cascade => "Cascade".into(),
         K::Annihilator(n) => format!("Annihilator {n}"),
+        K::Firebending(n) => format!("Firebending {n}"),
         K::Dredge(n) => format!("Dredge {n}"),
         K::Crew(n) => format!("Crew {n}"),
         K::Madness(cost) => format!("Madness {}", cost.summary()),
@@ -715,6 +864,16 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Offspring(cost) => format!("Offspring {}", cost.summary()),
         K::CantAttackOrBlockUnlessEvenCounters =>
             "Can't attack or block unless it has an even number of counters".into(),
+        K::CantAttackOrBlockUnlessYouControlCount { min, attack_only, block_only, .. } => {
+            let verb = if *attack_only {
+                "attack"
+            } else if *block_only {
+                "block"
+            } else {
+                "attack or block"
+            };
+            format!("Can't {verb} unless you control {min} or more matching permanents")
+        }
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
@@ -722,6 +881,8 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeBlockedBy(_) => "Can't be blocked by certain creatures".into(),
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature".into(),
         K::CantBeBlockedExceptByN(n) => format!("Can't be blocked except by {n} or more creatures"),
+        K::CantBeBlockedByPowerLess => "Can't be blocked by creatures with less power".into(),
+        K::CantBeBlockedByPowerAtMost(n) => format!("Can't be blocked by creatures with power {n} or less"),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
         // Cost/count-bearing keywords that otherwise fell through to the raw
@@ -753,6 +914,72 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeCounteredIfXAtLeast(n) => {
             format!("Can't be countered if X is {n} or more")
         }
+        K::StartYourEngines => "Start your engines!".into(),
+        // Evasion / combat-restriction keywords that previously fell through to
+        // the raw `{:?}` debug shape.
+        K::Unblockable => "Can't be blocked".into(),
+        K::Horsemanship => "Horsemanship".into(),
+        K::Flanking => "Flanking".into(),
+        K::SplitSecond => "Split second".into(),
+        K::CanBlockOnlyFlying => "Can block only creatures with flying".into(),
+        K::CantBeBlockedIfControllerCastSpells(n) => {
+            format!("Can't be blocked if its controller cast {n} or more spells this turn")
+        }
+        K::CantAttackUnlessCastCreatureThisTurn => {
+            "Can't attack unless you cast a creature spell this turn".into()
+        }
+        K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium".into(),
+        K::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
+            "Can't attack or block unless a creature died under your control this turn".into()
+        }
+        K::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
+            format!("Can't attack or block unless you have {n} or fewer cards in hand")
+        }
+        K::CantAttackOrBlockUnlessDescend(n) => {
+            format!("Can't attack or block unless you descended {n}")
+        }
+        K::CantAttackOrBlockUnlessCityBlessing => {
+            "Can't attack or block unless you have the city's blessing".into()
+        }
+        K::CanAttackOnlyIfYouControl(_) => {
+            "Can attack only if you control a matching permanent".into()
+        }
+        // Protection variants beyond the single-color case.
+        K::ProtectionFromEverything => "Protection from everything".into(),
+        K::ProtectionFromMulticolored => "Protection from multicolored".into(),
+        K::ProtectionFromInstants => "Protection from instants".into(),
+        K::ProtectionFromColoredSpells => "Protection from colored spells".into(),
+        K::ProtectionFromSpells => "Protection from spells".into(),
+        K::ProtectionFromCreatures => "Protection from creatures".into(),
+        K::ProtectionFromCreatureType(t) => format!("Protection from {t:?}"),
+        K::ProtectionFromSpellSubtype(s) => format!("Protection from {s:?} spells"),
+        K::ProtectionFromManaValueExcept(n) => {
+            format!("Protection from each mana value except {n}")
+        }
+        K::ProtectionFromManaValueParity { odd } => {
+            format!("Protection from {} mana value", if *odd { "odd" } else { "even" })
+        }
+        K::UmbraArmor => "Totem armor".into(),
+        // Counter / cost keywords that previously printed the raw `{:?}` shape.
+        K::Poisonous(n) => format!("Poisonous {n}"),
+        K::Bloodthirst(n) => format!("Bloodthirst {n}"),
+        K::CyclingLife(n) => format!("Cycling—Pay {n} life"),
+        K::Impending(n) => format!("Impending {n}"),
+        K::Entwine(c) => format!("Entwine {}", c.summary()),
+        K::Squad(c) => format!("Squad {}", c.summary()),
+        K::Replicate(c) => format!("Replicate {}", c.summary()),
+        K::Mayhem(c) => format!("Mayhem {}", c.summary()),
+        K::Harmonize(c) => format!("Harmonize {}", c.summary()),
+        K::Disturb(c) => format!("Disturb {}", c.summary()),
+        K::Splice(c, st) => format!("Splice onto {st:?} {}", c.summary()),
+        // Ability words / static keywords with no payload.
+        K::Conspire => "Conspire".into(),
+        K::Improvise => "Improvise".into(),
+        K::Gravestorm => "Gravestorm".into(),
+        K::Epic => "Epic".into(),
+        K::JumpStart => "Jump-start".into(),
+        K::Companion => "Companion".into(),
+        K::SuspendAccelerant => "Suspend".into(),
         _ => format!("{kw:?}"),
     }
 }
@@ -806,6 +1033,15 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Ice => "Ice",
         CounterType::Void => "Void",
         CounterType::Fuse => "Fuse",
+        CounterType::Ki => "Ki",
+        CounterType::Coin => "Coin",
+        CounterType::Tide => "Tide",
+        CounterType::Bounty => "Bounty",
+        CounterType::Oil => "Oil",
+        CounterType::Valor => "Valor",
+        CounterType::Defense => "Defense",
+        CounterType::Possession => "Possession",
+        CounterType::Nest => "Nest",
     }
 }
 
@@ -823,13 +1059,17 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Hone => "Ticks down each of your upkeeps; cast from exile for {4} less when the last is removed.",
         CounterType::Burden => "The One Ring's tally: draw one per burden counter; lose that much life each upkeep.",
         CounterType::Ice => "Removed by triggered effects; the permanent transforms when the last one is gone.",
+        CounterType::Tide => "Ominous Seas: at four or more, remove them to make an 8/8 Kraken.",
+        CounterType::Bounty => "When this bountied creature dies, its bounty's owner draws a card and gains 1 life.",
+        CounterType::Possession => "DSK Eerie tally — counted by the creature's death-replacement payoff.",
+        CounterType::Nest => "DSK Twitching Doll tally — one Spider token per counter when sacrificed.",
         _ => return None,
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, keyword_label, keyword_reminder};
+    use super::{build_tooltip_body, companion_restriction_text, keyword_label, keyword_reminder};
     use crabomination::card::{CardId, CardType, CounterType};
     use crabomination::net::PermanentView;
 
@@ -864,7 +1104,9 @@ mod tests {
             goaded: false,
             monstrous: false,
             suspected: false,
+            renowned: false,
             detained: false,
+            untap_locked: false,
             pt_modified: false,
             mana_cost_display: String::new(),
             creature_types: vec![],
@@ -897,6 +1139,13 @@ mod tests {
             prepare_spell_name: None,
             prepare_cost_label: String::new(),
             prepare_needs_target: false,
+            creature_subtypes: vec![],
+            lost_all_abilities: false,
+            colors: vec![],
+            crew_power_bonus: 0,
+            saddled: false,
+            station_charges: None,
+            station_next_threshold: None,
         }
     }
 
@@ -927,12 +1176,43 @@ mod tests {
     }
 
     #[test]
+    fn legendary_marker_surfaces_for_legends_only() {
+        let mut p = make_permanent_view(0, 2);
+        p.creature_types = vec!["Spirit".into()];
+        p.is_legendary = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("Legendary"), "legends are flagged: {body}");
+
+        p.is_legendary = false;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(!body.contains("Legendary"), "non-legends are not: {body}");
+    }
+
+    #[test]
     fn marked_damage_hidden_when_zero() {
         let p = make_permanent_view(0, 2);
         // No counters, no abilities, no other lines — body might be None.
         let body = build_tooltip_body(&p);
         if let Some(s) = body {
             assert!(!s.contains("marked:"), "no damage marked, should not surface: {s}");
+        }
+    }
+
+    #[test]
+    fn alt_cast_keywords_have_reminder_text() {
+        use crabomination::card::Keyword as K;
+        use crabomination::mana::{cost, generic};
+        // Previously these fell through to `None` (no tooltip line).
+        for kw in [
+            K::Cycling(cost(&[generic(2)])),
+            K::Kicker(cost(&[generic(1)])),
+            K::Flashback(cost(&[generic(3)])),
+            K::Echo(cost(&[generic(2)])),
+            K::Impending(3),
+            K::Casualty(2),
+            K::Saddle(3),
+        ] {
+            assert!(keyword_reminder(&kw).is_some(), "missing reminder for {kw:?}");
         }
     }
 
@@ -1145,6 +1425,19 @@ mod tests {
     }
 
     #[test]
+    fn companion_rules_render_restriction_text() {
+        use crabomination::card::CompanionRule as C;
+        for rule in [
+            C::PermanentsManaValueAtMost(2), C::NonlandManaValueAtLeast(3),
+            C::NonlandEvenManaValue, C::NonlandOddManaValue, C::NoDuplicateManaSymbols,
+            C::Singleton, C::CreatureTypesAmong(vec![]), C::NonlandShareACardType,
+            C::DeckSizeAtLeastOverMinimum(20), C::PermanentsHaveActivatedAbility,
+        ] {
+            assert!(!companion_restriction_text(&rule).is_empty(), "text for {rule:?}");
+        }
+    }
+
+    #[test]
     fn evasion_keywords_carry_reminder_text() {
         use crabomination::card::Keyword;
         for kw in [Keyword::Prowess, Keyword::Fear, Keyword::Skulk,
@@ -1166,6 +1459,50 @@ mod tests {
             Keyword::CantBeCopied, Keyword::DealsNoCombatDamage,
             Keyword::Protection(Color::Red), Keyword::Bushido(2),
             Keyword::Rampage(1), Keyword::Crew(3), Keyword::Madness(ManaCost::default()),
+            // Restriction / poison keywords that previously fell through to None.
+            Keyword::Poisonous(1), Keyword::CanBlockOnlyFlying,
+            Keyword::CantAttackOrBlockUnlessHandSizeAtMost(1),
+            Keyword::CantAttackOrBlockUnlessDelirium,
+        ] {
+            assert!(keyword_reminder(&kw).is_some(),
+                "expected reminder text for {kw:?}");
+        }
+    }
+
+    #[test]
+    fn alt_cost_and_protection_keywords_carry_reminder_text() {
+        use crabomination::card::{CreatureType, Keyword, SpellSubtype};
+        use crabomination::mana::ManaCost;
+        for kw in [
+            Keyword::Disturb(ManaCost::default()), Keyword::Entwine(ManaCost::default()),
+            Keyword::Epic, Keyword::Improvise, Keyword::JumpStart,
+            Keyword::Replicate(ManaCost::default()),
+            Keyword::Splice(ManaCost::default(), SpellSubtype::Arcane),
+            Keyword::Squad(ManaCost::default()), Keyword::UmbraArmor, Keyword::Companion,
+            Keyword::ProtectionFromColoredSpells, Keyword::ProtectionFromSpells,
+            Keyword::ProtectionFromCreatures, Keyword::ProtectionFromMulticolored,
+            Keyword::ProtectionFromManaValueExcept(3),
+            Keyword::ProtectionFromCreatureType(CreatureType::Human),
+            Keyword::ProtectionFromSpellSubtype(SpellSubtype::Arcane),
+            Keyword::ProtectionFromInstants, Keyword::ProtectionFromEverything,
+        ] {
+            assert!(keyword_reminder(&kw).is_some(),
+                "expected reminder text for {kw:?}");
+        }
+    }
+
+    #[test]
+    fn graveyard_recast_and_restriction_keywords_carry_reminder_text() {
+        use crabomination::card::Keyword;
+        use crabomination::mana::ManaCost;
+        for kw in [
+            Keyword::Mayhem(ManaCost::default()),
+            Keyword::Harmonize(ManaCost::default()),
+            Keyword::CantActivateAbilities,
+            Keyword::CantAttackUnlessCastCreatureThisTurn,
+            Keyword::CantAttackOrBlockUnlessEvenCounters,
+            Keyword::CantBeCounteredIfXAtLeast(5),
+            Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn,
         ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");

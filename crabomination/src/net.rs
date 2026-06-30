@@ -11,7 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::card::{CardId, CardType, CounterType, Keyword};
+use crate::card::{CardId, CardType, CounterType, CreatureType, Keyword};
 use crate::decision::Decision;
 use crate::game::{GameAction, GameEvent, Target, TurnStep};
 use crate::mana::{Color, ManaCost, ManaPool};
@@ -66,6 +66,11 @@ pub enum ClientMsg {
     Resume { token: String },
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
     SubmitAction(GameAction),
+    /// In-match chat: relayed to every seat and spectator as
+    /// [`ServerMsg::Chat`] stamped with the sender's seat + display name.
+    /// The server sanitizes (trims, strips control characters, clamps
+    /// length) and drops empty results.
+    Chat { text: String },
     /// Debug-console cheat: bypasses turn order / priority and mutates the
     /// authoritative state directly. Applied as the *sender's* seat — the
     /// server routes it to whichever seat owns the originating channel.
@@ -213,6 +218,9 @@ pub enum ServerMsg {
     /// seat: act within `seconds` or the server auto-acts for you. Sent
     /// once per arming; every accepted action re-arms (and re-sends).
     Rope { seconds: u32 },
+    /// In-match chat from `seat` (display name `name`), already sanitized
+    /// by the server. Relayed to every human seat and spectator.
+    Chat { seat: usize, name: String, text: String },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────
@@ -240,6 +248,11 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 615.1 — true while a "prevent all combat damage this turn" fog is
+    /// active (Fog, Holy Day, Inspire Awe). Surfaced so UIs can warn that
+    /// combat won't deal damage this turn. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub combat_damage_prevented_this_turn: bool,
     /// CR 731 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
     /// so UIs can show a day/night indicator. `#[serde(default)]` for
@@ -260,9 +273,10 @@ pub struct ClientView {
     /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
-    /// Hand MDFCs whose **back face** is castable right now via
-    /// `CastSpellBack` — `castable_hand` only probes front faces.
-    /// Feeds the castable highlight and the auto-pass hold logic.
+    /// MDFCs whose **back face** is castable right now via `CastSpellBack` —
+    /// from hand, plus permitted graveyard backs (Pestilent Cauldron's
+    /// `may_cast_back_from_graveyard`). `castable_hand` only probes front
+    /// faces. Feeds the castable highlight and the auto-pass hold logic.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub back_castable_hand: Vec<CardId>,
@@ -316,6 +330,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub replicatable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Conspire they could cast right now
+    /// while controlling two untapped creatures sharing a color (CR 702.79).
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub conspirable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Multikicker they could cast paying
     /// the kicker cost at least once (CR 702.33c). `#[serde(default)]` for
     /// snapshot back-compat.
@@ -333,6 +352,11 @@ pub struct ClientView {
     /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub blitzable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could cast for their Warp cost right
+    /// now (EOE). Lets the client offer a "Warp" affordance. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub warpable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could Suspend right now (CR 702.62):
     /// the card has `Keyword::Suspend` and the suspend cost is affordable at
     /// legal timing. Lets the client offer a "Suspend" affordance. Empty
@@ -355,6 +379,18 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with an Omen half they could cast right now
+    /// (CR 702.183). Lets the client offer the "cast the Omen" affordance
+    /// distinct from the plain creature cast. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub omenable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with a Prototype face they could cast
+    /// for the prototype cost right now (CR 702.160). Lets the client offer
+    /// "cast for prototype" distinct from the full-cost cast. Empty
+    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub prototypable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand that are split cards whose **right** half
     /// they could cast right now (CR 709). Lets the client offer the right
     /// half distinct from the default (left) cast. Empty off-priority.
@@ -442,6 +478,21 @@ pub struct CombatPreview {
     pub damage_to_planeswalkers: Vec<(CardId, i32)>,
 }
 
+/// Per-turn spell-cast locks (CR 611.2 continuous "can't cast more than one
+/// [type] spell each turn" effects) affecting a player, plus whether each has
+/// already been reached this turn. A `*_reached` flag is set only when the
+/// matching lock is in play **and** the player has already cast a spell of that
+/// category this turn — i.e. the UI should refuse further casts of it.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpellCastLock {
+    /// Rule of Law / Arcane Laboratory — any spell after the first is barred.
+    pub any_reached: bool,
+    /// Deafening Silence — any noncreature spell after the first is barred.
+    pub noncreature_reached: bool,
+    /// Ethersworn Canonist — any nonartifact spell after the first is barred.
+    pub nonartifact_reached: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerView {
     pub seat: usize,
@@ -452,6 +503,19 @@ pub struct PlayerView {
     /// client HUD can show an energy chip alongside life/poison.
     #[serde(default)]
     pub energy: u32,
+    /// CR 702.179 — this player's speed (0–4). Surfaced so the client HUD can
+    /// show a speed chip for "Start your engines!" decks.
+    #[serde(default)]
+    pub speed: u32,
+    /// CR 702.179c — true once `speed == 4` (max speed). Pre-derived so the
+    /// client can highlight that "Max speed —" abilities are live without
+    /// re-checking the threshold.
+    #[serde(default)]
+    pub at_max_speed: bool,
+    /// CR 122 rad counters this player has — each mills a card and may add a
+    /// poison counter at the start of their turn. Surfaced for a HUD chip.
+    #[serde(default)]
+    pub rad_counters: u32,
     pub mana_pool: ManaPool,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
@@ -520,6 +584,16 @@ pub struct PlayerView {
     /// display and cards with "if you've cast N spells this turn" gates.
     #[serde(default)]
     pub spells_cast_this_turn: u32,
+    /// Active per-turn spell-cast locks affecting this player and whether each
+    /// has already been reached this turn (Rule of Law, Deafening Silence,
+    /// Ethersworn Canonist). UIs grey out further casts of the locked category.
+    #[serde(default)]
+    pub spell_cast_lock: SpellCastLock,
+    /// CR 506 — number of this player's upcoming combat phases that will be
+    /// skipped (Stonehorn Dignitary). Surfaced so the UI can warn "next
+    /// combat skipped." Defaults to 0.
+    #[serde(default)]
+    pub skip_next_combat: u32,
     /// CR 402.2 — this player's maximum hand size: `Some(n)` (normally
     /// `Some(7)`) or `None` for "no maximum hand size" effects (Wisdom of
     /// Ages, Reliquary Tower). Surfaced so UIs can show the right limit and
@@ -554,6 +628,12 @@ pub struct PlayerView {
     /// player. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// CR 615 — true when a blanket "prevent all damage that would be dealt to
+    /// you" static (Glacial Chasm) shields this player from *all* damage this
+    /// turn. Distinct from `has_prevention_shield` (a partial / next-N shield).
+    /// Surfaced so UIs can show a full-immunity badge. `#[serde(default)]`.
+    #[serde(default)]
+    pub damage_fully_prevented: bool,
     /// CR 700.5 — this player's devotion to each color, ordered W, U, B, R,
     /// G (the count of mana symbols of that color among the mana costs of
     /// permanents they control). Surfaced so UIs can show a devotion readout
@@ -590,6 +670,45 @@ pub struct PlayerView {
     /// seat-order seating when every team reads as the same default).
     #[serde(default)]
     pub team: usize,
+    /// Innistrad "Coven" — true when this player controls three or more
+    /// creatures with different powers, so coven-gated abilities are online.
+    /// Surfaced so UIs can show a "Coven" badge and light up coven payoffs.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub coven_active: bool,
+    /// CR 700.13 — true if this player has committed a crime this turn, so the
+    /// client can light up crime-matters payoffs. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub committed_crime_this_turn: bool,
+    /// LCI Descend — the number of permanent cards in this player's graveyard.
+    /// Surfaced so the client can show a "Descend N" chip and light up the
+    /// descend-N / fathomless-descent payoffs. `#[serde(default)]` for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub descend_count: u32,
+    /// CR 700.11 — how many times this player descended *this turn* (permanent
+    /// cards entering their graveyard). Distinct from `descend_count` (a
+    /// graveyard total); lets the client show a "descended N×" pulse for
+    /// per-turn payoffs (The Mycotyrant). `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub descended_this_turn_count: u32,
+    /// CR 701.54 — how many times the Ring has tempted this player (0–4).
+    /// `0` means The Ring is dormant; the client shows a "The Ring ×N" chip
+    /// otherwise. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub ring_temptations: u32,
+    /// CR 701.54a — this seat's current Ring-bearer (validated; `None` when
+    /// the designated creature has left or changed control). Lets the client
+    /// flag the bearer. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub ring_bearer: Option<CardId>,
+    /// EOE Void — true when this seat's Void condition is met (a nonland
+    /// permanent left the battlefield this turn, or this seat warped a spell
+    /// this turn). Lets the client light up Void-matters payoffs with a "✦
+    /// Void" chip. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub void_active: bool,
 }
 
 /// One source-commander's combat-damage tally against a player (CR 903.10a).
@@ -730,6 +849,41 @@ pub struct KnownCard {
     /// single-target cursor can't collect two; it greys the Fused button).
     #[serde(default)]
     pub split_fused_needs_target: bool,
+    /// CR 702.165 — true if this card has Gift. Drives the client's right-click
+    /// "Cast (promise gift)" affordance, which submits `GameAction::CastGift`.
+    #[serde(default)]
+    pub has_gift: bool,
+    /// The gift's printed label ("a Food" / "a card" / "a tapped Fish"), for the
+    /// client's promise prompt. Empty when `has_gift == false`.
+    #[serde(default)]
+    pub gift_label: String,
+    /// True when the gifted (promised) effect carries a targeted slot, so the
+    /// client knows to arm the targeting cursor before submitting `CastGift`.
+    #[serde(default)]
+    pub gift_needs_target: bool,
+    /// CR 702.183 — true if this card has an Omen half. Drives the client's
+    /// right-click "Cast the Omen" affordance (`GameAction::CastOmen`).
+    #[serde(default)]
+    pub has_omen: bool,
+    /// The Omen half's printed name, for the client's prompt/log. Empty when
+    /// `has_omen == false`.
+    #[serde(default)]
+    pub omen_label: String,
+    /// True when the Omen effect carries a targeted slot, so the client knows
+    /// to arm the targeting cursor before submitting `CastOmen`.
+    #[serde(default)]
+    pub omen_needs_target: bool,
+    /// CR 721 — for a Station card on the battlefield, the next `{N+}` charge
+    /// threshold it hasn't yet reached (so the client can show "Station → N"
+    /// progress next to its charge counters). `None` for non-station cards or
+    /// once every band is active. Pair with the `Charge` entry in `counters`.
+    #[serde(default)]
+    pub station_next_threshold: Option<u32>,
+    /// CR 721 — current charge-counter count on this Station card (mirror of
+    /// `PermanentView.station_charges`), for the client's "N/M" progress chip.
+    /// `None` for non-station cards.
+    #[serde(default)]
+    pub station_charges: Option<u32>,
 }
 
 /// One activated ability as projected for the client.
@@ -832,6 +986,16 @@ pub struct GraveyardCardView {
     /// the graveyard via `GameAction::CastDisturb`. `None` otherwise.
     #[serde(default)]
     pub disturb_cost: Option<crate::mana::ManaCost>,
+    /// Mayhem cost (CR 702.187) if this card is *currently* castable from the
+    /// graveyard via `GameAction::CastMayhem` — i.e. it has a mayhem cost and
+    /// its owner discarded it this turn. `None` otherwise.
+    #[serde(default)]
+    pub mayhem_cost: Option<crate::mana::ManaCost>,
+    /// Harmonize cost (CR 702.180) if this card can be cast from the graveyard
+    /// via `GameAction::CastHarmonize` (cost reducible by a tapped creature's
+    /// power). `None` otherwise.
+    #[serde(default)]
+    pub harmonize_cost: Option<crate::mana::ManaCost>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so
@@ -852,6 +1016,12 @@ pub struct ExileCardView {
     /// `None` for plain exile (no may-play grant).
     #[serde(default)]
     pub may_play_recipient: Option<usize>,
+    /// If the may-play grant carries an alternative cast cost (mana value) —
+    /// airbend's flat {2} (CR 700.13a), miracle-from-exile, Hostage Taker's
+    /// pay-its-cost — the client renders "play for {N}" instead of implying
+    /// the card's own cost. `None` when the grant is a free cast.
+    #[serde(default)]
+    pub may_play_alt_cost: Option<u32>,
     /// Card's mana value (CMC). Surfaced so the client can render the
     /// cost badge on exile-browser entries without needing the
     /// full CardDefinition. 0 for cards with no cost (lands).
@@ -904,6 +1074,16 @@ pub struct PermanentView {
     pub counters: Vec<(CounterType, u32)>,
     pub attached_to: Option<CardId>,
     pub is_token: bool,
+    /// CR 721 — the next `{N+}` charge threshold this Station card hasn't
+    /// reached, for the client's "Station → N" progress hint. `None` for
+    /// non-station permanents or once every band is active.
+    #[serde(default)]
+    pub station_next_threshold: Option<u32>,
+    /// CR 721 — current charge-counter count on this Station card, so the
+    /// client can render a "N/M" Station progress chip alongside
+    /// `station_next_threshold`. `None` for non-station permanents.
+    #[serde(default)]
+    pub station_charges: Option<u32>,
     /// Whether this permanent is currently declared as an attacker.
     pub attacking: bool,
     /// If this permanent is declared as a blocker, the attacker it is
@@ -970,11 +1150,21 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub suspected: bool,
+    /// True when this creature is renowned (CR 702.93) — a UI hint so the client
+    /// can badge it (its Renown trigger has already fired). Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub renowned: bool,
     /// True when this permanent is detained (CR 701.35) — a UI hint so the
     /// client can badge it as "can't attack/block/activate." Populated by
     /// `project_permanent`.
     #[serde(default)]
     pub detained: bool,
+    /// True when this permanent is locked from untapping by another permanent
+    /// (Entrancing Lyre) — a UI hint so the client can badge "won't untap."
+    /// Populated by `project_permanent`.
+    #[serde(default)]
+    pub untap_locked: bool,
     /// `Some(n)` when this is an Impending permanent (CR 702.183) that still
     /// has `n` time counters — i.e. it isn't a creature yet and becomes one in
     /// `n` of its controller's end steps. Lets the client badge the countdown
@@ -1077,6 +1267,18 @@ pub struct PermanentView {
     /// offer the "crew" action. Populated by `project_permanent`.
     #[serde(default)]
     pub crew_value: u32,
+    /// CR 702.122e/702.171 — extra power this creature contributes when
+    /// crewing a Vehicle or saddling a Mount, beyond its real power
+    /// (Cloudspire Captain, Deathless Pilot). 0 for the common case; lets the
+    /// client badge "crews as +N".
+    #[serde(default)]
+    pub crew_power_bonus: i32,
+    /// True while this Mount is saddled (CR 702.171 — "saddled until end of
+    /// turn"). Lets the client badge the Mount so the player can see that its
+    /// "attacks while saddled" riders are armed this combat. Populated by
+    /// `project_permanent`; defaults false.
+    #[serde(default)]
+    pub saddled: bool,
     /// True when this creature's marked damage is already lethal (≥ its
     /// current toughness) and it isn't indestructible — i.e. it will die
     /// at the next state-based-action check. Lets the client grey out /
@@ -1155,6 +1357,23 @@ pub struct PermanentView {
     /// `CastPrepareSpell`. `false` when there is no prepare spell.
     #[serde(default)]
     pub prepare_needs_target: bool,
+    /// Computed creature subtypes after layer effects (so a creature turned
+    /// into a 0/1 Fish by Ichthyomorphosis shows as a Fish, and a granted
+    /// Changeling shows every type). Empty for noncreatures. `#[serde(default)]`
+    /// for older clients.
+    #[serde(default)]
+    pub creature_subtypes: Vec<CreatureType>,
+    /// True when a continuous effect has stripped all of this permanent's
+    /// abilities (CR 613.1f — Ichthyomorphosis, Heliod's Punishment, Turn to
+    /// Frog). A UI hint so clients can badge "abilities removed".
+    #[serde(default)]
+    pub lost_all_abilities: bool,
+    /// Computed colors after layer-5 effects (so a creature turned blue by
+    /// Turn to Frog / Snakeform shows as blue). Empty = colorless. Lets the
+    /// client surface a "now [color]" line when it differs from the printed
+    /// card. `#[serde(default)]` for older clients.
+    #[serde(default)]
+    pub colors: Vec<crate::mana::Color>,
 }
 
 impl PermanentView {
@@ -1210,6 +1429,10 @@ pub struct KnownStackItem {
 
 fn default_stack_item_kind() -> StackItemKind {
     StackItemKind::Trigger
+}
+
+fn default_divide_noun() -> String {
+    "damage".into()
 }
 
 /// Serde default for `PlayerView.max_hand_size` — the normal seven-card cap,
@@ -1371,6 +1594,10 @@ pub enum DecisionWire {
         source: CardId,
         total: u32,
         targets: Vec<Target>,
+        /// What's being divided, for client labelling ("damage" / "+1/+1
+        /// counter"). Defaults to "damage" for back-compat snapshots.
+        #[serde(default = "default_divide_noun")]
+        noun: String,
     },
     /// CR 510.1c-d — divide an attacker's combat damage among its blockers.
     /// Decider answers `CombatDamageAssignment((id, amount) pairs)`.
@@ -1508,10 +1735,11 @@ impl From<&Decision> for DecisionWire {
                 player: *player,
                 triggers: triggers.clone(),
             },
-            Decision::DivideDamage { source, total, targets } => DecisionWire::DivideDamage {
+            Decision::DivideDamage { source, total, targets, noun } => DecisionWire::DivideDamage {
                 source: *source,
                 total: *total,
                 targets: targets.clone(),
+                noun: noun.clone(),
             },
             Decision::AssignCombatDamage { attacker, attacker_power, blockers } => {
                 DecisionWire::AssignCombatDamage {
@@ -1576,12 +1804,15 @@ pub enum GameEventWire {
     LifeGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::CommittedCrime` (CR 700.13).
+    CommittedCrime { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
     CoinFlipWon { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipLost` (CR 705.1).
     CoinFlipLost { player: usize },
-    /// Wire mirror of `GameEvent::DiceRolled` (CR 706.6).
-    DiceRolled { player: usize, count: u32 },
+    /// Wire mirror of `GameEvent::DiceRolled` (CR 706.6). `high` is the
+    /// greatest result rolled, surfaced so the log can show what was rolled.
+    DiceRolled { player: usize, count: u32, #[serde(default)] high: u8 },
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
@@ -1594,6 +1825,8 @@ pub enum GameEventWire {
     /// regardless of type for replay rewinds and Korvold/Mayhem-Devil
     /// payoffs.
     PermanentSacrificed { card_id: CardId, who: usize },
+    /// Wire mirror of `GameEvent::CreatureLeftWithoutDying` (CR 603.6).
+    CreatureLeftWithoutDying { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     #[serde(rename = "kw_counter_added")]
@@ -1604,8 +1837,11 @@ pub enum GameEventWire {
     PermanentPhasedOut { card_id: CardId },
     PermanentPhasedIn { card_id: CardId },
     Explored { card_id: CardId, controller: usize },
+    Discovered { player: usize, value: u32 },
     BecameMonstrous { card_id: CardId },
     Transformed { card_id: CardId },
+    Mutated { card_id: CardId },
+    Flipped { card_id: CardId },
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
@@ -1618,9 +1854,12 @@ pub enum GameEventWire {
     TopCardRevealed { player: usize, card_name: String, is_land: bool },
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
     VehicleCrewed { vehicle: CardId },
+    MountSaddled { mount: CardId },
+    RoomFullyUnlocked { room: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
     CityBlessingGained { player: usize },
+    RingTempted { player: usize, level: u32, bearer: Option<CardId> },
     DayNightChanged { is_day: bool },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
@@ -1718,16 +1957,22 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
+            GameEvent::CommittedCrime { player } => {
+                GameEventWire::CommittedCrime { player: *player }
+            }
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
             GameEvent::CoinFlipLost { player } => GameEventWire::CoinFlipLost { player: *player },
-            GameEvent::DiceRolled { player, count } => {
-                GameEventWire::DiceRolled { player: *player, count: *count }
+            GameEvent::DiceRolled { player, count, high } => {
+                GameEventWire::DiceRolled { player: *player, count: *count, high: *high }
             }
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
             }
             GameEvent::CreatureSacrificed { card_id, who } => {
                 GameEventWire::CreatureSacrificed { card_id: *card_id, who: *who }
+            }
+            GameEvent::CreatureLeftWithoutDying { card_id, controller } => {
+                GameEventWire::CreatureLeftWithoutDying { card_id: *card_id, controller: *controller }
             }
             GameEvent::PermanentSacrificed { card_id, who } => {
                 GameEventWire::PermanentSacrificed { card_id: *card_id, who: *who }
@@ -1770,14 +2015,23 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PermanentPhasedIn { card_id } => {
                 GameEventWire::PermanentPhasedIn { card_id: *card_id }
             }
-            GameEvent::Explored { card_id, controller } => {
+            GameEvent::Explored { card_id, controller, .. } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
+            }
+            GameEvent::Discovered { player, value } => {
+                GameEventWire::Discovered { player: *player, value: *value }
             }
             GameEvent::BecameMonstrous { card_id } => {
                 GameEventWire::BecameMonstrous { card_id: *card_id }
             }
             GameEvent::Transformed { card_id } => {
                 GameEventWire::Transformed { card_id: *card_id }
+            }
+            GameEvent::Mutated { card_id } => {
+                GameEventWire::Mutated { card_id: *card_id }
+            }
+            GameEvent::Flipped { card_id } => {
+                GameEventWire::Flipped { card_id: *card_id }
             }
             GameEvent::TurnedFaceUp { card_id } => {
                 GameEventWire::TurnedFaceUp { card_id: *card_id }
@@ -1819,8 +2073,22 @@ impl From<&GameEvent> for GameEventWire {
                     attached_to: *attached_to,
                 }
             }
-            GameEvent::VehicleCrewed { vehicle } => {
+            // CR 303.4 — surfaced to the client as an attachment move (the
+            // Aura→host link); the engine-side trigger is what matters.
+            GameEvent::AuraAttached { aura, attached_to } => {
+                GameEventWire::AttachmentMoved {
+                    attachment: *aura,
+                    attached_to: Some(*attached_to),
+                }
+            }
+            GameEvent::VehicleCrewed { vehicle, .. } => {
                 GameEventWire::VehicleCrewed { vehicle: *vehicle }
+            }
+            GameEvent::RoomFullyUnlocked { room, .. } => {
+                GameEventWire::RoomFullyUnlocked { room: *room }
+            }
+            GameEvent::MountSaddled { mount, .. } => {
+                GameEventWire::MountSaddled { mount: *mount }
             }
             GameEvent::PoisonAdded { player, amount } => GameEventWire::PoisonAdded {
                 player: *player,
@@ -1828,7 +2096,12 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
             GameEvent::CityBlessingGained { player } => GameEventWire::CityBlessingGained { player: *player },
-            GameEvent::DayNightChanged { day_night } => GameEventWire::DayNightChanged {
+            GameEvent::RingTempted { player, level, bearer } => GameEventWire::RingTempted {
+                player: *player,
+                level: *level,
+                bearer: *bearer,
+            },
+            GameEvent::DayNightChanged { day_night, .. } => GameEventWire::DayNightChanged {
                 is_day: matches!(day_night, crate::game::types::DayNight::Day),
             },
             GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
@@ -1937,15 +2210,25 @@ impl GameEventWire {
             E::LifeLost { player, amount } => format!("{} loses {amount} life", pn(*player)),
             E::LifeGained { player, amount } => format!("{} gains {amount} life", pn(*player)),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
+            E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
             E::CoinFlipLost { player } => format!("{} lost a coin flip", pn(*player)),
-            E::DiceRolled { player, count } => format!("{} rolled {count} dice", pn(*player)),
+            E::DiceRolled { player, count, high } => {
+                if *count == 1 {
+                    format!("{} rolled a {high}", pn(*player))
+                } else {
+                    format!("{} rolled {count} dice (highest {high})", pn(*player))
+                }
+            }
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
             E::CreatureSacrificed { card_id, who } => {
                 format!("{} sacrificed creature {}", pn(*who), name(*card_id))
             }
             E::PermanentSacrificed { card_id, who } => {
                 format!("{} sacrificed permanent {}", pn(*who), name(*card_id))
+            }
+            E::CreatureLeftWithoutDying { card_id, .. } => {
+                format!("{} left the battlefield without dying", name(*card_id))
             }
             E::PumpApplied {
                 card_id,
@@ -1972,8 +2255,11 @@ impl GameEventWire {
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
             E::PermanentPhasedIn { card_id } => format!("{} phased in", name(*card_id)),
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
+            E::Discovered { player, value } => format!("{} discovered {value}", pn(*player)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
             E::Transformed { card_id } => format!("{} transformed", name(*card_id)),
+            E::Mutated { card_id } => format!("{} mutated", name(*card_id)),
+            E::Flipped { card_id } => format!("{} flipped", name(*card_id)),
             E::TurnedFaceUp { card_id } => format!("{} was turned face up", name(*card_id)),
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
             E::CardMilled { player, card_id } => {
@@ -2003,10 +2289,15 @@ impl GameEventWire {
                 Some(target) => format!("{} attached to {}", name(*attachment), name(*target)),
                 None => format!("{} unattached", name(*attachment)),
             },
-            E::VehicleCrewed { vehicle } => format!("{} crewed", name(*vehicle)),
+            E::VehicleCrewed { vehicle, .. } => format!("{} crewed", name(*vehicle)),
+            E::MountSaddled { mount } => format!("{} saddled", name(*mount)),
+            E::RoomFullyUnlocked { room } => format!("{} fully unlocked", name(*room)),
             E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
             E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),
             E::CityBlessingGained { player } => format!("{} gets the city's blessing", pn(*player)),
+            E::RingTempted { player, level, .. } => {
+                format!("the Ring tempts {} (×{level})", pn(*player))
+            }
             E::DayNightChanged { is_day } => {
                 format!("it becomes {}", if *is_day { "day" } else { "night" })
             }

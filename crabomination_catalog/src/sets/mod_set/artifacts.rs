@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{ManaCost, cost, generic};
+use crate::mana::{Color, ManaCost, cost, generic, phyrexian};
 
 /// Ornithopter — {0} Artifact Creature 0/2 with Flying. Pure vanilla; no
 /// abilities beyond Flying.
@@ -570,7 +570,7 @@ pub fn contagion_clasp() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Contagion Clasp",
-        cost: cost(&[generic(4)]),
+        cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -596,7 +596,7 @@ pub fn contagion_clasp() -> CardDefinition {
 pub fn throne_of_geth() -> CardDefinition {
     CardDefinition {
         name: "Throne of Geth",
-        cost: cost(&[generic(1)]),
+        cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -819,14 +819,14 @@ pub fn arcbound_slith() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
     CardDefinition {
         name: "Arcbound Slith",
-        cost: cost(&[generic(1)]),
+        cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Slith],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        power: 0,
+        toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         triggered_abilities: vec![
             TriggeredAbility {
@@ -848,7 +848,7 @@ pub fn arcbound_hybrid() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
     CardDefinition {
         name: "Arcbound Hybrid",
-        cost: cost(&[generic(3)]),
+        cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],
@@ -866,7 +866,7 @@ pub fn arcbound_bruiser() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
     CardDefinition {
         name: "Arcbound Bruiser",
-        cost: cost(&[generic(4)]),
+        cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Golem],
@@ -1236,7 +1236,7 @@ pub fn birthing_pod() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
         name: "Birthing Pod",
-        cost: cost(&[generic(1), g()]),
+        cost: cost(&[generic(3), phyrexian(Color::Green)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -1321,7 +1321,7 @@ pub fn mana_vault() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
         name: "Mana Vault",
-        cost: cost(&[generic(0)]),
+        cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Mana Vault doesn't untap during your untap step.",

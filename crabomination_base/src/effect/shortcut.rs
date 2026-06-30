@@ -111,10 +111,32 @@ pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
 }
 
+/// Warp (EOE) alternative cost: cast a permanent for `mana_cost`; at the next
+/// end step it's exiled and may be recast from exile on a later turn (full
+/// cost). Casting via warp also satisfies Void this turn.
+pub fn warp(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost { mana_cost, warp: true, ..Default::default() }
+}
+
 /// Evoke (CR 702.74) alternative cost: cast for `mana_cost`; the creature is
 /// sacrificed when it enters, after its ETB triggers resolve.
 pub fn evoke(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, evoke_sacrifice: true, ..Default::default() }
+}
+
+/// Sneak (CR 702.190) alternative cost: during your declare blockers step
+/// (instant timing via `flash`), cast for `mana_cost` by returning one
+/// unblocked creature you control to its owner's hand. Pair with
+/// `Keyword::Sneak(mana_cost)` for display.
+pub fn sneak(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    use crate::card::SelectionRequirement as R;
+    crate::card::AlternativeCost {
+        mana_cost,
+        flash: true,
+        condition: Some(Predicate::CurrentStepIs(crate::turn_step::TurnStep::DeclareBlockers)),
+        return_to_hand: Some((R::Creature.and(R::IsUnblocked).and(R::ControlledByYou), 1)),
+        ..Default::default()
+    }
 }
 
 /// Impending N—[cost] (CR 702.183): cast for `mana_cost`; the permanent enters
@@ -270,6 +292,14 @@ pub fn on_attack(effect: Effect) -> TriggeredAbility {
         effect,
     }
 }
+/// "Whenever you attack, `effect`" (CR 508) — fires once per combat for the
+/// attacking player, regardless of attacker count (Razorkin Hordecaller).
+pub fn on_you_attack(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+        effect,
+    }
+}
 /// Revolt (CR 702.139): "When this enters, if a permanent left the
 /// battlefield under your control this turn, `body`." An ETB trigger
 /// gated on `Predicate::RevoltActive { You }`. Models "enters with a
@@ -310,6 +340,14 @@ pub fn provoke() -> TriggeredAbility {
 pub fn on_dies(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect,
+    }
+}
+
+/// CR 702.140f — "Whenever this creature mutates, `effect`."
+pub fn on_mutate(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Mutated, EventScope::SelfSource),
         effect,
     }
 }
@@ -512,6 +550,27 @@ pub fn evolve() -> TriggeredAbility {
     }
 }
 
+/// Eerie shortcut (DSK ability word): "Whenever an enchantment you control
+/// enters and whenever you fully unlock a Room, [body]." Returns the two
+/// triggered abilities that share `body` — an enchantment-ETB watcher and a
+/// `RoomFullyUnlocked` watcher (both `YourControl`).
+pub fn eerie(body: Effect) -> Vec<TriggeredAbility> {
+    vec![
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Enchantment,
+                }),
+            effect: body.clone(),
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::RoomFullyUnlocked, EventScope::YourControl),
+            effect: body,
+        },
+    ]
+}
+
 /// ETB-Drain shortcut: "When this creature enters, each opponent loses
 /// `amount` life and you gain `amount` life." Wraps [`etb`] with the
 /// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /
@@ -633,6 +692,36 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// Flurry (Tarkir: Dragonstorm): "Whenever you cast your second spell each
+/// turn, `effect`." Reuses the `SpellsCastThisTurnEquals` predicate
+/// (already incremented for the current cast at trigger time).
+pub fn flurry(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::SpellsCastThisTurnEquals {
+                who: crate::effect::PlayerRef::You,
+                count: Value::Const(2),
+            },
+        ),
+        effect,
+    }
+}
+
+/// Spiritcraft: "Whenever you cast a Spirit or Arcane spell, `effect`."
+/// (Kamigawa — Teller of Tales, Kami of Fire's Roar.)
+pub fn spiritcraft(effect: Effect) -> TriggeredAbility {
+    use crate::card::{CreatureType, SpellSubtype};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::CastSpellMatches(
+                SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                    .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane)),
+            ),
+        ),
+        effect,
+    }
+}
+
 /// "Whenever you cast a colorless spell, `effect`." (Kozilek's Sentinel.)
 /// `SelectionRequirement::Colorless` reads cost pips, so genuinely colorless
 /// (generic-cost) spells match; Devoid spells with colored pips slip through
@@ -662,6 +751,62 @@ pub fn cascade(mv: u32) -> TriggeredAbility {
     }
 }
 
+/// Ripple N (CR 702.20). Wires the "when you cast this spell" trigger whose
+/// body is [`Effect::Ripple`] — reveal the top N, free-cast same-named copies,
+/// bottom the rest.
+pub fn ripple(n: u32) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+        effect: Effect::Ripple { n: Value::Const(n as i32) },
+    }
+}
+
+/// Station (CR 702.184): "Tap another untapped creature you control: Put a
+/// number of charge counters on this permanent equal to the tapped creature's
+/// power. Activate only as a sorcery." Every station card carries this ability
+/// (CR 721.4); pair it with `CardDefinition.station` bands.
+pub fn station() -> ActivatedAbility {
+    ActivatedAbility {
+        sorcery_speed: true,
+        tap_other_filter: Some(crate::card::SelectionRequirement::Creature),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: crate::card::CounterType::Charge,
+            amount: Value::TappedForCostPower,
+        },
+        ..Default::default()
+    }
+}
+
+/// Unearth `cost` (CR 702.84). "[cost]: Return this card from your graveyard to
+/// the battlefield. It gains haste. Exile it at the beginning of the next end
+/// step …" — a sorcery-speed graveyard-activated ability. The "exile it if it
+/// would leave the battlefield" clause is approximated by the end-step exile
+/// only (the same model Goryo's Vengeance uses).
+pub fn unearth(cost: crate::mana::ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        from_graveyard: true,
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: crate::card::Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Exile { what: Selector::This }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Squad (CR 702.157) — the ETB trigger that mints one token copy of this
 /// creature per time its squad cost was paid (`Value::SquadCount`). Pair with
 /// `Keyword::Squad(cost)` on the card.
@@ -671,8 +816,10 @@ pub fn squad_etb() -> TriggeredAbility {
         count: Value::SquadCount,
         source: Selector::This,
         extra_creature_types: Vec::new(),
+        extra_card_types: Vec::new(),
         override_pt: None,
         non_legendary: false,
+        legendary: false,
     })
 }
 
@@ -1834,6 +1981,17 @@ pub fn mentor() -> TriggeredAbility {
     }
 }
 
+/// Heroic (CR 702.85): "Whenever you cast a spell that targets this creature,
+/// `body`." A `SpellCast / YourControl` trigger gated on
+/// `Predicate::CastSpellTargetsSource`.
+pub fn heroic(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellTargetsSource),
+        effect: body,
+    }
+}
+
 /// Dethrone (CR 702.105): "Whenever this creature attacks the player with
 /// the most life or tied for most life, put a +1/+1 counter on it." An
 /// `Attacks / SelfSource` trigger gated on `PlayerHasMostLife` for the
@@ -1894,9 +2052,17 @@ pub fn enlist() -> TriggeredAbility {
 /// either way.) An `Attacks / SelfSource` trigger over
 /// [`Effect::CreateTokenAttacking`].
 pub fn mobilize(n: i32) -> TriggeredAbility {
+    mobilize_value(Value::Const(n))
+}
+
+/// Mobilize with a runtime count (CR 702.181) — "Mobilize X, where X is …"
+/// (Avenger of the Fallen: creature cards in your graveyard; Devoted Mardu:
+/// devotion). Same tapped-and-attacking Warrior tokens, sacrificed at end of
+/// combat, but the count is evaluated when the attack trigger resolves.
+pub fn mobilize_value(count: Value) -> TriggeredAbility {
     on_attack(Effect::CreateTokenAttacking {
         who: PlayerRef::You,
-        count: Value::Const(n),
+        count,
         definition: crate::card::TokenDefinition {
             name: "Warrior".into(),
             power: 1,
@@ -2107,18 +2273,21 @@ pub fn bloodthirst(n: i32) -> TriggeredAbility {
 /// it only renowns once because the counters then block re-triggering.
 pub fn renown(n: i32) -> TriggeredAbility {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+    // CR 702.93 — "if it isn't renowned, put N +1/+1 counters on it and it
+    // becomes renowned." Gated on the real `renowned` flag (not a counter
+    // heuristic) so unrelated +1/+1 counters don't suppress it.
     TriggeredAbility {
         event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
         effect: Effect::If {
-            cond: Predicate::Not(Box::new(Predicate::EntityMatches {
-                what: Selector::This,
-                filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
-            })),
-            then: Box::new(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(n),
-            }),
+            cond: Predicate::Not(Box::new(Predicate::SourceIsRenowned)),
+            then: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(n),
+                },
+                Effect::BecomeRenowned { what: Selector::This },
+            ])),
             else_: Box::new(Effect::Noop),
         },
     }
@@ -2156,6 +2325,29 @@ pub fn ingest() -> TriggeredAbility {
     }
 }
 
+/// Recover (CR 702.58): "When a creature is put into your graveyard from the
+/// battlefield, you may pay [cost]. If you do, return this card from your
+/// graveyard to your hand. Otherwise, exile this card." A
+/// `CreatureDied / FromYourGraveyard` trigger that fires while this card sits
+/// in its owner's graveyard; the `MayPay` gate returns it to hand on payment
+/// or exiles it on decline.
+pub fn recover(cost: crate::mana::ManaCost) -> TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    use crate::effect::ZoneDest;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard),
+        effect: Effect::MayPay {
+            description: "Recover".into(),
+            mana_cost: cost,
+            body: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Some(Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Exile })),
+        },
+    }
+}
+
 /// Outlast (CR 702.97) — the activated ability "{cost}, {T}: Put a
 /// +1/+1 counter on this creature. Activate only as a sorcery." Returns
 /// the `ActivatedAbility`; pass the (already mana-loaded) cost in.
@@ -2171,6 +2363,47 @@ pub fn outlast(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         },
+        ..Default::default()
+    }
+}
+
+/// Transfigure (CR 702.71): "[Cost], Sacrifice this permanent: Search your
+/// library for a creature card with the same mana value as this permanent and
+/// put it onto the battlefield. Then shuffle. Activate only as a sorcery."
+/// `sac_cost` records the sacrificed MV (threaded via `WithSacrificedPt`), so
+/// the `ManaValueEqualsSacrificedPlus(0)` search filter matches it.
+pub fn transfigure(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{PlayerRef, ZoneDest};
+    ActivatedAbility {
+        mana_cost,
+        sac_cost: true,
+        sorcery_speed: true,
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(0)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Forecast (CR 702.57): "Forecast — [cost], Reveal this card from your hand:
+/// [effect]. Activate only during your upkeep and only once each turn." A
+/// from-hand activated ability gated to the controller's upkeep; the card
+/// stays in hand (no discard/exile cost).
+pub fn forecast(mana_cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
+    use crate::turn_step::TurnStep;
+    ActivatedAbility {
+        mana_cost,
+        from_hand: true,
+        once_per_turn: true,
+        condition: Some(Predicate::All(vec![
+            Predicate::CurrentStepIs(TurnStep::Upkeep),
+            Predicate::IsTurnOf(PlayerRef::You),
+        ])),
+        effect,
         ..Default::default()
     }
 }
@@ -2771,8 +3004,10 @@ fn embalm_like(
             count: Value::Const(1),
             source: Selector::This,
             extra_creature_types: vec![crate::card::CreatureType::Zombie],
+            extra_card_types: Vec::new(),
             override_pt,
             non_legendary: false,
+            legendary: false,
         },
         ..Default::default()
     }
@@ -2793,6 +3028,22 @@ pub fn scavenge(cost: crate::mana::ManaCost) -> ActivatedAbility {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::PowerOf(Box::new(Selector::This)),
         },
+        ..Default::default()
+    }
+}
+
+/// Craft (CR 702.169): "[cost], Exile this artifact, Exile `count` other
+/// [filter] from among permanents you control and/or [filter] cards from your
+/// graveyard: Return this card transformed. Activate only as a sorcery." The
+/// source's exile-and-return-transformed rides `ExileSelfReturnTransformed`;
+/// the additional "exile N other objects" cost rides `craft_exile_cost`. The
+/// front face must carry a `back_face`. LCI cycle.
+pub fn craft(cost: crate::mana::ManaCost, filter: SelectionRequirement, count: u32) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        craft_exile_cost: Some((filter, count)),
+        effect: Effect::ExileSelfReturnTransformed,
         ..Default::default()
     }
 }
@@ -2828,6 +3079,21 @@ pub fn prowl(
         mana_cost: cost,
         condition: Some(Predicate::ProwlTypeDealtCombatDamage { types }),
         marks_kicked: true,
+        ..Default::default()
+    }
+}
+
+/// Offering (CR 702.48): "[Type] offering" — cast at instant speed by
+/// sacrificing a creature of `creature_type`, reducing the cost by the
+/// sacrificed creature's whole mana cost (color included).
+pub fn offering(
+    cost: crate::mana::ManaCost,
+    creature_type: crate::card::CreatureType,
+) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost: cost,
+        flash: true,
+        offering: Some(crate::card::SelectionRequirement::HasCreatureType(creature_type)),
         ..Default::default()
     }
 }

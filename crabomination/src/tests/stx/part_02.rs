@@ -22,7 +22,7 @@ fn dueling_coach_activation_counters_each_creature_you_control() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: coach,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Dueling Coach activation works for {4}{W},{T}");
     drain_stack(&mut g);
 
@@ -51,7 +51,7 @@ fn shaile_counters_only_creatures_that_entered_this_turn() {
     g.battlefield.iter_mut().find(|c| c.id == opp).unwrap().entered_turn = Some(turn);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shaile, ability_index: 0, target: None, x_value: None,
+        card_id: shaile, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Shaile {T} activates");
     drain_stack(&mut g);
 
@@ -202,13 +202,13 @@ fn brackish_trudge_recurs_from_graveyard_only_after_lifegain() {
     g.players[0].mana_pool.add_colorless(1);
     // No life gained this turn → activation rejected.
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "can't recur without having gained life this turn");
     // Gain life, then it returns to hand.
     g.players[0].life_gained_this_turn = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{1}{B}: return after lifegain");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "returned to hand");
@@ -1199,6 +1199,59 @@ fn sublime_epiphany_resolves_counter_bounce_draw() {
     );
 }
 
+#[test]
+fn sublime_epiphany_mode_three_copies_a_creature_you_control() {
+    // CR 700.2d override → mode 3 only: create a token copy of target
+    // creature you control.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sublime_epiphany());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![3])]));
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(after, before + 1, "a token copy of the bear was created");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0
+            && c.definition.name == "Grizzly Bears").count(),
+        2,
+        "the token shares the bear's name"
+    );
+}
+
+#[test]
+fn sublime_epiphany_mode_one_counters_an_ability() {
+    // CR 700.2d override → mode 1 only: counter target activated/triggered
+    // ability. Devourer of Destiny's on-cast Scry trigger is the target.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    g.priority.player_with_priority = 1;
+    let id = g.add_card_to_hand(1, catalog::sublime_epiphany());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dev)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable targeting the trigger source");
+    drain_stack(&mut g);
+    assert!(!g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Trigger { source, .. } if *source == dev
+    )), "the Scry trigger was countered");
+}
+
 // ── Persist (STA reprint) ──────────────────────────────────────────────────
 
 #[test]
@@ -1491,6 +1544,26 @@ fn magmatic_sinkhole_surveils_and_deals_four_damage() {
         !g.battlefield.iter().any(|c| c.id == target),
         "Serra Angel destroyed by 4 damage"
     );
+}
+
+#[test]
+fn magmatic_sinkhole_delve_pays_generic_from_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); } // for surveil
+    let gy: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.clear_sickness(target);
+    let id = g.add_card_to_hand(0, catalog::magmatic_sinkhole());
+    // {5}{R}: delve five to cover the {5}, pay the {R} with mana.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let exile_before = g.exile.len();
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("castable for {R} after delving five");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == target), "4 damage killed the Angel");
+    assert_eq!(g.exile.len(), exile_before + 5, "five delved cards moved to exile");
 }
 
 #[test]
@@ -2366,7 +2439,7 @@ fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("first ability is a mana ability");
 
     // Untap to allow the second activation.
@@ -2378,7 +2451,7 @@ fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("second ability sacs and draws");
     drain_stack(&mut g);
 
@@ -2656,7 +2729,7 @@ fn strixhaven_stadium_mana_ability_adds_point_counter() {
     let mut g = two_player_game();
     let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stadium, ability_index: 0, target: None, x_value: None,
+        card_id: stadium, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added one colorless");
@@ -3563,7 +3636,7 @@ fn witchs_cauldron_sac_gains_two_life_and_draws() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron,
         ability_index: 0,
-        target: None, x_value: None }).expect("Cauldron activation");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Cauldron activation");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
@@ -3606,7 +3679,7 @@ fn tome_of_the_guildpact_activation_draws_a_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: tome,
         ability_index: 0,
-        target: None, x_value: None }).expect("Tome activation");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Tome activation");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -3957,6 +4030,33 @@ fn hindering_light_counters_target_spell_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
 }
 
+/// Hindering Light can't counter a spell that doesn't target the caster or
+/// one of their permanents (CR 115 — `SpellTargetsControllerOrControlled`).
+#[test]
+fn hindering_light_cant_counter_spell_aimed_elsewhere() {
+    let mut g = two_player_game();
+    // Seat 0 casts a Bolt at its *own* creature — nothing seat 1 owns.
+    let own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(own_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    // Seat 1's Hindering Light has no legal target (the Bolt targets seat 1's
+    // opponent, not seat 1 or its permanents), so it can't be cast on the Bolt.
+    let id = g.add_card_to_hand(1, catalog::hindering_light());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Bolt aimed at the caster's opponent is not a legal target");
+}
+
 // ── Soul Shatter ───────────────────────────────────────────────────────────
 
 #[test]
@@ -4055,7 +4155,7 @@ fn sungrass_egg_sac_adds_two_mana_of_one_color() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: egg,
         ability_index: 0,
-        target: None, x_value: None }).expect("Egg activation");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Egg activation");
     drain_stack(&mut g);
 
     // Egg sacrificed off the battlefield.

@@ -64,7 +64,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
             ..Default::default()
         },
         power: 2,
@@ -751,7 +751,7 @@ pub fn elemental_expressionist() -> CardDefinition {
         cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Orc, CreatureType::Wizard],
             ..Default::default()
         },
         power: 4,

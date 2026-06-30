@@ -325,6 +325,37 @@ impl ManaCost {
         self.symbols = new_syms;
         applied
     }
+
+    /// Reduce this cost by another whole mana cost, color included
+    /// (CR 702.48 Offering — "paying the difference in mana costs … Mana cost
+    /// includes color."). Each colored pip in `other` removes one matching
+    /// colored pip here; everything else (generic/colorless/hybrid/Phyrexian/
+    /// snow, plus colored pips with no match) folds into a generic reduction.
+    pub fn reduce_by_cost(&mut self, other: &ManaCost) -> u32 {
+        let mut generic_pool = 0u32;
+        for sym in &other.symbols {
+            match sym {
+                ManaSymbol::Colored(c) => {
+                    if let Some(pos) = self
+                        .symbols
+                        .iter()
+                        .position(|s| matches!(s, ManaSymbol::Colored(sc) if sc == c))
+                    {
+                        self.symbols.remove(pos);
+                    } else {
+                        generic_pool += 1;
+                    }
+                }
+                ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => generic_pool += *n,
+                ManaSymbol::Hybrid(..)
+                | ManaSymbol::Phyrexian(_)
+                | ManaSymbol::MonoHybrid(..)
+                | ManaSymbol::Snow => generic_pool += 1,
+                ManaSymbol::X => {}
+            }
+        }
+        self.reduce_generic(generic_pool)
+    }
 }
 
 /// A "spend this mana only to …" restriction carried by certain mana
@@ -357,6 +388,12 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast creature spells or activate abilities
     /// of creatures." (Castle Garenbrig.)
     CreatureSpellsOrAbilities,
+    /// "This mana can't be spent to cast a nonartifact spell." (Powerstone
+    /// tokens, CR 111.10q — abilities and artifact casts are fine.)
+    NoNonartifactSpells,
+    /// "Spend this mana only to activate abilities." (Omen Hawker.) Funds
+    /// any ability activation regardless of the source's card type.
+    AbilitiesOnly,
 }
 
 impl SpendRestriction {
@@ -366,6 +403,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
+            SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
             SpendRestriction::CreatureOfTypeUncounterable(t)
             | SpendRestriction::CreatureOfType(t) => {
                 kind.changeling || kind.creature_types.contains(&t)
@@ -374,6 +412,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureSpellsOrAbilities => {
                 kind.creature || kind.creature_ability
             }
+            SpendRestriction::AbilitiesOnly => kind.activating_ability,
         }
     }
 }
@@ -400,6 +439,10 @@ pub struct SpellKind {
     pub creature: bool,
     /// Activating an ability of a creature (Castle Garenbrig).
     pub creature_ability: bool,
+    /// Casting a spell that isn't an artifact spell (Powerstone gate).
+    pub casting_nonartifact_spell: bool,
+    /// Activating an ability of any source (Omen Hawker's abilities-only mana).
+    pub activating_ability: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.
@@ -433,6 +476,10 @@ pub struct ManaPool {
     /// of Strixhaven sources, so the common path is unaffected.
     #[serde(default)]
     restricted: Vec<(Color, u32, SpendRestriction)>,
+    /// Spend-restricted **colorless** mana (Powerstone tokens). Held apart
+    /// from `colorless` exactly like `restricted` is from the color slots.
+    #[serde(default)]
+    restricted_colorless: Vec<(u32, SpendRestriction)>,
 }
 
 /// Side effects produced by paying a mana cost (e.g. Phyrexian mana life loss).
@@ -523,11 +570,28 @@ impl ManaPool {
         }
     }
 
+    /// Colorless sibling of [`add_restricted`] (Powerstone tokens).
+    pub fn add_restricted_colorless(&mut self, amount: u32, restriction: SpendRestriction) {
+        if amount == 0 {
+            return;
+        }
+        if let Some(entry) = self
+            .restricted_colorless
+            .iter_mut()
+            .find(|(_, r)| *r == restriction)
+        {
+            entry.0 += amount;
+        } else {
+            self.restricted_colorless.push((amount, restriction));
+        }
+    }
+
     /// Total spend-restricted mana floating in the pool (any color/
     /// restriction). Exposed for UI/debug surfaces that show floated mana;
     /// `total()` deliberately excludes it since it isn't freely spendable.
     pub fn restricted_total(&self) -> u32 {
-        self.restricted.iter().map(|(_, n, _)| *n).sum()
+        self.restricted.iter().map(|(_, n, _)| *n).sum::<u32>()
+            + self.restricted_colorless.iter().map(|(n, _)| *n).sum::<u32>()
     }
 
     pub fn amount(&self, color: Color) -> u32 {
@@ -833,7 +897,13 @@ impl ManaPool {
                 spendable[color_index(*c)] += *n;
             }
         }
-        if spendable.iter().all(|n| *n == 0) {
+        let spendable_colorless: u32 = self
+            .restricted_colorless
+            .iter()
+            .filter(|(_, r)| r.allows(kind))
+            .map(|(n, _)| *n)
+            .sum();
+        if spendable.iter().all(|n| *n == 0) && spendable_colorless == 0 {
             // No usable restricted mana — identical to the plain path,
             // which leaves the restricted bucket untouched.
             return self.pay(cost);
@@ -846,14 +916,41 @@ impl ManaPool {
         // afterward (restricted first).
         let mut work = self.clone();
         work.restricted.clear();
+        work.restricted_colorless.clear();
         for c in Color::ALL {
             work.add(c, spendable[color_index(c)]);
         }
+        work.colorless += spendable_colorless;
         let mut side_effects = work.pay(cost)?;
 
         // Settle each color: restricted drains before unrestricted.
         let mut result = work.clone();
         result.restricted = self.restricted.clone();
+        result.restricted_colorless = self.restricted_colorless.clone();
+        {
+            // Colorless settles the same way: restricted drains first.
+            let before = self.colorless + spendable_colorless;
+            let after = work.colorless;
+            let spent = before - after;
+            let from_restricted = spent.min(spendable_colorless);
+            let from_unrestricted = spent - from_restricted;
+            result.colorless = self.colorless - from_unrestricted;
+            let mut rem = from_restricted;
+            for entry in result.restricted_colorless.iter_mut() {
+                if rem == 0 {
+                    break;
+                }
+                if entry.1.allows(kind) {
+                    let d = rem.min(entry.0);
+                    entry.0 -= d;
+                    rem -= d;
+                    if d > 0 && !side_effects.spent_restrictions.contains(&entry.1) {
+                        side_effects.spent_restrictions.push(entry.1);
+                    }
+                }
+            }
+            result.restricted_colorless.retain(|(n, _)| *n > 0);
+        }
         for c in Color::ALL {
             let idx = color_index(c);
             let before = self.amount(c) + spendable[idx];
@@ -925,6 +1022,9 @@ impl ManaPool {
         self.snow += other.snow;
         for (c, n, r) in &other.restricted {
             self.add_restricted(*c, *n, *r);
+        }
+        for (n, r) in &other.restricted_colorless {
+            self.add_restricted_colorless(*n, *r);
         }
     }
 

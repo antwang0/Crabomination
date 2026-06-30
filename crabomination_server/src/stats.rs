@@ -42,6 +42,12 @@ pub(crate) struct MatchStats {
     /// the running cube-vs-demo split in the rolling summary line. Push
     /// (claude/modern_decks batch 162).
     pub(crate) format_buckets: [u64; FORMAT_BUCKET_COUNT],
+    /// Per-format cumulative final turn count, indexed like
+    /// `format_buckets`. Divided by the matching `format_buckets` count to
+    /// surface each format's average game length in the summary
+    /// (`demo:7(9t) cube:3(14t)`), so operators can tell a slow format apart
+    /// from a slow build without sampling per-match logs.
+    pub(crate) format_turn_totals: [u64; FORMAT_BUCKET_COUNT],
     /// Cumulative turn count across all matches — divided by total
     /// matches in the summary line. Operators see at a glance whether
     /// games are concession-heavy (low avg turn count) or grindy
@@ -146,6 +152,12 @@ pub(crate) struct MatchStats {
     /// the Commander/Brawl formats; reads alongside `poison_wins`/`deck_wins`
     /// as a third distinct alternate-win path.
     pub(crate) commander_damage_wins: u64,
+    /// Subset of `deckout_wins` where at least one losing seat left for an
+    /// "other" reason (concession or a "you lose the game" effect — CR
+    /// 104.3a/104.3g) — not life, poison, deck-out, or commander damage.
+    /// Surfacing it completes the alternate-win decomposition so the
+    /// umbrella `deckout_wins` doesn't hide an unclassified residue.
+    pub(crate) other_wins: u64,
     /// Running sum of squared final turn counts (`Σ turns²`). Paired with
     /// `total_turns` (`Σ turns`) and the match count it yields the
     /// population standard deviation of game length via
@@ -214,6 +226,31 @@ impl MatchStats {
         self.pair_matches += 1;
         self.observe_duration(d);
         self.observe_format(f);
+    }
+    /// Fold a completed match into every counter at once: the match-kind
+    /// tally (`record_bot`/`record_pair`), turn counts, winner/seat bias,
+    /// and — for decisive games — the win life-delta and win-kind buckets.
+    /// Centralizes the recording logic so `run_bot_match` / `run_pair_match`
+    /// stay in lockstep and new stats only land in one place.
+    pub(crate) fn record_outcome(
+        &mut self,
+        outcome: &crabomination::server::MatchOutcome,
+        format: Format,
+        duration: Duration,
+        pair: bool,
+    ) {
+        if pair {
+            self.record_pair(duration, format);
+        } else {
+            self.record_bot(duration, format);
+        }
+        self.observe_turns(outcome.final_turn);
+        self.observe_format_turns(format, outcome.final_turn);
+        self.observe_winner(outcome.winner);
+        if let Some(Some(w)) = outcome.winner {
+            self.observe_win_life_delta(w, &outcome.final_life_totals);
+            self.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
+        }
     }
     /// Bump the cumulative turn counter — called at match completion
     /// from the record paths if the caller has a final turn number.
@@ -284,6 +321,15 @@ impl MatchStats {
         let total = self.total_matches();
         if total == 0 { return 0; }
         self.inconclusive.saturating_mul(100) / total
+    }
+    /// Percentage of *all* completed matches that ended in a draw. Distinct
+    /// from `decisive_pct` (which is wins/(wins+draws), ignoring inconclusive
+    /// games): this is over the full denominator, so a creeping bot-vs-bot
+    /// stalemate regression shows up here even as `inconclusive_pct` stays low.
+    pub(crate) fn draw_pct(&self) -> u64 {
+        let total = self.total_matches();
+        if total == 0 { return 0; }
+        self.draws.saturating_mul(100) / total
     }
     /// Share of decisive (non-draw) wins taken by the player on the play
     /// (seat 0), as a percentage. A value far from 50 over a long bot ladder
@@ -397,6 +443,9 @@ impl MatchStats {
             if reasons.contains(&LossReason::CommanderDamage) {
                 self.commander_damage_wins = self.commander_damage_wins.saturating_add(1);
             }
+            if reasons.contains(&LossReason::Other) {
+                self.other_wins = self.other_wins.saturating_add(1);
+            }
             return;
         }
         // Fallback: no reason data → infer from life totals (every losing
@@ -462,6 +511,12 @@ impl MatchStats {
     pub(crate) fn deck_pct(&self) -> u64 {
         self.deck_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
+    /// Percent of wins in which a losing seat left for an "other" reason
+    /// (concession / "you lose the game" effect). A sub-split of
+    /// `deckout_pct`; 0 when no wins recorded.
+    pub(crate) fn other_pct(&self) -> u64 {
+        self.other_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
+    }
     /// Percent of wins via 21+ commander damage (CR 903.10a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn commander_damage_pct(&self) -> u64 {
@@ -480,6 +535,24 @@ impl MatchStats {
     pub(crate) fn observe_format(&mut self, f: Format) {
         let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
         self.format_buckets[idx] = self.format_buckets[idx].saturating_add(1);
+    }
+    /// Accumulate a completed match's final turn count into its format
+    /// bucket. Called once per match alongside `observe_turns`; divided by
+    /// `format_buckets` in the summary to surface each format's average
+    /// game length.
+    pub(crate) fn observe_format_turns(&mut self, f: Format, turns: u32) {
+        let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
+        self.format_turn_totals[idx] = self.format_turn_totals[idx].saturating_add(turns as u64);
+    }
+    /// Average final turn count for format bucket `i`, or `None` if no turn
+    /// data has been recorded for that format (so callers fall back to the
+    /// bare `label:count` rather than rendering a misleading `(0t)`).
+    pub(crate) fn format_avg_turns(&self, i: usize) -> Option<u64> {
+        let total = *self.format_turn_totals.get(i)?;
+        if total == 0 {
+            return None;
+        }
+        total.checked_div(*self.format_buckets.get(i)?)
     }
     /// Shared bookkeeping for both record paths — accumulates the
     /// total + tracks the new min/max envelope. Pulled out of the
@@ -704,6 +777,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             " wins={} draws={} decisive={}%",
             s.wins, s.draws, s.decisive_pct()
         ));
+        // Draw rate over *all* matches — a stalemate-regression gauge that the
+        // resolved-only `decisive_pct` can't show. Only when draws exist.
+        if s.draws > 0 {
+            out.push_str(&format!(" draw_rate={}%", s.draw_pct()));
+        }
         // Alternate-win split: how many of those wins closed via
         // something other than lethal face damage (deckout / poison /
         // mill / win-the-game). Only rendered when at least one such
@@ -723,6 +801,9 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                     s.commander_damage_wins,
                     s.commander_damage_pct()
                 ));
+            }
+            if s.other_wins > 0 {
+                out.push_str(&format!(" other={} ({}%)", s.other_wins, s.other_pct()));
             }
         }
         // Stuck/disconnected matches: prefer the explicit `inconclusive`
@@ -808,7 +889,10 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 if count == 0 {
                     return None;
                 }
-                format_label_for_bucket(i).map(|label| format!("{label}:{count}"))
+                format_label_for_bucket(i).map(|label| match s.format_avg_turns(i) {
+                    Some(avg) => format!("{label}:{count}({avg}t)"),
+                    None => format!("{label}:{count}"),
+                })
             })
             .collect();
         if !format_chunks.is_empty() {

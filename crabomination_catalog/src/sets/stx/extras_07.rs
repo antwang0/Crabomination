@@ -1547,12 +1547,12 @@ pub fn lorehold_archivist() -> CardDefinition {
         cost: cost(&[generic(1), r(), w(), generic(2), r(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Artificer],
             ..Default::default()
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Vigilance],
+        keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Move {

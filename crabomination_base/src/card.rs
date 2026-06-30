@@ -42,26 +42,30 @@ pub enum CreatureType {
     Human, Elf, Goblin, Merfolk, Moonfolk, Zombie, Vampire, Angel, Demon, Dragon,
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari, Dauthi,
     Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm,
-    Bear, Ape, Rat, Fungus, Treefolk, Giant, Ogre, Shaman, Druid,
-    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose,
+    Armadillo, Nautilus,
+    Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Shaman, Druid,
+    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek,
+    Doctor,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
-    Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
+    Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith, Lamia,
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
-    Jackal,
+    Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
-    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy,
-    Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
+    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
+    Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
-    Construct, Golem, Myr, Robot, Hellion, Scarecrow,
+    Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
+    // Phyrexia: All Will Be One.
+    Mite,
     Orc, Warlock, Bard, Sorcerer, Pilot,
     // Misc. subtypes used by SOS body-only cards.
-    Dwarf, Badger, Salamander, Giraffe,
+    Dwarf, Badger, Salamander, Giraffe, Antelope, Pangolin,
     // SOS Witherbloom Dryad subtype (Essenceknit Scholar).
     Dryad,
     // Modern supplement: Kari Zev's Ragavan token.
@@ -83,18 +87,30 @@ pub enum CreatureType {
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
     Siren, Citizen, Leech,
+    // BLB / VOW expansion (Prosperous Innkeeper).
+    Halfling,
+    // THB expansion (Venomous Hierophant, Pharika's Spawn).
+    Gorgon,
     // Bloomburrow / MKM (Voracious Varmint).
     Varmint,
+    // Bloomburrow Survival creatures (Cautious Survivor, Defiant Survivor).
+    Survivor,
     // Enchantment creature subtype (Enduring Innocence).
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).
     Ninja,
+    // Kamigawa Samurai subtype (Bushido — Kitsune Blademaster).
+    Samurai,
+    // Edge of Eternities (2025) subtypes.
+    Drix, Scientist,
     // Outlaws of Thunder Junction Mount subtype (Saddle, CR 702.171).
     Mount,
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
-    Rabbit, Raccoon, Mouse, Wolverine, Mole,
+    Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum,
+    // The Lost Caverns of Ixalan (2023).
+    Capybara,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
     // Ravnica Weird (Turn // Burn's 0/1).
@@ -137,6 +153,32 @@ pub enum CreatureType {
     Eye,
     // Manland animate-into bodies (Mishra's Factory, Inkmoth / Blinkmoth Nexus).
     AssemblyWorker, Blinkmoth,
+    // Strixhaven (Eccentric Apprentice).
+    Tiefling,
+    // Theros Chimera (Daybreak Chimera, Loathsome Chimera).
+    Chimera,
+    // Kamigawa Zubera (the five Zubera with scaling death triggers).
+    Zubera,
+    // THB Nadir Kraken's Tentacle token.
+    Tentacle,
+    // THB Alirios, Enraptured's Reflection token.
+    Reflection,
+    // Ikoria Brushwagg (Almighty Brushwagg).
+    Brushwagg,
+    // Warhammer 40,000 Tyranids (Ravenous — CR 702.156).
+    Tyranid,
+    // Final Fantasy Job Select Hero token (CR 702.182).
+    Hero,
+    // Tarkir: Dragonstorm (Cunning Coyote).
+    Coyote,
+    // Tarkir: Dragonstorm (Sunpearl Kirin).
+    Kirin,
+    // "Spellshaper" — discard-cost spellcaster creatures (Seismic Mage).
+    Spellshaper,
+    // Streets of New Capenna "Villain" (Kingpin's Enforcers).
+    Villain,
+    // Duskmourn "Toy" artifact-creature subtype (Splitskin Doll, Patched Plaything).
+    Toy,
 }
 
 /// Land subtypes (basic land types + others).
@@ -144,6 +186,12 @@ pub enum CreatureType {
 pub enum LandType {
     Plains, Island, Swamp, Mountain, Forest,
     Desert, Gate, Locus, Mine, Tower, PowerPlant, Urza,
+    // Tarkir: Dragonstorm planeswalking dual lands.
+    Omenpath,
+    // Edge of Eternities — "Land — Planet" (Station-bearing utility lands).
+    Planet,
+    // Lost Caverns of Ixalan — "Land — Cave" (Caves-matter payoffs).
+    Cave,
 }
 
 /// Artifact subtypes.
@@ -152,6 +200,10 @@ pub enum ArtifactSubtype {
     Equipment, Vehicle, Food, Treasure, Clue, Blood, Fortification, Contraption,
     // Lost Caverns of Ixalan explore token (CR 111.10s).
     Map,
+    // The Brothers' War mana token (CR 111.10q).
+    Powerstone,
+    // Edge of Eternities: station card (CR 721) and its Lander token.
+    Spacecraft, Lander,
 }
 
 /// Enchantment subtypes.
@@ -166,6 +218,12 @@ pub enum SpellSubtype {
     Adventure, Lesson, Trap, Arcane,
 }
 
+/// Battle subtypes (CR 310.4). Siege is the only printed one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BattleSubtype {
+    Siege,
+}
+
 /// Planeswalker subtypes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PlaneswalkerSubtype {
@@ -177,6 +235,8 @@ pub enum PlaneswalkerSubtype {
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
     // Geyadrone Dihada, Urza Chief Artificer).
     Saheeli, Tamiyo, Dihada, Urza,
+    // THB walker.
+    Calix,
     // modern_decks: Narset, Parter of Veils.
     Narset,
     // STX: Kasmina, Enigma Sage.
@@ -185,6 +245,8 @@ pub enum PlaneswalkerSubtype {
     Rowan, Will, Lukka,
     // Cube expansion: Wrenn (Wrenn and Six).
     Wrenn,
+    // NEO: The Wandering Emperor.
+    WanderingEmperor,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -196,6 +258,8 @@ pub struct Subtypes {
     pub enchantment_subtypes: Vec<EnchantmentSubtype>,
     pub spell_subtypes: Vec<SpellSubtype>,
     pub planeswalker_subtypes: Vec<PlaneswalkerSubtype>,
+    #[serde(default)]
+    pub battle_subtypes: Vec<BattleSubtype>,
 }
 
 /// Counter types that can be placed on permanents or players.
@@ -290,6 +354,39 @@ pub enum CounterType {
     /// Void counter — Dauthi Voidwalker's stamp on opponents' cards its
     /// replacement exiles; its sacrifice ability frees one for a free play.
     Void,
+    /// Ki counter — Kamigawa flip cards (Cunning Bandit, Faithful Squire,
+    /// Hired Muscle, …) accrue these on Spirit/Arcane casts and flip at two or
+    /// more; the bottom faces spend them for their activated abilities.
+    Ki,
+    /// Coin counter — Athreos, Shroud-Veiled marks creatures with these; when
+    /// a coin-countered creature dies, its card returns under Athreos's
+    /// controller's control.
+    Coin,
+    /// Tide counter — Ominous Seas accrues one on your first draw each turn;
+    /// at four or more they're removed to mint an 8/8 Kraken.
+    Tide,
+    /// Bounty counter — Chevill, Bane of Monsters marks an opponent's
+    /// creature/planeswalker; when a bounty-countered creature dies, Chevill's
+    /// controller draws and gains a life.
+    Bounty,
+    /// Oil counter — a generic resource counter on Phyrexian permanents,
+    /// spent by activated abilities (Glistener Seer, Migloz).
+    Oil,
+    /// Valor counter — the MID/VOW Adversary cycle's "pay-any-number-of-times"
+    /// counter, scaling a `PumpPTPerCounterOnSource` team anthem (Intrepid
+    /// Adversary).
+    Valor,
+    /// Defense counter — CR 310.7. A battle enters with a number of defense
+    /// counters equal to its printed defense; combat/noncombat damage removes
+    /// that many, and when the last is removed the battle is defeated
+    /// (`EventKind::BattleDefeated`).
+    Defense,
+    /// Possession counter — DSK Unwilling Vessel accrues one per Eerie
+    /// trigger; on death it mints an X/X Spirit where X is the count.
+    Possession,
+    /// Nest counter — DSK Twitching Doll accrues one each time its mana
+    /// ability is used; sacrificing it makes a Spider per counter on it.
+    Nest,
 }
 
 /// Every zone a card can occupy.
@@ -316,6 +413,9 @@ pub enum WardCost {
     Mana(crate::mana::ManaCost),
     Life(u32),
     Discard(u32),
+    /// "Ward—Blight N." (CR 701.68 — Auntie Ool, Cursewretch.) The warding
+    /// player must put N -1/-1 counters on a creature they control.
+    Blight(u32),
     SacrificeCreature,
     /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
     SacrificePermanents(u32),
@@ -323,6 +423,9 @@ pub enum WardCost {
     /// off the source's computed power at payment time (Esper Sentinel's
     /// rhystic tax).
     GenericSourcePower,
+    /// "Pay life equal to this creature's power" — a dynamic life cost read
+    /// off the source's computed power at payment time (Phyrexian Fleshgorger).
+    LifeSourcePower,
 }
 
 impl WardCost {
@@ -417,6 +520,11 @@ pub enum Keyword {
     /// player, that player also gets N poison counters (in addition to
     /// the normal damage).
     Toxic(u32),
+    /// Poisonous N (CR 702.70) — whenever this creature deals combat damage
+    /// to a player, that player gets N poison counters. Mechanically the
+    /// same combat-damage poison rider as Toxic (the wording differs but the
+    /// effect is identical), so it folds into the same combat path.
+    Poisonous(u32),
     Defender,
     /// CR 702.147 — Decayed. "This creature can't block. When it attacks,
     /// sacrifice it at end of combat." Common on Zombie tokens (MID/VOW).
@@ -432,11 +540,46 @@ pub enum Keyword {
     /// CR 702.16 — "protection from creatures" (Spirit Mantle): can't be
     /// blocked, and all damage from creature sources is prevented.
     ProtectionFromCreatures,
+    /// CR 702.16e — protection from a creature type (Kitsune Riftwalker's
+    /// "protection from Spirits"): can't be blocked by, damaged by, enchanted
+    /// or equipped by, or targeted by a permanent of that creature type.
+    ProtectionFromCreatureType(CreatureType),
+    /// CR 702.16 — protection from a spell subtype (Kitsune Riftwalker's
+    /// "protection from Arcane"). Cast-time targeting gate: a spell with the
+    /// subtype can't target this permanent.
+    ProtectionFromSpellSubtype(SpellSubtype),
+    /// CR 702.16 — "protection from each mana value other than N" (Haktos the
+    /// Unscarred). Can't be blocked/damaged/targeted by a source whose mana
+    /// value isn't `N`. Granted at random on ETB.
+    ProtectionFromManaValueExcept(u32),
+    /// CR 702.16 — "protection from each mana value of the chosen quality"
+    /// (Lavabrink Venturer). `odd == true` → protection from every odd mana
+    /// value; `odd == false` → every even mana value (zero is even). Granted
+    /// on ETB by the controller's odd/even choice.
+    ProtectionFromManaValueParity { odd: bool },
+    /// CR 702.16 — "protection from multicolored" (Stonecoil Serpent, Mirran
+    /// Crusader). Can't be blocked/damaged/targeted/enchanted by a source that
+    /// is two or more colors.
+    ProtectionFromMulticolored,
+    /// CR 702.16 — "protection from instants" (Hexdrinker level 3-7). Cast-time
+    /// targeting gate: an instant spell can't target this permanent. (Instants
+    /// are never permanents/blockers/combat sources, so this only matters at the
+    /// spell-target check.)
+    ProtectionFromInstants,
+    /// CR 702.16 — "protection from everything" (Hexdrinker level 8+,
+    /// Progenitus): can't be blocked, targeted, enchanted/equipped, or dealt
+    /// damage by anything. Returns true at every protection-check site.
+    ProtectionFromEverything,
     /// CR 702.89 — Umbra armor (on an Aura): if the enchanted creature
     /// would be destroyed, instead remove all damage from it and destroy
     /// this Aura (Hyena Umbra, Spider Umbra).
     UmbraArmor,
     Hexproof,
+    /// CR 702.11e — "hexproof from [color]": can't be the target of
+    /// [color] spells or abilities opponents control. The targeting-only
+    /// half of protection-from-color (Witchbane Orb-style, Veil of Summer's
+    /// rider granted via the turn-scoped player flag).
+    HexproofFromColor(Color),
     Shroud,
     CantBeCountered,
     /// CR 117.x — "If X is N or more, this spell can't be countered."
@@ -553,6 +696,18 @@ pub enum Keyword {
     Phasing,
     Dredge(u32),
     Annihilator(u32),
+    /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
+    /// you don't lose this mana as steps and phases end (until end of combat)."
+    Firebending(u32),
+    /// CR 702.190 — Sneak [cost]. A spell-static alt cast: during your declare
+    /// blockers step you may cast this by paying [cost] and returning an
+    /// unblocked creature you control to its owner's hand. Carried for display;
+    /// the alt-cost itself lives in `CardDefinition.alternative_cost`.
+    Sneak(crate::mana::ManaCost),
+    /// CR 702.54 — Bloodthirst N. "If an opponent was dealt damage this turn,
+    /// this creature enters with N +1/+1 counters on it." Carried for display;
+    /// the counters ride an ETB trigger (`shortcut::bloodthirst`).
+    Bloodthirst(u32),
     Banding,
     Equip(crate::mana::ManaCost),
     /// CR 702.151 — Reconfigure [cost]. An Equipment-creature attaches to a
@@ -639,12 +794,55 @@ pub enum Keyword {
     /// a batch that declares this creature alongside any other attacker is
     /// rejected.
     AttacksAlone,
+    /// CR 508.0 — "This creature can't attack alone" (Militia Rallier,
+    /// Cemetery Gatekeeper-era). Enforced in `declare_attackers`: a batch
+    /// where this is the *only* attacker is rejected.
+    CantAttackAlone,
+    /// CR 509.1c — "This creature can't attack or block alone" (Duskmourn's
+    /// Beast tokens). Enforced in `declare_attackers` / `declare_blockers`:
+    /// a batch where this is the *only* attacker (resp. only blocker this
+    /// combat) is rejected.
+    CantAttackOrBlockAlone,
+    /// CR 508.1a restriction — "This creature can't attack unless you've cast
+    /// a creature spell this turn" (Goblin Cohort, Goblin War Strike-era
+    /// aggro). Enforced in `declare_attackers` against the controller's
+    /// `creatures_cast_this_turn` tally.
+    CantAttackUnlessCastCreatureThisTurn,
+    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
+    /// unless you have N or fewer cards in hand" (Hazoret the Fervent, the
+    /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
+    /// against the controller's hand size.
+    CantAttackOrBlockUnlessHandSizeAtMost(u32),
+    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
+    /// unless there are four or more card types among cards in your graveyard"
+    /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.
+    CantAttackOrBlockUnlessDelirium,
+    /// CR 508.1a / 509.1a restriction — "Descend N — This creature can't attack
+    /// or block unless there are N or more permanent cards in your graveyard"
+    /// (The Ancient One, descend 8). Enforced against the controller's
+    /// permanent-card graveyard count (`descend_count`).
+    CantAttackOrBlockUnlessDescend(u32),
+    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
+    /// unless you have the city's blessing" (CR 702.131 — Wayward Swordtooth).
+    /// Enforced against the controller's `city_blessing` flag.
+    CantAttackOrBlockUnlessCityBlessing,
+    /// CR 508.1a / 509.1a restriction — "[This creature] can't attack or block
+    /// unless a creature died under your control this turn" (Bontu the
+    /// Glorified). Enforced against the controller's `creatures_died_this_turn`.
+    CantAttackOrBlockUnlessCreatureDiedThisTurn,
     /// "This creature assigns no combat damage this turn" (Master of
     /// Cruelties' attack rider). A marker keyword — typically granted with
     /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the
     /// *computed* keyword set to zero out the bearer's combat damage in
     /// both the first-strike and regular damage steps.
     DealsNoCombatDamage,
+    /// "Assigns combat damage equal to its toughness rather than its power"
+    /// (Doran, the Siege Tower; Bill the Pony's temporary grant). A marker
+    /// keyword read off the *computed* keyword set in `combat.rs`: the bearer
+    /// uses its toughness as the damage value it assigns in both combat-damage
+    /// steps (CR 510.1c — the substitution is unconditional, so a 5/1 bearer
+    /// assigns 1).
+    AssignsCombatDamageByToughness,
     /// CR 509.1c — "This creature must be blocked if able" (Lure-style
     /// block requirement, also Academic Dispute's rider). Enforced in
     /// `declare_blockers`: if an attacker carrying this keyword is left
@@ -682,6 +880,23 @@ pub enum Keyword {
     /// creature's own controller. Lovestruck Beast ("can't attack unless you
     /// control a 1/1 creature").
     CanAttackOnlyIfYouControl(Box<SelectionRequirement>),
+    /// "This creature can't attack or block unless you control [N] or more
+    /// [filter]." Count-based variant of `CanAttackOnlyIfYouControl`, enforced
+    /// on both the attack and block side against the bearer's controller.
+    /// Topiary Stomper ("…unless you control seven or more lands"). When
+    /// `attack_only` is set the gate applies to attacking only, not blocking
+    /// (Lambholt Pacifist — "can't attack unless you control a creature with
+    /// power 4 or greater"); `block_only` is the mirror — the gate applies to
+    /// blocking only (Olog-hai Crusher — "can't block unless you control a
+    /// Goblin or Orc").
+    CantAttackOrBlockUnlessYouControlCount {
+        filter: Box<SelectionRequirement>,
+        min: u32,
+        #[serde(default)]
+        attack_only: bool,
+        #[serde(default)]
+        block_only: bool,
+    },
     /// CR 702.166 — Offspring [cost]. An optional additional cast cost; if
     /// paid, the creature's ETB mints a 1/1 token copy of it. Reuses the
     /// Kicker pipeline (`has_kicker` returns this cost, `SpellWasKicked` gates
@@ -697,6 +912,12 @@ pub enum Keyword {
     /// copied once per payment (copies may choose new targets). Cast via
     /// `GameAction::CastSpellReplicate`.
     Replicate(crate::mana::ManaCost),
+    /// CR 702.78 — Conspire. An optional additional cast cost on an
+    /// instant/sorcery: as you cast it, you may tap two untapped creatures you
+    /// control that each share a color with the spell. Doing so copies the
+    /// spell once (the copy may choose new targets). Cast via
+    /// `GameAction::CastSpellConspire`.
+    Conspire,
     /// "This creature can't attack or block unless it has an even number of
     /// counters on it." (Zero is even.) Enforced in `declare_attackers` and
     /// `declare_blockers` (and the bot/legal-attacker gates) by reading the
@@ -744,6 +965,20 @@ pub enum Keyword {
     /// `AutoDecider` declines by default (so ordinary bot games are
     /// unaffected); tests pre-float the cost and feed `Bool(true)`.
     Madness(crate::mana::ManaCost),
+    /// CR 702.187 — Mayhem `cost`. A static ability that works while the card
+    /// is in a graveyard: "As long as you discarded this card this turn, you
+    /// may cast it from your graveyard by paying [cost] rather than its mana
+    /// cost." Routed through the flashback machinery (`cast_flashback`), gated
+    /// on `Player.discarded_this_turn`; the spell is exiled if it would leave
+    /// the stack (same exile-after tail as flashback).
+    Mayhem(crate::mana::ManaCost),
+    /// CR 702.180 — Harmonize `cost`. A static ability that works while the
+    /// card is in a graveyard: "You may cast this card from your graveyard by
+    /// paying [cost] and tapping up to one untapped creature you control rather
+    /// than paying its mana cost; the total cost is reduced by generic mana
+    /// equal to the tapped creature's power." Routed through the flashback
+    /// machinery (`cast_harmonize`); exiled if it would leave the stack.
+    Harmonize(crate::mana::ManaCost),
     /// CR 509.1b — "This creature can't be blocked except by [filter]"
     /// (Signal Pest — "except by artifact creatures and/or creatures with
     /// flying"; Silhana Ledgewalker — "except by creatures with flying").
@@ -765,12 +1000,38 @@ pub enum Keyword {
     /// attacker must be blocked by `0` or `>= N` creatures. Enforced in
     /// `declare_blockers`.
     CantBeBlockedExceptByN(u32),
+    /// "Creatures with power less than this creature's power can't block it"
+    /// (Formation Breaker). The inverse of Skulk — gates on the *blocker's*
+    /// computed power being below the attacker's. Enforced in
+    /// `can_block_attacker_computed` (CR 509.1b).
+    CantBeBlockedByPowerLess,
+    /// "Can't be blocked by creatures with power N or less" (Questing Beast —
+    /// N=2). Fixed-threshold cousin of `CantBeBlockedByPowerLess`; gates on the
+    /// blocker's computed power being `<= N`. Enforced in
+    /// `can_block_attacker_computed`.
+    CantBeBlockedByPowerAtMost(u32),
+    /// "This creature can't be blocked if you've cast N or more spells this
+    /// turn" (Illvoi Infiltrator — N=2). Game-state-dependent, so it's enforced
+    /// in the stateful block-declaration path (`declare_blockers`) rather than
+    /// the pure two-creature `can_block_attacker_computed`. CR 509.1b.
+    CantBeBlockedIfControllerCastSpells(u32),
+    /// "This creature can block only creatures with flying." A blocker-side
+    /// restriction (the inverse of the others here): when set, the bearer
+    /// can't be declared as a blocker for an attacker that lacks Flying.
+    /// Enforced in `can_block_attacker_computed` (Wanderlight Spirit).
+    CanBlockOnlyFlying,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each
     /// paired creature gains is carried in `CardDefinition.soulbond_bonus`.
     /// Deadeye Navigator, Wolfir Silverheart.
     Soulbond,
+    /// CR 702.179 — Start your engines! A marker keyword: when a permanent
+    /// with it enters, if its controller has no speed their speed becomes 1.
+    /// Speed then increases once per their turn (capped at 4) when an opponent
+    /// loses life. "Max speed —" abilities (modeled as `Predicate::SpeedAtLeast
+    /// { speed: 4 }`) are active at speed 4.
+    StartYourEngines,
 }
 
 /// CR 702.24 — the maintenance cost paid (once per age counter) to keep a
@@ -813,6 +1074,36 @@ pub struct LevelBand {
     pub keywords: Vec<Keyword>,
 }
 
+/// CR 721.2 — one `{N+}[abilities][P/T]` striation of a station card.
+/// While the permanent has `min` or more charge counters, it gains
+/// `keywords` (layer 6); if `pt` is `Some`, it also becomes a creature with
+/// that base power/toughness in addition to its other types (CR 721.2b,
+/// layers 4 + 7a).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StationBand {
+    pub min: u32,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
+    #[serde(default)]
+    pub pt: Option<(i32, i32)>,
+    /// CR 721.2a — static abilities active only while the threshold is met
+    /// (e.g. Lumen-Class Frigate's `{2+}: other creatures you control get
+    /// +1/+1`). Converted to layer effects in `gather_continuous_effects`.
+    #[serde(default)]
+    pub statics: Vec<crate::effect::StaticEffect>,
+    /// CR 721.2a — triggered abilities active only while the threshold is met
+    /// (e.g. Synthesizer Labship's `{2+}` combat-damage trigger). Surfaced
+    /// off the source via `statics_granted_triggers_for` when charges ≥ `min`.
+    #[serde(default)]
+    pub triggers: Vec<TriggeredAbility>,
+    /// CR 721.2a — activated abilities active only while the threshold is met
+    /// (e.g. a Planet's `12+ | {cost}: …` band). Surfaced off the source via
+    /// `granted_abilities_for` (appended after printed + instance-granted) when
+    /// charges ≥ `min`, so the activation index path treats them as grants.
+    #[serde(default)]
+    pub activated: Vec<crate::effect::ActivatedAbility>,
+}
+
 /// Composable filter for valid targets of a spell or ability.
 /// `Default` is the match-anything `Any`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -828,19 +1119,44 @@ pub enum SelectionRequirement {
     Enchantment,
     Planeswalker,
     Permanent,
+    /// A *card* whose type line includes a permanent type (creature / land /
+    /// artifact / enchantment / planeswalker / battle). Unlike `Permanent`
+    /// (always-true on the battlefield), this discriminates in zones that
+    /// also hold instants/sorceries — graveyard/exile/milled picks.
+    PermanentCard,
     Land,
     Nonland,
     Noncreature,
     Tapped,
     Untapped,
+    /// CR 120.x — the permanent has been dealt damage this turn (Initiate of
+    /// Blood // Goka's "target creature that was dealt damage this turn").
+    DealtDamageThisTurn,
+    /// The permanent was dealt damage *by the evaluating source* this turn
+    /// (Bushi Tenderfoot's "a creature dealt damage by this creature this
+    /// turn"). Reads the dying object's LKI snapshot.
+    DamagedBySourceThisTurn,
+    /// The *player* target was dealt damage by the evaluating source this turn
+    /// (Wicked Akuba's "target player dealt damage by this creature this turn").
+    PlayerDamagedBySourceThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
+    /// CR 702.140 — the card has a mutate cost (Pollywog Symbiote's
+    /// "creature spell you cast … if it has mutate").
+    HasMutate,
     /// The card has any cycling ability (Cycling / CyclingLife /
     /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
     HasCyclingAbility,
+    /// The card has Disturb (CR 702.146), regardless of its cost (Shipwreck
+    /// Sifters' "Spirit card or a card with disturb" discard payoff).
+    HasDisturb,
     PowerAtMost(i32),
     ToughnessAtMost(i32),
     WithCounter(CounterType),
+    /// True when the candidate has at least one counter of any kind on it —
+    /// "a creature with a counter on it" (Delta Bloodflies, Stalwart
+    /// Successor). The any-kind complement of `WithCounter`.
+    WithAnyCounter,
     /// True when the candidate has no counters of any kind on it (CR 122).
     /// Powers "target creature with no counters on it" (Heartless Act mode 0).
     HasNoCounters,
@@ -850,13 +1166,32 @@ pub enum SelectionRequirement {
     NameDiffersFromLastMoved,
     ControlledByYou,
     ControlledByOpponent,
+    /// CR 108.3 — the object's owner is you (regardless of who controls it).
+    /// Gruul Charm's "gain control of all permanents you own".
+    OwnedByYou,
     HasSupertype(Supertype),
     HasCreatureType(CreatureType),
+    /// CR 700.12 — the object is an **outlaw**: a creature that is an Assassin,
+    /// Mercenary, Pirate, Rogue, or Warlock. Convenience filter for the
+    /// five outlaw creature types (Vial Smasher, Rakish Crew, Hellspur Brute).
+    IsOutlaw,
     HasLandType(LandType),
     HasArtifactSubtype(ArtifactSubtype),
     HasEnchantmentSubtype(EnchantmentSubtype),
+    HasPlaneswalkerType(PlaneswalkerSubtype),
+    /// Spell subtype on an instant/sorcery (Arcane — Kamigawa spiritcraft
+    /// triggers gate on `Spirit creature OR Arcane`).
+    HasSpellSubtype(SpellSubtype),
     PowerAtLeast(i32),
     ToughnessAtLeast(i32),
+    /// Creature whose toughness is strictly greater than its power (Catapult
+    /// Fodder's "creatures that each have toughness greater than their power").
+    /// Battlefield-only; false for non-creatures.
+    ToughnessGreaterThanPower,
+    /// Candidate's current power exceeds its printed base power — i.e. it has
+    /// been pumped (counters / bonuses). Kutzil, Malamet Exemplar; Sovereign
+    /// Okinec Ahau. Battlefield-only; false for non-creatures.
+    PowerGreaterThanBasePower,
     /// Candidate's power + toughness (layer-computed) is at most `n`. Used
     /// by Cut Down ("destroy target creature with total power and toughness
     /// 5 or less"). Battlefield-only; false for non-creatures.
@@ -881,6 +1216,9 @@ pub enum SelectionRequirement {
     GreaterPowerOrToughnessThanSource,
     IsToken,
     NotToken,
+    /// CR 702.185 — the permanent was cast for its warp cost (its `warped` flag
+    /// is set). Backs Full Bore's "if it was cast for its warp cost" rider.
+    Warped,
     IsBasicLand,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
     /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's
@@ -888,11 +1226,18 @@ pub enum SelectionRequirement {
     /// nonbasic-land targeting filter.
     IsNonbasicLand,
     IsAttacking,
+    /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
+    /// combat state — Sneak's "return an unblocked creature you control".
+    IsUnblocked,
     IsBlocking,
     /// True when the candidate creature was declared as an attacker at any
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless
     /// Assault's "untap all creatures that attacked this turn".
     AttackedThisTurn,
+    /// CR 708 — true when the candidate permanent is face down (a manifested /
+    /// morphed / cloaked / disguised permanent showing a 2/2 vanilla). Powers
+    /// DSK "face-down permanent you control" matters (Cryptid Inspector).
+    FaceDown,
     /// True when the candidate permanent is the source of an activated or
     /// triggered ability currently on the stack. Targeting filter for
     /// `Effect::CounterAbility` (Stifle — CR 113.9).
@@ -915,6 +1260,10 @@ pub enum SelectionRequirement {
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
+    /// True when the candidate permanent has at least `n` Equipment attached
+    /// (CR 301.5). Battlefield-only. Balan's "double strike as long as two or
+    /// more Equipment are attached to it".
+    EquippedByAtLeast(u32),
     /// CR 700.9 — "modified": the permanent has one or more counters, is
     /// equipped, or is enchanted by an Aura its own controller controls.
     /// Battlefield-only. Kodama of the West Tree.
@@ -941,15 +1290,40 @@ pub enum SelectionRequirement {
     /// `block_map.keys()` AND `block_map.len() == 1`.
     IsBlockingAlone,
     IsSpellOnStack,
+    /// A stack spell at least one of whose chosen targets is the choosing
+    /// player or a permanent they control (Hindering Light's "counter target
+    /// spell that targets you or a permanent you control"). Only meaningful
+    /// against a `StackItem::Spell`.
+    SpellTargetsControllerOrControlled,
+    /// A stack spell that was NOT cast from its owner's hand (Wash Away's
+    /// bracketed base mode — flashback/graveyard/exile casts qualify).
+    SpellNotCastFromHand,
     ManaValueAtMost(u32),
     /// MV at most the number of battlefield permanents matching the inner
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").
     ManaValueAtMostYourCount(Box<SelectionRequirement>),
+    /// LCI fathomless descent — MV at most the number of permanent cards in the
+    /// evaluating player's graveyard (Squirming Emergence's reanimation cap).
+    ManaValueAtMostPermanentsInYourGraveyard,
+    /// Mana value ≤ the mana spent to cast the source permanent's spell
+    /// (`CardInstance.cast_mana_spent`). Read source-relative at filter time —
+    /// Astelli Reclaimer's "with mana value X or less, where X is the amount of
+    /// mana spent to cast this".
+    ManaValueAtMostCastManaSpent,
     /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
     ManaValueAtMostXFromCost,
+    /// Mana value == the X paid into the resolving spell/ability's cost.
+    /// Resolved to a concrete `ManaValueExactly(x)` by `resolve_x` (Hearth
+    /// Kami's "destroy target artifact with mana value X"); unresolved
+    /// instances evaluate false.
+    ManaValueExactlyXFromCost,
+    /// Power ≤ the X paid into the resolving spell/ability's cost. Resolved to
+    /// a concrete `PowerAtMost(x)` by `resolve_x` (Entrancing Lyre's "tap
+    /// target creature with power X or less"); unresolved instances eval false.
+    PowerAtMostXFromCost,
     /// Mana value ≤ the resolving spell's converge count (distinct colors of
     /// mana spent — CR 702.86). Resolved to a concrete `ManaValueAtMost(n)`
     /// by `resolve_converge` at search-resolution time (Bring to Light);
@@ -962,6 +1336,10 @@ pub enum SelectionRequirement {
     /// shape rather than the `AtMost`/`AtLeast` approximations).
     /// Composes naturally with `And`/`Or` for range gates.
     ManaValueExactly(u32),
+    /// True when the card's mana value has the given parity — odd when
+    /// `odd: true`, even (incl. 0) otherwise. Extinction Event's "exile each
+    /// creature with mana value of the chosen parity".
+    ManaValueParity { odd: bool },
     /// True when the card's mana value equals the number of counters of the
     /// given kind on the resolving ability's source (Aether Vial). Resolved
     /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at
@@ -973,6 +1351,11 @@ pub enum SelectionRequirement {
     /// creature card with mana value equal to 1 plus the sacrificed creature's
     /// mana value." Evaluates to `mv == 0 + offset` when nothing was recorded.
     ManaValueEqualsSacrificedPlus(u32),
+    /// True when the card's mana value is at most the most-recently-sacrificed
+    /// creature's mana value plus `offset` (`GameState.sacrificed_mana_value`).
+    /// Powers Eldritch Evolution's "creature card with mana value X or less,
+    /// where X is 2 plus the sacrificed creature's mana value."
+    ManaValueAtMostSacrificedPlus(u32),
     /// True when the card's mana value is strictly less than the firing
     /// trigger event's amount — for died events, the dying card's mana value
     /// (`GameState.trigger_event_amount_scratch`). Powers Scrap Trawler's
@@ -1030,6 +1413,16 @@ pub enum SelectionRequirement {
     /// graveyard (CR 702.47a "your graveyard" — Soulshift). Stricter than
     /// `InGraveyard`, which matches any player's graveyard.
     InYourGraveyard,
+    /// True when the candidate card is in an opponent's graveyard ("target
+    /// card from an opponent's graveyard" — Nezumi Graverobber). Complement
+    /// of `InYourGraveyard`.
+    InOpponentGraveyard,
+    /// Descend N (CR 701.x — LCI) — true when the candidate's controller has
+    /// N or more permanent cards in their graveyard. Used as the `condition`
+    /// of a `SelfHasKeywordWhile` for "Descend 8 — this can't be blocked as
+    /// long as there are eight or more permanent cards in your graveyard"
+    /// (Watertight Gondola), and as a generic gate for Descend payoffs.
+    ControllerDescend(u32),
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
@@ -1108,6 +1501,8 @@ impl SelectionRequirement {
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
+            Self::ManaValueExactlyXFromCost => Self::ManaValueExactly(x),
+            Self::PowerAtMostXFromCost => Self::PowerAtMost(x as i32),
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),
@@ -1269,6 +1664,15 @@ pub struct TokenDefinition {
     /// mint time survive copies per CR 707.2.
     #[serde(default)]
     pub dynamic_pt: Option<(crate::effect::Value, crate::effect::Value)>,
+    /// CR 508.3a — the token enters tapped (a "tapped <token>" gift / mint).
+    /// Defaults to `false` (enters untapped) via `#[serde(default)]`.
+    #[serde(default)]
+    pub tapped: bool,
+    /// CR 111.10i / 712 — back face for a double-faced token (the Incubator
+    /// token's transformable Phyrexian back). Lifted onto the resulting
+    /// `CardDefinition.back_face` so `Effect::Transform` can toggle it.
+    #[serde(default)]
+    pub back_face: Option<Box<TokenDefinition>>,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────
@@ -1291,9 +1695,19 @@ pub struct CardDefinition {
     pub supertypes: Vec<Supertype>,
     pub card_types: Vec<CardType>,
     pub subtypes: Subtypes,
+    /// CR 202.2 / 105.2c — color indicator. Defines the object's color when it
+    /// has no mana symbols to define it (tokens, DFC/Omen back faces). The
+    /// object's colors are the union of its mana cost's colors and this
+    /// indicator. Empty for ordinary cards whose color comes from their cost.
+    #[serde(default)]
+    pub color_indicator: Vec<Color>,
     pub power: i32,
     pub toughness: i32,
     pub base_loyalty: u32,
+    /// CR 310.7 — printed defense of a Battle. The permanent enters with this
+    /// many `CounterType::Defense` counters. 0 for non-battles.
+    #[serde(default)]
+    pub defense: u32,
     pub keywords: Vec<Keyword>,
     pub static_abilities: Vec<StaticAbility>,
     /// For instants/sorceries: the effect that resolves. Defaults to `Effect::Noop`
@@ -1305,11 +1719,21 @@ pub struct CardDefinition {
     /// non-leveler cards.
     #[serde(default)]
     pub level_bands: Vec<LevelBand>,
+    /// CR 721 — Station-card striations (`{N+}` symbols), ordered by `min`.
+    /// Empty for non-station cards. Cards with any station band always carry
+    /// the Station ability (CR 721.4); add it via `shortcut::station()`.
+    #[serde(default)]
+    pub station: Vec<StationBand>,
     pub loyalty_abilities: Vec<LoyaltyAbility>,
     /// CR 606.3 override — "You may activate the loyalty abilities of [this]
     /// twice each turn rather than only once." (Urza, Planeswalker.)
     #[serde(default)]
     pub loyalty_twice_each_turn: bool,
+    /// CR 606.3b override — "As long as [this] entered this turn, you may
+    /// activate its loyalty abilities any time you could cast an instant."
+    /// (The Wandering Emperor — pairs with `Keyword::Flash`.)
+    #[serde(default)]
+    pub flash_loyalty: bool,
     /// Optional alternative ("pitch") cost. When `Some`, the player can cast
     /// this spell by paying the alternative cost instead of `cost` — typically
     /// some life and exiling a card from hand matching `exile_filter`.
@@ -1332,6 +1756,18 @@ pub struct CardDefinition {
     /// Some((CounterType::Prepared, Value::Const(1)))`.
     #[serde(default)]
     pub prepare_spell: Option<Box<CardDefinition>>,
+    /// CR 711 — flip card. When `Some`, this is the *unflipped* (top) face and
+    /// the value is the flipped (bottom) characteristics. Unlike a DFC, a flip
+    /// card is single-faced — it is never cast or rendered as its flip side; it
+    /// only flips in place via `Effect::Flip`. Only the top stores this.
+    #[serde(default)]
+    pub flip_face: Option<Box<CardDefinition>>,
+    /// CR 603.8 — state-triggered flip. When `Some(kw)`, this flip card flips
+    /// (`Effect::Flip`) the moment its *computed* keywords include `kw`
+    /// (externally granted Flying counts). Checked once per SBA pass; flipping
+    /// removes the condition so it fires once. Student of Elements (Flying).
+    #[serde(default)]
+    pub flip_when_has_keyword: Option<Keyword>,
     /// Opening-hand effect ("If this card is in your opening hand…"): start
     /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
     /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark
@@ -1390,6 +1826,12 @@ pub struct CardDefinition {
     /// `route_to_graveyard` funnel (Darksteel / Blightsteel Colossus).
     #[serde(default)]
     pub shuffles_into_library_instead: bool,
+    /// CR 704.5j exception — "If there are exactly two permanents with this
+    /// name on the battlefield, the legend rule doesn't apply to them."
+    /// (Brothers Yamazaki.) When the same-name legend group has exactly two
+    /// members and all are flagged, the SBA skips it.
+    #[serde(default)]
+    pub legend_pair_exempt: bool,
     /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
     /// A combined chapter ("I, II — …") is listed once per number with the
     /// same effect. Non-empty marks the card a Saga: it enters with one lore
@@ -1437,6 +1879,28 @@ pub struct CardDefinition {
     /// reductions, etc. Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub affinity_graveyard_filter: Option<SelectionRequirement>,
+    /// "This spell costs `{amount}` less to cast if it targets a permanent
+    /// matching `filter`." A card-intrinsic, target-conditional generic
+    /// reduction (Ride's End — "{3} less if it targets a tapped permanent").
+    /// Generic-only, clamped by the caller; evaluated against the chosen
+    /// target at cast time. Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_if_target: Option<(SelectionRequirement, u32)>,
+    /// "This spell costs `{amount}` less to cast if you control a permanent
+    /// matching `filter`." Flat (non-scaling) board-state-gated generic
+    /// reductions — Pearl of Wisdom ("{1} less if you control an Otter").
+    /// Multiple clauses each apply independently (Geistlight Snare — "{1} less
+    /// if you control a Spirit; and {1} less if you control an enchantment").
+    /// Distinct from `affinity_filter`, which scales per matching permanent.
+    /// Generic-only, clamped by the caller; empty by default for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_if_control: Vec<(SelectionRequirement, u32)>,
+    /// "This spell costs `{amount}` less to cast if it's night" (Moonrager's
+    /// Slash). Generic-only, clamped by the caller. `None` by default for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_if_night: Option<u32>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
@@ -1451,6 +1915,13 @@ pub struct CardDefinition {
     /// this bonus on BOTH itself and its partner. Defaults to `None`.
     #[serde(default)]
     pub soulbond_bonus: Option<SoulbondBonus>,
+    /// "If a creature dealt damage by this would die this turn, exile it
+    /// instead" — a source-bound death replacement (Kumano Master Yamabushi,
+    /// Frostwielder). When true, every creature this permanent damages is
+    /// added to `GameState.dies_to_exile_eot` for the rest of the turn.
+    /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub damage_exiles_if_dies: bool,
     /// CR 601.2b/601.2f — additional cost(s) paid as the spell is cast
     /// ("As an additional cost to cast this spell, …"). Paid during
     /// casting, not folded into resolution: the spell can't be cast unless
@@ -1482,6 +1953,35 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventure: Option<Box<Adventure>>,
+    /// CR 702.183 — Omen. When `Some`, this creature card also has an
+    /// instant/sorcery "Omen" half that can be cast from hand for the listed
+    /// cost (`GameAction::CastOmen`). On resolution or counter the card is
+    /// shuffled into its owner's library instead of going to the graveyard.
+    /// Reuses the [`Adventure`] shape (name/cost/types/effect).
+    #[serde(default)]
+    pub omen: Option<Box<Adventure>>,
+    /// CR 702.165 — Gift. When `Some`, as the spell is cast its controller may
+    /// promise a gift to an opponent (`GameAction::CastGift`); if promised, the
+    /// opponent receives the gift and the spell resolves its enhanced
+    /// `gifted_effect` instead of the printed base `effect`.
+    #[serde(default)]
+    pub gift: Option<Box<Gift>>,
+    /// CR 702.160 — Prototype. When `Some`, this colorless artifact creature
+    /// may instead be cast for the prototype cost (`GameAction::CastPrototype`),
+    /// entering with the prototype's mana cost, color, and size; it keeps its
+    /// abilities and types. Defaults to `None` via `#[serde(default)]`.
+    #[serde(default)]
+    pub prototype: Option<Box<Prototype>>,
+    /// CR 702.140 — Mutate. `Some(cost)` lets this non-Human creature spell
+    /// be cast for its mutate cost (`GameAction::CastMutate`), merging with a
+    /// target non-Human creature you own instead of entering on its own.
+    /// Defaults to `None` via `#[serde(default)]`.
+    #[serde(default)]
+    pub mutate: Option<crate::mana::ManaCost>,
+    /// CR 702.139 — Companion deck restriction. `Some` for the ten companion
+    /// legends; `format::companion_restriction_met` checks a deck against it.
+    #[serde(default)]
+    pub companion: Option<CompanionRule>,
     /// CR 702.170 — Plot. `Some(cost)` marks the card as plottable: during
     /// your main phase with an empty stack, pay this cost to exile it
     /// face-up (`GameAction::Plot`); on a later turn cast it from exile
@@ -1595,6 +2095,58 @@ impl Adventure {
     }
 }
 
+/// CR 702.165 — Gift. The printed spell's base resolution lives in the parent
+/// [`CardDefinition::effect`]; when the gift is promised, the spell resolves
+/// `gifted_effect` (which itself bestows the promised gift on the opponent
+/// before its other effects). `label` is the gift's printed name, for the
+/// client's "Gift a Food / a card / a tapped Fish" prompt.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct Gift {
+    #[serde(with = "crate::static_str_serde")]
+    pub label: crate::static_str_serde::StaticStr,
+    pub gifted_effect: crate::effect::Effect,
+}
+
+/// CR 702.160 — the Prototype alternative cast of a Brothers' War artifact
+/// creature. The printed (full) cost/color/size live on the parent
+/// [`CardDefinition`]; this holds the smaller, colored prototype face.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Prototype {
+    pub cost: ManaCost,
+    pub power: i32,
+    pub toughness: i32,
+}
+
+/// CR 702.139 — the deck-construction restriction a Companion imposes on your
+/// starting deck. If every card in the deck satisfies it, the companion may be
+/// brought from the sideboard to hand once (`GameAction::CompanionToHand`,
+/// {3}). Checked by `format::companion_restriction_met`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompanionRule {
+    /// Lurrus — every permanent card has mana value ≤ N.
+    PermanentsManaValueAtMost(u32),
+    /// Keruga — every card with mana value ≥ N (lands exempt).
+    NonlandManaValueAtLeast(u32),
+    /// Gyruda — every card has even mana value (lands exempt).
+    NonlandEvenManaValue,
+    /// Obosh — every card has odd mana value (lands exempt).
+    NonlandOddManaValue,
+    /// Jegantha — no card's mana cost contains two or more of the same mana
+    /// symbol (`{R}{R}`, `{G}{G}`, hybrid pairs, etc.).
+    NoDuplicateManaSymbols,
+    /// Lutri — at most one copy of each nonland card (singleton).
+    Singleton,
+    /// Kaheera — every creature card is among these types.
+    CreatureTypesAmong(Vec<CreatureType>),
+    /// Umori — every nonland card shares one card type.
+    NonlandShareACardType,
+    /// Yorion — the deck contains at least N cards beyond the format minimum.
+    DeckSizeAtLeastOverMinimum(u32),
+    /// Zirda — every permanent card has an activated ability.
+    PermanentsHaveActivatedAbility,
+}
+
 /// CR 707 — "enters as a copy of [filter] permanent" spec, stored on
 /// `CardDefinition.enters_as_copy`. The copier becomes a copy of the
 /// chosen permanent; `extra_creature_types` are layered on top of the
@@ -1626,6 +2178,10 @@ pub struct EntersAsCopy {
     /// copiable characteristics are stamped, so they survive the rewrite.
     #[serde(default)]
     pub extra_card_types: Vec<CardType>,
+    /// CR 707.2e — "except it's not legendary." When true the copy strips the
+    /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
+    #[serde(default)]
+    pub non_legendary: bool,
 }
 
 fn one_u32() -> u32 { 1 }
@@ -1687,6 +2243,20 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         pay: u32,
     },
+    /// "As an additional cost to cast this spell, tap N untapped permanents you
+    /// control matching `filter`." Guardian of the Great Door ("tap four
+    /// untapped artifacts, creatures, and/or lands you control"). The cast is
+    /// rejected unless that many untapped matches exist; the auto-picker taps
+    /// the lowest-impact ones (non-mana sources, then lowest mana value).
+    TapPermanents {
+        filter: SelectionRequirement,
+        count: u32,
+    },
+    /// "As an additional cost to cast this spell, pay N life." (CR 119.4 —
+    /// payable only if life ≥ N.) Deep Analysis's "Flashback—{1}{U}, Pay 3
+    /// life". Paid immediately during casting, so any "loses life" watcher
+    /// fires before the spell resolves.
+    PayLife { amount: u32 },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
@@ -1729,6 +2299,27 @@ pub struct EquipBonus {
     /// Steel of the Godhead).
     #[serde(default)]
     pub conditional: Vec<ConditionalEquipBonus>,
+    /// Continuous characteristic overrides applied to the host while attached
+    /// (the "becomes a 0/1 Fish with no abilities" auras — Ichthyomorphosis,
+    /// One with the Stars). Each `Some`/`true` installs the matching layer
+    /// modification on the host. `None`/`false` leaves that characteristic
+    /// untouched (the common stat-bonus Equipment/Aura case).
+    #[serde(default)]
+    pub set_base_pt: Option<(i32, i32)>,
+    #[serde(default)]
+    pub set_card_types: Option<Vec<CardType>>,
+    #[serde(default)]
+    pub set_creature_types: Option<Vec<CreatureType>>,
+    /// Land types the host's type line becomes (the "is a Forest land" auras —
+    /// Song of the Dryads). Pairs with `set_card_types: Some([Land])` so the
+    /// intrinsic basic-land mana ability follows the granted type.
+    #[serde(default)]
+    pub set_land_types: Option<Vec<LandType>>,
+    #[serde(default)]
+    pub set_colors: Option<Vec<crate::mana::Color>>,
+    /// When true the host loses all abilities (layer 6 — CR 613.1f).
+    #[serde(default)]
+    pub remove_abilities: bool,
 }
 
 /// One "as long as enchanted creature is [filter]" rider of an
@@ -1788,7 +2379,7 @@ pub struct EquipScale {
 ///
 /// Stored on `CardDefinition.dynamic_pt`; adding a new dynamic-P/T card
 /// sets that field (no engine-side table).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DynamicPt {
     /// Power = N, toughness = N+1 where N is the count of distinct card
     /// types across every player's graveyard. Tarmogoyf, Cosmogoyf.
@@ -1802,10 +2393,27 @@ pub enum DynamicPt {
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,
+    /// Power = toughness = `base` + the number of creature cards in the
+    /// controller's graveyard. Fiend Artisan (base 1/1).
+    BasePlusCreaturesInControllerGraveyard { base: i32 },
+    /// Fathomless descent (LCI) — power = `base_p` + the number of permanent
+    /// cards in the controller's graveyard, toughness = `base_t` + that count.
+    /// Souls of the Lost (*/*+1 → base_p 0, base_t 1).
+    PermanentCardsInControllerGraveyard { base_p: i32, base_t: i32 },
+    /// Power = toughness = the number of creatures the controller controls
+    /// that have any of `types`. The Mycotyrant (Fungi and/or Saprolings).
+    CreaturesYouControlWithTypes { types: Vec<CreatureType> },
+    /// Power = toughness = `base` + the number of *other* creatures the
+    /// controller controls that have flying. Skycat Sovereign (base 1/1).
+    /// Reads printed flying (granted flying isn't counted).
+    BasePlusOtherFlyersControlled { base: i32 },
     /// Power = toughness = base + total land cards in all graveyards.
     /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
     /// player's graveyard).
     BasePlusLandsInAllGraveyards { base_p: i32, base_t: i32 },
+    /// Power = base_p + creature cards in all graveyards; toughness = base_t +
+    /// that count. Lhurgoyf (0/1+*), Mortivore (0/0 + {B} regenerate).
+    CreatureCardsInAllGraveyards { base_p: i32, base_t: i32 },
     /// Power = toughness = base + land cards in the *controller's*
     /// graveyard. Wight of the Reliquary (base 1/1, +1/+1 per land in
     /// your graveyard).
@@ -1826,18 +2434,52 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of lands the controller
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },
+    /// Power = `base_p` + the lands the controller controls; toughness is
+    /// the fixed `base_t`. `*`-power Vehicles whose power tracks lands
+    /// while toughness is printed (Lumbering Worldwagon, `*/8`).
+    LandsControlledPower { base_p: i32, base_t: i32 },
+    /// Power = toughness = `base` + lands the controller controls + land cards
+    /// in the controller's graveyard. Multani, Yavimaya's Avatar (base 0/0).
+    LandsControlledPlusLandsInControllerGraveyard { base: i32 },
+    /// Power = `base_p` + the number of card types among cards in the
+    /// controller's *opponents'* graveyards; toughness is the fixed `base_t`.
+    /// Nighthawk Scavenger (1+*/3).
+    CardTypesInOpponentsGraveyards { base_p: i32, base_t: i32 },
+    /// Power = `base_p` + the number of card types among cards in the
+    /// *controller's own* graveyard; toughness = `base_t` + that count.
+    /// Nethergoyf (*/1+* → base_p 0, base_t 1).
+    CardTypesInControllerGraveyard { base_p: i32, base_t: i32 },
+    /// Power = toughness = the number of cards in the controller's hand.
+    /// Maro, Kagemaro.
+    ControllerHandSize,
+    /// Power = toughness = `factor` × the cards in the controller's hand.
+    /// Masumaro, First to Live (twice your hand size).
+    ControllerHandSizeTimes { factor: i32 },
+    /// Power = toughness = the size of the largest hand among the controller's
+    /// opponents. Adamaro, First to Desire.
+    MaxOpponentHandSize,
+    /// Base `base_p`/`base_t`, then −1/−1 for each card in opponents' hands
+    /// (Enemy of Enlightenment — "gets -1/-1 for each card in your
+    /// opponents' hands").
+    BaseMinusOpponentsHandTotal { base_p: i32, base_t: i32 },
     /// Power = toughness = `base` + the number of artifacts the controller
     /// controls (counting the source). Broodstar (base 0/0, CR 604.3 CDA).
     ArtifactsControlled { base: i32 },
     /// Power = number of instant and sorcery cards in the controller's
     /// graveyard and exile; toughness = `base_t`. Crackling Drake (0/4).
     InstantsSorceriesInGraveyardAndExile { base_t: i32 },
+    /// Power = number of instant and sorcery cards in the controller's
+    /// graveyard (only); toughness = `base_t`. Enigma Drake (*/4).
+    InstantsSorceriesInControllerGraveyard { base_t: i32 },
     /// Imprint CDA (CR 604.3): P/T of the creature card exiled with this
     /// permanent; printed base when nothing is exiled. Duplicant.
     ExiledWithSourcePt { base_p: i32, base_t: i32 },
     /// P/T = base + `per` for each Aura attached to this permanent.
     /// Kor Spiritdancer (0/2, +2/+2 per Aura).
     BasePlusPerAttachedAura { base_p: i32, base_t: i32, per: i32 },
+    /// P/T = base + `per` for each Equipment attached to this permanent.
+    /// Goblin Gaveleer (1/1, +2/+0 per Equipment).
+    BasePlusPerAttachedEquipment { base_p: i32, base_t: i32, per: i32 },
     /// P/T = base − the highest life total among players (Scourge of the
     /// Skyclaves: 20 − highest life).
     BaseMinusHighestLife { base_p: i32, base_t: i32 },
@@ -1845,6 +2487,14 @@ pub enum DynamicPt {
     /// creature cards only. Consuming Aberration (base 0, all cards), Wight
     /// of Precinct Six (base 1, creatures only).
     BasePlusOpponentGraveyards { base: i32, creatures_only: bool },
+    /// P/T = base + 1/+1 for each land of `land_type` the controller controls.
+    /// Outcaster Greenblade (1/2, +1/+1 per Desert).
+    BasePlusLandsOfTypeControlled { land_type: LandType, base_p: i32, base_t: i32 },
+    /// Power = `base_p` + the greatest mana value among *other* artifacts the
+    /// controller controls; toughness = the fixed `base_t`. Models "gets +X/+0,
+    /// where X is the greatest mana value among other artifacts you control"
+    /// (Emissary Escort, base 0/4).
+    BasePlusGreatestOtherArtifactMv { base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
@@ -1956,6 +2606,20 @@ pub struct AlternativeCost {
     /// that turns into a creature once the counters tick off.
     #[serde(default)]
     pub impending: u32,
+    /// CR 702.48 — Offering. When `Some(filter)`, this alternative cost may be
+    /// paid any time you could cast an instant (grants flash) by sacrificing a
+    /// permanent you control matching `filter` (the offering's creature type)
+    /// and reducing `mana_cost` by that permanent's whole mana cost, color
+    /// included (`ManaCost::reduce_by_cost`). The auto-picker sacrifices the
+    /// highest-MV match for maximum reduction. The five Kamigawa Patrons.
+    #[serde(default)]
+    pub offering: Option<SelectionRequirement>,
+    /// EOE Warp (CR 702.x). When `true`, casting via this alternative cost
+    /// stamps the resolving permanent `warped`: at the beginning of the next
+    /// end step it's exiled and gains a `WhileExiled` may-play permission so
+    /// its owner can recast it from exile (paying its full mana cost).
+    #[serde(default)]
+    pub warp: bool,
 }
 
 impl CardDefinition {
@@ -1966,6 +2630,7 @@ impl CardDefinition {
     pub fn is_artifact(&self) -> bool { self.card_types.contains(&CardType::Artifact) }
     pub fn is_enchantment(&self) -> bool { self.card_types.contains(&CardType::Enchantment) }
     pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
+    pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
     pub fn is_permanent(&self) -> bool {
         self.card_types.iter().any(|t| {
             matches!(
@@ -1996,6 +2661,11 @@ impl CardDefinition {
                 colors.push(c);
             }
         };
+        // CR 105.2c — a color indicator defines color for objects (tokens,
+        // back faces) whose mana cost can't.
+        for c in &self.color_indicator {
+            push(*c);
+        }
         for sym in &self.cost.symbols {
             match sym {
                 ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
@@ -2036,6 +2706,8 @@ impl CardDefinition {
             land_ability: false,
             creature: self.is_creature(),
             creature_ability: false,
+            casting_nonartifact_spell: !self.is_artifact(),
+            activating_ability: false,
         }
     }
 
@@ -2046,6 +2718,7 @@ impl CardDefinition {
             artifact: self.is_artifact(),
             land_ability: self.is_land(),
             creature_ability: self.is_creature(),
+            activating_ability: true,
             ..Default::default()
         }
     }
@@ -2094,6 +2767,23 @@ impl CardDefinition {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
     }
 
+    /// The "enchant ___" restriction an Aura attaches under, recovered from
+    /// its resolution `Effect::Attach { to: TargetFiltered { filter, .. } }`
+    /// (CR 303.4a). Returns `None` when the attach target can't be read as a
+    /// single filtered selector (bestow, scripted attaches), so callers that
+    /// re-check legality (the 704.5n SBA) can conservatively skip it.
+    pub fn aura_enchant_filter(&self) -> Option<&SelectionRequirement> {
+        fn from_effect(e: &crate::effect::Effect) -> Option<&SelectionRequirement> {
+            use crate::effect::{Effect, Selector};
+            match e {
+                Effect::Attach { to: Selector::TargetFiltered { filter, .. }, .. } => Some(filter),
+                Effect::Seq(inner) => inner.iter().find_map(from_effect),
+                _ => None,
+            }
+        }
+        from_effect(&self.effect)
+    }
+
     pub fn has_flashback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Flashback(cost) = kw { Some(cost) } else { None }
@@ -2125,6 +2815,25 @@ impl CardDefinition {
     /// CR 715 — the adventure half, if this card has Adventure.
     pub fn has_adventure(&self) -> Option<&Adventure> {
         self.adventure.as_deref()
+    }
+    /// CR 702.183 — the Omen half, if this card has Omen.
+    pub fn has_omen(&self) -> Option<&Adventure> {
+        self.omen.as_deref()
+    }
+    /// CR 702.160 — the Prototype face, if this card has Prototype.
+    pub fn has_prototype(&self) -> Option<&Prototype> {
+        self.prototype.as_deref()
+    }
+    /// CR 702.160c — a clone of this definition with the prototype cost,
+    /// color, and size applied (color follows the cost; the `prototype`
+    /// field is retained so a snapshot round-trip can re-apply it).
+    pub fn with_prototype_applied(&self) -> Option<CardDefinition> {
+        let proto = self.has_prototype()?;
+        let mut def = self.clone();
+        def.cost = proto.cost.clone();
+        def.power = proto.power;
+        def.toughness = proto.toughness;
+        Some(def)
     }
     /// CR 709 — the split definition, if this is a split card.
     pub fn has_split(&self) -> Option<&SplitCard> {
@@ -2199,6 +2908,18 @@ impl CardDefinition {
     pub fn madness_cost(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Madness(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// CR 702.187 — the Mayhem cost if this card has `Keyword::Mayhem`.
+    pub fn mayhem_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Mayhem(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// CR 702.180 — the Harmonize cost if this card has `Keyword::Harmonize`.
+    pub fn harmonize_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Harmonize(cost) = kw { Some(cost) } else { None }
         })
     }
     pub fn has_equip(&self) -> Option<&ManaCost> {
@@ -2329,6 +3050,11 @@ pub struct CardInstance {
     /// Persists onto the permanent so its ETB mints one token copy per payment
     /// (`Value::SquadCount`). Defaults to 0 (no Squad / not paid).
     pub squad_count: u32,
+    /// Mana spent to cast the spell that became this permanent, stamped at
+    /// resolution so ETB riders can read it after the spell left the stack
+    /// (`Value::CastSpellManaSpent`, `ManaValueAtMostCastManaSpent` — Astelli
+    /// Reclaimer). Defaults to 0.
+    pub cast_mana_spent: u32,
     /// CR 702.176 — true if this spell was cast paying its optional Bargain
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
@@ -2345,6 +3071,9 @@ pub struct CardInstance {
     /// CR 702.41 — true if this spell was cast paying its optional Entwine
     /// cost: its `ChooseMode` runs every mode in order.
     pub entwined: bool,
+    /// CR 702.165 — true if this spell was cast with its Gift promised: on
+    /// resolution it runs `definition.gift.gifted_effect` instead of `effect`.
+    pub gift_promised: bool,
     /// CR 702.103 — true while this permanent is on the battlefield as a
     /// bestowed Aura. It's an Aura (not a creature) for as long as this is
     /// set; cleared by the SBA when the enchanted creature leaves, at which
@@ -2360,6 +3089,19 @@ pub struct CardInstance {
     /// permanent can flip back. In-memory only (not serialized): the serde
     /// wire stores the front name and rebuilds this on load.
     pub front_face: Option<Arc<CardDefinition>>,
+    /// CR 702.160 — the printed (full, colorless) definition, kept while
+    /// `cast_as_prototype` so the permanent reverts to its full mana cost,
+    /// color, and size when it leaves the battlefield. In-memory only: the
+    /// wire keeps the name + `cast_as_prototype` and rebuilds this on load.
+    pub prototype_printed: Option<Arc<CardDefinition>>,
+    /// CR 711 — true while this flip card is showing its flipped (bottom) face.
+    /// `definition` is swapped to the flip face; `unflipped_def` stashes the
+    /// top so it can be restored on zone change. Reconstructed on snapshot load
+    /// from the top name + this flag.
+    pub flipped: bool,
+    /// CR 711 — the unflipped (top) definition, kept while `flipped`. In-memory
+    /// only: the serde wire stores the top name + the `flipped` flag.
+    pub unflipped_def: Option<Arc<CardDefinition>>,
     /// CR 708 — while this permanent is on the battlefield face down (morph /
     /// manifest), `definition` is swapped to the vanilla 2/2 face-down
     /// definition and the real card is stashed here so it can be turned face
@@ -2398,6 +3140,10 @@ pub struct CardInstance {
     /// — on ETB it gains haste and a death-draw rider, and is sacrificed at
     /// the next end step.
     pub blitzed: bool,
+    /// True if this card was cast via a Warp alternative cost (EOE) — on ETB
+    /// it arms a delayed exile-at-next-end-step that grants a `WhileExiled`
+    /// may-play so it can be recast from exile.
+    pub warped: bool,
     /// CR 702.183 — number of time counters this permanent should enter with
     /// because it was cast for its Impending cost. Consumed at ETB (the
     /// counters are added to the permanent), then irrelevant. 0 = cast
@@ -2418,11 +3164,22 @@ pub struct CardInstance {
     /// `kicked` flag so that a card with both Kicker and Flashback can
     /// be disambiguated cleanly.
     pub cast_via_flashback: bool,
+    /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
+    /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
+    /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
+    pub cast_via_mayhem: bool,
     /// True if this card was cast from exile on its current trip through the
     /// stack (suspend/foretell/plot/impulse free or alt-cost casts). Powers
     /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
     /// Expression). Cleared when the card leaves the stack.
     pub cast_from_exile: bool,
+    /// One-shot permission to cast this MDFC's **back face from the
+    /// graveyard** (Pestilent Cauldron's "sacrifice, then cast Restorative
+    /// Burst transformed"). Set by `Effect::GrantCastBackFromGraveyard` once
+    /// the card is in the graveyard; consumed (cleared) by
+    /// `cast_spell_back_face` when it hops the card to hand to cast the back.
+    /// (serde handled via the wire-mirror struct, like `cast_via_flashback`.)
+    pub may_cast_back_from_graveyard: bool,
     /// "As [this] enters, choose a creature type." Cavern of Souls. The
     /// chosen type narrows which creature spells the controller can cast as
     /// uncounterable through this permanent. `None` until the ETB choice
@@ -2435,6 +3192,9 @@ pub struct CardInstance {
     /// `clean_per_turn_state`. Empty for the common case (most abilities
     /// don't have the flag set).
     pub once_per_turn_used: Vec<usize>,
+    /// CR 702.177 — indices of `exhaust` activated abilities already used.
+    /// Unlike `once_per_turn_used`, this is **never** cleared (once per game).
+    pub exhausted_abilities: Vec<usize>,
     /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
     /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
     /// Stored separately from `definition.keywords` so the printed-Oracle
@@ -2474,6 +3234,16 @@ pub struct CardInstance {
     /// with deathtouch since the last time SBAs were checked. Causes
     /// destruction regardless of damage amount vs toughness.
     pub dealt_deathtouch_damage: bool,
+    /// CR 120.x — true if this permanent has been dealt damage this turn
+    /// (any source, combat or not, including wither/-1/-1 damage). Reset at
+    /// cleanup. Powers "target creature that was dealt damage this turn"
+    /// (Initiate of Blood // Goka). In-memory only.
+    pub dealt_damage_this_turn: bool,
+    /// Sources that have dealt damage to this creature this turn. Powers
+    /// "When a creature dealt damage by this creature this turn dies"
+    /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
+    /// Reset at cleanup; in-memory only.
+    pub damaged_by_this_turn: Vec<CardId>,
     /// CR 701.15 — Regeneration shields. Each is a one-shot replacement:
     /// "the next time this permanent would be destroyed this turn, instead
     /// remove a regeneration shield, tap it, remove it from combat, and
@@ -2486,6 +3256,10 @@ pub struct CardInstance {
     /// time; consumed (and the untap skipped) by `do_untap`. Transient —
     /// not serialized (defaults to false on snapshot reload).
     pub skip_next_untap: bool,
+    /// Entrancing Lyre — this permanent doesn't untap during its controller's
+    /// untap step for as long as the linked source permanent stays tapped (and
+    /// on the battlefield). Cleared once the source untaps or leaves.
+    pub untap_locked_by: Option<CardId>,
     /// CR 702.142 — set when this creature is declared as an attacker;
     /// gates Boast activated abilities ("activate only if this attacked
     /// this turn"). Cleared in per-turn cleanup. Transient — not
@@ -2549,6 +3323,9 @@ pub struct CardInstance {
     /// and any "as long as ~ is monstrous" state. Round-trips through
     /// `CardInstanceWire` with `#[serde(default)]`.
     pub monstrous: bool,
+    /// CR 702.93 — true once this creature has become renowned. Persistent;
+    /// gates the once-only Renown counter add.
+    pub renowned: bool,
     /// CR 701.60 — true while this creature is suspected. A suspected
     /// creature has menace and can't block (injected as computed keywords).
     /// Persistent until it leaves the battlefield. Round-trips through
@@ -2564,6 +3341,16 @@ pub struct CardInstance {
     /// (`GameAction::CastAdventureCreature`). Cleared once the creature is
     /// cast (or the card otherwise changes zones).
     pub on_adventure: bool,
+    /// CR 702.183 — true while this card is on the stack as its Omen
+    /// (instant/sorcery) half. The resolver runs `definition.omen`'s effect
+    /// instead of the creature body and, on resolution or counter, shuffles the
+    /// card into its owner's library instead of the graveyard.
+    pub omen_casting: bool,
+    /// CR 702.160 — true when this card was cast for its Prototype cost, so it
+    /// entered with the prototype's mana cost, color, and size. The live
+    /// `definition` already carries the applied values; this flag lets a
+    /// snapshot round-trip re-apply them (`with_prototype_applied`).
+    pub cast_as_prototype: bool,
     /// CR 702.171 — true while this permanent is saddled (a marker set by a
     /// Saddle activation, until end of turn). Read by `Predicate::SourceSaddled`
     /// to gate "whenever this attacks while saddled" triggers. Cleared by
@@ -2596,9 +3383,42 @@ pub struct CardInstance {
     /// only on a melded object; when it leaves the battlefield, the parts go
     /// to that zone instead and the melded shell ceases to exist.
     pub meld_parts: Vec<CardInstance>,
+    /// CR 702.140 — the component cards of a merged (mutated) permanent,
+    /// top-to-bottom. Non-empty only on a mutate pile; `definition` is the
+    /// synthesized union (top card's characteristics + every card's
+    /// abilities). When the pile leaves the battlefield each component goes
+    /// to that zone as its own card.
+    pub mutate_stack: Vec<CardInstance>,
+    /// Set on a mutate spell on the stack: `(host id, on_top)`. On resolution
+    /// the spell merges onto the host instead of entering as a new creature.
+    pub mutate_onto: Option<(CardId, bool)>,
+    /// CR 310.6 — the protector of a Battle: the opponent its controller chose
+    /// as it entered. That player is the defending player for attacks aimed at
+    /// the battle (CR 508.4) and its creatures block them. `None` for
+    /// non-battles. Round-trips via `CardInstanceWire` with `#[serde(default)]`.
+    pub protected_by: Option<usize>,
 }
 
 impl CardInstance {
+    /// The instant/sorcery alternate half (Adventure or Omen) this card is
+    /// currently on the stack as, if any. While set, the card resolves down the
+    /// spell path with the half's card types and effect (CR 715 / CR 702.183).
+    pub fn alt_spell_half(&self) -> Option<&Adventure> {
+        if self.adventuring {
+            self.definition.adventure.as_deref()
+        } else if self.omen_casting {
+            self.definition.omen.as_deref()
+        } else {
+            None
+        }
+    }
+
+    /// True while this card is on the stack as an instant/sorcery alternate
+    /// half (Adventure or Omen) — i.e. it resolves as a noncreature spell.
+    pub fn casting_alt_half(&self) -> bool {
+        self.adventuring || self.omen_casting
+    }
+
     pub fn new(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
         let definition = definition.into();
         let summoning_sick = definition.is_creature();
@@ -2607,6 +3427,11 @@ impl CardInstance {
         let mut counters = HashMap::new();
         if is_planeswalker && base_loyalty > 0 {
             counters.insert(CounterType::Loyalty, base_loyalty);
+        }
+        // CR 310.7 — a Battle enters with defense counters equal to its printed
+        // defense (re-seeded on reanimate/blink in `move_card_to`).
+        if definition.is_battle() && definition.defense > 0 {
+            counters.insert(CounterType::Defense, definition.defense);
         }
         Self {
             id,
@@ -2627,14 +3452,19 @@ impl CardInstance {
             granted_activated_abilities: Vec::new(),
             kick_count: 0,
             squad_count: 0,
+            cast_mana_spent: 0,
             bargained: false,
             spliced_effects: Vec::new(),
             bought_back: false,
             entwined: false,
+            gift_promised: false,
             bestowed: false,
             face_down: false,
             transformed: false,
             front_face: None,
+            prototype_printed: None,
+            flipped: false,
+            unflipped_def: None,
             unlocked_doors: 0,
             face_up_def: None,
             cloaked: false,
@@ -2645,21 +3475,28 @@ impl CardInstance {
             cast_from_suspend: false,
             cast_from_escape: false,
             blitzed: false,
+            warped: false,
             impending_counters: 0,
             cast_from_hand: false,
             cast_target_was_battlefield: false,
             cast_via_flashback: false,
+            cast_via_mayhem: false,
             cast_from_exile: false,
+            may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
+            exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
             granted_keywords_eot_ts: Vec::new(),
             removed_keywords_eot: Vec::new(),
             keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
+            dealt_damage_this_turn: false,
+            damaged_by_this_turn: Vec::new(),
             regeneration_shields: 0,
             skip_next_untap: false,
+            untap_locked_by: None,
             attacked_this_turn: false,
             must_block: None,
             exiled_by: None,
@@ -2671,15 +3508,21 @@ impl CardInstance {
             chosen_color: None,
             goaded_by: Vec::new(),
             monstrous: false,
+            renowned: false,
             suspected: false,
             adventuring: false,
             on_adventure: false,
+            omen_casting: false,
+            cast_as_prototype: false,
             saddled: false,
             split_cast: None,
             entered_turn: None,
             battlefield_timestamp: 0,
             detained_by: None,
             meld_parts: Vec::new(),
+            mutate_stack: Vec::new(),
+            mutate_onto: None,
+            protected_by: None,
         }
     }
 
@@ -2834,6 +3677,93 @@ impl CardInstance {
         Some(name)
     }
 
+    /// CR 711.2 — flip this permanent to its flipped (bottom) face in place.
+    /// No-op if already flipped or it has no flip face. Returns the flip
+    /// face's name when a flip happened.
+    pub fn flip(&mut self) -> Option<&'static str> {
+        if self.flipped {
+            return None;
+        }
+        let flip = self.definition.flip_face.as_ref().map(|f| (**f).clone())?;
+        let name = flip.name;
+        self.unflipped_def = Some(self.definition.clone());
+        self.definition = Arc::new(flip);
+        self.flipped = true;
+        Some(name)
+    }
+
+    /// CR 711.6 — outside the battlefield only the unflipped characteristics
+    /// exist; restore the top face as the card changes zones.
+    pub fn revert_flip(&mut self) {
+        if let Some(top) = self.unflipped_def.take() {
+            self.definition = top;
+            self.flipped = false;
+        }
+    }
+
+    /// CR 712.4 — a transforming double-faced permanent that leaves the
+    /// battlefield has only its front-face characteristics in the new zone.
+    /// Restore the front face (no-op for a permanent showing its front).
+    pub fn revert_transform(&mut self) {
+        if let Some(front) = self.front_face.take() {
+            self.definition = front;
+            self.transformed = false;
+        }
+    }
+
+    /// CR 702.160c — a permanent cast for its prototype cost has only its
+    /// printed (full, colorless) characteristics once it leaves the
+    /// battlefield. Restore the printed definition as the card changes zones.
+    pub fn revert_prototype(&mut self) {
+        if let Some(printed) = self.prototype_printed.take() {
+            self.definition = printed;
+            self.cast_as_prototype = false;
+        }
+    }
+
+    /// CR 702.140e — merge `incoming` onto this host permanent. `on_top`
+    /// puts the incoming card's characteristics on top of the merged pile.
+    /// The host keeps its id, counters, damage, and summoning sickness; only
+    /// its printed characteristics + abilities change.
+    pub fn apply_mutate(&mut self, incoming: CardInstance, on_top: bool) {
+        if self.mutate_stack.is_empty() {
+            // Seed the pile with a bare component carrying the host's printed
+            // card, so leaving the battlefield can scatter every component.
+            let mut host = CardInstance::new(self.id, self.definition.clone(), self.owner);
+            host.is_token = self.is_token;
+            self.mutate_stack.push(host);
+        }
+        let mut incoming = incoming;
+        incoming.mutate_onto = None;
+        if on_top {
+            self.mutate_stack.insert(0, incoming);
+        } else {
+            self.mutate_stack.push(incoming);
+        }
+        self.rebuild_mutate_definition();
+    }
+
+    /// Recompute the merged permanent's live `definition`: the top card's
+    /// characteristics with every component card's abilities unioned in.
+    pub fn rebuild_mutate_definition(&mut self) {
+        let Some(top) = self.mutate_stack.first() else { return };
+        let mut def = (*top.definition).clone();
+        for comp in self.mutate_stack.iter().skip(1) {
+            def.triggered_abilities
+                .extend(comp.definition.triggered_abilities.iter().cloned());
+            def.activated_abilities
+                .extend(comp.definition.activated_abilities.iter().cloned());
+            def.static_abilities
+                .extend(comp.definition.static_abilities.iter().cloned());
+            for kw in &comp.definition.keywords {
+                if !def.keywords.contains(kw) {
+                    def.keywords.push(kw.clone());
+                }
+            }
+        }
+        self.definition = Arc::new(def);
+    }
+
     pub fn can_attack(&self) -> bool {
         self.definition.is_creature()
             && !self.tapped
@@ -2890,6 +3820,8 @@ impl CardInstance {
         self.granted_flashback_eot = None;
         self.granted_alt_cast_cost_eot = None;
         self.dealt_deathtouch_damage = false;
+        self.dealt_damage_this_turn = false;
+        self.damaged_by_this_turn.clear();
         // CR 701.15g — unused regeneration shields expire at end of turn.
         self.regeneration_shields = 0;
         // CR 702.171 — "saddled until end of turn" ends here.
@@ -2946,6 +3878,9 @@ struct CardInstanceWire {
     /// CR 702.157 squad-payment count. `#[serde(default)]` for back-compat.
     #[serde(default)]
     squad_count: u32,
+    /// Mana spent to cast this permanent's spell. `#[serde(default)]`.
+    #[serde(default)]
+    cast_mana_spent: u32,
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     bargained: bool,
@@ -2971,6 +3906,9 @@ struct CardInstanceWire {
     /// CR 702.41 entwine flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     entwined: bool,
+    /// CR 702.165 gift-promised flag. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    gift_promised: bool,
     /// CR 702.103 bestowed flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -2995,6 +3933,10 @@ struct CardInstanceWire {
     /// `front.back_face` on load. `#[serde(default)]` for back-compat.
     #[serde(default)]
     transformed: bool,
+    /// CR 711 — showing the flipped face. `name` stores the unflipped (top)
+    /// name; the flip face is recovered as `top.flip_face` on load.
+    #[serde(default)]
+    flipped: bool,
     is_token: bool,
     #[serde(default)]
     loyalty_uses_this_turn: u8,
@@ -3008,6 +3950,8 @@ struct CardInstanceWire {
     #[serde(default)]
     blitzed: bool,
     #[serde(default)]
+    warped: bool,
+    #[serde(default)]
     impending_counters: u32,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
@@ -3015,10 +3959,16 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_via_flashback: bool,
     #[serde(default)]
+    cast_via_mayhem: bool,
+    #[serde(default)]
     cast_from_exile: bool,
+    #[serde(default)]
+    may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
+    #[serde(default)]
+    exhausted_abilities: Vec<usize>,
     #[serde(default)]
     may_play_until: Option<MayPlayPermission>,
     /// CR 122.1b keyword counters — permanent state (never cleared at
@@ -3068,6 +4018,10 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     monstrous: bool,
+    /// CR 702.93 renowned flag. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    renowned: bool,
     /// CR 701.60 suspected flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -3078,6 +4032,14 @@ struct CardInstanceWire {
     adventuring: bool,
     #[serde(default)]
     on_adventure: bool,
+    /// CR 702.183 Omen marker. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    omen_casting: bool,
+    /// CR 702.160 prototype marker. `#[serde(default)]` so older snapshots
+    /// load as `false`.
+    #[serde(default)]
+    cast_as_prototype: bool,
     /// CR 702.171 saddled marker. `#[serde(default)]` so older snapshots
     /// load as `false`.
     #[serde(default)]
@@ -3111,6 +4073,20 @@ struct CardInstanceWire {
     /// snapshots load as empty.
     #[serde(default)]
     meld_parts: Vec<CardInstance>,
+    /// CR 702.140 merged-component cards. `#[serde(default)]` so older
+    /// snapshots load as empty; the union `definition` is rebuilt on load.
+    #[serde(default)]
+    mutate_stack: Vec<CardInstance>,
+    /// Pending mutate-onto target for a mutate spell on the stack.
+    #[serde(default)]
+    mutate_onto: Option<(CardId, bool)>,
+    /// Entrancing Lyre tap-lock: this permanent doesn't untap while the
+    /// linked source stays tapped. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    untap_locked_by: Option<CardId>,
+    /// CR 310.6 Battle protector. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    protected_by: Option<usize>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -3124,6 +4100,7 @@ impl serde::Serialize for CardInstance {
                 .face_up_def
                 .as_ref()
                 .or(self.front_face.as_ref())
+                .or(self.unflipped_def.as_ref())
                 .map(|f| f.name.to_string())
                 .unwrap_or_else(|| self.definition.name.to_string()),
             owner: self.owner,
@@ -3141,6 +4118,7 @@ impl serde::Serialize for CardInstance {
             kicked: self.kicked,
             kick_count: self.kick_count,
             squad_count: self.squad_count,
+            cast_mana_spent: self.cast_mana_spent,
             bargained: self.bargained,
             spliced_effects: self.spliced_effects.clone(),
             encoded_on: self.encoded_on,
@@ -3148,12 +4126,14 @@ impl serde::Serialize for CardInstance {
             granted_activated_abilities: self.granted_activated_abilities.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
+            gift_promised: self.gift_promised,
             bestowed: self.bestowed,
             face_down: self.face_down,
             unlocked_doors: self.unlocked_doors,
             face_down_permanent: self.face_up_def.is_some(),
             cloaked: self.cloaked,
             transformed: self.transformed,
+            flipped: self.flipped,
             is_token: self.is_token,
             loyalty_uses_this_turn: self.loyalty_uses_this_turn,
             evoked: self.evoked,
@@ -3161,12 +4141,16 @@ impl serde::Serialize for CardInstance {
             cast_from_suspend: self.cast_from_suspend,
             cast_from_escape: self.cast_from_escape,
             blitzed: self.blitzed,
+            warped: self.warped,
             impending_counters: self.impending_counters,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
+            cast_via_mayhem: self.cast_via_mayhem,
             cast_from_exile: self.cast_from_exile,
+            may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
+            exhausted_abilities: self.exhausted_abilities.clone(),
             may_play_until: self.may_play_until,
             keyword_counters: self
                 .keyword_counters
@@ -3182,9 +4166,12 @@ impl serde::Serialize for CardInstance {
             chosen_color: self.chosen_color,
             goaded_by: self.goaded_by.clone(),
             monstrous: self.monstrous,
+            renowned: self.renowned,
             suspected: self.suspected,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
+            omen_casting: self.omen_casting,
+            cast_as_prototype: self.cast_as_prototype,
             saddled: self.saddled,
             split_cast: self.split_cast,
             exiled_by: self.exiled_by,
@@ -3193,6 +4180,10 @@ impl serde::Serialize for CardInstance {
             battlefield_timestamp: self.battlefield_timestamp,
             detained_by: self.detained_by,
             meld_parts: self.meld_parts.clone(),
+            mutate_stack: self.mutate_stack.clone(),
+            mutate_onto: self.mutate_onto,
+            untap_locked_by: self.untap_locked_by,
+            protected_by: self.protected_by,
         };
         wire.serialize(ser)
     }
@@ -3219,6 +4210,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.kicked = wire.kicked;
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
+        c.cast_mana_spent = wire.cast_mana_spent;
         c.bargained = wire.bargained;
         c.spliced_effects = wire.spliced_effects.clone();
         c.encoded_on = wire.encoded_on;
@@ -3226,6 +4218,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_activated_abilities = wire.granted_activated_abilities;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;
+        c.gift_promised = wire.gift_promised;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;
         // CR 708 — restore a face-down permanent: stash the real definition
@@ -3244,6 +4237,15 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.definition = Arc::new(back);
             c.transformed = true;
         }
+        // CR 711 — restore a flipped permanent: stash the top, swap the active
+        // definition to the flip face.
+        if wire.flipped
+            && let Some(flip) = c.definition.flip_face.as_ref().map(|f| (**f).clone())
+        {
+            c.unflipped_def = Some(c.definition.clone());
+            c.definition = Arc::new(flip);
+            c.flipped = true;
+        }
         // CR 709.5 — restore a Room permanent's unlocked doors (the live
         // definition is the union of unlocked doors' abilities).
         if wire.unlocked_doors != 0 && c.definition.room.is_some() {
@@ -3257,12 +4259,15 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_suspend = wire.cast_from_suspend;
         c.cast_from_escape = wire.cast_from_escape;
         c.blitzed = wire.blitzed;
+        c.warped = wire.warped;
         c.impending_counters = wire.impending_counters;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
+        c.cast_via_mayhem = wire.cast_via_mayhem;
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;
+        c.exhausted_abilities = wire.exhausted_abilities;
         c.may_play_until = wire.may_play_until;
         c.keyword_counters = wire.keyword_counters.into_iter().collect();
         c.granted_keywords_eot = wire.granted_keywords_eot;
@@ -3274,9 +4279,21 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_color = wire.chosen_color;
         c.goaded_by = wire.goaded_by;
         c.monstrous = wire.monstrous;
+        c.renowned = wire.renowned;
         c.suspected = wire.suspected;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;
+        c.omen_casting = wire.omen_casting;
+        // CR 702.160 — restore a prototype-cast permanent: the name→factory
+        // definition is the full (colorless, big) card, so re-apply the
+        // prototype cost/color/size that it entered with.
+        if wire.cast_as_prototype
+            && let Some(proto_def) = c.definition.with_prototype_applied()
+        {
+            c.prototype_printed = Some(c.definition.clone());
+            c.definition = Arc::new(proto_def);
+            c.cast_as_prototype = true;
+        }
         c.saddled = wire.saddled;
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
@@ -3285,6 +4302,13 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.battlefield_timestamp = wire.battlefield_timestamp;
         c.detained_by = wire.detained_by;
         c.meld_parts = wire.meld_parts;
+        c.mutate_stack = wire.mutate_stack;
+        c.mutate_onto = wire.mutate_onto;
+        if !c.mutate_stack.is_empty() {
+            c.rebuild_mutate_definition();
+        }
+        c.untap_locked_by = wire.untap_locked_by;
+        c.protected_by = wire.protected_by;
         Ok(c)
     }
 }

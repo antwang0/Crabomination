@@ -154,18 +154,21 @@ pub fn update_castable_highlights(
             // path: flip (right-click / F), then cast.
             .chain(cv.back_castable_hand.iter())
             .chain(cv.blitzable_hand.iter())
+            .chain(cv.warpable_hand.iter())
             .chain(cv.pitchable_hand.iter())
             .chain(cv.kickable_hand.iter())
             .chain(cv.suspendable_hand.iter())
             .chain(cv.foretellable_hand.iter())
             .chain(cv.plottable_hand.iter())
             .chain(cv.adventurable_hand.iter())
+            .chain(cv.omenable_hand.iter())
             .chain(cv.splittable_right_hand.iter())
             .chain(cv.miracle_hand.iter())
             .chain(cv.morphable_hand.iter())
             .chain(cv.reinforceable_hand.iter())
             .chain(cv.squadable_hand.iter())
             .chain(cv.replicatable_hand.iter())
+            .chain(cv.conspirable_hand.iter())
             .copied()
             .filter(|id| !hard.contains(id))
             .collect();
@@ -715,6 +718,63 @@ pub(crate) fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: 
 /// ("Menace — can only be blocked by two or more creatures."). Returns
 /// `(text, is_reminder)` pairs; reminder lines render dimmer. Empty when
 /// the name isn't in the catalog (tokens, fictional placeholders).
+/// Live characteristic-override notes for a battlefield permanent whose
+/// computed state diverges from its printed card (continuous effects —
+/// Ichthyomorphosis, Heliod's Punishment, Turn to Frog). Appended below the
+/// printed `hover_info_lines` so the player sees what the permanent *is now*,
+/// not just what it was printed as. Returns dimmed `(text, true)` reminder
+/// lines; empty when nothing diverges.
+fn live_override_lines(
+    name: &str,
+    lost_all_abilities: bool,
+    creature_subtypes: &[crabomination::card::CreatureType],
+    colors: &[crabomination::mana::Color],
+) -> Vec<(String, bool)> {
+    let mut out = Vec::new();
+    if lost_all_abilities {
+        out.push(("Now: all abilities removed".to_string(), true));
+    }
+    // Computed creature subtypes that differ from the printed ones (a
+    // type-changing aura / animation). Only note it when there's an actual
+    // change so vanilla creatures stay quiet.
+    let printed = crabomination::catalog::lookup_by_name(name);
+    let printed_types = printed
+        .as_ref()
+        .map(|d| d.subtypes.creature_types.clone())
+        .unwrap_or_default();
+    if !creature_subtypes.is_empty() && creature_subtypes != printed_types.as_slice() {
+        let line = creature_subtypes
+            .iter()
+            .map(|t| format!("{t:?}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        out.push((format!("Now: {line}"), true));
+    }
+    // Computed colors that differ from the printed card's colors (a
+    // color-changing effect — Turn to Frog / Snakeform become blue/green).
+    if let Some(def) = printed.as_ref() {
+        let mut printed_colors = def.cost.colors();
+        for c in &def.color_indicator {
+            if !printed_colors.contains(c) {
+                printed_colors.push(*c);
+            }
+        }
+        if colors != printed_colors.as_slice() {
+            let label = if colors.is_empty() {
+                "colorless".to_string()
+            } else {
+                colors
+                    .iter()
+                    .map(|c| format!("{c:?}").to_lowercase())
+                    .collect::<Vec<_>>()
+                    .join(" and ")
+            };
+            out.push((format!("Now: {label}"), true));
+        }
+    }
+    out
+}
+
 fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
     let Some(def) = crabomination::catalog::lookup_by_name(name) else {
         return Vec::new();
@@ -751,6 +811,11 @@ fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
             None => lines.push((label, true)),
         }
     }
+    // CR 702.139c — surface the companion's deck-construction restriction.
+    if let Some(rule) = &def.companion {
+        let text = crate::systems::counter_tooltip::companion_restriction_text(rule);
+        lines.push((format!("Companion — {text}"), true));
+    }
     // Oracle-ish ability text (roadmap Tier 8): statics carry printed
     // descriptions; triggered/activated/loyalty abilities are phrased from
     // their event + effect shapes. Empty phrasings are skipped.
@@ -785,10 +850,22 @@ fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
         if aa.sac_cost {
             cost.push("Sacrifice this".into());
         }
+        if aa.exile_self_cost {
+            cost.push("Exile this from your graveyard".into());
+        }
         if cost.is_empty() {
             cost.push("{0}".into());
         }
-        lines.push((format!("{}: {body}.", cost.join(", ")), true));
+        let mut line = format!("{}: {body}.", cost.join(", "));
+        // Surface the zone / timing restrictions the cost line alone hides
+        // (Unearth, Renew, the SOS graveyard-return cycle, …).
+        if aa.from_graveyard && !aa.exile_self_cost {
+            line.push_str(" (from your graveyard)");
+        }
+        if aa.sorcery_speed {
+            line.push_str(" (sorcery speed only)");
+        }
+        lines.push((line, true));
     }
     for la in &def.loyalty_abilities {
         let body = la.effect.effect_short_text();
@@ -859,6 +936,7 @@ pub fn hover_card_preview(
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
     hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
     card_names: Res<crate::game::CardNames>,
+    view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
@@ -890,9 +968,21 @@ pub fn hover_card_preview(
         return;
     };
 
-    let info = card_id
+    let mut info = card_id
         .map(|id| hover_info_lines(&card_names.get(id)))
         .unwrap_or_default();
+    // Append live characteristic-override notes (type-changing / ability-
+    // stripping continuous effects) from the current battlefield view.
+    if let (Some(id), Some(cv)) = (card_id, view.0.as_ref())
+        && let Some(pv) = cv.battlefield.iter().find(|p| p.id == id)
+    {
+        info.extend(live_override_lines(
+            &pv.name,
+            pv.lost_all_abilities,
+            &pv.creature_subtypes,
+            &pv.colors,
+        ));
+    }
     // Estimated panel height so the anchor keeps the whole column on screen
     // (reminder lines wrap to ~2 rows at this width).
     let info_height: f32 = if info.is_empty() {
@@ -1028,6 +1118,10 @@ pub fn graveyard_browser(
             .map(|cv| cv.players[owner].graveyard.iter().map(|c| {
                 let badge = if let Some(fb) = &c.flashback_cost {
                     Some(format!("Flashback {{{}}}", fb.cmc()))
+                } else if let Some(mh) = &c.mayhem_cost {
+                    Some(format!("Mayhem {{{}}}", mh.cmc()))
+                } else if let Some(hm) = &c.harmonize_cost {
+                    Some(format!("Harmonize {{{}}}", hm.cmc()))
                 } else if let Some(db) = &c.disturb_cost {
                     Some(format!("Disturb {{{}}}", db.cmc()))
                 } else if let Some((esc, n)) = &c.escape {
@@ -1187,7 +1281,7 @@ pub fn graveyard_browser(
 
                 // Close hint
                 panel.spawn((
-                    Text::new("Click outside or press Esc to close"),
+                    Text::new("Press Esc or click outside to close"),
                     ui_fonts.tf(11.0),
                     TextColor(theme::TEXT_MUTED),
                     Pickable::IGNORE,
@@ -1213,18 +1307,20 @@ pub fn exile_browser(
     existing: Query<Entity, With<ExileBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
+    chat: Res<crate::systems::chat::ChatInputState>,
 ) {
+    let key_v = !chat.open && keyboard.just_pressed(KeyCode::KeyV);
     let close_requested = keyboard.just_pressed(KeyCode::Escape)
         || overlay_interaction
             .iter()
             .any(|i| *i == Interaction::Pressed);
-    if !existing.is_empty() && (close_requested || keyboard.just_pressed(KeyCode::KeyV)) {
+    if !existing.is_empty() && (close_requested || key_v) {
         for entity in &existing {
             commands.entity(entity).despawn();
         }
         return;
     }
-    if !existing.is_empty() || !keyboard.just_pressed(KeyCode::KeyV) {
+    if !existing.is_empty() || !key_v {
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };
@@ -1239,10 +1335,11 @@ pub fn exile_browser(
                 badges.push("Face down".to_string());
             }
             if let Some(p) = c.may_play_recipient {
-                badges.push(if p == cv.your_seat {
-                    "May play (you)".to_string()
-                } else {
-                    format!("May play (P{p})")
+                let who = if p == cv.your_seat { "you".to_string() } else { format!("P{p}") };
+                // Surface airbend's flat {2} / miracle / Hostage-Taker alt cost.
+                badges.push(match c.may_play_alt_cost {
+                    Some(n) => format!("May play ({who}) for {{{n}}}"),
+                    None => format!("May play ({who})"),
                 });
             }
             if c.encoded_on.is_some() {
@@ -1379,7 +1476,7 @@ pub fn exile_browser(
                 });
         }
         panel.spawn((
-            Text::new("V / Esc / click outside to close"),
+            Text::new("Press V or Esc, or click outside to close"),
             ui_fonts.tf(11.0),
             TextColor(theme::TEXT_MUTED),
             Pickable::IGNORE,
@@ -1599,8 +1696,50 @@ pub fn reveal_popup(
 
 #[cfg(test)]
 mod tests {
-    use super::{preview_anchor, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_WIDTH, HOVER_PREVIEW_MARGIN};
+    use super::{
+        hover_info_lines, live_override_lines, preview_anchor, HOVER_PREVIEW_HEIGHT,
+        HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
+    };
     use bevy::math::Vec2;
+    use crabomination::card::CreatureType;
+
+    /// An Unearth ability's hover line is annotated as a sorcery-speed
+    /// graveyard ability.
+    #[test]
+    fn unearth_ability_line_notes_graveyard_and_sorcery_speed() {
+        let lines = hover_info_lines("Viscera Dragger");
+        assert!(
+            lines.iter().any(|(t, _)| t.contains("from your graveyard")
+                && t.contains("sorcery speed only")),
+            "expected a graveyard / sorcery-speed annotated line, got {lines:?}"
+        );
+    }
+
+    #[test]
+    fn override_lines_note_fish_and_lost_abilities() {
+        // Serra Angel turned into a 0/1 Fish with no abilities (Ichthyomorphosis).
+        let lines = live_override_lines(
+            "Serra Angel",
+            true,
+            &[CreatureType::Fish],
+            &[crabomination::mana::Color::Blue],
+        );
+        assert!(lines.iter().any(|(t, _)| t.contains("abilities removed")));
+        assert!(lines.iter().any(|(t, _)| t.contains("Fish")));
+        assert!(lines.iter().any(|(t, _)| t.contains("blue")));
+    }
+
+    #[test]
+    fn override_lines_quiet_for_unchanged_creature() {
+        // A Grizzly Bears still a Bear with its abilities → no override notes.
+        let lines = live_override_lines(
+            "Grizzly Bears",
+            false,
+            &[CreatureType::Bear],
+            &[crabomination::mana::Color::Green],
+        );
+        assert!(lines.is_empty(), "no notes when nothing diverges");
+    }
 
     const PW: f32 = HOVER_PREVIEW_WIDTH;
     const PH: f32 = HOVER_PREVIEW_HEIGHT;

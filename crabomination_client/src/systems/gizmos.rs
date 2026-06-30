@@ -481,6 +481,9 @@ pub fn draw_attack_plan_gizmos(
                 Some(p)
             }
             AttackTarget::Planeswalker(pw_id) => positions.get(pw_id).copied(),
+            // A Siege battle is attacked like a planeswalker — point the arrow
+            // at its battlefield position (CR 508.1).
+            AttackTarget::Battle(battle_id) => positions.get(battle_id).copied(),
         };
         if let Some(to) = to {
             gizmos.arrow(from, to, color).with_tip_length(0.7);

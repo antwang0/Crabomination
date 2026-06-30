@@ -43,12 +43,12 @@ pub fn silverquill_lecturer() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Kor, CreatureType::Wizard],
             ..Default::default()
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![],
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(1),

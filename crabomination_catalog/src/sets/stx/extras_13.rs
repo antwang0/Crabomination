@@ -1052,10 +1052,6 @@ pub fn collector_ouphe() -> CardDefinition {
 /// "Flying, haste. / At the beginning of combat on your turn, if you've
 /// cast three or more instant and/or sorcery spells this turn, return
 /// Arclight Phoenix from your graveyard to the battlefield."
-///
-/// Body: 3/2 Flying Haste. The graveyard-recursion trigger is omitted
-/// (needs a begin-combat trigger scoped to graveyard-resident cards +
-/// 3+ IS spell gate). The body is a strong hasty flier for red decks.
 /// Arclight Phoenix — {2}{R} Creature — Phoenix. 3/2 Flying, Haste. At the
 /// beginning of combat on your turn, if you've cast three or more instant
 /// and/or sorcery spells this turn, return this from your graveyard to the
@@ -1181,7 +1177,8 @@ pub fn blustersquall() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -1231,7 +1228,8 @@ pub fn electrickery() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -1300,7 +1298,8 @@ pub fn teleportal() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -1353,7 +1352,8 @@ pub fn street_spasm() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }

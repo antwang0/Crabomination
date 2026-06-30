@@ -220,6 +220,7 @@ pub fn handle_ability_menu(
                 card_id: item.card_id,
                 ability_index: item.ability_index,
                 target: None,
+                additional_targets: Vec::new(),
                 x_value: None,
             });
         }

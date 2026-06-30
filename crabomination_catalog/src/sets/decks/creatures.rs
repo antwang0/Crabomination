@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, colorless, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         cost: cost(&[generic(4), g(), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Avatar],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
             ..Default::default()
         },
         power: 6,
@@ -106,7 +106,7 @@ pub fn cosmogoyf() -> CardDefinition {
 pub fn devourer_of_destiny() -> CardDefinition {
     CardDefinition {
         name: "Devourer of Destiny",
-        cost: cost(&[generic(7)]),
+        cost: cost(&[generic(5), colorless(2)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Eldrazi],
@@ -319,7 +319,7 @@ pub fn solitude() -> CardDefinition {
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
             ..Default::default()
         },
         power: 3,
@@ -352,7 +352,8 @@ pub fn solitude() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -364,7 +365,7 @@ pub fn solitude() -> CardDefinition {
 pub fn grief() -> CardDefinition {
     CardDefinition {
         name: "Grief",
-        cost: cost(&[generic(1), b(), b()]),
+        cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
@@ -603,10 +604,10 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
     use crate::effect::OpeningHandEffect;
     CardDefinition {
         name: "Chancellor of the Annex",
-        cost: cost(&[generic(4), w(), w()]),
+        cost: cost(&[generic(4), w(), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Avatar],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Angel],
             ..Default::default()
         },
         power: 5,
@@ -644,7 +645,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
 pub fn elesh_norn_mother_of_machines() -> CardDefinition {
     CardDefinition {
         name: "Elesh Norn, Mother of Machines",
-        cost: cost(&[generic(3), w(), w()]),
+        cost: cost(&[generic(4), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

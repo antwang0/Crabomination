@@ -80,6 +80,17 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "As long as [condition], this creature has base power and toughness
+    /// P/T." The base-P/T-setting sibling of `PumpSelfIf` — installs a live
+    /// layer-7b `SetPowerToughness` while the predicate holds (counters and
+    /// +N/+M still stack on top per CR 613.7c/f). Snowmelt Stag
+    /// ("During your turn, this creature has base power and toughness 5/2").
+    SetBasePtIf { condition: Predicate, power: i32, toughness: i32 },
+    /// "This creature can attack as though it didn't have defender as long as
+    /// [condition]." A self-static gating defender-bypass on a live predicate
+    /// (controller as context). Drowsing Tyrannodon ("…as long as you control
+    /// a creature with power 4 or greater").
+    CanAttackIgnoringDefenderWhile { condition: Predicate },
     /// "As long as [condition], [creatures the selector picks] get +P/+T."
     /// The conditional-team sibling of `PumpSelfIf` (self) and `PumpPT`
     /// (unconditional team). Resolved live in `gather_continuous_effects`:
@@ -113,6 +124,18 @@ pub enum StaticEffect {
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though
+    /// its power were N greater." Adds `amount` to each affected creature's
+    /// power *only* when summing crew / saddle totals (it is not a real P/T
+    /// modification). `applies_to` is usually `Selector::This` (Cloudspire
+    /// Captain, Deathless Pilot). Read in `GameState::crew` / `saddle`.
+    CrewSaddlePowerBonus { applies_to: Selector, amount: i32 },
+    /// CR 613 — the source has `keyword` as long as it itself matches
+    /// `condition` ("As long as this creature is equipped, it has double
+    /// strike" — Kor Duelist). Recomputed live against the source via
+    /// `evaluate_requirement_static`, so board-state conditions (IsEquipped,
+    /// IsEnchanted, IsModified) track correctly.
+    SelfHasKeywordWhile { keyword: Keyword, condition: SelectionRequirement },
     /// "All [filter] have protection from the chosen color" — the color is
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.
@@ -132,10 +155,34 @@ pub enum StaticEffect {
     LoseKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
     EntersTapped { applies_to: Selector },
+    /// "Lands you control enter the battlefield untapped" (Spelunking, Amulet
+    /// of Vigor-adjacent). An enters-untapped replacement that overrides any
+    /// enters-tapped static for lands the source's controller controls.
+    LandsEnterUntapped,
+    /// "Lethal damage dealt to matching creatures is determined by their power
+    /// rather than their toughness" (Zilortha, Strength Incarnate / Mountain
+    /// Goat). The SBA reads `power` as the lethal threshold for any creature
+    /// `applies_to` matches.
+    LethalDamageByPower { applies_to: Selector },
     /// Controller may play one additional land per turn.
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Generic cost reduction for spells the controller casts *from their
+    /// graveyard* (Gravebreaker Lamia — "Spells you cast from your graveyard
+    /// cost {1} less"). Applied only on the graveyard-cast paths (flashback /
+    /// retrace / escape / disturb / aftermath); clamped at the generic pip.
+    GraveyardCastCostReduction { amount: u32 },
+    /// Like `CostReduction`, but only on turns other than the controller's
+    /// (Naiad of Hidden Coves — "During turns other than yours, spells you
+    /// cast cost {1} less"). Applied in `cost_reduction_for_spell` when the
+    /// caster is not the active player.
+    CostReductionDuringOpponentsTurn { filter: SelectionRequirement, amount: u32 },
+    /// "Your Nth spell each turn costs `amount` less" (Highspire Bell-Ringer —
+    /// second spell). Applied in `cost_reduction_for_spell` when the caster
+    /// controls the source and is about to cast their `nth` spell this turn
+    /// (i.e. `Player.spells_cast_this_turn == nth - 1`). Generic-only.
+    CostReductionNthSpell { filter: SelectionRequirement, nth: u32, amount: u32 },
     /// Target-aware generic cost reduction for spells whose chosen target
     /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
     /// cast that target a creature cost {2} less to cast."
@@ -159,26 +206,101 @@ pub enum StaticEffect {
     /// cast time alongside `AdditionalCostAfterFirstSpell` in
     /// `extra_cost_for_spell`.
     AdditionalCost { filter: SelectionRequirement, amount: u32 },
+    /// Jubilant-Skybonder-style "spells your opponents cast that target a
+    /// [`target_filter`] permanent you control cost `amount` more" — a
+    /// continuous target-tax read off the source's controller. Evaluated in
+    /// `extra_cost_for_spell` against the spell's chosen target; the tax only
+    /// applies to spells cast by an opponent of the source's controller.
+    TaxOpponentSpellsTargeting { target_filter: SelectionRequirement, amount: u32 },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is the
     /// greatest power among creatures you control" (The Great Henge). Read by
     /// `cost_reduction_for_spell` off the *spell being cast* (not battlefield
     /// permanents), so it only discounts its own cast. Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByGreatestPower,
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is the total
+    /// power of creatures you control" (Ghalta, Primal Hunger). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast*. Generic-only;
+    /// clamped by `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByTotalPower,
+    /// Card-intrinsic "This spell costs {1} less to cast for each creature card
+    /// in your graveyard" (Ghoultree). Read by `cost_reduction_for_spell` off
+    /// the *spell being cast*. Generic-only; clamped by `ManaCost::reduce_generic`.
+    SelfCostReducedPerCreatureInGraveyard,
+    /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
+    /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
+    SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// Domain" (CR 702.43 — Leyline Binding). Read by `cost_reduction_for_spell`
     /// off the *spell being cast*; the count is the distinct basic land types
     /// among the caster's lands (0–5). Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByDomain { per: u32 },
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is the number
+    /// of differently named lands you control" (Fungal Colossus). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast*. Generic-only;
+    /// clamped by `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByDistinctLandNames,
+    /// Card-intrinsic "This spell costs {amount} less to cast during your turn"
+    /// (Mental Modulation). Read by `cost_reduction_for_spell` off the spell
+    /// being cast when the caster is the active player. Generic-only; clamped by
+    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedDuringYourTurn { amount: u32 },
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is your
+    /// devotion to `colors`" (Theros — Daybreak Chimera, etc.). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast*; the count is the
+    /// caster's devotion (each colored pip in those colors among permanents
+    /// they control, CR 700.5). Generic-only; clamped by
+    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByDevotion { colors: Vec<crate::mana::Color> },
     /// "This spell costs {N} less to cast for each card you've discarded
     /// this turn" (Hollow One). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.
     SelfCostReducedPerDiscardThisTurn { per: u32 },
+    /// "This spell costs {N} less to cast for each creature you attacked with
+    /// this turn" (Search Party Captain). Card-intrinsic; read by
+    /// `cost_reduction_for_spell` off `Player.creatures_attacked_this_turn`.
+    /// Generic-only; clamped by `ManaCost::reduce_generic`. No layer effect.
+    /// When `all_players` is true the count spans every player's attackers
+    /// ("for each creature that attacked this turn" — Witchstalker Frenzy),
+    /// otherwise just the caster's.
+    SelfCostReducedPerCreatureAttackedThisTurn {
+        per: u32,
+        #[serde(default)]
+        all_players: bool,
+    },
+    /// CR 702.125 — Undaunted: "This spell costs `per` less to cast for each
+    /// opponent." Read off the spell being cast in `cost_reduction_for_spell`.
+    /// Generic-only.
+    SelfCostReducedPerOpponent { per: u32 },
+    /// Card-intrinsic "This spell costs `amount` less to cast if you control a
+    /// permanent matching each of `filters`" (Of One Mind — a Human creature
+    /// *and* a non-Human creature). Read by `cost_reduction_for_spell` off the
+    /// *spell being cast*; the discount applies only when every filter has at
+    /// least one match among the caster's permanents. Generic-only.
+    SelfCostReducedIfControlEach { filters: Vec<SelectionRequirement>, amount: u32 },
+    /// Card-intrinsic "This spell costs `amount` less to cast if `condition`"
+    /// (Gigastorm Titan — you've cast another spell this turn; Lashwhip Predator
+    /// — your opponents control 3+ creatures). The predicate is evaluated at
+    /// cost time with the caster as controller. Generic-only, clamped.
+    SelfCostReducedIf { condition: Predicate, amount: u32 },
     /// "Each player can't cast more than one spell each turn" (Rule of Law,
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_turn`.
     OneSpellPerTurn,
+    /// "Each player can't cast more than one noncreature spell each turn"
+    /// (Deafening Silence). Enforced at the central `perform_action` cast gate
+    /// against `Player.noncreature_spells_cast_this_turn`.
+    OneNoncreatureSpellPerTurn,
+    /// "Each player who has cast a nonartifact spell this turn can't cast
+    /// additional nonartifact spells" (Ethersworn Canonist). Enforced at the
+    /// central `perform_action` cast gate against
+    /// `Player.nonartifact_spells_cast_this_turn`.
+    OneNonartifactSpellPerTurn,
+    /// "Each spell costs {N} more to cast except during its controller's turn"
+    /// (Defense Grid). A generic-mana tax folded into `extra_cost_for_spell`,
+    /// skipped when the caster is the active player.
+    SpellsCostMoreExceptOnControllerTurn { amount: u32 },
     /// CR 104.3c override — "If you would draw a card while your library has
     /// no cards in it, you win the game instead" (Laboratory Maniac, Jace,
     /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by
@@ -248,11 +370,31 @@ pub enum StaticEffect {
     /// (creature/artifact/enchantment/planeswalker). Checked at the main
     /// cast gate in `cast_spell`.
     ControllerCantCastPermanentSpells,
+    /// "Noncreature spells with mana value `min_mana_value` or greater can't be
+    /// cast" and (when `or_has_x`) "noncreature spells with {X} in their mana
+    /// costs can't be cast." Global — locks every player while any permanent
+    /// has it (Gaddock Teeg). Checked at the main cast gate in `cast_spell`.
+    NoncreatureSpellsCantBeCastIf { min_mana_value: u32, or_has_x: bool },
     /// CR 615.12 — while active, damage can't be prevented (global). A
     /// permanent-static sibling of `Effect::DamageCantBePreventedThisTurn`;
     /// `apply_prevention_shields` bypasses all shields while any source on the
     /// battlefield has this. Sulfuric Vortex, Sunspine Lynx, Everlasting Torment.
     DamageCantBePrevented,
+    /// CR 614 — "If an opponent would lose life during your turn, they lose
+    /// twice that much life instead." (Bloodletter of Aclazotz.) A life-loss
+    /// doubling replacement scoped to the source controller's turn and their
+    /// opponents; consulted by `adjust_life`.
+    OpponentLifeLossDoubledDuringYourTurn,
+    /// CR 615.12 (scoped) — combat damage dealt by creatures the source's
+    /// controller controls can't be prevented (Questing Beast). Bypasses
+    /// prevention shields only for damage whose source is a creature that
+    /// controller controls.
+    ControllerCreaturesCombatDamageCantBePrevented,
+    /// CR 615.12 — *all* combat damage can't be prevented, regardless of
+    /// controller (Frenzied Baloth). Bypasses prevention shields for any
+    /// damage whose source is a creature (the combat approximation shared
+    /// with `ControllerCreaturesCombatDamageCantBePrevented`).
+    CombatDamageCantBePrevented,
     /// CR 508.1g — creatures can't attack the source's controller (and, when
     /// `protect_planeswalkers`, a planeswalker they control) unless the
     /// attacking player pays `amount` generic mana for each such attacker.
@@ -325,6 +467,11 @@ pub enum StaticEffect {
     /// "You may cast [filter] spells as though they had flash." Sigarda's
     /// Aid (Auras + Equipment). Consulted at the cast-timing gate.
     ControllerSpellsHaveFlash { filter: SelectionRequirement },
+    /// "Each instant and sorcery card in your graveyard has flashback. The
+    /// flashback cost is equal to that card's mana cost." Lier, Disciple of
+    /// the Drowned. Consulted by the flashback-cast path and surfaced in the
+    /// graveyard view so the UI offers the recast.
+    GraveyardInstantsSorceriesHaveFlashback,
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a
@@ -337,14 +484,27 @@ pub enum StaticEffect {
     DoubleTokens,
     /// "If one or more counters would be put on a permanent you control,
     /// twice that many of those counters are put on that permanent instead."
-    /// The counter-half of CR 614.16, matching Doubling Season / Hardened
-    /// Scales / Branching Evolution-class permanents. Read at
-    /// `Effect::AddCounter` resolution time: each active `DoubleCounters`
-    /// permanent the controller has on the battlefield doubles the counter
-    /// count (2 doublers → 4×, …). Composes multiplicatively with
-    /// `DoubleTokens` for cards that print both halves (Doubling Season
-    /// itself ships both static abilities).
+    /// The counter-half of CR 614.16, matching Doubling Season / Branching
+    /// Evolution-class permanents. Read at `Effect::AddCounter` resolution
+    /// time: each active `DoubleCounters` permanent the controller has on the
+    /// battlefield doubles the counter count (2 doublers → 4×, …). Composes
+    /// multiplicatively with `DoubleTokens` for cards that print both halves
+    /// (Doubling Season itself ships both static abilities).
     DoubleCounters,
+    /// CR 614.16 additive variant — "If one or more +1/+1 counters would be
+    /// put on a creature you control, that many *plus one* are put on it
+    /// instead." Hardened Scales / Conclave Mentor / Kalonian Hydra-class.
+    /// Each active copy adds one to a +1/+1 placement onto the controller's
+    /// creatures; applied before any `DoubleCounters` multiplier.
+    ExtraPlusOneCounters,
+    /// CR 614.16 additive variant for *every* counter kind — "If one or more
+    /// counters would be put on an artifact or creature you control, that many
+    /// plus one of each of those kinds are put on it instead."
+    /// Winding Constrictor-class. Each active copy adds one to a placement of
+    /// any kind onto the controller's creatures (the "counters you'd get"
+    /// player-counter clause is approximated away); applied alongside
+    /// `ExtraPlusOneCounters` before the `DoubleCounters` multiplier.
+    ExtraCounterAllKinds,
     /// CR 614.2 — "If a source would deal damage … it deals double that
     /// damage instead." A *global* damage-replacement (Furnace of Rath,
     /// Gratuitous Violence-class, Fiery Emancipation as ×2 stacking): read
@@ -358,11 +518,23 @@ pub enum StaticEffect {
     /// Innocent.) Read by `GameState::damage_halvers`; applied after any
     /// doublers at both damage funnels.
     HalveDamageDealt,
+    /// CR 615 — "Prevent all combat damage that would be dealt to this." A
+    /// self-static the combat-damage resolver honors (zeroing damage marked on
+    /// the permanent) unless combat damage can't be prevented this turn (615.12).
+    /// Fog Bank, Guard Gomazoa.
+    PreventAllCombatDamageToThis,
     /// CR 614.5 — "If a source would deal damage to an opponent or a
     /// permanent an opponent controls, it deals double that damage instead."
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's
     /// opponents; consulted by `GameState::scale_damage_to`.
     DoubleDamageToOpponents,
+    /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
+    /// opponent or a permanent an opponent controls, it deals double that
+    /// damage instead." (Solphim, Mayhem Dominus.) Noncombat-only and also
+    /// requires the *source* to be controlled by the static's controller, so
+    /// it's applied in the `deal_damage_to_from` funnel rather than
+    /// `scale_damage_to`.
+    DoubleNoncombatDamageToOpponents,
     /// CR 614.5/615 — "If a source would deal damage to you or a permanent
     /// you control, prevent half that damage, rounded up." (Gisela.) The
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped
@@ -375,6 +547,12 @@ pub enum StaticEffect {
     /// `GameState::scale_damage_to` (additive bonus applied before the
     /// doublers/halvers).
     AddDamageToOpponents { source_color: Option<crate::mana::Color>, amount: u32 },
+    /// CR 614.x — "If a [color] source would deal damage to a player, it deals
+    /// that much damage plus `amount` to that player instead." Unlike
+    /// `AddDamageToOpponents`, this matches *any* controller's source of the
+    /// color and *every* player (Tok-Tok, Volcano Born). Applied in
+    /// `scale_damage_to` before the doublers/halvers.
+    AddDamageFromColorToPlayers { color: crate::mana::Color, amount: u32 },
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of
@@ -476,10 +654,23 @@ pub enum StaticEffect {
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
     ActivationCostReduction { amount: u32 },
+    /// CR 702.6 — "You may activate equip abilities any time you could cast an
+    /// instant" (Leonin Shikari). Lifts the sorcery-speed gate on the
+    /// controller's `GameAction::Equip`.
+    ControllerEquipAtInstantSpeed,
+    /// CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper,
+    /// Brass Squire-style discounts). Reduces the controller's equip-cost
+    /// generic by `amount`, never below the colored portion.
+    EquipCostReduction { amount: u32 },
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).
     ActivationTax { amount: u32 },
+    /// CR 606 — "Loyalty abilities of planeswalkers your opponents control
+    /// cost {N} more to activate" (Eidolon of Obstruction). Summed across the
+    /// taxers an activating player's opponents control and paid as extra
+    /// generic mana at `activate_loyalty_ability`.
+    OpponentLoyaltyActivationTax { amount: u32 },
     /// "During each of your turns, you may cast a permanent spell of each
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).
@@ -494,7 +685,16 @@ pub enum StaticEffect {
     /// controller's matching creatures. `exclude_source: true` skips the source
     /// itself ("**other** creatures …" — Adaptive Automaton); `false` includes
     /// it (Patchwork Banner). No effect while no type has been chosen.
-    AnthemForChosenType { power: i32, toughness: i32, #[serde(default)] exclude_source: bool },
+    /// `opponents: true` instead applies the (typically negative) modifier to
+    /// each *opponent's* creatures of the chosen type (Plague Engineer).
+    AnthemForChosenType {
+        power: i32,
+        toughness: i32,
+        #[serde(default)]
+        exclude_source: bool,
+        #[serde(default)]
+        opponents: bool,
+    },
     /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
     /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
     /// list is accepted on any spell whose controller has this static, not
@@ -667,10 +867,28 @@ pub enum StaticEffect {
         colors: Vec<crate::mana::Color>,
         threshold: u32,
     },
+    /// CR 700.5 — "Your devotion to each color and each combination of colors
+    /// is increased by one." Altar of the Pantheon. Each permanent the player
+    /// controls carrying this static adds 1 to every non-empty devotion query.
+    DevotionBonus,
+    /// CR 615 — "If a creature would deal combat damage to this creature,
+    /// prevent that damage and put a +1/+1 counter on this creature."
+    /// Ironscale Hydra. A self-only combat-damage replacement consulted at the
+    /// creature-vs-creature damage sites.
+    PreventCombatDamageToSelfAndGrow,
     /// CR 615 — "Prevent all damage that would be dealt to attacking
     /// creatures you control." Iroas, God of Victory. Consulted at both the
     /// combat strike-back and the shared non-combat damage funnel.
     PreventDamageToYourAttackers,
+    /// CR 615 — "Prevent all damage that would be dealt to you." Glacial Chasm.
+    /// Consulted at the player-directed branch of the shared damage funnel
+    /// (combat and noncombat alike), unless prevention is shut off this turn.
+    PreventAllDamageToController,
+    /// CR 615 — "Prevent all noncombat damage that would be dealt to creatures
+    /// you control." Mark of Asylum. Consulted at the shared (noncombat) damage
+    /// funnel for creature targets; combat damage is marked on a separate path
+    /// and is unaffected.
+    PreventNoncombatDamageToYourCreatures,
     /// CR 106.4 override — "If you would lose unspent mana, that mana
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.
@@ -697,12 +915,20 @@ pub enum StaticEffect {
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
     /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
     NoMaximumHandSize,
+    /// CR 509.1a — "Tapped creatures you control can block as though they were
+    /// untapped." While the controller has a permanent carrying this static, a
+    /// tapped creature they control is a legal blocker (Masako the Humorless).
+    TappedCreaturesCanBlock,
     /// "Spells with the chosen name cost {N} more to cast" — reads the
     /// source's `named_card` (stamped at ETB via `Effect::NameCard`).
     /// Disruptor Flute. Folded into `extra_cost_for_spell`.
     NamedSpellTax { amount: u32 },
     /// Meddling Mage — spells with the source's `named_card` can't be cast.
     NamedSpellCantBeCast,
+    /// Ashiok's Erasure — the controller's *opponents* can't cast spells with
+    /// the source's `named_card` (the exiled card's name). Unlike
+    /// `NamedSpellCantBeCast` (which locks everyone), this is controller-scoped.
+    OpponentsCantCastNamed,
     /// Dress Down / Humility-lite — all creatures lose all abilities
     /// (layer 6 `RemoveAllAbilities`).
     CreaturesLoseAllAbilities,
@@ -770,6 +996,11 @@ pub enum StaticEffect {
         own_only: bool,
         #[serde(default)]
         colors: Option<Vec<crate::mana::Color>>,
+        /// Restrict the redirect to cards whose printed types intersect this
+        /// list (Dryad Militant / Scavenging Ooze's instant-and-sorcery-only
+        /// graveyard hate). `None` = every card type.
+        #[serde(default)]
+        card_types: Option<Vec<crate::card::CardType>>,
         /// Stamp a void counter on each card this redirect exiles
         /// (Dauthi Voidwalker — its sac ability frees one for a free play).
         #[serde(default)]
@@ -795,6 +1026,11 @@ pub enum StaticEffect {
     /// the controller's permanents untap alongside the active player's (subject
     /// to the same Stun / `PreventUntap` / exert gates). No layer effect.
     UntapAllYoursEachUntapStep,
+    /// CR 502.3 — "Untap this permanent during each other player's untap step."
+    /// The source untaps itself on every untap step it doesn't already untap on
+    /// (i.e. whenever the active player is someone else). Thousand Moons
+    /// Infantry. Consulted by `do_untap` in a follow-up pass.
+    UntapSelfEachUntapStep,
     /// CR 614 — "If a nontoken creature an opponent controls would die, exile
     /// it instead." Consulted in `remove_from_battlefield_to_graveyard`: an
     /// opponent's nontoken creature bound for a graveyard from the battlefield
@@ -827,6 +1063,15 @@ pub enum StaticEffect {
     /// "Your opponents can't cast spells during your turn." Voice of
     /// Victory. Gated at the cast-action dispatch.
     OpponentsCantCastDuringYourTurn,
+    /// "During your turn, your opponents can't cast spells or activate
+    /// abilities of artifacts, creatures, or enchantments." Grand Abolisher.
+    /// Blocks both the cast dispatch (like `OpponentsCantCastDuringYourTurn`)
+    /// and the activated-ability dispatch for A/C/E sources.
+    OpponentsCantActDuringYourTurn,
+    /// CR 601 — "Your opponents can't cast spells from anywhere other than
+    /// their hands." Drannith Magistrate. Checked in `cast_from_zone_blocked`
+    /// for every non-hand cast path (flashback / escape / retrace / free-cast).
+    OpponentsCantCastFromAnywhereButHand,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -1080,6 +1325,22 @@ pub struct ActivatedAbility {
     /// Treasure`. Defaults to false.
     #[serde(default)]
     pub discard_self_cost: bool,
+    /// CR 702.177 — Exhaust: this activated ability can be activated only
+    /// once (per game, not per turn). Tracked per-permanent-instance in
+    /// `CardInstance.exhausted_abilities`, which — unlike `once_per_turn_used`
+    /// — is never cleared at turn start. Defaults to false.
+    #[serde(default)]
+    pub exhaust: bool,
+    /// Craft (CR 702.169) — exile `count` *other* objects matching this
+    /// filter from among permanents you control and/or cards in your
+    /// graveyard, as an additional cost. Pairs with
+    /// `Effect::ExileSelfReturnTransformed` (which exiles the source and
+    /// returns it transformed). Activate only as a sorcery
+    /// (`sorcery_speed: true`). The auto-picker exiles graveyard cards
+    /// first, then the lowest-power battlefield permanents, so higher-value
+    /// board pieces stay put. Defaults to None.
+    #[serde(default)]
+    pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

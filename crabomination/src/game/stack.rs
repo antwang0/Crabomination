@@ -169,6 +169,19 @@ impl GameState {
             next = TurnStep::EndCombat;
         }
 
+        // CR 506 — skip the active player's combat phase (Stonehorn
+        // Dignitary). When we'd enter Begin Combat with a banked skip charge,
+        // consume it and jump straight to the postcombat main — no
+        // begin-combat triggers, declares, or damage. (The post-main extra
+        // combat below is unaffected; only the scheduled combat is skipped.)
+        if next == TurnStep::BeginCombat
+            && self.step == TurnStep::PreCombatMain
+            && self.players[self.active_player_idx].skip_next_combat > 0
+        {
+            self.players[self.active_player_idx].skip_next_combat -= 1;
+            next = TurnStep::PostCombatMain;
+        }
+
         // CR 505.1b — additional combat phase. When the active player leaves
         // End of Combat with a banked extra phase, loop back to Begin Combat
         // (a fresh combat) instead of advancing to the postcombat main.
@@ -228,8 +241,15 @@ impl GameState {
                     // CR 502.2 — day/night turn-based check. Runs BEFORE
                     // do_untap so an extra turn (previous active == active)
                     // reads the real previous-turn spell count rather than
-                    // the counter do_untap is about to reset.
-                    self.check_day_night_transition(&mut events);
+                    // the counter do_untap is about to reset. A transition
+                    // here fires "day becomes night …" triggers (Brimstone
+                    // Vandal) — dispatch them before priority is given out.
+                    let mut dn_evs = Vec::new();
+                    self.check_day_night_transition(&mut dn_evs);
+                    if !dn_evs.is_empty() {
+                        self.dispatch_triggers_for_events(&dn_evs);
+                        events.append(&mut dn_evs);
+                    }
                     self.do_untap();
                 }
                 events.push(GameEvent::TurnStarted {
@@ -352,6 +372,8 @@ impl GameState {
                 self.spells_cast_this_turn = 0;
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;
+                    pl.noncreature_spells_cast_this_game_turn = 0;
+                    pl.nonartifact_spells_cast_this_game_turn = 0;
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
@@ -395,7 +417,8 @@ impl GameState {
             EventScope::AnotherOfYours => false,
             EventScope::FromYourGraveyard => false, // walked separately below
             EventScope::YourPermanentTargetedByOpponent
-            | EventScope::YourCreatureTargeted => false, // event-based
+            | EventScope::YourCreatureTargeted
+            | EventScope::EnchantedBySource => false, // event-based
             EventScope::ControllerAttackedByOpponent => false, // combat-based
         };
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
@@ -490,6 +513,9 @@ impl GameState {
                     dt.controller == active
                 }
                 (DelayedKind::NextEndStep, TurnStep::End) => true,
+                (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => {
+                    dt.controller == active
+                }
                 _ => false,
             };
             if matches {
@@ -629,11 +655,71 @@ impl GameState {
             } => {
                 let card = *card;
                 let card_id = card.id;
-                // CR 715 — while on an adventure the card is its instant/
-                // sorcery half, so it resolves down the spell path (and is
-                // exiled, not put onto the battlefield) regardless of its
+
+                // CR 702.140 — a creature with mutate merges onto its host
+                // permanent instead of entering on its own. If the host is no
+                // longer a legal mutate target it enters as a normal creature
+                // (CR 702.140i), so we only divert when the host is legal.
+                if let Some((host_id, on_top)) = card.mutate_onto {
+                    let legal_host = self.battlefield.iter().any(|c| {
+                        c.id == host_id
+                            && c.controller == caster
+                            && c.definition.is_creature()
+                            && !c
+                                .definition
+                                .has_creature_type(crate::card::CreatureType::Human)
+                    });
+                    if legal_host {
+                        let mut incoming = card;
+                        incoming.mutate_onto = None;
+                        let host = self
+                            .battlefield
+                            .iter_mut()
+                            .find(|c| c.id == host_id)
+                            .expect("legal_host verified");
+                        host.apply_mutate(incoming, on_top);
+                        events.push(GameEvent::Mutated { card_id: host_id });
+                        // CR 702.140f — "Whenever this creature mutates" from
+                        // every card in the merged pile (now unioned into the
+                        // host's live definition).
+                        let mutate_effects: Vec<Effect> = self
+                            .battlefield
+                            .iter()
+                            .find(|c| c.id == host_id)
+                            .map(|c| {
+                                c.definition
+                                    .triggered_abilities
+                                    .iter()
+                                    .filter(|t| {
+                                        t.event.kind == EventKind::Mutated
+                                            && matches!(t.event.scope, EventScope::SelfSource)
+                                    })
+                                    .map(|t| t.effect.clone())
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        for effect in mutate_effects {
+                            let auto_target = self.auto_target_for_effect(&effect, caster);
+                            self.stack.push(
+                                TriggerPush::new(host_id, caster, effect)
+                                    .target(auto_target)
+                                    .trigger_source(Some(
+                                        crate::game::effects::EntityRef::Permanent(host_id),
+                                    ))
+                                    .build(),
+                            );
+                        }
+                        let mut sba = self.check_state_based_actions();
+                        events.append(&mut sba);
+                        return Ok(events);
+                    }
+                }
+
+                // CR 715 / 702.183 — while cast as its Adventure/Omen half the
+                // card is its instant/sorcery half, so it resolves down the
+                // spell path (not onto the battlefield) regardless of its
                 // creature card type.
-                let is_noncreature = card.adventuring || !card.definition.is_creature();
+                let is_noncreature = card.casting_alt_half() || !card.definition.is_creature();
 
                 // CR 608.2b — an Aura spell re-checks its enchant target as
                 // it tries to resolve; if the target is illegal (gone,
@@ -643,7 +729,7 @@ impl GameState {
                 // are exempt: CR 702.103e resolves them as the creature.
                 if card.definition.is_aura()
                     && !card.bestowed
-                    && !card.adventuring
+                    && !card.casting_alt_half()
                     && let Some(t) = &target
                 {
                     let gone = matches!(t, Target::Permanent(tid)
@@ -666,7 +752,7 @@ impl GameState {
                     }
                 }
 
-                if card.definition.is_permanent() && !card.adventuring {
+                if card.definition.is_permanent() && !card.casting_alt_half() {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
                     // copied object's ETB triggers (CR 707.5).
@@ -686,16 +772,37 @@ impl GameState {
                     // BEFORE the next state-based-action sweep, so a printed
                     // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
                     let enters_spec = card.definition.enters_with_counters.clone();
+                    // CR 614.12 — Patched Plaything's "enters with two -1/-1
+                    // counters if you cast it from your hand" reads the cast
+                    // zone via `Predicate::CastFromHand`.
+                    let cast_from_hand = card.cast_from_hand;
                     let mut card = card;
                     // CR 608.3a — a permanent spell enters under the control
                     // of its caster (matters for casts of opponent-owned
                     // cards: Gonti, Hostage Taker).
                     card.controller = caster;
                     card.controller = self.apply_etb_control_replacement(&card, card.controller);
+                    // Stamp the cast cost so ETB riders can read it after the
+                    // spell leaves the stack (Astelli Reclaimer's MV-≤-X return).
+                    card.cast_mana_spent = mana_spent;
                     let room_door = card.definition.room.as_ref().map(|_| {
                         usize::from(card.split_cast == Some(1))
                     });
                     self.battlefield.push(card);
+                    // CR 310.6 — a cast Siege's controller chooses an opponent
+                    // to protect it (the lone opponent in 2-player; multiplayer
+                    // choice is a follow-up).
+                    if let Some(c) = self.battlefield.iter().find(|c| c.id == card_id)
+                        && c.definition.is_battle()
+                        && c.protected_by.is_none()
+                    {
+                        let ctrl = c.controller;
+                        let protector = (0..self.players.len())
+                            .find(|&pl| pl != ctrl && self.players[pl].is_alive());
+                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                            c.protected_by = protector;
+                        }
+                    }
                     // CR 614.13 — enters-tapped replacements (Imposing
                     // Sovereign, Urabrask) apply to cast permanents too.
                     self.apply_enters_tapped_replacement(card_id);
@@ -746,7 +853,7 @@ impl GameState {
                     // CR 122.1 — Solemnity drops enters-with-counters.
                     if self.counters_locked() { counter_specs.clear(); }
                     for (kind, value) in counter_specs {
-                        let etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
+                        let mut etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
                             card_id,
                             self.battlefield
                                 .iter()
@@ -761,6 +868,7 @@ impl GameState {
                             converged_value,
                             mana_spent,
                         );
+                        etb_ctx.cast_from_hand = cast_from_hand;
                         let base = self.evaluate_value(&value, &etb_ctx);
                         if base > 0 {
                             // CR 614.16: counter-doubling replacement effects
@@ -866,6 +974,13 @@ impl GameState {
                             self.battlefield.iter_mut().find(|c| c.id == card_id)
                     {
                         aura.attached_to = Some(tid);
+                        // CR 303.4 — fire "an Aura you control became attached"
+                        // triggers (Siona). Only for true Auras, not bestowed
+                        // creature spells (which entered as creatures).
+                        if self.battlefield.iter().any(|c| c.id == card_id && c.definition.is_aura())
+                        {
+                            events.push(GameEvent::AuraAttached { aura: card_id, attached_to: tid });
+                        }
                     }
 
                     // Evoke: schedule a self-sacrifice trigger that resolves
@@ -930,6 +1045,38 @@ impl GameState {
                             source: card_id,
                             kind: crate::game::types::DelayedKind::NextEndStep,
                             effect: Effect::SacrificeSource,
+                            target: None,
+                            bound_token: None,
+                            fires_once: true,
+                        });
+                    }
+
+                    // Warp (EOE): a permanent cast for its warp cost is exiled
+                    // at the beginning of the next end step and may be recast
+                    // from exile later for its full cost. Arm a delayed
+                    // exile-then-grant-may-play; clear the flag once consumed.
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && c.warped
+                    {
+                        c.warped = false;
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: caster,
+                            source: card_id,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::Seq(vec![
+                                Effect::Move {
+                                    what: crate::effect::Selector::This,
+                                    to: crate::effect::ZoneDest::Exile,
+                                },
+                                Effect::GrantMayPlay {
+                                    what: crate::effect::Selector::LastMoved,
+                                    duration: crate::card::MayPlayDuration::WhileExiled,
+                                    to_owner: true,
+                                    exile_after: false,
+                                    pay_own_cost: true,
+                                    any_color: false,
+                                },
+                            ]),
                             target: None,
                             bound_token: None,
                             fires_once: true,
@@ -1069,6 +1216,7 @@ impl GameState {
                 mana_spent,
                 event_amount,
                 intervening_if,
+                additional_targets,
             } => {
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that
@@ -1112,6 +1260,7 @@ impl GameState {
                     mana_spent,
                     trigger_source,
                     event_amount,
+                    additional_targets,
                 )?;
                 if had_lki {
                     self.resolving_lki_source = None;
@@ -1347,8 +1496,24 @@ impl GameState {
         // CR 502.3 — Seedborn Muse: any player *other* than the active player
         // who controls an `UntapAllYoursEachUntapStep` permanent also untaps
         // their permanents during this untap step.
+        // CR 502.3 — a player who's been made to skip their next untap step
+        // (Yosei) doesn't untap; consume one charge. Seedborn-style other
+        // untappers still untap their own permanents.
+        let active_skips_untap = if self.players[p].skip_next_untap_step > 0 {
+            self.players[p].skip_next_untap_step -= 1;
+            true
+        } else {
+            false
+        };
+        // Bontu's Last Reckoning — the active player's lands skip this untap.
+        let active_lands_skip_untap = if self.players[p].lands_dont_untap_next_untap > 0 {
+            self.players[p].lands_dont_untap_next_untap -= 1;
+            true
+        } else {
+            false
+        };
         let untappers: Vec<usize> = {
-            let mut u = vec![p];
+            let mut u = if active_skips_untap { vec![] } else { vec![p] };
             for c in &self.battlefield {
                 if c.controller != p
                     && !u.contains(&c.controller)
@@ -1410,8 +1575,25 @@ impl GameState {
                     }
                 }
             }
+            // Bontu's Last Reckoning — block the active player's lands.
+            if active_lands_skip_untap {
+                for c in &self.battlefield {
+                    if c.controller == p && c.definition.is_land() {
+                        blocked.insert(c.id);
+                    }
+                }
+            }
             blocked
         };
+        // Entrancing Lyre tap-lock: gather the ids referenced as a lock source
+        // and the set of currently-tapped permanents. A lock source keeps
+        // itself tapped (the "you may choose not to untap this artifact"
+        // clause, modeled as: stay tapped while it still locks a creature); a
+        // locked permanent skips its untap while its source remains tapped.
+        let lock_sources: std::collections::HashSet<crate::card::CardId> =
+            self.battlefield.iter().filter_map(|c| c.untap_locked_by).collect();
+        let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
+            self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -1441,6 +1623,25 @@ impl GameState {
                     }
                     continue;
                 }
+                // Entrancing Lyre — a lock source keeps itself tapped while it
+                // still locks a creature.
+                if card.tapped && lock_sources.contains(&card.id) {
+                    if active {
+                        card.summoning_sick = false;
+                    }
+                    continue;
+                }
+                // A locked permanent skips its untap while its source is still
+                // tapped on the battlefield; otherwise the lock releases.
+                if let Some(src) = card.untap_locked_by {
+                    if tapped_now_set.contains(&src) {
+                        if active {
+                            card.summoning_sick = false;
+                        }
+                        continue;
+                    }
+                    card.untap_locked_by = None;
+                }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
                 } else {
@@ -1452,6 +1653,30 @@ impl GameState {
                 if active {
                     card.summoning_sick = false;
                 }
+            }
+        }
+        // CR 502.3 — "untap this during each other player's untap step"
+        // (Thousand Moons Infantry). On someone else's untap step, untap each
+        // such permanent its controller didn't already untap above (Stun
+        // counters still interpose). Summoning sickness is untouched — it only
+        // clears on the controller's own turn boundary.
+        for card in &mut self.battlefield {
+            if untappers.contains(&card.controller) {
+                continue;
+            }
+            if !card
+                .definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::UntapSelfEachUntapStep))
+            {
+                continue;
+            }
+            if card.counter_count(CounterType::Stun) > 0 {
+                card.remove_counters(CounterType::Stun, 1);
+            } else if card.tapped {
+                untapped_now.push(card.id);
+                card.tapped = false;
             }
         }
         // CR 701.38 — goad lasts "until your next turn." When the goader's
@@ -1475,6 +1700,9 @@ impl GameState {
         // "Opponents' spells cost more until your next turn" expires too
         // (Elspeth Conquers Death II).
         self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
+        // "Opponents can't cast spells named X until your next turn"
+        // (Academic Probation mode 0) expires as the lock owner's turn begins.
+        self.players[p].opponents_cant_cast_named.clear();
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {
@@ -1484,6 +1712,9 @@ impl GameState {
             ) && dt.controller == p)
         });
         self.players[p].extra_land_plays = 0;
+        // CR 702.179 — "speed increases once on each of your turns": clear the
+        // active player's per-turn speed-bump flag as their turn begins.
+        self.players[p].speed_increased_this_turn = false;
         // Raid (CR 702.108): the active player hasn't attacked yet this turn.
         self.players[p].attacked_this_turn = false;
         self.players[p].creatures_attacked_this_turn = 0;
@@ -1501,11 +1732,23 @@ impl GameState {
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
             pl.spells_uncounterable_this_turn = false;
+            pl.hexproof_from_colors_this_turn.clear();
             pl.cast_blue_or_black_this_turn = false;
             pl.cant_cast_noncreature_this_turn = false;
             pl.silenced_this_turn = false;
+            pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
+            pl.descended_this_turn = false;
+            pl.descend_count_this_turn = 0;
+            pl.discarded_this_turn.clear();
+            pl.permanents_sacrificed_this_turn = 0;
+            // CR 702.179 — Freerunning's combat-damage gate is per-turn.
+            pl.dealt_combat_damage_to_player_this_turn = false;
+            // CR 700.13 — "committed a crime this turn" resets each turn.
+            pl.committed_crime_this_turn = false;
+            // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
+            pl.play_from_top_this_turn = false;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters
@@ -1526,10 +1769,14 @@ impl GameState {
         // powers Witherbloom "if a creature died under your control this
         // turn" end-step payoffs (Essenceknit Scholar).
         self.players[p].creatures_died_this_turn = 0;
+        self.players[p].zuberas_died_this_turn = 0;
         self.players[p].escalating_resolutions_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
         self.players[p].permanent_left_battlefield_this_turn = false;
+        // EOE Void — reset the game-wide "a nonland permanent left this turn"
+        // flag at the turn boundary.
+        self.nonland_permanent_left_bf_this_turn = false;
         // Reset the "cards exiled this turn" tally; powers Strixhaven
         // "if one or more cards were put into exile this turn" payoffs
         // (Ennis the Debate Moderator) per turn.
@@ -1705,6 +1952,8 @@ impl GameState {
         // tracker (used by Fractal Tender's end-step trigger). Resetting
         // at cleanup is the canonical "until end of turn" scope.
         self.permanents_gained_counter_this_turn.clear();
+        // CR 603-style "Nth time this turn" escalation counters reset.
+        self.ability_resolutions_this_turn.clear();
         // Clear transient granted triggers (Rabid Attack, Root
         // Manipulation EOT-duration grants).
         self.granted_triggers_eot.clear();
@@ -1719,17 +1968,21 @@ impl GameState {
                 crate::game::types::DelayedKind::WhenCardDies(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                    | crate::game::types::DelayedKind::EachCombatThisTurn
             )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
+        self.prevent_combat_damage_except = None;
         self.combat_damage_prevented_creatures.clear();
+        self.auras_at_death.clear();
         self.creature_etb_steal_this_turn.clear();
         self.search_tax_paid_this_turn.clear();
         self.damage_prevented_sources.clear();
         self.cant_block_pairs.clear();
+        self.attack_despite_defender_this_turn.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();
@@ -1745,6 +1998,7 @@ impl GameState {
         // at each upkeep, so the rotation is per game turn, not per player).
         for pl in &mut self.players {
             pl.creatures_entered_last_turn = std::mem::take(&mut pl.creatures_entered_this_turn);
+            pl.artifacts_entered_this_turn = 0;
         }
         // CR 500.7 — extra turns. If the active player banked an extra
         // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead
@@ -1866,6 +2120,31 @@ impl GameState {
     pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
+        // CR 603.8 — state-triggered flip (Student of Elements: "When this
+        // creature has flying, flip it"). Cheap guard so the common board pays
+        // nothing; only compute the layer view when an unflipped state-flip
+        // card is present, then flip any whose *computed* keywords now satisfy
+        // the condition. Flipping clears the condition, so it fires once.
+        if self
+            .battlefield
+            .iter()
+            .any(|c| c.definition.flip_when_has_keyword.is_some() && !c.flipped)
+        {
+            let computed = self.compute_battlefield();
+            let to_flip: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter_map(|c| {
+                    let kw = c.definition.flip_when_has_keyword.as_ref()?;
+                    let has = computed.iter().find(|p| p.id == c.id)?.keywords.contains(kw);
+                    (has && !c.flipped).then_some(c.id)
+                })
+                .collect();
+            for id in to_flip {
+                self.flip_permanent(id, &mut events);
+            }
+        }
+
         // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
         // SBA removes `N` of each kind, where `N` is the smaller count).
         for card in &mut self.battlefield {
@@ -1931,10 +2210,20 @@ impl GameState {
                     })
                     .push((c.id, c.definition.name.to_string()));
             }
+            // CR 704.5j exception — a same-name group of exactly two whose
+            // members all carry `legend_pair_exempt` (Brothers Yamazaki) is
+            // skipped: the legend rule doesn't apply to them.
+            let pair_exempt = |dups: &[(CardId, String)]| -> bool {
+                dups.len() == 2
+                    && dups.iter().all(|(id, _)| {
+                        self.battlefield_find(*id)
+                            .is_some_and(|c| c.definition.legend_pair_exempt)
+                    })
+            };
             let mut out = Vec::new();
             for k in order {
                 let dups = groups.remove(&k).unwrap_or_default();
-                if dups.len() > 1 {
+                if dups.len() > 1 && !pair_exempt(&dups) {
                     out.push((k.0, k.1.to_string(), dups));
                 }
             }
@@ -2068,7 +2357,21 @@ impl GameState {
                 if c.is_indestructible() {
                     return false;
                 }
-                if (c.damage as i32) >= computed_toughness {
+                // Zilortha — lethal is measured against power, not toughness,
+                // for any creature a LethalDamageByPower static matches. The
+                // power threshold can be 0, so gate on actual damage being
+                // marked (a 0-power creature dies only once it's been dealt
+                // damage; an undamaged one survives — CR 704.5g ruling).
+                let lethal_threshold = if self.lethal_damage_by_power(c.id) {
+                    computed
+                        .iter()
+                        .find(|cp| cp.id == c.id)
+                        .map(|cp| cp.power)
+                        .unwrap_or(c.power())
+                } else {
+                    computed_toughness
+                };
+                if c.damage > 0 && (c.damage as i32) >= lethal_threshold {
                     return true;
                 }
                 c.dealt_deathtouch_damage && c.damage > 0
@@ -2219,6 +2522,14 @@ impl GameState {
             if controller_idx < self.players.len() {
                 self.players[controller_idx].creatures_died_this_turn =
                     self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+                // Zubera cycle: count Zubera deaths separately (read off the
+                // still-present dying creature's subtypes).
+                if self.battlefield.iter().any(|c| c.id == id
+                    && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
+                {
+                    self.players[controller_idx].zuberas_died_this_turn =
+                        self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
+                }
             }
             // CR 603.10 — stash an LKI snapshot before the creature leaves
             // so a "deals damage / makes tokens equal to its power" dies
@@ -2279,6 +2590,21 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
+        // CR 310.10 / 704.5x — a battle with no defense counters is defeated.
+        let defeated_battles: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.is_battle()
+                    && c.definition.defense > 0
+                    && c.counter_count(crate::card::CounterType::Defense) == 0
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in defeated_battles {
+            self.defeat_battle(id, &mut events);
+        }
+
         // CR 702.103e — a bestowed permanent whose enchanted creature has
         // left the battlefield is no longer an Aura; it stays in play and
         // reverts to a creature (clear `bestowed` + the attachment link).
@@ -2314,8 +2640,50 @@ impl GameState {
             .map(|c| c.id)
             .collect();
         for id in orphaned_auras {
+            // Record (aura → host) before the Aura leaves, so "whenever an
+            // enchanted creature dies" payoffs can count the Auras that were
+            // on the dying host (Hateful Eidolon, Dawn Evangel). Only meaningful
+            // when the lost host is gone (the common death case).
+            if let Some(aura) = self.battlefield.iter().find(|c| c.id == id)
+                && let Some(host) = aura.attached_to
+                && !self.battlefield.iter().any(|b| b.id == host)
+            {
+                self.auras_at_death.entry(host).or_default().push((id, aura.controller));
+                // Snapshot the leaving Aura so its "when enchanted creature
+                // dies" trigger (EnchantedBySource) can fire via LKI even
+                // though the Aura itself is gone (Minion's Return).
+                self.died_card_snapshots.insert(id, aura.clone());
+            }
             // Fire any leaves-the-battlefield triggers on the Aura itself
             // (CR 603.6d) — e.g. Rancor's "return it to its owner's hand".
+            events.append(&mut self.remove_to_graveyard_with_triggers(id));
+        }
+
+        // CR 704.5n / 303.4f — an Aura attached to an object it can no longer
+        // legally enchant (host lost the required type, or a "you control"
+        // Aura's host changed controllers) is put into its owner's graveyard.
+        // Only checked when the Aura's "enchant ___" filter is recoverable and
+        // its (live) host fails that filter — distinct from the missing-host
+        // sweep above. Bestowed Auras are exempt (their host loss reverts them
+        // to creatures, handled earlier).
+        let illegally_attached: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.is_aura() && !c.bestowed)
+            .filter_map(|c| {
+                let host = c.attached_to?;
+                let filter = c.definition.aura_enchant_filter()?;
+                let host_live = self.battlefield.iter().any(|b| b.id == host);
+                if host_live
+                    && !self.evaluate_requirement(filter, &Target::Permanent(host), c.controller)
+                {
+                    Some(c.id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        for id in illegally_attached {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
@@ -2511,7 +2879,7 @@ impl GameState {
     /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
     pub(crate) fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
-            let card = self.battlefield.remove(pos);
+            let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
@@ -2526,7 +2894,7 @@ impl GameState {
             // `ExileDyingOpponentCreatures` static controlled by an opponent of
             // the dying creature, redirect to exile, and capture its reflexive
             // "when you do" effect to fire after placement.
-            let valentin_redirect: Option<(usize, Option<Effect>)> = if card.definition.is_creature()
+            let valentin_redirect: Option<(CardId, usize, Option<Effect>)> = if card.definition.is_creature()
                 && !card.is_token
             {
                 self.battlefield.iter().find_map(|src| {
@@ -2535,7 +2903,7 @@ impl GameState {
                             &sa.effect
                             && src.controller != card.controller
                         {
-                            Some((src.controller, when_you_do.as_deref().cloned()))
+                            Some((src.id, src.controller, when_you_do.as_deref().cloned()))
                         } else {
                             None
                         }
@@ -2570,12 +2938,23 @@ impl GameState {
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
             }
+            // EOE Void — a nonland permanent left the battlefield this turn.
+            if !card.definition.is_land() {
+                self.nonland_permanent_left_bf_this_turn = true;
+            }
+            // Stamp `exiled_with` so the static's controller can recur the
+            // card later (Gisa, Glorious Resurrector's upkeep mass-reanimate).
+            if let (Some((src_id, _, _)), crate::card::Zone::Exile) =
+                (&valentin_redirect, resolved)
+            {
+                card.exiled_with = Some(*src_id);
+            }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
-            if let Some((controller, Some(effect))) = valentin_redirect {
+            if let Some((_src, controller, Some(effect))) = valentin_redirect {
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, None);
                 self.stack.push(
@@ -2602,9 +2981,21 @@ impl GameState {
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
             }
+            // EOE Void — a nonland permanent left the battlefield this turn.
+            if !card.definition.is_land() {
+                self.nonland_permanent_left_bf_this_turn = true;
+            }
+            // CR 603.6 — exile is a non-graveyard exit: a creature leaves
+            // without dying (Dour Port-Mage / Three Tree Scribe watchers).
+            let leaver =
+                (card.definition.is_creature()).then_some((card.id, card.controller));
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
+            if let Some((card_id, controller)) = leaver {
+                events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
+            }
+            self.dispatch_triggers_for_events(&events);
         }
     }
 
@@ -2630,6 +3021,13 @@ impl GameState {
             }
             return;
         }
+        // CR 702.140e — a merged (mutated) permanent leaves as its components.
+        if !card.mutate_stack.is_empty() && zone != Zone::Battlefield {
+            for part in std::mem::take(&mut card.mutate_stack) {
+                self.place_card_at_resolved_zone(part, zone);
+            }
+            return;
+        }
         // CR 702.95h — a card leaving the battlefield is no longer Soulbond-
         // paired. Clear its own link so a later re-entry can re-pair cleanly
         // (the SBA in `check_state_based_actions` clears the partner's side).
@@ -2637,6 +3035,18 @@ impl GameState {
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();
+        // The graveyard→exile redirect (Rest in Peace / Leyline / Disturb back
+        // face, CR 614.6 / 702.146e) and its void-counter rider read the back
+        // face, so capture them *before* the CR 712.4 front-face revert.
+        let exile_on_graveyard = self.graveyard_exiled_for(&card) || card.disturb_back_exiles();
+        let void_counter_on_exile = self.graveyard_exile_redirects(&card).1;
+        // CR 711.6 / 712.4 — flip cards and transformed DFCs revert to their
+        // unflipped / front face off the battlefield.
+        card.revert_flip();
+        card.revert_transform();
+        // CR 702.160c — a prototype permanent has only its printed
+        // (full, colorless) characteristics off the battlefield.
+        card.revert_prototype();
         // CR 709.5c — Room unlocked designations are battlefield-only.
         card.reset_room_doors();
         // CR 707 — a temporary copy reverts as it leaves.
@@ -2653,9 +3063,9 @@ impl GameState {
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
             // graveyard arrival to exile; CR 702.146e — so does a Disturb
             // back face.
-            Zone::Graveyard if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() => {
+            Zone::Graveyard if exile_on_graveyard => {
                 let mut card = card;
-                if self.graveyard_exile_redirects(&card).1 {
+                if void_counter_on_exile {
                     card.add_counters(crate::card::CounterType::Void, 1);
                 }
                 self.exile.push(card)
@@ -2784,6 +3194,12 @@ impl GameState {
         {
             self.players[controller_idx].creatures_died_this_turn =
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+            if self.battlefield.iter().any(|c| c.id == id
+                && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
+            {
+                self.players[controller_idx].zuberas_died_this_turn =
+                    self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
+            }
         }
         // Snapshot the card if it carries a SelfSource `PermanentSacrificed`
         // trigger so the dispatcher can fire it from last-known info after the

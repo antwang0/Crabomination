@@ -1037,6 +1037,7 @@ fn spawn_pack_card_tile(
                 ..default()
             },
             BackgroundColor(theme::FIELD_BG),
+            theme::HoverTint::new(theme::FIELD_BG),
             PackCardButton { pack_index },
             // Card name is stamped onto the tile so the alt-hover
             // tooltip system can read it without re-walking the pack
@@ -1473,21 +1474,27 @@ fn spawn_deckbuilding_screen(
                             session.main_total()
                         )
                     };
-                    right.spawn((
+                    let confirm_bg = if confirm_enabled {
+                        theme::ACCENT_GREEN
+                    } else {
+                        theme::BUTTON_DISABLED_BG
+                    };
+                    let mut confirm = right.spawn((
                         Button,
                         Node {
                             padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                             justify_content: JustifyContent::Center,
                             ..default()
                         },
-                        BackgroundColor(if confirm_enabled {
-                            theme::ACCENT_GREEN
-                        } else {
-                            Color::srgba(0.30, 0.30, 0.35, 0.8)
-                        }),
+                        BackgroundColor(confirm_bg),
                         ConfirmDeckButton,
-                    ))
-                    .with_children(|b| {
+                    ));
+                    // Only brighten on hover while the action is actually
+                    // available — a disabled button shouldn't feel clickable.
+                    if confirm_enabled {
+                        confirm.insert(theme::HoverTint::new(confirm_bg));
+                    }
+                    confirm.with_children(|b| {
                         b.spawn((
                             Text::new(confirm_label),
                             ui_fonts.tf(16.0),
@@ -1519,6 +1526,7 @@ fn spawn_deckbuild_tile(
                 ..default()
             },
             BackgroundColor(theme::FIELD_BG),
+            theme::HoverTint::new(theme::FIELD_BG),
             DeckbuildCardButton { in_main, index },
         ))
         .with_children(|tile| {
@@ -1569,7 +1577,8 @@ fn spawn_basic_row(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, color:
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.40, 0.20, 0.20, 1.0)),
+                BackgroundColor(theme::BUTTON_DANGER_BG),
+                theme::HoverTint::new(theme::BUTTON_DANGER_BG),
                 BasicAdjustButton { color, delta: -1 },
             ))
             .with_children(|b| {
@@ -1597,7 +1606,8 @@ fn spawn_basic_row(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, color:
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.20, 0.40, 0.20, 1.0)),
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                theme::HoverTint::new(theme::BUTTON_PRIMARY_BG),
                 BasicAdjustButton { color, delta: 1 },
             ))
             .with_children(|b| {
@@ -1687,6 +1697,7 @@ fn spawn_opponent_select_screen(
                             ..default()
                         },
                         BackgroundColor(theme::FIELD_BG),
+                        theme::HoverTint::new(theme::FIELD_BG),
                         OpponentChoiceButton { seat },
                     ))
                     .with_children(|tile| {
@@ -1761,7 +1772,8 @@ fn spawn_opponent_select_screen(
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgba(0.30, 0.30, 0.35, 0.95)),
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    theme::HoverTint::new(theme::BUTTON_NEUTRAL_BG),
                     DraftBackToMenuButton,
                 ))
                 .with_children(|b| {

@@ -546,17 +546,13 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
 /// payoff that puts pressure on the opp's library while resurrecting
 /// the controller's own creatures off the milled cards.
 pub fn pestilent_cauldron() -> CardDefinition {
-    // Push (modern_decks, batch 101): the back-face Restorative Burst is
-    // now defined (3-mana sorcery: each opp loses 4 life and you gain
-    // 4 life — printed two-target lifegain collapsed to a fixed drain
-    // pattern). The MDFC transform-from-graveyard pipeline is still
-    // engine-wide ⏳ — the engine's `cast_spell_back_face` walks hand
-    // only, so the back face isn't directly reachable via the printed
-    // "exile transformed under owner's control" rider after sacking
-    // Pestilent Cauldron. The back face is preserved on the
-    // CardDefinition so a future MDFC-from-graveyard pipeline lights
-    // up automatically. From-hand cast paths can also exercise the
-    // back face for testing.
+    // The back-face Restorative Burst ({2}{B} Sorcery: drain 4) is defined on
+    // `back_face`. The sac ability grants a one-shot
+    // `Effect::GrantCastBackFromGraveyard`, so after sacrificing the Cauldron
+    // the controller may cast Restorative Burst transformed from the graveyard
+    // (`GameAction::CastSpellBack` now hops a permitted graveyard card into
+    // hand for the back-face cast pipeline). The back is also castable from
+    // hand as a normal MDFC.
     use crate::mana::g;
     let restorative_burst = CardDefinition {
         name: "Restorative Burst",
@@ -590,6 +586,10 @@ pub fn pestilent_cauldron() -> CardDefinition {
                     to: Selector::You,
                     amount: Value::Const(3),
                 },
+                // "...then you may cast Restorative Burst transformed." Grant a
+                // one-shot permission to cast the back face from the graveyard
+                // (the Cauldron is already there from the sacrifice cost).
+                Effect::GrantCastBackFromGraveyard { what: Selector::This },
             ]),
             once_per_turn: false,
             sorcery_speed: false,
@@ -629,7 +629,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Orc, CreatureType::Shaman],
             ..Default::default()
         },
         power: 1,

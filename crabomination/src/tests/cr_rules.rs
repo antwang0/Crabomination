@@ -4,10 +4,37 @@
 //! death-replacement at the destroy funnel (CR 614), Exchange control
 //! (CR 701.12), Fight + deathtouch (CR 701.14 / 702.2), and the
 //! defending-player binding for "a creature you control attacks"
-//! triggers (CR 509.2 / 603.2), Domain (CR 702.43), and Equipment-granted
-//! triggers resolving on the Equipment (CR 702.6e).
+//! triggers (CR 509.2 / 603.2), Domain (CR 702.43), Equipment-granted
+//! triggers resolving on the Equipment (CR 702.6e), Prototype (CR 702.160),
+//! Ward—pay-life-equal-to-power (CR 702.21), once-each-turn triggers
+//! (CR 603.3d), Defender + conditional attack override (CR 702.12),
+//! delayed "when you cast your next spell" triggers (CR 603.7e), counters
+//! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.165),
+//! Survival (CR 702.180), the fixed-threshold power block restriction
+//! (CR 509.1b — Questing Beast), "lose half your life, rounded up"
+//! (CR 120.6), "up to N target" spells accepting fewer targets
+//! (CR 601.2c), scoped unpreventable combat damage (CR 615.12 — Questing
+//! Beast vs. fog), the stun-counter untap replacement (CR 122.1c),
+//! Cycling (CR 702.29), Cleave bracket-removal (CR 702.148), Training
+//! (CR 702.149), Exploit payoffs (CR 702.110), and reflexive
+//! sacrifice costs (CR 701.16 — `Effect::MaySacrifice`), token-created
+//! triggers (CR 111.10 — `EventKind::TokenCreated`) including the
+//! token-doubling interaction (CR 614.13), attack-only "can't attack
+//! unless you control N" restrictions (CR 508.1a), the Ring-bearer's
+//! granted Legendary supertype (CR 701.54c / 205.4b), block-only combat
+//! restrictions (CR 509.1c), one-sided "deals damage equal to its
+//! power" effects (CR 701.12-style), Craft (CR 702.169), the Descend ability
+//! word (CR 207.2c — permanent cards in the graveyard), losing on an
+//! empty-library draw (CR 104.3c / 704.5c), characteristic-defining P/T that
+//! recomputes live (CR 604.3 — Lhurgoyf), ownership independent of control
+//! (CR 108.3 / 800.4a — Gruul Charm's "gain control of permanents you own"),
+//! and Cascade granted to other spells (CR 702.85 — The First Sliver),
+//! abilities-only mana spend restrictions (CR 605.1c — Omen Hawker),
+//! controller-graveyard characteristic-defining P/T (CR 604.3 — Nethergoyf),
+//! and "can't block" as an illegal-blocker restriction (CR 509.1b).
 
 use crate::catalog;
+use crate::card::CounterType;
 use crate::game::types::{Attack, AttackTarget};
 use crate::mana::Color;
 use crate::game::two_player_game;
@@ -410,6 +437,29 @@ fn cr_702_6e_equip_trigger_resolves_on_the_equipment() {
         "the equipped creature got no counters");
 }
 
+/// CR 702.6e — an Equipment's granted triggered ability with
+/// `triggers_on_equipment == false` fires as though printed on the equipped
+/// creature, even for a non-combat observer event. Tarrian's Soulcleaver
+/// ("whenever another artifact or creature is put into a graveyard, put a
+/// +1/+1 counter on equipped creature") grows the host when an unrelated
+/// permanent dies.
+#[test]
+fn cr_702_6e_equip_observer_trigger_fires_off_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cleaver = g.add_card_to_battlefield(0, catalog::tarrians_soulcleaver());
+    g.battlefield_find_mut(cleaver).unwrap().attached_to = Some(host);
+    // An unrelated creature dies → the observer trigger grows the host.
+    let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(fodder).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(host).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "equip-granted observer trigger put a +1/+1 counter on the equipped creature");
+}
+
 // ── CR 510.2 — combat damage to a creature fires triggers ─────────────────────
 
 /// `DealsCombatDamageToCreature` triggers (CR 510.2) are now dispatched from
@@ -634,7 +684,7 @@ fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
         mode: None, x_value: None,
     }).expect("cast bolt");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sundial, ability_index: 0, target: None, x_value: None,
+        card_id: sundial, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Sundial");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bolt), "bolt exiled off the stack (728.1a)");
@@ -653,7 +703,7 @@ fn cr_728_sundial_rejects_activation_on_opponents_turn() {
     g.players[1].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 1;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: sundial, ability_index: 0, target: None, x_value: None,
+        card_id: sundial, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "only during your turn");
 }
 
@@ -704,7 +754,7 @@ fn cr_615_7_forge_tender_blanks_a_red_spell() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt])]));
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tender, ability_index: 0, target: None, x_value: None,
+        card_id: tender, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac the Forge-Tender");
     drain_stack(&mut g);
     let bear = g.battlefield_find(mine).expect("bear survives");
@@ -726,7 +776,7 @@ fn cr_615_7_forge_tender_prevents_a_creatures_combat_damage() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![raider])]));
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tender, ability_index: 0, target: None, x_value: None,
+        card_id: tender, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac the Forge-Tender");
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;
@@ -1020,6 +1070,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let mut events = Vec::new();
     let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
@@ -1114,7 +1165,7 @@ fn cr_602_2b_blood_token_discard_is_a_cost() {
     g.players[0].hand.clear();
     assert!(
         g.perform_action(GameAction::ActivateAbility {
-            card_id: blood, ability_index: 0, target: None, x_value: None,
+            card_id: blood, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
         })
         .is_err(),
         "empty hand can't pay the Blood discard cost"
@@ -1515,7 +1566,15 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                 {
                     out.insert(slot as u8);
                 }
-                for v in m.values() {
+                for (k, v) in m {
+                    // A `CreateToken`'s embedded `TokenDefinition` ("definition"/
+                    // "token") carries the *token's own* ability targets, chosen
+                    // when that ability is activated — not cast-time targets of
+                    // the spell. Don't count them (e.g. a Map token's "target
+                    // creature you control explores" inside Fanatical Offering).
+                    if k == "definition" || k == "token" {
+                        continue;
+                    }
                     collect_slots(v, out);
                 }
             }
@@ -1745,7 +1804,7 @@ fn cr_702_61_split_second_locks_casts_and_nonmana_abilities() {
     // Mana abilities are exempt (702.61b).
     g.battlefield_find_mut(mountain).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mountain, ability_index: 0, target: None, x_value: None,
+        card_id: mountain, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tapping for mana stays legal");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "Sudden Shock resolved for 2");
@@ -1778,7 +1837,7 @@ fn cr_702_61_triggers_fire_but_activations_blocked() {
     g.priority.player_with_priority = 1;
     g.players[1].mana_pool.add_colorless(1);
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 1, target: None, x_value: None,
+        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).unwrap_err();
     assert_eq!(err, GameError::SplitSecondLock);
     drain_stack(&mut g);
@@ -1913,7 +1972,7 @@ fn nylea_reveal_miss_may_go_to_graveyard() {
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: nylea, ability_index: 0, target: None, x_value: None,
+        card_id: nylea, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate the reveal");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "miss binned by choice");
@@ -2044,4 +2103,3384 @@ fn concordant_crossroads_grants_haste_to_all() {
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crate::card::Keyword::Haste));
     assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crate::card::Keyword::Haste));
+}
+
+// ── CR 121.5 / multi-pick reveals ────────────────────────────────────────────
+
+/// CR 121.5 — a card put into hand by a look-and-pick (Impulse) is NOT
+/// drawn: no CardDrawn event, and an opponent's "whenever an opponent
+/// draws" trigger (Consecrated Sphinx) doesn't fire.
+#[test]
+fn cr_121_5_look_pick_to_hand_is_not_a_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::consecrated_sphinx());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::impulse());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Impulse");
+    let events = drain_stack(&mut g);
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::CardDrawn { player: 0, .. })),
+        "the Impulse pick is put into hand, not drawn");
+    assert_eq!(g.players[1].hand.len(), p1_hand, "Sphinx never fired");
+}
+
+/// A `wants_ui` Dig Through Time caster gets a real two-card `ChooseCards`
+/// pick over the top seven; the chosen pair lands in hand, the rest bottom.
+#[test]
+fn multi_pick_dig_through_time_chooses_two() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut lib = Vec::new();
+    for _ in 0..7 { lib.push(g.add_card_to_library(0, catalog::island())); }
+    let id = g.add_card_to_hand(0, catalog::dig_through_time());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dig Through Time");
+    g.perform_action(GameAction::PassPriority).expect("active passes");
+    g.perform_action(GameAction::PassPriority).expect("non-active passes → resolve");
+
+    let pd = g.pending_decision.as_ref().expect("the pick is pending");
+    match &pd.decision {
+        crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
+            assert_eq!(candidates.len(), 7, "all seven revealed");
+            assert_eq!((*min, *max), (2, 2), "exactly two picks");
+        }
+        other => panic!("expected ChooseCards, got {other:?}"),
+    }
+    // Pick the 3rd and 6th revealed cards (not the auto top-two).
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(
+        vec![lib[2], lib[5]],
+    ))).expect("submit the pick");
+    assert!(g.players[0].has_in_hand(lib[2]) && g.players[0].has_in_hand(lib[5]),
+        "the chosen pair is in hand");
+    assert_eq!(g.players[0].library.len(), 5, "the rest stay in the library");
+    assert!(!g.players[0].has_in_hand(lib[0]), "the auto top card was not taken");
+}
+
+/// Atraxa's "up to one card of each card type" multi-pick validates the
+/// answer: two picks sharing their only card type keep just the first.
+#[test]
+fn atraxa_take_one_per_type_validates_distinct_types() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // Top of library (revealed set): two instants + a land.
+    let bolt_a = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bolt_b = g.add_card_to_library(0, catalog::lightning_bolt());
+    let isle = g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::atraxa_grand_unifier());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Atraxa");
+    drain_stack(&mut g);
+
+    let pd = g.pending_decision.as_ref().expect("ETB pick pending");
+    assert!(matches!(pd.decision, crate::decision::Decision::ChooseCards { .. }));
+    // Ask for both Bolts and the Island: the second Bolt is dropped
+    // (Instant already covered), the Island keeps its Land slot.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(
+        vec![bolt_a, bolt_b, isle],
+    ))).expect("submit the pick");
+    assert!(g.players[0].has_in_hand(bolt_a), "first instant taken");
+    assert!(g.players[0].has_in_hand(isle), "land taken");
+    assert!(!g.players[0].has_in_hand(bolt_b), "duplicate-type pick dropped");
+    assert!(g.players[0].library.iter().any(|c| c.id == bolt_b), "it went to the bottom");
+}
+
+// ── CR 702.85 — Heroic ────────────────────────────────────────────────────────
+
+/// Hero of the Pride's Heroic fires when a spell you cast targets it: every
+/// creature you control gets +1/+0 (seen on a non-targeted teammate).
+#[test]
+fn cr_702_85_heroic_pumps_team_when_targeted() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_the_pride());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, not targeted
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(hero)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate targeting the hero");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "Heroic gave the team +1/+0");
+}
+
+/// Heroic does NOT fire when the spell targets a different creature.
+#[test]
+fn cr_702_85_heroic_silent_when_not_targeted() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hero_of_the_pride());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), // targets the bear, not the hero
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate on the bear");
+    drain_stack(&mut g);
+    // Bear got only Infuriate's +3/+2 (5/4), not an extra heroic +1/+0.
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 5, "no heroic pump");
+}
+
+/// Phalanx Leader's Heroic puts a +1/+1 counter on each creature you control.
+#[test]
+fn cr_702_85_phalanx_leader_counters_team() {
+    let mut g = two_player_game();
+    let leader = g.add_card_to_battlefield(0, catalog::phalanx_leader());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(leader)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate targeting Phalanx Leader");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "teammate got a +1/+1 counter");
+}
+
+/// CR 702.177 — Exhaust: Camera Launcher's exhaust ability resolves once
+/// (a +1/+1 counter + a Thopter), then can never be activated again — not
+/// even after turn cleanup clears the once-per-turn budget.
+#[test]
+fn cr_702_177_exhaust_ability_activates_only_once_per_game() {
+    let mut g = two_player_game();
+    let cam = g.add_card_to_battlefield(0, catalog::camera_launcher());
+    g.clear_sickness(cam);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cam, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("first exhaust activation");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cam).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "got a +1/+1 counter");
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Thopter"),
+        "created a Thopter token");
+
+    // Same turn → rejected.
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: cam, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "exhaust ability can't be activated twice");
+
+    // Turn cleanup clears once-per-turn state, but exhaust persists (per game).
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cam) {
+        c.clear_end_of_turn_effects();
+    }
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: cam, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "exhaust stays spent across turns");
+}
+
+/// Hazard of the Dunes' exhaust adds three +1/+1 counters once; a 4/4 → 7/7.
+#[test]
+fn cr_702_177_hazard_of_the_dunes_exhaust_counters_once() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes());
+    g.clear_sickness(h);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(h).unwrap();
+    assert_eq!((c.power(), c.toughness()), (7, 7), "4/4 + three +1/+1 = 7/7");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "exhaust can't repeat");
+}
+
+/// Pacesetter Paragon's exhaust adds a +1/+1 counter and grants double strike
+/// until end of turn.
+#[test]
+fn cr_702_177_pacesetter_paragon_exhaust_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::pacesetter_paragon());
+    g.clear_sickness(p);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(p).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "got a +1/+1 counter");
+    assert!(c.keywords.contains(&Keyword::DoubleStrike), "gained double strike EOT");
+}
+
+/// Greenbelt Guardian's non-exhaust {G} ability grants trample repeatedly;
+/// its exhaust counter ability fires only once.
+#[test]
+fn cr_702_177_greenbelt_guardian_repeatable_and_exhaust_abilities() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let gg = g.add_card_to_battlefield(0, catalog::greenbelt_guardian());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gg);
+    // Non-exhaust ability (index 0): grant trample to the bear, twice.
+    for _ in 0..2 {
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: gg, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        }).expect("repeatable trample grant");
+        drain_stack(&mut g);
+    }
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    // Exhaust ability (index 1): +3/+3 once.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gg, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust counters");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gg).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// Prowcatcher Specialist's exhaust adds two +1/+1 counters (2/1 → 4/3).
+#[test]
+fn cr_702_177_prowcatcher_specialist_exhaust() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::prowcatcher_specialist());
+    g.clear_sickness(p);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(p).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 3));
+}
+
+/// Keen Buccaneer's exhaust loots (draw then discard) and adds a +1/+1
+/// counter; net hand size unchanged, the creature grows once.
+#[test]
+fn cr_702_177_keen_buccaneer_exhaust_loots_and_grows() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    let k = g.add_card_to_battlefield(0, catalog::keen_buccaneer());
+    g.clear_sickness(k);
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: k, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "draw 1 then discard 1 nets even");
+    assert_eq!(g.battlefield_find(k).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Barkshell Blessing conspired pumps the same target twice (+4/+4 total).
+#[test]
+fn conspire_barkshell_blessing_pumps_twice() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::barkshell_blessing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let c0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [c0, c1],
+        target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Barkshell");
+    drain_stack(&mut g);
+    // 2/2 + (+2/+2)×2 = 6/6.
+    let t = g.computed_permanent(target).unwrap();
+    assert_eq!((t.power, t.toughness), (6, 6), "pumped by original + copy");
+}
+
+/// Skystreak Engineer's exhaust adds two +1/+1 counters (1/3 → 3/5), once.
+#[test]
+fn cr_702_177_skystreak_engineer_exhaust() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::skystreak_engineer());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(s).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 5));
+}
+
+/// Mai, Jaded Edge's exhaust puts a double-strike counter on her.
+#[test]
+fn cr_702_177_mai_jaded_edge_double_strike_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::mai_jaded_edge());
+    g.clear_sickness(m);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "gained a double strike counter");
+}
+
+/// Stampeding Scurryfoot's exhaust adds a +1/+1 counter and makes a 3/3
+/// Elephant, once.
+#[test]
+fn cr_702_177_stampeding_scurryfoot_exhaust() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::stampeding_scurryfoot());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Elephant"
+        && (c.power(), c.toughness()) == (3, 3)), "made a 3/3 Elephant");
+}
+
+/// Mindspring Merfolk's X-cost exhaust draws X and counters each Merfolk you
+/// control (including itself), once.
+#[test]
+fn cr_702_177_mindspring_merfolk_x_draw_and_counters() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let m = g.add_card_to_battlefield(0, catalog::mindspring_merfolk());
+    let other = g.add_card_to_battlefield(0, catalog::mindspring_merfolk());
+    g.clear_sickness(m);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2),
+    }).expect("exhaust X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew X=2");
+    assert_eq!(g.battlefield_find(m).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "each Merfolk you control got a counter");
+}
+
+/// CR 702.48 — Offering. Patron of the Akki ({4}{R}{R}) cast via Goblin
+/// offering: sacrifice a {1}{R} Goblin, the cost drops by its whole mana
+/// cost (color included) to {3}{R}, and the Patron resolves.
+#[test]
+fn cr_702_48_offering_reduces_cost_by_sacrificed_creature() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::goblin_instigator()); // {1}{R}
+    let id = g.add_card_to_hand(0, catalog::patron_of_the_akki());
+    // {3}{R} = the reduced offering cost (full {4}{R}{R} minus the Goblin's {1}{R}).
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("offering cast for {3}{R} after sacrificing a {1}{R} Goblin");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "Goblin sacrificed to offering");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Patron resolved");
+}
+
+/// Offering is illegal with no creature of the offered type to sacrifice.
+#[test]
+fn cr_702_48_offering_requires_the_offered_creature_type() {
+    let mut g = two_player_game();
+    // A non-Goblin creature doesn't satisfy Goblin offering.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::patron_of_the_akki());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "no Goblin → offering rejected");
+}
+
+// ── CR 508.1a — "can't attack unless you've cast a creature spell this turn" ──
+
+/// Goblin Cohort can't be declared as an attacker until its controller has
+/// cast a creature spell this turn; once one resolves, the lock lifts.
+#[test]
+fn cr_508_1a_goblin_cohort_gated_on_creature_cast() {
+    let mut g = two_player_game();
+    let cohort = g.add_card_to_battlefield(0, catalog::goblin_cohort());
+    g.clear_sickness(cohort);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // No creature cast this turn → declaration rejected.
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cohort, target: AttackTarget::Player(1),
+    }]));
+    assert!(matches!(err, Err(GameError::CannotAttack(_))), "locked before a creature cast");
+
+    // Pretend a creature spell resolved this turn, then it can attack.
+    g.players[0].creatures_cast_this_turn = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cohort, target: AttackTarget::Player(1),
+    }])).expect("attacks once a creature spell has been cast");
+    assert!(g.attacking().iter().any(|a| a.attacker == cohort), "Cohort attacking");
+}
+
+// ── CR 502.3 — Hokori: lands don't untap; one is freed at each upkeep ─────────
+
+/// Under Hokori the untap step leaves all lands tapped; the each-upkeep trigger
+/// untaps exactly one land the active player controls.
+#[test]
+fn cr_502_3_hokori_locks_lands_and_frees_one_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hokori_dust_drinker());
+    let l1 = g.add_card_to_battlefield(0, catalog::island());
+    let l2 = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield_find_mut(l1).unwrap().tapped = true;
+    g.battlefield_find_mut(l2).unwrap().tapped = true;
+    g.do_untap();
+    assert_eq!([l1, l2].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count(), 2,
+        "untap step frees no land under Hokori");
+    // Fire the each-player-upkeep trigger directly.
+    let trig = catalog::hokori_dust_drinker().triggered_abilities[0].effect.clone();
+    let hok = g.battlefield.iter().find(|c| c.definition.name == "Hokori, Dust Drinker").unwrap().id;
+    let ctx = crate::game::effects::EffectContext::for_trigger(hok, 0, None, 0);
+    g.active_player_idx = 0;
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!([l1, l2].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count(), 1,
+        "the upkeep trigger frees exactly one land");
+}
+
+// ── CR 603.2 — global "whenever a creature becomes the target" trigger ────────
+
+/// Horobi fires its global became-the-target trigger for an opponent's creature
+/// too (not just its own), destroying it (CR 603.2 + AnyPlayer scope).
+#[test]
+fn cr_603_2_horobi_fires_for_any_creature_targeted() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::horobi_deaths_wail()); // opponent's Horobi
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // I target my own creature with a pump; Horobi still destroys it.
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("pump my own bear");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(mine).is_none(), "Horobi destroyed the targeted creature");
+}
+
+// ── CR 704.5j — legend rule + Brothers Yamazaki pair exception ────────────────
+
+/// Two same-name legendaries one player controls collapse to one (CR 704.5j).
+#[test]
+fn cr_704_5j_legend_rule_keeps_one_same_name_legend() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    let l2 = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    g.check_state_based_actions();
+    let kept: Vec<CardId> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Kasmina, Enigma Sage").map(|c| c.id).collect();
+    assert_eq!(kept.len(), 1, "legend rule keeps exactly one");
+    assert!(kept == vec![l2] || kept == vec![l1], "one of the two survives");
+}
+
+/// Brothers Yamazaki: exactly two coexist (CR 704.5j exception); a third
+/// re-engages the legend rule.
+#[test]
+fn cr_704_5j_brothers_yamazaki_pair_exempt() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Brothers Yamazaki").count(),
+        2, "exactly two Brothers Yamazaki coexist"
+    );
+    // A third triggers the legend rule again (3 != 2, exception lapses).
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Brothers Yamazaki").count(),
+        1, "a third re-engages the legend rule"
+    );
+}
+
+// ── CR 702.36 — Fear ──────────────────────────────────────────────────────────
+
+/// A Fear creature can be blocked only by artifact and/or black creatures.
+#[test]
+fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
+    let attacker = catalog::nezumi_cutthroat(); // 2/1 Fear
+    let attacker_kws = &attacker.keywords;
+    let assert_block = |def: crate::card::CardDefinition, expect: bool, why: &str| {
+        let mut g = two_player_game();
+        let blk = g.add_card_to_battlefield(1, def);
+        let inst = g.battlefield_find(blk).unwrap().clone();
+        let cp = g.computed_permanent(blk).unwrap();
+        assert_eq!(
+            crate::game::can_block_attacker_computed(&inst, &cp, attacker_kws, &[], 2),
+            expect, "{why}"
+        );
+    };
+    assert_block(catalog::grizzly_bears(), false, "green creature can't block Fear");
+    assert_block(catalog::ornithopter(), true, "artifact creature can block Fear");
+    assert_block(catalog::nezumi_cutthroat(), true, "black creature can block Fear");
+}
+
+// ── CR 712.4 — a transformed DFC reverts to its front face off-battlefield ────
+
+/// A transformed double-faced permanent that dies is its front face in the
+/// graveyard (CR 712.4).
+#[test]
+fn cr_712_4_transformed_dfc_reverts_to_front_in_graveyard() {
+    let mut g = two_player_game();
+    let delver = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let mut events = Vec::new();
+    g.transform_permanent(delver, &mut events);
+    assert!(g.battlefield_find(delver).unwrap().transformed, "transformed on battlefield");
+    g.remove_from_battlefield_to_graveyard_raw(delver);
+    let in_gy = g.players[0].graveyard.iter().find(|c| c.id == delver).expect("in graveyard");
+    assert!(!in_gy.transformed, "reverts off the battlefield");
+    assert_eq!(in_gy.definition.name, "Delver of Secrets", "front face restored");
+}
+
+// ── CR 711 + 704.5j — a flipped legendary obeys the legend rule ───────────────
+
+/// When a flip card flips into its Legendary face (Azamuki) and the controller
+/// already controls one, the legend-rule SBA collapses them to one — exercising
+/// the supertype change the flip applies in place.
+#[test]
+fn cr_711_flipped_legendary_obeys_legend_rule() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // One already-flipped Azamuki (flip a Cunning Bandit), plus a second.
+    let b1 = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    let b2 = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    for b in [b1, b2] {
+        g.battlefield_find_mut(b).unwrap().add_counters(CounterType::Ki, 2);
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+    ]));
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    let azamuki = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Azamuki, Treachery Incarnate").count();
+    assert_eq!(azamuki, 1, "two flipped Azamuki collapse to one under the legend rule");
+}
+
+/// CR 702.16c — a permanent with protection from red can't be targeted by an
+/// activated ability whose source is red (Cunning Sparkmage's tap-ping).
+#[test]
+fn cr_702_16c_ability_cant_target_protection_from_source_color() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::cunning_sparkmage()); // red
+    g.clear_sickness(mage);
+    let priest = g.add_card_to_battlefield(1, catalog::soltari_priest()); // pro-red
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(priest)),
+        additional_targets: Vec::new(), x_value: None,
+    });
+    assert!(err.is_err(), "a red source's ability can't target protection from red");
+    // A non-protected creature is a fine target.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("can ping an unprotected creature");
+}
+
+// ── CR 704.5n / 303.4f — illegally-attached Aura SBA ──────────────────────────
+
+/// An "enchant creature you control" Aura whose host changes controllers is
+/// put into its owner's graveyard (CR 704.5n).
+#[test]
+fn cr_704_5n_you_control_aura_falls_off_on_control_change() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::starlit_mantle());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Starlit Mantle on own creature");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(bear), "attached");
+    // The opponent gains control of the bear; the "you control" Aura is now
+    // illegally attached and is put into its owner's graveyard.
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(aura).is_none(), "Aura left the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == aura), "into owner's graveyard");
+}
+
+/// A plain "enchant creature" Aura stays attached when its host merely changes
+/// controllers (no control restriction to violate).
+#[test]
+fn cr_704_5n_plain_creature_aura_survives_control_change() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::aspect_of_manticore());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Aspect of Manticore");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(bear),
+        "plain enchant-creature Aura stays put");
+}
+
+// ── CR 506.4 — remove from combat ─────────────────────────────────────────────
+
+/// Labyrinth of Skophos removes a declared attacker from combat (CR 506.4).
+#[test]
+fn cr_506_4_labyrinth_removes_attacker_from_combat() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let labyrinth = g.add_card_to_battlefield(0, catalog::labyrinth_of_skophos());
+    g.clear_sickness(labyrinth);
+    g.set_attacking(vec![Attack { attacker, target: AttackTarget::Player(0) }]);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: labyrinth, ability_index: 1, target: Some(Target::Permanent(attacker)),
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate Labyrinth removal");
+    drain_stack(&mut g);
+    assert!(!g.attacking().iter().any(|a| a.attacker == attacker),
+        "attacker removed from combat");
+}
+
+// ── CR 606 — opponent loyalty-ability tax ─────────────────────────────────────
+
+/// Eidolon of Obstruction makes an opponent's loyalty ability cost {1} more.
+#[test]
+fn cr_606_eidolon_taxes_opponent_loyalty() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eidolon_of_obstruction());
+    let karn = g.add_card_to_battlefield(1, catalog::karn_scion_of_urza());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    // No mana → the {1} tax can't be paid, activation is rejected.
+    assert!(g.activate_loyalty_ability(karn, 0, None, None).is_err(),
+        "untaxed activation blocked with no mana");
+    // Pay the tax and it goes through.
+    g.players[1].mana_pool.add_colorless(1);
+    assert!(g.activate_loyalty_ability(karn, 0, None, None).is_ok(),
+        "activation succeeds once the {{1}} tax is paid");
+}
+
+// ── CR 509.1b — block restrictions ────────────────────────────────────────────
+
+/// Temple Thief can't be blocked by enchantment creatures (CR 509.1b).
+#[test]
+fn cr_509_1b_temple_thief_cant_be_blocked_by_enchantment_creatures() {
+    let mut g = two_player_game();
+    let thief = g.add_card_to_battlefield(0, catalog::temple_thief());
+    let ench_creature = g.add_card_to_battlefield(1, catalog::skola_grovedancer()); // ench creature
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(ench_creature, thief), "enchantment creature can't block");
+    assert!(g.blocker_can_block_attacker(bear, thief), "plain creature can block");
+}
+
+/// Serpent of Yawning Depths can only be blocked by sea creatures (CR 509.1b).
+#[test]
+fn cr_509_1b_serpent_only_blocked_by_sea_creatures() {
+    let mut g = two_player_game();
+    let serpent = g.add_card_to_battlefield(0, catalog::serpent_of_yawning_depths());
+    let kraken = g.add_card_to_battlefield(1, catalog::nadir_kraken()); // Kraken
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.blocker_can_block_attacker(kraken, serpent), "Kraken can block");
+    assert!(!g.blocker_can_block_attacker(bear, serpent), "non-sea creature can't");
+}
+
+// ── CR 509 (declare blockers) + 702.20 (Vigilance) — Grasping Giant ───────────
+
+fn cr_advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
+/// CR 509.1c — a creature becomes blocked by *each* creature blocking it, so
+/// Grasping Giant exiles every blocker (the `Selector::BlockingCreatures`
+/// reverse-lookup of the block map).
+#[test]
+fn cr_509_1c_grasping_giant_exiles_every_blocker() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::grasping_giant());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(giant);
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    // CR 702.20 — Vigilance: attacking doesn't tap the giant.
+    assert!(!g.battlefield_find(giant).unwrap().tapped, "vigilant attacker stays untapped");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, giant), (b2, giant)])).expect("double block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(), "both blockers exiled");
+}
+
+// ── CR 117.7c / 601.2f — cost reductions can't reduce colored pips ─────────────
+
+/// CR 601.2f — Thryx's {1}-off discount applies to the generic part only; a
+/// mana-value-5+ spell still needs all its colored pips.
+#[test]
+fn cr_601_2f_thryx_discount_does_not_pay_colored() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thryx_the_sudden_storm());
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon()); // {4}{R}{R} → {3}{R}{R}
+    // Only {3}{R} available — the second red pip is unpaid even with the discount.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: dragon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "discount can't cover a colored pip");
+}
+
+/// CR 509.1h / 510.1c — once a creature is blocked it stays blocked even if its
+/// blocker leaves; Grasping Giant exiles its lone blocker yet deals no combat
+/// damage to the defending player.
+#[test]
+fn cr_510_1c_grasping_giant_stays_blocked_after_exiling_blocker() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::grasping_giant());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(giant);
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, giant)])).expect("block");
+    drain_stack(&mut g); // becomes-blocked trigger exiles the blocker
+    assert!(g.battlefield_find(blocker).is_none(), "blocker exiled before damage");
+    let life_before = g.players[1].life;
+    cr_advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before, "blocked attacker deals no damage to the player");
+}
+
+// ── CR 613.3 / 613.7 — characteristic-overriding Aura layers ──────────────────
+/// Ichthyomorphosis sets the host's base P/T to 0/1 (layer 7b); a +1/+1
+/// counter then applies in layer 7c on top → 1/2. The host also loses its
+/// printed abilities (layer 6) but the engine reports the new Fish subtype
+/// (layer 4).
+#[test]
+fn cr_613_aura_set_base_pt_then_counter() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flier
+    g.battlefield_find_mut(host).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let aura = g.add_card_to_hand(0, catalog::ichthyomorphosis());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(host)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 2), "base 0/1 (7b) + counter (7c)");
+    assert!(cp.keywords.is_empty(), "abilities removed (layer 6)");
+}
+
+// ── CR 605.1a — board-conditional mana ability stays a mana ability ───────────
+/// Ilysian Caryatid's "{T}: add one of any color; two instead if you control a
+/// power-4+ creature" resolves without using the stack — its mana is available
+/// to pay for a spell in the same action sequence.
+#[test]
+fn cr_605_conditional_mana_ability_pays_a_spell() {
+    let mut g = two_player_game();
+    let dork = g.add_card_to_battlefield(0, catalog::ilysian_caryatid());
+    g.clear_sickness(dork);
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // power-4+ → makes two
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(Color::Green),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("mana ability (no stack)");
+    assert!(g.stack.is_empty(), "mana abilities don't use the stack (CR 605.3a)");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "two mana floated");
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("the floated mana pays {1}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_some(), "bear cast off the dork's mana");
+}
+
+// ── CR 701.19 — Searching (multi-card) ────────────────────────────────────────
+/// Deathbellow War Cry searches for up to four Minotaurs; the count-search
+/// chains single picks, and a non-matching card is never offered.
+#[test]
+fn cr_701_19_search_up_to_n_picks_matches_only() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_library(0, catalog::rage_scarred_berserker());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::deathbellow_war_cry());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(m)),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m).is_some(), "Minotaur tutored to battlefield");
+    assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the non-Minotaur stays in the library");
+}
+
+// ── CR 700.5 — Devotion (Altar of the Pantheon bonus flips a God on) ─────────
+
+#[test]
+fn cr_700_5_altar_devotion_bonus_flips_god_to_creature() {
+    let mut g = two_player_game();
+    let heliod = g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun()); // {3}{W}, threshold 5
+    g.add_card_to_battlefield(0, catalog::soul_warden()); // {W}
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    g.add_card_to_battlefield(0, catalog::soul_warden()); // 3 + Heliod's W = 4 devotion
+    assert!(
+        !g.computed_permanent(heliod).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "devotion 4 < 5 — Heliod isn't a creature"
+    );
+    g.add_card_to_battlefield(0, catalog::altar_of_the_pantheon()); // +1 → 5
+    assert!(
+        g.computed_permanent(heliod).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "Altar's +1 devotion (CR 700.5) reaches 5 — Heliod is now a creature"
+    );
+}
+
+// ── CR 615.1 / 702.15g — fog exception still lets exempt creatures lifelink ──
+
+#[test]
+fn cr_615_1_inspire_awe_exempt_enchantment_creature_deals_and_lifelinks() {
+    let mut g = two_player_game();
+    let vanilla = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fogged
+    let eidolon = g.add_card_to_battlefield(0, catalog::hateful_eidolon()); // 1/2 enchantment creature, lifelink
+    g.clear_sickness(vanilla);
+    g.clear_sickness(eidolon);
+    let spell = g.add_card_to_hand(0, catalog::inspire_awe());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inspire Awe");
+    drain_stack(&mut g);
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: vanilla, target: AttackTarget::Player(1) },
+        Attack { attacker: eidolon, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, opp - 1, "only the exempt 1/2 enchantment creature connects");
+    assert_eq!(g.players[0].life, me + 1, "lifelink scales off the unprevented 1 damage (CR 702.15g)");
+}
+
+// ── CR 702.3b — Defender can't attack ───────────────────────────────────────
+
+#[test]
+fn cr_702_3b_defender_cannot_be_declared_attacker() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(0, catalog::sylvan_caryatid()); // 0/3 Defender
+    g.clear_sickness(wall);
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: wall, target: AttackTarget::Player(1) },
+    ]));
+    assert!(err.is_err(), "a Defender creature can't be declared as an attacker (CR 702.3b)");
+}
+
+// ── CR 702.16 — Protection (from each mana value other than N) ───────────────
+
+#[test]
+fn cr_702_16_protection_from_mana_value_blocks_targeting() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)])); // d3=1 → chosen 2
+    let haktos = g.add_card_to_battlefield(0, catalog::haktos_the_unscarred());
+    let eff = catalog::haktos_the_unscarred().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(haktos, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    // Opponent's Lightning Bolt is mana value 1 (≠ 2) → can't target Haktos.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(haktos)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "a MV-1 spell can't target protection-from-each-MV-other-than-2 (CR 702.16)");
+}
+
+// ── CR 509.1b — block restriction from protection-by-mana-value ──────────────
+
+#[test]
+fn cr_509_1b_protection_from_mv_restricts_blockers() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)])); // d3=1 → chosen 2
+    let haktos = g.add_card_to_battlefield(0, catalog::haktos_the_unscarred());
+    let eff = catalog::haktos_the_unscarred().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(haktos, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.clear_sickness(haktos);
+    let mv3 = g.add_card_to_battlefield(1, catalog::gray_ogre());     // MV 3
+    let mv2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.clear_sickness(mv3);
+    g.clear_sickness(mv2);
+    g.step = TurnStep::DeclareBlockers;
+    g.attacking.push(Attack { attacker: haktos, target: AttackTarget::Player(1) });
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(mv3, haktos)]));
+    assert!(err.is_err(), "MV-3 creature can't block Haktos (protection from each MV other than 2)");
+    g.block_map.clear();
+    let ok = g.perform_action(GameAction::DeclareBlockers(vec![(mv2, haktos)]));
+    assert!(ok.is_ok(), "MV-2 creature may block Haktos");
+}
+
+// ── CR 704.5g — a creature with toughness 0 is put into its graveyard ────────
+
+#[test]
+fn cr_704_5g_zero_toughness_creature_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::MinusOneMinusOne, 2);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "the 0-toughness creature left the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "put into its owner's graveyard (CR 704.5g)");
+}
+
+// ── CR 702.160 — Prototype ──────────────────────────────────────────────────
+
+#[test]
+fn cr_702_160_prototype_sets_cost_color_and_size_keeping_abilities() {
+    let mut g = two_player_game();
+    // Full cast: colorless, full size, keeps abilities (Deathtouch).
+    let full = g.add_card_to_hand(0, catalog::goring_warplow());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 6);
+    }
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: full, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("full cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(full).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4));
+    assert!(cp.colors.is_empty(), "full-cost prototype is colorless (CR 702.160c)");
+
+    // Prototype cast: colored, smaller, same abilities, smaller mana value.
+    let proto = g.add_card_to_hand(0, catalog::goring_warplow());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastPrototype {
+        card_id: proto, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("prototype cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(proto).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size (CR 702.160c)");
+    assert_eq!(cp.colors, vec![Color::Black], "prototype color follows its cost");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Deathtouch), "abilities/types kept");
+}
+
+// ── CR 702.21 — Ward (cost = source's power) ─────────────────────────────────
+
+#[test]
+fn cr_702_21_ward_life_equal_to_power_is_paid_or_countered() {
+    let mut g = two_player_game();
+    let gorger = g.add_card_to_battlefield(0, catalog::phyrexian_fleshgorger()); // 7/5
+    // Opponent targets it: Ward—Pay life equal to its power (7).
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(gorger)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 7, "Ward paid life = source power");
+    assert!(g.battlefield_find(gorger).is_some(), "creature survives the 3-damage bolt");
+}
+
+// ── CR 603.3d — "This ability triggers only once each turn" ──────────────────
+
+#[test]
+fn cr_603_3d_trigger_fires_at_most_once_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tocasias_welcome());
+    let nid = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(nid, catalog::lightning_bolt(), 0));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let cast_small = |g: &mut GameState| {
+        let c = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: c, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(g);
+    };
+    cast_small(&mut g);
+    cast_small(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "the once-each-turn trigger drew only once");
+}
+
+// ── CR 702.140 — Mutate ──────────────────────────────────────────────────────
+
+/// CR 702.140b — a mutating creature spell whose target is illegal as it
+/// begins resolving ceases to be a mutating creature spell and resolves as a
+/// normal creature spell, entering the battlefield on its own.
+#[test]
+fn cr_702_140b_illegal_host_enters_as_normal_creature() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMutate {
+        card_id: recluse, target: host, on_top: true, x_value: None,
+    }).expect("cast for mutate");
+    // Host leaves before the mutate spell resolves — its target is now illegal.
+    g.remove_to_graveyard_with_triggers(host);
+    drain_stack(&mut g);
+    // The spell entered as its own 2/3 Spider rather than merging.
+    let r = g.battlefield_find(recluse).expect("Glowstone Recluse entered on its own");
+    assert_eq!((r.power(), r.toughness()), (2, 3));
+    assert!(r.mutate_stack.is_empty(), "no merge happened");
+}
+
+// ── CR 702.31 — Horsemanship ─────────────────────────────────────────────────
+
+/// CR 702.31b — a creature with horsemanship can't be blocked by creatures
+/// without horsemanship (one-directional, like flying).
+#[test]
+fn cr_702_31_horsemanship_only_blocked_by_horsemanship() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::guan_yu_sainted_warrior()); // Horsemanship
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no horsemanship
+    let acomp = g.computed_permanent(atk).unwrap();
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(!crate::game::can_block_attacker_computed(
+        binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
+        "a non-horsemanship creature can't block a horsemanship attacker");
+}
+
+// ── CR 702.28 — Shadow (reverse direction) ───────────────────────────────────
+
+/// CR 702.28b — a creature *without* shadow can't be blocked by a creature
+/// *with* shadow either.
+#[test]
+fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // no shadow
+    let blk = g.add_card_to_battlefield(1, catalog::soltari_priest()); // Shadow
+    let acomp = g.computed_permanent(atk).unwrap();
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(!crate::game::can_block_attacker_computed(
+        binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
+        "a shadow creature can't block a non-shadow attacker");
+}
+
+// ── CR 702.12 — Defender ─────────────────────────────────────────────────────
+
+/// CR 702.12b/702.12c — a creature with defender can't attack, but a static
+/// ability may let it attack anyway while a condition holds (Drowsing
+/// Tyrannodon — `CanAttackIgnoringDefenderWhile`).
+#[test]
+fn cr_702_12_defender_blocks_attack_unless_overridden() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::drowsing_tyrannodon());
+    g.clear_sickness(dino);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    // 702.12c: defender stops the attack with no qualifying creature.
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dino, target: AttackTarget::Player(1),
+    }])).is_err());
+    // Override condition met → it may attack despite defender.
+    let beater = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.clear_sickness(beater);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dino, target: AttackTarget::Player(1),
+    }])).expect("attacks once the static condition is satisfied");
+}
+
+// ── CR 603.7e — delayed "when you cast your next spell this turn" ─────────────
+
+/// CR 603.7e — a one-shot delayed trigger set up by a resolving ability fires
+/// on the controller's next qualifying spell, with that spell available to the
+/// trigger (Vivien's −2 reads the cast spell's mana value).
+#[test]
+fn cr_603_7e_next_spell_delayed_trigger_sees_the_cast_spell() {
+    let mut g = two_player_game();
+    let vivien = g.add_card_to_battlefield(0, catalog::vivien_monsters_advocate());
+    let small = g.add_card_to_library(0, catalog::grizzly_bears()); // MV2 < MV6
+    let big = g.add_card_to_hand(0, catalog::colossal_dreadmaw());   // MV6
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Search(Some(small))],
+    ));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vivien, ability_index: 1, target: None, x_value: None,
+    }).expect("arm the delayed trigger");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the next spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == small),
+        "delayed trigger fired on the next cast and read its mana value");
+}
+
+// ── CR 122.2 — counters cease to exist on zone change ────────────────────────
+
+/// CR 122.2 — when a permanent leaves the battlefield, its counters cease to
+/// exist (verified with a freshly-added counter kind, Bounty).
+#[test]
+fn cr_122_2_counters_vanish_on_zone_change() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Bounty, 2);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Bounty), 2);
+    g.remove_to_graveyard_with_triggers(bear);
+    // Re-entering as a new object carries no counters.
+    let again = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.battlefield_find(again).unwrap().counter_count(CounterType::Bounty), 0,
+        "counters did not persist across the zone change");
+}
+
+// ── CR 702.11e — Hexproof from [color] ───────────────────────────────────────
+
+/// CR 702.11e — a creature with "hexproof from black" can't be targeted by an
+/// opponent's black spell, but a white spell targets it fine. Knight of Grace.
+#[test]
+fn cr_702_11e_hexproof_from_black_blocks_only_black() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_grace());
+    // Opponent's black removal can't target it.
+    let blade = g.add_card_to_hand(1, catalog::doom_blade());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: blade, target: Some(Target::Permanent(knight)),
+        additional_targets: vec![], mode: None, x_value: None });
+    assert!(matches!(err, Err(GameError::TargetHasHexproof(_))), "black blocked, got {err:?}");
+    // A white spell is unaffected.
+    let swords = g.add_card_to_hand(1, catalog::swords_to_plowshares());
+    g.players[1].mana_pool.add(Color::White, 1);
+    crate::game::cast_at(&mut g, swords, Target::Permanent(knight));
+    assert!(g.battlefield_find(knight).is_none(), "white Swords exiled it");
+}
+
+// ── CR 702.165 — Gift ─────────────────────────────────────────────────────────
+
+/// CR 702.165 — promising a Gift bestows the gift on the opponent *before* the
+/// spell's other (enhanced) effects, and broadens the resolution accordingly.
+#[test]
+fn cr_702_165_gift_promised_gives_opponent_and_enhances() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blast = g.add_card_to_hand(0, catalog::blooming_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: blast, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blooming Blast with gift");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Treasure"),
+        "opponent received the promised Treasure");
+    assert_eq!(g.players[1].life, 17, "the enhanced effect burned the controller for 3");
+}
+
+// ── CR 702.180 — Survival ──────────────────────────────────────────────────────
+
+/// CR 702.180 — Survival triggers at the controller's second main phase while
+/// the creature is tapped (the intervening-`if`); the untapped case is covered
+/// by `survival_skips_when_untapped`.
+#[test]
+fn cr_702_180_survival_fires_while_tapped_at_second_main() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::cautious_survivor());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "Survival gained 2 life once tapped");
+}
+
+// ── CR 702.183 — Omen ──────────────────────────────────────────────────────────
+
+/// CR 702.183 — casting a card's Omen half resolves the Omen effect and shuffles
+/// the card into its owner's library (not the graveyard); the creature stays
+/// available to be drawn and cast later.
+#[test]
+fn cr_702_183_omen_resolves_then_shuffles_into_library() {
+    let mut g = two_player_game();
+    let regent = g.add_card_to_hand(0, catalog::marang_river_regent());
+    // Seed the library so Coil and Catch's draw-three has cards to find.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    // Coil and Catch costs {3}{U}: draw three, discard one.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastOmen {
+        card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Omen half");
+    drain_stack(&mut g);
+    // Net hand: -1 (Regent left) +3 draw -1 discard = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew three, discarded one");
+    // The Regent itself is shuffled back into the library, not the graveyard.
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != regent),
+        "Omen card did not go to the graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == regent),
+        "Omen card was shuffled into the library");
+    assert_eq!(g.players[0].library.len(), lib_before - 3 + 1, "three drawn, Regent shuffled in");
+}
+
+/// CR 702.183 — a countered Omen spell shuffles into its owner's library rather
+/// than going to the graveyard.
+#[test]
+fn cr_702_183_countered_omen_shuffles_into_library() {
+    let mut g = two_player_game();
+    let regent = g.add_card_to_hand(0, catalog::bloomvine_regent());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Claim Territory");
+    // Lift the spell off the stack as if countered (CR 701.5g → 702.183 instead).
+    let card = match g.stack.pop().expect("Omen spell on the stack") {
+        crate::game::StackItem::Spell { card, .. } => *card,
+        _ => unreachable!("top of stack is the Omen spell"),
+    };
+    assert_eq!(card.id, regent, "Omen spell is on the stack");
+    let mut events = Vec::new();
+    g.route_to_graveyard(card, &mut events);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != regent),
+        "countered Omen did not hit the graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == regent),
+        "countered Omen was shuffled into the library");
+}
+
+// ── CR 508.3a — put onto the battlefield attacking ─────────────────────────────
+
+/// CR 508.3a — Alesha's attack trigger reanimates a power-≤2 creature card
+/// *tapped and attacking* via `Effect::JoinCombatAttacking`.
+#[test]
+fn cr_508_3a_alesha_reanimates_tapped_and_attacking() {
+    let mut g = two_player_game();
+    let alesha = g.add_card_to_battlefield(0, catalog::alesha_who_smiles_at_death());
+    g.clear_sickness(alesha);
+    // A 2/2 bear in the graveyard is a legal reanimate target (power ≤ 2).
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Accept the optional "pay {W/B}{W/B}" trigger (AutoDecider declines by default).
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Bool(true)],
+    ));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // Float {W}{W} to pay the {W/B}{W/B} attack trigger.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: alesha, target: AttackTarget::Player(1),
+    }])).expect("Alesha attacks");
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(bear).expect("bear returned to the battlefield");
+    assert!(reanimated.tapped, "reanimated creature enters tapped (CR 508.3a)");
+    assert!(g.attacking.iter().any(|a| a.attacker == bear), "and joins combat attacking");
+}
+
+/// Skimming Strike (Dirgur Island Dragon's Omen) taps a creature and draws.
+#[test]
+fn omen_skimming_strike_taps_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dragon = g.add_card_to_hand(0, catalog::dirgur_island_dragon());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastOmen {
+        card_id: dragon, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Skimming Strike");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
+    // -1 (Dragon left hand) +1 draw = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card after tapping");
+    assert!(g.players[0].library.iter().any(|c| c.id == dragon), "Dragon shuffled back");
+}
+
+/// Exude Toxin ({X}{B}{B}, Scavenger Regent's Omen) gives each non-Dragon
+/// creature -X/-X; Dragons are spared.
+#[test]
+fn omen_exude_toxin_spares_dragons() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 non-Dragon
+    let dragon = g.add_card_to_battlefield(1, catalog::bloomvine_regent()); // 4/5 Dragon
+    let regent = g.add_card_to_hand(0, catalog::scavenger_regent());
+    // {X}{B}{B} with X=2 → {2}{B}{B}.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Exude Toxin for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the 2/2 non-Dragon died to -2/-2");
+    assert!(g.battlefield_find(dragon).is_some(), "the Dragon was spared");
+}
+
+/// Charring Bite (Twinmaw Stormbrood's Omen) deals 5 to a creature without
+/// flying — enough to kill a ground blocker, while a flyer is not a legal target.
+#[test]
+fn omen_charring_bite_burns_ground_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let brood = g.add_card_to_hand(0, catalog::twinmaw_stormbrood());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: brood, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Charring Bite at the ground bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "Charring Bite's 5 damage killed the 2/2 bear");
+    assert!(g.players[0].library.iter().any(|c| c.id == brood),
+        "Twinmaw Stormbrood shuffled back after its Omen resolved");
+}
+
+/// Roost Seek (Sagu Wildling's Omen) tutors a basic land into hand.
+#[test]
+fn omen_roost_seek_tutors_basic_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let wildling = g.add_card_to_hand(0, catalog::sagu_wildling());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Search(Some(forest))],
+    ));
+    g.perform_action(GameAction::CastOmen {
+        card_id: wildling, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roost Seek");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic Forest tutored to hand");
+    assert!(g.players[0].library.iter().any(|c| c.id == wildling), "Sagu Wildling shuffled back");
+}
+
+/// CR 701.52 — Nesting Instinct (Pearl Lake Warden's Omen) *seeks* a land card
+/// at random and puts it onto the battlefield (no player choice of which land).
+#[test]
+fn omen_nesting_instinct_seeks_land_to_battlefield() {
+    let mut g = two_player_game();
+    // Library has only one land among non-land filler, so the random seek must
+    // find that land deterministically.
+    let island = g.add_card_to_library(0, catalog::island());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let warden = g.add_card_to_hand(0, catalog::pearl_lake_warden());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: warden, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nesting Instinct");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(island).is_some(), "seeked land entered the battlefield");
+    assert!(g.players[0].library.iter().any(|c| c.id == warden), "Pearl Lake Warden shuffled back");
+}
+
+/// Chilling Screech (Runescale Stormbrood's Omen) counters a mana-value-2 spell
+/// but can't target a higher-cost one.
+#[test]
+fn omen_chilling_screech_counters_low_mv_spell() {
+    let mut g = two_player_game();
+    // Opponent casts a 2-mana bear; it's on the stack.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears()); // {1}{G}, MV 2
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts the bear");
+    // We hold the Stormbrood and cast Chilling Screech at the bear spell.
+    let brood = g.add_card_to_hand(0, catalog::runescale_stormbrood());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: brood, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chilling Screech at the MV-2 spell");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the MV-2 spell was countered");
+    assert!(g.players[0].library.iter().any(|c| c.id == brood), "Runescale Stormbrood shuffled back");
+}
+
+/// Signaling Roar (Riling Dawnbreaker's Omen) mints a 2/2 white Soldier token.
+#[test]
+fn omen_signaling_roar_makes_soldier() {
+    let mut g = two_player_game();
+    let dawn = g.add_card_to_hand(0, catalog::riling_dawnbreaker());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: dawn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Signaling Roar");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0)
+        .expect("a Soldier token was created");
+    assert_eq!((token.definition.power, token.definition.toughness), (2, 2), "2/2 Soldier");
+}
+
+/// CR 702.182 — Job Select: an Equipment with job select enters, mints a 1/1
+/// Hero token, and attaches itself to it.
+#[test]
+fn cr_702_182_job_select_mints_hero_and_attaches() {
+    let mut g = two_player_game();
+    let fist = g.add_card_to_hand(0, catalog::monks_fist());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fist, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Monk's Fist");
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Hero" && c.controller == 0)
+        .expect("a 1/1 Hero token was created");
+    let hero_id = hero.id;
+    assert_eq!((hero.definition.power, hero.definition.toughness), (1, 1), "1/1 Hero");
+    // The Equipment attached itself to the Hero, granting +1/+0 → 2/1.
+    let equip = g.battlefield_find(fist).expect("equipment on battlefield");
+    assert_eq!(equip.attached_to, Some(hero_id), "Monk's Fist attached to the Hero");
+    assert_eq!(g.computed_permanent(hero_id).unwrap().power, 2, "Hero gets +1/+0 from Monk's Fist");
+}
+
+/// CR 702.187 — Mayhem: a card discarded this turn may be cast from the
+/// graveyard for its mayhem cost, then is exiled when it leaves the stack.
+#[test]
+fn cr_702_187_mayhem_casts_discarded_card_then_exiles() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::electros_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Discard the Bolt this turn — that's what unlocks its Mayhem cast.
+    let mut events = Vec::new();
+    g.discard_card(0, bolt, &mut events);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt is in the graveyard");
+    // Pay the Mayhem cost {1}{R} and cast it from the graveyard at the bear.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastMayhem {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Electro's Bolt via Mayhem");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Bolt's 4 damage killed the 2/2 bear");
+    // CR 702.187 exile-after: the Mayhem spell goes to exile, not the graveyard.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "Mayhem-cast spell was exiled");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bolt), "not in the graveyard");
+}
+
+/// A Mayhem cast is illegal if the card wasn't discarded this turn.
+#[test]
+fn cr_702_187_mayhem_blocked_without_discard_this_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Bolt sits in the graveyard but was NOT discarded this turn.
+    let bolt = g.add_card_to_graveyard(0, catalog::electros_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.perform_action(GameAction::CastMayhem {
+        card_id: bolt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "Mayhem can't cast a card not discarded this turn");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt stays in the graveyard");
+}
+
+/// CR 702.188 — Web-slinging: cast Spider-Man, Web-Slinger for {W} by returning
+/// a tapped creature you control to its owner's hand instead of paying {2}{W}.
+#[test]
+fn cr_702_188_web_slinging_returns_tapped_creature() {
+    let mut g = two_player_game();
+    // A tapped creature to bounce.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == fodder).unwrap().tapped = true;
+    let spider = g.add_card_to_hand(0, catalog::spider_man_web_slinger());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1); // only {W} — the web-slinging cost
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spider, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("web-sling Spider-Man for {W} + bounce a tapped creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == spider), "Spider-Man resolved onto the battlefield");
+    assert!(g.battlefield_find(fodder).is_none(), "the tapped creature was returned");
+    assert!(g.players[0].hand.iter().any(|c| c.id == fodder), "bounced to its owner's hand");
+}
+
+/// Web-slinging is illegal with no tapped creature to return.
+#[test]
+fn cr_702_188_web_slinging_requires_a_tapped_creature() {
+    let mut g = two_player_game();
+    // An untapped creature doesn't satisfy the return-a-tapped-creature cost.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spider = g.add_card_to_hand(0, catalog::spider_man_web_slinger());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spider, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "no tapped creature → web-slinging rejected");
+}
+
+/// CR 702.187 — the "if this spell's mayhem cost was paid, …" rider. Cast for
+/// the mayhem cost and only opponents' creatures get -2/-2 (Sandman's Quicksand).
+#[test]
+fn cr_702_187_mayhem_rider_branches_on_mayhem_cast() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::sandmans_quicksand());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let mut events = Vec::new();
+    g.discard_card(0, spell, &mut events);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMayhem {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sandman's Quicksand via Mayhem");
+    drain_stack(&mut g);
+    // Mayhem cast → only the opponent's creature took -2/-2.
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's bear died to -2/-2");
+    assert!(g.battlefield_find(mine).is_some(), "my bear was spared by the rider");
+}
+
+/// Cast normally (from hand), the rider doesn't fire — all creatures get -2/-2.
+#[test]
+fn cr_702_187_mayhem_rider_off_when_cast_normally() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sandmans_quicksand());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("hard-cast Sandman's Quicksand");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's bear died");
+    assert!(g.battlefield_find(mine).is_none(), "my bear died too — both swept");
+}
+
+/// CR 702.180 — Harmonize: cast a card from the graveyard for its harmonize
+/// cost, tapping a creature to reduce the cost by its power; the spell is
+/// exiled after resolving.
+#[test]
+fn cr_702_180_harmonize_tap_discount_then_exile() {
+    let mut g = two_player_game();
+    // Channeled Dragonfire (Harmonize {5}{R}{R}) waits in the graveyard.
+    let spell = g.add_card_to_graveyard(0, catalog::channeled_dragonfire());
+    // A 5/5 to tap: {5}{R}{R} − 5 = {R}{R}.
+    let big = g.add_card_to_battlefield(0, catalog::durkwood_baloth());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastHarmonize {
+        card_id: spell,
+        tap_creature: Some(big),
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("cast Channeled Dragonfire via Harmonize for {R}{R}");
+    assert!(g.battlefield_find(big).unwrap().tapped, "the discounting creature is tapped");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "dealt 2 to the opponent");
+    // CR 702.180 exile-after.
+    assert!(g.exile.iter().any(|c| c.id == spell), "Harmonize spell was exiled");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != spell), "not in graveyard");
+}
+
+/// Without tapping a creature, the full harmonize cost must be paid.
+#[test]
+fn cr_702_180_harmonize_no_tap_requires_full_cost() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_graveyard(0, catalog::channeled_dragonfire());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Only {R}{R} available — not enough for the full {5}{R}{R}.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let r = g.perform_action(GameAction::CastHarmonize {
+        card_id: spell, tap_creature: None,
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "can't pay {{5}}{{R}}{{R}} with only {{R}}{{R}} and no tap");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "spell stays in graveyard");
+}
+
+/// Whirlwing Stormbrood's static lets its controller cast sorceries at instant
+/// speed (here: on the opponent's turn with a non-empty stack context).
+#[test]
+fn whirlwing_grants_sorcery_flash_timing() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::whirlwing_stormbrood());
+    // A sorcery in hand that would normally be sorcery-speed-only.
+    let bolt = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // It's the opponent's turn (seat 1 active); seat 0 holds priority.
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Whirlwing's static lets the sorcery be cast at instant speed");
+    assert!(g.stack.iter().any(|si| matches!(si,
+        crate::game::StackItem::Spell { card, .. } if card.id == bolt)),
+        "the sorcery is on the stack");
+}
+
+// ── CR 120.6 — "loses half their life, rounded up" ─────────────────────────────
+
+/// A "lose half your life, rounded up" effect rounds an odd total upward
+/// (CR 120.6 / 119.5). Unstoppable Slasher's combat trigger drives it.
+#[test]
+fn cr_120_6_lose_half_life_rounds_up() {
+    let mut g = two_player_game();
+    let slasher = g.add_card_to_battlefield(0, catalog::unstoppable_slasher());
+    g.clear_sickness(slasher);
+    g.players[1].life = 15;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: slasher, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    // 15 - 2 (combat) = 13; half rounded up = 7; 13 - 7 = 6.
+    assert_eq!(g.players[1].life, 6, "odd life halved and rounded up");
+}
+
+// ── CR 509.1b — fixed-threshold "can't be blocked by power N or less" ──────────
+
+/// CR 509.1b — Questing Beast's evasion gates on the blocker's *computed*
+/// power against a fixed threshold (2), not the attacker's power.
+#[test]
+fn cr_509_1b_power_threshold_block_restriction() {
+    let mut g = two_player_game();
+    let qb = g.add_card_to_battlefield(0, catalog::questing_beast());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // power 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // power 4
+    assert!(!g.blocker_can_block_attacker(small, qb), "power-2 blocker is illegal");
+    assert!(g.blocker_can_block_attacker(big, qb), "power-4 blocker is legal");
+}
+
+// ── CR 601.2c — "up to N target" spells accept fewer targets ───────────────────
+
+/// CR 601.2c — a "put a +1/+1 counter on each of up to two target creatures"
+/// spell (Gird for Battle) is legal with a single target and still resolves.
+#[test]
+fn cr_601_2c_up_to_two_targets_accepts_one() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::gird_for_battle());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with a single target");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "the single chosen creature got its counter"
+    );
+}
+
+// ── CR 601.2f / 117.7c — target-conditional cost reduction ────────────────────
+
+/// CR 601.2f — Ride's End ("costs {3} less if it targets a tapped permanent")
+/// is castable for {1}{W} against a tapped creature, but its full {4}{W} stands
+/// against an untapped one. The colored {W} pip is never reduced (117.7c).
+#[test]
+fn cr_601_2f_rides_end_target_conditional_reduction() {
+    // Tapped target → discounted, castable for {1}{W}.
+    let mut g = two_player_game();
+    let tapped = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let re = g.add_card_to_hand(0, catalog::rides_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, re, Target::Permanent(tapped));
+    assert!(g.exile.iter().any(|c| c.id == tapped), "discounted exile of a tapped permanent");
+
+    // Untapped target → no discount; {1}{W} is not enough for {4}{W}.
+    let mut g = two_player_game();
+    let untapped = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let re = g.add_card_to_hand(0, catalog::rides_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: re, target: Some(Target::Permanent(untapped)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "no discount against an untapped target — full cost unpaid"
+    );
+}
+
+// ── CR 701.13 — Investigate ───────────────────────────────────────────────────
+
+/// CR 701.13 — Hostile Investigator's "whenever a player discards, investigate"
+/// (once each turn) creates a Clue artifact token.
+#[test]
+fn cr_701_13_investigate_makes_a_clue() {
+    use crate::card::ArtifactSubtype;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hostile_investigator());
+    // A discard (Unburden on seat 0) triggers the investigate.
+    let unburden = g.add_card_to_hand(0, catalog::unburden());
+    g.add_card_to_hand(0, catalog::mountain());
+    g.add_card_to_hand(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, unburden, Target::Player(0));
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue)),
+        "investigate created a Clue token"
+    );
+}
+
+// ── CR 702.166 — Offspring ────────────────────────────────────────────────────
+
+/// CR 702.166 — paying a creature's Offspring cost makes a 1/1 token copy of it
+/// enter when the creature itself enters.
+#[test]
+fn cr_702_166_offspring_makes_one_one_copy() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_hand(0, catalog::pawpatch_recruit()); // Offspring {2}
+    g.players[0].mana_pool.add(Color::Green, 1); // {G} base
+    g.players[0].mana_pool.add_colorless(2); // {2} Offspring
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: recruit, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with Offspring paid");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Pawpatch Recruit")
+        .count();
+    assert_eq!(copies, 2, "the creature plus its 1/1 Offspring token");
+    let cp = g.compute_battlefield();
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Pawpatch Recruit" && c.is_token
+            && cp.iter().find(|p| p.id == c.id).map(|p| (p.power, p.toughness)) == Some((1, 1))),
+        "the Offspring copy is a 1/1 token"
+    );
+}
+
+// ── CR 615.12 (scoped) — Questing Beast: your creatures' combat damage can't be prevented ──
+
+/// CR 615.12 — a Fog (prevent all combat damage this turn) doesn't stop the
+/// combat damage of a creature its controller controls while Questing Beast's
+/// static is active.
+#[test]
+fn cr_615_12_questing_beast_combat_damage_ignores_fog() {
+    let mut g = two_player_game();
+    let qb = g.add_card_to_battlefield(0, catalog::questing_beast()); // 4/4, the static
+    g.clear_sickness(qb);
+    // A Fog is in effect this turn.
+    g.prevent_combat_damage_this_turn = true;
+    let opp = g.players[1].life;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: qb, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, opp - 4, "Questing Beast's combat damage was not prevented");
+}
+
+/// Without Questing Beast's static, the same Fog prevents an ordinary
+/// attacker's combat damage (control case).
+#[test]
+fn cr_615_1_fog_prevents_ordinary_attacker() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.prevent_combat_damage_this_turn = true;
+    let opp = g.players[1].life;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, opp, "ordinary combat damage is fogged");
+}
+
+// ── CR 122.1c / 701.46a — a stun counter replaces an untap ───────────────────
+
+/// CR 122.1c — a tapped permanent with stun counters stays tapped through the
+/// untap step, removing one stun counter each time, then untaps normally.
+#[test]
+fn cr_122_1c_stun_counter_replaces_untap() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let inst = g.battlefield_find_mut(c).unwrap();
+        inst.tapped = true;
+        inst.add_counters(CounterType::Stun, 2);
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    let inst = g.battlefield_find(c).unwrap();
+    assert!(inst.tapped, "stayed tapped, untap replaced");
+    assert_eq!(inst.counter_count(CounterType::Stun), 1, "one stun counter removed");
+    g.do_untap();
+    let inst = g.battlefield_find(c).unwrap();
+    assert!(inst.tapped, "still tapped while a stun counter remains");
+    assert_eq!(inst.counter_count(CounterType::Stun), 0, "second stun removed");
+    g.do_untap();
+    assert!(!g.battlefield_find(c).unwrap().tapped, "untaps once stun counters are gone");
+}
+
+// ── CR 702.29 — Cycling: pay the cost, discard the card, draw a card ─────────
+
+/// CR 702.29a — cycling a card discards it (to its owner's graveyard) and draws
+/// a card, paying the cycling cost.
+#[test]
+fn cr_702_29_cycling_discards_and_draws() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_hand(0, catalog::marauding_mako()); // Cycling {2}
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: card, x_value: None }).expect("cycle for {2}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == card), "cycled card hits the graveyard");
+    assert_eq!(g.players[0].hand.len(), hand, "discarded one, drew one (net zero)");
+}
+
+// ── CR 701.55 — Face a villainous choice ─────────────────────────────────────
+
+/// CR 701.55a — the chooser performs the chosen option. The bot heuristic
+/// picks the lesser self-harm: 2 life lost beats 6 life lost.
+#[test]
+fn cr_701_55_villainous_choice_picks_lesser_harm() {
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    let choice = Effect::VillainousChoice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        option_a: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(6) }),
+        option_b: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) }),
+    };
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&choice, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 18, "opponent took the 2-life option");
+}
+
+/// CR 701.55b — an impossible option may be chosen and does nothing, so the
+/// chooser dodges harm (no creature to sacrifice → sacrifice branch is free).
+#[test]
+fn cr_701_55_villainous_choice_takes_impossible_option_to_dodge() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    // Opponent controls no creature, so the sacrifice option is impossible.
+    let choice = Effect::VillainousChoice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        option_a: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(5) }),
+        option_b: Box::new(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::You),
+            filter: SelectionRequirement::Creature,
+            count: Value::Const(1),
+        }),
+    };
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&choice, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 20, "dodged via the impossible sacrifice option");
+}
+
+// ── CR 614.16 — counter-placement replacement ordering ───────────────────────
+
+/// CR 614.16 / 616.1 — Hardened Scales (additive +1) and a Doubling-Counters
+/// permanent both replace a +1/+1 placement; the additive applies before the
+/// doubling: a 1-counter placement becomes (1+1)*2 = 4.
+#[test]
+fn cr_614_16_additive_then_doubling_counter_replacement() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    g.add_card_to_battlefield(0, catalog::witherbloom_pestseed()); // DoubleCounters
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(1),
+    }, &ctx).unwrap();
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "(1 + Hardened Scales) * Doubling = 4"
+    );
+}
+
+// ── CR 701.56 — Time travel ──────────────────────────────────────────────────
+
+/// CR 701.56a — time traveling removes a time counter from a suspended card the
+/// player owns (the bot heuristic advances its own suspended spells).
+#[test]
+fn cr_701_56_time_travel_advances_own_suspended_card() {
+    use crate::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::durkwood_baloth()); // Suspend 5—{G}
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    let before = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    assert_eq!(before, 5);
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::TimeTravel { who: PlayerRef::You }, &ctx).unwrap();
+    let after = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    assert_eq!(after, 4, "one time counter removed");
+}
+
+// ── CR 702.148 — Cleave ──────────────────────────────────────────────────────
+
+/// Casting Path of Peril normally destroys only creatures of mana value 2 or
+/// less; casting it for its cleave cost removes the bracketed clause and wipes
+/// every creature (the bracket-removal is the broader `effect_override`).
+#[test]
+fn cr_702_148_cleave_removes_bracketed_clause() {
+    // Normal cast: a 5/5 survives.
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    let id = g.add_card_to_hand(0, catalog::path_of_peril());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("normal cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "MV-2 creature destroyed");
+    assert!(g.battlefield_find(big).is_some(), "MV-5 creature spared by the bracketed clause");
+
+    // Cleave cast: the 5/5 dies too.
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::path_of_peril());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "cleave wipes all creatures");
+}
+
+// ── CR 701.16 — Sacrifice as a reflexive cost ────────────────────────────────
+
+/// `Effect::MaySacrifice` ("you may sacrifice X; if you do, …") declined leaves
+/// the board untouched and skips the payoff.
+#[test]
+fn cr_701_16_reflexive_sacrifice_declined_skips_payoff() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::effect::{Effect, Value, Selector};
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = Effect::MaySacrifice {
+        description: "sac a creature?".into(),
+        filter: SelectionRequirement::Creature,
+        count: Value::Const(1),
+        then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+        else_: None,
+    };
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(fodder).is_some(), "nothing sacrificed when declined");
+    assert_eq!(g.players[0].life, life, "payoff skipped");
+}
+
+// ── EntityMatchesAny — "if a [type] card was exiled this way" ────────────────
+
+/// `Predicate::EntityMatchesAny` is false when the selector is empty, so an
+/// "up to one target" rider with no target chosen skips its payoff (Diregraf
+/// Scavenger drains nothing when it exiles nothing).
+#[test]
+fn entity_matches_any_false_on_empty_target() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    g.players[0].life = 20;
+    let etb = catalog::diregraf_scavenger().triggered_abilities[0].effect.clone();
+    // No target chosen (up-to-one declined) → empty targets.
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 20, "no exile → no drain");
+    assert_eq!(g.players[0].life, 20, "no exile → no gain");
+}
+
+// ── CR 702.34 — Flashback (graveyard-grant via Lier) ──────────────────────────
+
+/// CR 702.34a/d — Lier grants flashback (= mana cost) to instants/sorceries in
+/// your graveyard; the recast follows alternative-cost timing and the card is
+/// exiled when it leaves the stack.
+#[test]
+fn cr_702_34_lier_grants_graveyard_flashback_and_exiles() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lier_disciple_of_the_drowned());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // The grant is visible to the engine helper.
+    let inst = g.players[0].graveyard.iter().find(|c| c.id == bolt).unwrap().clone();
+    assert!(g.graveyard_flashback_grant(0, &inst).is_some(), "Lier grants flashback");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback castable via Lier");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Bolt resolved for 3");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "CR 702.34d — exiled off the stack");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Without Lier (or printed flashback), a graveyard instant isn't castable.
+#[test]
+fn cr_702_34_no_grant_no_flashback() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let inst = g.players[0].graveyard.iter().find(|c| c.id == bolt).unwrap().clone();
+    assert!(g.graveyard_flashback_grant(0, &inst).is_none(), "no static → no grant");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no flashback grant → not castable");
+}
+
+// ── CR 702.147 — Decayed ──────────────────────────────────────────────────────
+
+/// CR 702.147a — "Decayed" means "this creature can't block". A decayed Zombie
+/// (Ghoulish Procession's token) is denied as a blocker.
+#[test]
+fn cr_702_147_decayed_creature_cant_block() {
+    let mut g = two_player_game();
+    // Mint a decayed Zombie under seat 1 via Ghoulish Procession's effect.
+    let proc = g.add_card_to_battlefield(1, catalog::ghoulish_procession());
+    let trig = catalog::ghoulish_procession().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(proc, 1, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let zombie = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
+    assert!(g.computed_permanent(zombie).unwrap().keywords.contains(&Keyword::Decayed),
+        "token carries Decayed");
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    assert!(!g.blocker_can_block_attacker(zombie, attacker), "CR 702.147 — decayed can't block");
+}
+
+// ── CR 702.41 — Affinity ──────────────────────────────────────────────────────
+
+/// CR 702.41a — "Affinity for [text]" reduces a spell's cost by {1} per matching
+/// permanent. Millicent's Affinity for Spirits discounts the generic pips.
+#[test]
+fn cr_702_41_affinity_for_spirits_reduces_cost() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::millicent_restless_revenant(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no Spirits → no discount");
+    g.add_card_to_battlefield(0, catalog::millicent_restless_revenant()); // a Spirit
+    g.add_card_to_battlefield(0, catalog::millicent_restless_revenant());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "two Spirits → 2 generic off");
+}
+
+// ── CR 702.149 — Training ────────────────────────────────────────────────────
+
+/// CR 702.149a — "Whenever this creature attacks with another creature with
+/// greater power, put a +1/+1 counter on this creature." Rural Recruit (1/1)
+/// grows when it attacks beside a bigger creature, and not when alone.
+#[test]
+fn cr_702_149_training_grows_beside_a_bigger_attacker() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_battlefield(0, catalog::rural_recruit()); // 1/1 trainer
+    let big = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    g.clear_sickness(recruit);
+    g.clear_sickness(big);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: recruit, target: AttackTarget::Player(1) },
+        Attack { attacker: big, target: AttackTarget::Player(1) },
+    ]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(recruit).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "training fired beside a bigger attacker",
+    );
+}
+
+/// CR 702.149a — a lone training attacker (no bigger ally attacking) gets no
+/// counter.
+#[test]
+fn cr_702_149_training_silent_when_alone() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_battlefield(0, catalog::rural_recruit());
+    g.clear_sickness(recruit);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: recruit,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(recruit).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        None,
+        "no bigger ally → no training counter",
+    );
+}
+
+// ── CR 702.110 — Exploit ─────────────────────────────────────────────────────
+
+/// CR 702.110b/c — Exploit lets the creature be sacrificed on entry; its
+/// "when this exploits a creature" payoff then resolves. Mindleech Ghoul makes
+/// each opponent exile a card from hand.
+#[test]
+fn cr_702_110_exploit_payoff_fires_on_sacrifice() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // accept exploit
+    let opp_hand = g.players[1].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::mindleech_ghoul());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "opponent exiled a card from hand");
+}
+
+// ── CR 702.147 — Decayed (attack-sacrifice half) ─────────────────────────────
+
+/// CR 702.147a — "When it attacks, sacrifice it at end of combat." A decayed
+/// Zombie that attacks is gone by the post-combat main phase.
+#[test]
+fn cr_702_147_decayed_attacker_sacrificed_at_end_of_combat() {
+    let mut g = two_player_game();
+    let proc = g.add_card_to_battlefield(0, catalog::ghoulish_procession());
+    let trig = catalog::ghoulish_procession().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(proc, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let zombie = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
+    g.clear_sickness(zombie);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: zombie,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(zombie).is_none(), "decayed attacker sacrificed at end of combat");
+}
+
+/// CR 706.4 — a result-gated roll trigger ("whenever you roll a 5 or higher")
+/// fires off the `RolledDice` event's greatest result. Ground Pounder gains
+/// trample on a 5+, and stays vanilla on a low roll.
+#[test]
+fn cr_706_4_die_result_trigger_grants_trample() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let roll = |face: u8| {
+        let mut g = two_player_game();
+        let gp = g.add_card_to_battlefield(0, catalog::ground_pounder());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(face)]));
+        let effect = catalog::ground_pounder().activated_abilities[0].effect.clone();
+        let ctx = crate::game::effects::EffectContext::for_ability(gp, 0, None);
+        let evs = g.resolve_effect(&effect, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        g.computed_permanent(gp).unwrap().keywords.contains(&Keyword::Trample)
+    };
+    assert!(roll(5), "rolling a 5 grants trample");
+    assert!(!roll(3), "rolling a 3 does not");
+}
+
+/// CR 702.146e — a Disturb back face that's an Aura is exiled (not put into a
+/// graveyard) when it leaves the battlefield, just like a creature back.
+#[test]
+fn cr_702_146e_disturb_aura_back_exiles_on_leave() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_graveyard(0, catalog::kindly_ancestor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+    }).expect("disturb the Aura");
+    drain_stack(&mut g);
+    // Kill the host; the orphaned Aura would normally go to the graveyard.
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == id), "Aura back exiled, not in graveyard");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != id), "not in graveyard");
+}
+
+// ── CR 111.10 — "When you create a token" triggers ───────────────────────────
+
+/// CR 111.10 — `EventKind::TokenCreated` fires per token created. Voldaren
+/// Bloodcaster (4 Blood already out) crosses its five-Blood transform threshold
+/// when its fifth Blood is minted.
+#[test]
+fn cr_111_10_token_created_fires_per_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let caster = g.add_card_to_battlefield(0, catalog::voldaren_bloodcaster());
+    for _ in 0..4 {
+        g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    }
+    let evs = g.resolve_effect(
+        &crate::card::Effect::CreateToken {
+            who: crate::effect::PlayerRef::You,
+            count: crate::card::Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        },
+        &EffectContext::for_ability(crate::card::CardId(0), 0, None),
+    ).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+}
+
+/// CR 614.13 — a token-doubling replacement multiplies the count, and each
+/// resulting token fires its own `TokenCreated` event (CR 111.10). With a
+/// doubler out, Voldaren at 3 Blood mints one → two Blood enter → it reaches
+/// five and transforms off the doubled token.
+#[test]
+fn cr_614_13_token_doubling_fires_per_doubled_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let caster = g.add_card_to_battlefield(0, catalog::voldaren_bloodcaster());
+    g.add_card_to_battlefield(0, catalog::elspeth_storm_slayer()); // doubles tokens
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    }
+    let evs = g.resolve_effect(
+        &crate::card::Effect::CreateToken {
+            who: crate::effect::PlayerRef::You,
+            count: crate::card::Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        },
+        &EffectContext::for_ability(crate::card::CardId(0), 0, None),
+    ).unwrap();
+    // The single mint doubled to two tokens → five Blood total.
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Blood").count(),
+        5,
+        "doubler made two Blood from one mint"
+    );
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+}
+
+// ── CR 508.1a — attack-only restriction ──────────────────────────────────────
+
+/// CR 508.1a — "can't attack unless you control [N matching]" restricts only
+/// attacking, not blocking, when flagged attack-only (Lambholt Pacifist).
+#[test]
+fn cr_508_1a_attack_only_gate_allows_blocking() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let pacifist = g.add_card_to_battlefield(0, catalog::lambholt_pacifist());
+    g.clear_sickness(pacifist);
+    g.step = TurnStep::DeclareAttackers;
+    assert!(!g.legal_attackers(0).contains(&pacifist), "no power-4 creature → can't attack");
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    assert!(g.blocker_can_block_attacker(pacifist, atk), "but it can still block");
+}
+
+// ── CR 509.1b — "can block only creatures with flying" restriction ────────────
+
+/// Shacklegeist (and Wanderlight Spirit) can block only flyers: a ground
+/// attacker can't be blocked by it, but a flyer can.
+#[test]
+fn cr_509_1b_can_block_only_flying_restriction() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let blk = g.add_card_to_battlefield(1, catalog::shacklegeist());
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(
+        !crate::game::can_block_attacker_computed(binst, &bcomp, &[], &[], 3),
+        "ground attacker can't be blocked by a fly-only blocker"
+    );
+    assert!(
+        crate::game::can_block_attacker_computed(binst, &bcomp, &[Keyword::Flying], &[], 3),
+        "a flyer can be blocked"
+    );
+}
+
+// ── CR 726 — Day and Night (spell-driven) ────────────────────────────────────
+
+/// A spell with "It becomes night" sets the day/night state to night from
+/// outside the upkeep transition.
+#[test]
+fn cr_726_spell_becomes_night() {
+    use crate::game::effects::EffectContext;
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    assert_eq!(g.day_night, None, "starts neither day nor night");
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::into_the_night().effect, &ctx).unwrap();
+    assert_eq!(g.day_night, Some(DayNight::Night), "spell forced night");
+}
+
+/// CR 502.3 — Winter Orb prevents lands from untapping during their
+/// controllers' untap steps (the `PreventUntap` machinery, exercised through a
+/// real card). Non-land permanents are unaffected.
+#[test]
+fn cr_502_3_winter_orb_prevents_land_untap() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winter_orb());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "land stays tapped under Winter Orb");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "non-land untaps");
+}
+
+/// CR 614.5 — noncombat damage replacements stack: Solphim's noncombat-only
+/// doubler combines with Furnace of Rath's global doubler (3 → 12), while
+/// combat damage only sees Furnace (Solphim is noncombat-only).
+#[test]
+fn cr_614_5_solphim_stacks_with_furnace_on_noncombat_only() {
+    // Noncombat: 3-damage bolt → Furnace ×2 → Solphim ×2 = 12.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::solphim_mayhem_dominus());
+    g.add_card_to_battlefield(0, catalog::furnace_of_rath());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 8, "3 → ×2 (Furnace) → ×2 (Solphim) = 12 damage");
+
+    // Combat: a 5/4 Solphim attack only doubles via Furnace (5 → 10), not Solphim.
+    let mut g2 = two_player_game();
+    let solphim = g2.add_card_to_battlefield(0, catalog::solphim_mayhem_dominus());
+    g2.add_card_to_battlefield(0, catalog::furnace_of_rath());
+    g2.clear_sickness(solphim);
+    cr_advance_to(&mut g2, TurnStep::DeclareAttackers);
+    g2.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: solphim, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g2);
+    cr_advance_to(&mut g2, TurnStep::PostCombatMain);
+    assert_eq!(g2.players[1].life, 10, "5 combat → ×2 Furnace only = 10");
+}
+
+/// CR 122.1 / 702.12 — an indestructible counter (Solphim's activated ability)
+/// replaces destruction: the permanent survives a "destroy" effect.
+#[test]
+fn cr_122_1_indestructible_counter_survives_destroy() {
+    let mut g = two_player_game();
+    let solphim = g.add_card_to_battlefield(1, catalog::solphim_mayhem_dominus());
+    g.battlefield_find_mut(solphim).unwrap()
+        .add_counters(CounterType::Indestructible, 1);
+    let kill = g.add_card_to_hand(0, catalog::sephiroths_intervention()); // destroy target creature
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kill, target: Some(Target::Permanent(solphim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(solphim).is_some(), "indestructible counter saved it");
+}
+
+// ── CR 502.3 — untap-step land lock (Bontu's Last Reckoning) ────────────────
+/// CR 502.3 — Bontu's Last Reckoning keeps the caster's lands from untapping
+/// for one untap step, then the lock lifts.
+#[test]
+fn cr_502_3_bontus_lands_skip_one_untap_step() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::bontus_last_reckoning());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bontu's Last Reckoning");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "land stays tapped this untap step");
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped, "lock is one-shot — untaps next step");
+}
+
+// ── CR 611.2 — per-turn spell-cast locks by type ───────────────────────────
+/// CR 611.2 — Deafening Silence allows only one noncreature spell per turn but
+/// leaves creature spells untouched.
+#[test]
+fn cr_611_2_deafening_silence_locks_only_noncreature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::deafening_silence());
+    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: b1, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first noncreature spell ok");
+    drain_stack(&mut g);
+    assert!(matches!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: b2, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        }),
+        Err(GameError::SpellLimitReached)
+    ), "second noncreature spell barred");
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature spell unaffected by Deafening Silence");
+}
+
+// ── CR 701.16 — targeted sacrifice fires sacrifice + death triggers ─────────
+/// CR 701.16 — Effect::SacrificePermanent is a genuine sacrifice: a creature
+/// sacrificed this way fires CreatureDied, so a death payoff (Harvester of
+/// Souls) sees it. Footsteps of the Goryo sacrifices its reanimated creature
+/// at the end step.
+#[test]
+fn cr_701_16_targeted_sacrifice_fires_death_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::harvester_of_souls());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::footsteps_of_the_goryo());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::island());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Footsteps of the Goryo");
+    drain_stack(&mut g);
+    let h = g.players[0].hand.len();
+    // Accept Harvester's "may draw" when the reanimated creature is sacrificed.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    while g.step != crate::game::types::TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_none(), "reanimated creature sacrificed at end step");
+    assert_eq!(g.players[0].hand.len(), h + 1, "the sacrifice fired Harvester's death draw");
+}
+
+// ── CR 105.2c / 111.4 — token color from its color indicator ────────────────
+/// A token has no mana cost, so its color comes from the effect that creates
+/// it, modeled as a color indicator. Color-filtered effects therefore see a
+/// white Soldier token (Raise the Alarm) as white and a colorless Spirit token
+/// (Sokenzan) as colorless.
+#[test]
+fn cr_105_2c_token_color_from_indicator() {
+    use crate::card::SelectionRequirement as R;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: alarm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise the Alarm");
+    drain_stack(&mut g);
+    let soldier = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0).expect("soldier token").id;
+    assert!(g.evaluate_requirement_static(&R::HasColor(Color::White), &Target::Permanent(soldier), 0, None),
+        "white Soldier token is white");
+    assert!(!g.evaluate_requirement_static(&R::HasColor(Color::Blue), &Target::Permanent(soldier), 0, None),
+        "white Soldier token is not blue");
+
+    let soken = g.add_card_to_hand(0, catalog::sokenzan_crucible_of_defiance());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: soken, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("channel Sokenzan");
+    drain_stack(&mut g);
+    let spirit = g.battlefield.iter()
+        .find(|c| c.definition.name == "Spirit" && c.controller == 0).expect("spirit token").id;
+    assert!(!g.evaluate_requirement_static(&R::HasColor(Color::Red), &Target::Permanent(spirit), 0, None),
+        "colorless Spirit token has no color");
+}
+
+// ── CR 700.5 — devotion counts mana pips, not token color ───────────────────
+/// A colored token *is* its color (CR 105.2c) but contributes nothing to
+/// devotion, which counts colored mana symbols in mana costs (CR 700.5). The
+/// color-indicator change must not leak into the devotion tally.
+#[test]
+fn cr_700_5_devotion_ignores_colored_tokens() {
+    use crate::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: alarm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise the Alarm");
+    drain_stack(&mut g);
+    let soldier = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0).expect("soldier").id;
+    assert!(g.evaluate_requirement_static(&R::HasColor(Color::White), &Target::Permanent(soldier), 0, None),
+        "the token is white");
+    assert_eq!(g.devotion_to(0, &[Color::White]), 0, "tokens add no devotion (no mana pips)");
+}
+
+// ── CR 702.16e — protection prevents a colored token's combat damage ─────────
+/// A creature with protection from white takes no combat damage from a white
+/// token it blocks (CR 702.16e), so the protection reads the token's color.
+#[test]
+fn cr_702_16e_protection_prevents_colored_token_damage() {
+    let mut g = two_player_game();
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: alarm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise the Alarm");
+    drain_stack(&mut g);
+    let soldier = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0).expect("soldier").id;
+    g.clear_sickness(soldier);
+    // P1's 2/1 has protection from white; it survives blocking the white token.
+    let cav = g.add_card_to_battlefield(1, catalog::stillmoon_cavalier());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: soldier, target: AttackTarget::Player(1),
+    }])).expect("attack with the token");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass to blockers");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(cav, soldier)])).expect("block");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cav).is_some(), "pro-white blocker took no damage from the white token");
+}
+
+// ── CR 701.54 — The Ring tempts you / Ring-bearer ───────────────────────────
+
+/// CR 701.54a — temptation designates a creature the player controls as their
+/// Ring-bearer (the engine auto-picks the strongest).
+#[test]
+fn cr_701_54a_ring_tempts_designates_a_bearer() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.ring_tempts(0, &mut ev);
+    assert_eq!(g.players[0].ring_temptations, 1);
+    assert_eq!(g.effective_ring_bearer(0), Some(bear));
+}
+
+/// CR 701.54c — at one+ temptation the Ring-bearer can't be blocked by a
+/// creature with greater power; at four+ it drains each opponent 3 on combat
+/// damage to a player.
+#[test]
+fn cr_701_54c_ring_bearer_evasion_and_drain() {
+    let mut g = two_player_game();
+    let bearer = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bearer);
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    // Cover the level-2 attack loot so the bearer doesn't deck out.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_hand(0, catalog::forest());
+    let mut ev = vec![];
+    for _ in 0..4 { g.ring_tempts(0, &mut ev); } // level 4
+    assert!(!g.blocker_can_block_attacker(big, bearer), "greater-power blocker barred");
+    let before = g.players[1].life;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bearer, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[1].life, before - 2 - 3, "2 combat + 3 Ring drain");
+}
+
+// ── CR 701.47 — Amass ───────────────────────────────────────────────────────
+
+/// CR 701.47a — amass with no Army first mints a 0/0 Army token, then loads it
+/// with N +1/+1 counters (Easterling Vanguard's death trigger amasses Orcs 1).
+#[test]
+fn cr_701_47a_amass_mints_and_grows_an_army() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::easterling_vanguard());
+    let ev = g.remove_to_graveyard_with_triggers(v);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Army))
+        .expect("Army token minted");
+    let cp = g.compute_battlefield();
+    let acp = cp.iter().find(|c| c.id == army.id).unwrap();
+    assert_eq!((acp.power, acp.toughness), (1, 1), "0/0 Army + one +1/+1 counter");
+}
+
+// ── CR 701.54c — the Ring's level-1 emblem makes the Ring-bearer legendary ────
+
+/// CR 701.54c — at level 1+, your Ring-bearer is legendary. Modeled by a
+/// synthetic `Modification::AddSupertype(Legendary)` layer-4 effect (CR 205.4b).
+#[test]
+fn cr_701_54c_ring_bearer_is_legendary() {
+    use crate::card::Supertype;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // nonlegendary
+    g.ring_tempts(0, &mut vec![]);
+    assert_eq!(g.effective_ring_bearer(0), Some(bear));
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == bear).unwrap().supertypes.contains(&Supertype::Legendary),
+        "Ring-bearer gains the Legendary supertype");
+}
+
+// ── CR 509.1c — "can't block unless you control N+ [filter]" (block-only) ──────
+
+/// CR 509.1c — a block restriction that gates blocking only (Olog-hai Crusher:
+/// "can't block unless you control a Goblin or Orc"), leaving attacking free.
+#[test]
+fn cr_509_1c_block_only_restriction() {
+    let mut g = two_player_game();
+    let olog = g.add_card_to_battlefield(1, catalog::olog_hai_crusher());
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(olog, atk), "no Goblin/Orc → can't block");
+    g.add_card_to_battlefield(1, catalog::goblin_guide());
+    assert!(g.blocker_can_block_attacker(olog, atk), "with a Goblin → can block");
+}
+
+// ── CR 701.12-style one-sided power damage ────────────────────────────────────
+
+/// One-sided "deals damage equal to its power" (Stew the Coneys). The source
+/// takes no back-swing; deathtouch/lifelink ride the source via the funnel.
+#[test]
+fn one_sided_power_damage_no_backswing() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::stew_the_coneys());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == foe), "enemy took 3 and died");
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "our creature takes no back-swing");
+}
+
+// ── CR 120.10 — excess damage ─────────────────────────────────────────────────
+
+/// Excess damage (CR 120.10) is the amount beyond lethal; it accumulates per
+/// resolution and resets between resolutions, gating Orbital Plunge's Lander.
+#[test]
+fn cr_120_10_excess_damage_tracked_per_resolution() {
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::hill_giant());
+    // 6 to a 2/2 → 4 excess.
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(small)));
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }, &ctx).unwrap();
+    assert_eq!(g.excess_damage_this_resolution, 4, "6 to a 2/2 → 4 excess");
+    // 6 to a 9/9 → no excess, and the counter reset between resolutions.
+    let big = g.add_card_to_battlefield(1, catalog::bygone_colossus());
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(big)));
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }, &ctx).unwrap();
+    assert_eq!(g.excess_damage_this_resolution, 0, "6 to a 9/9 → no excess");
+}
+
+// ── CR 207.2c / 700.11 — Descend (LCI ability word) ──────────────────────────
+
+/// "Descend 8" reads "eight or more permanent cards in your graveyard"
+/// (CR 207.2c ability word). Crafting Waterlogged Hulk into Watertight Gondola
+/// grants Unblockable only once the controller's graveyard holds 8 permanent
+/// cards; instant/sorcery cards there don't count.
+#[test]
+fn descend_8_grants_unblockable_only_at_eight_permanent_cards() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hulk = g.add_card_to_battlefield(0, catalog::waterlogged_hulk());
+    g.add_card_to_battlefield(0, catalog::island()); // Island to exile as the craft cost
+    // Seven permanent cards + one instant in the graveyard → descend 7.
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // not a permanent card
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hulk, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("craft into gondola");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hulk).unwrap().definition.name, "Watertight Gondola");
+    assert!(
+        !g.computed_permanent(hulk).unwrap().keywords.contains(&Keyword::Unblockable),
+        "descend 7 (instant doesn't count) → still blockable",
+    );
+    // Add an eighth permanent card → descend 8 flips the static on.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(hulk).unwrap().keywords.contains(&Keyword::Unblockable),
+        "descend 8 → unblockable",
+    );
+}
+
+// ── CR 702.169 — Craft ────────────────────────────────────────────────────────
+
+/// Craft (CR 702.169) is a sorcery-speed activated ability that exiles the
+/// source and other objects, returning the source transformed.
+#[test]
+fn cr_702_169_craft_exiles_and_returns_transformed() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::tithing_blade());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: blade, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("craft");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fodder), "creature exiled as cost");
+    assert_eq!(g.battlefield_find(blade).unwrap().definition.name, "Consuming Sepulcher");
+}
+
+// ── CR 104.3c / 704.5a — losing on an empty-library draw ─────────────────────
+
+/// A player who has attempted to draw from an empty library since the last
+/// SBA check loses the game (CR 104.3c via 704.5c).
+#[test]
+fn cr_704_5c_drawing_from_empty_library_loses() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let mut events = vec![];
+    assert!(!g.draw_one(0, &mut events), "draw from empty library fails");
+    g.lose_to_empty_draw(0);
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated, "empty-library draw eliminates the player");
+    assert!(g.is_game_over(), "game ends — the other player wins");
+}
+
+// ── CR 603.7 — reflexive "when you do" triggered abilities ───────────────────
+
+/// CR 603.7 — a reflexive ability set up by "you may pay {2}. When you do, …"
+/// chooses its targets when it triggers (after the cost), not when the ETB
+/// trigger is put on the stack. `Effect::Reflexive` is opaque to the cast/
+/// trigger-time target walk; Itzquinth's bite resolves only after the {2}.
+#[test]
+fn cr_603_7_reflexive_payoff_targets_after_cost() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let itz = g.add_card_to_battlefield(0, catalog::itzquinth_firstborn_of_gishath());
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.fire_self_etb_triggers(itz, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "reflexive bite resolved after the {{2}} was paid");
+}
+
+// ── CR 701.57 — Discover ─────────────────────────────────────────────────────
+
+/// CR 701.57 — discover N exiles from the top until a nonland card with mana
+/// value ≤ N, then casts it for free (or puts it into hand). Trumpeting
+/// Carnosaur discovers 5 on ETB.
+#[test]
+fn cr_701_57_discover_digs_and_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 ≤ 5 → discovered
+    let carno = g.add_card_to_battlefield(0, catalog::trumpeting_carnosaur());
+    let lib_before = g.players[0].library.len();
+    g.fire_self_etb_triggers(carno, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() < lib_before, "discover dug into the library");
+    // The MV-2 nonland card was discovered — cast for free or put into hand.
+    let found = g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+        || g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears");
+    assert!(found, "discovered card moved out of the library (cast or to hand)");
+}
+
+/// CR 702.56 — Forecast: a hand-activated ability usable only during the
+/// owner's upkeep, only once each turn. Pride of the Clouds mints a Bird.
+#[test]
+fn cr_702_56_forecast_once_per_turn_in_upkeep() {
+    let mut g = two_player_game();
+    let pride = g.add_card_to_hand(0, catalog::pride_of_the_clouds());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Outside the upkeep the forecast condition fails.
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: pride, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "forecast can't fire outside upkeep");
+    // In your upkeep it resolves; the card stays in hand.
+    g.step = TurnStep::Upkeep;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pride, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("forecast in upkeep");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == pride), "forecast card stays in hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird").count(), 1, "made a Bird");
+    // Second activation the same turn is rejected (once each turn).
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: pride, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "once each turn");
+}
+
+/// CR 701.40 — Explore via a Map token: sacrifice the Map to explore a
+/// creature; a land reveal goes to hand.
+#[test]
+fn cr_701_40_map_token_explore() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // A Map maker: cast Spyglass Siren (ETB makes a Map).
+    let siren = g.add_card_to_hand(0, catalog::spyglass_siren());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: siren, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast siren");
+    drain_stack(&mut g);
+    let map = g.battlefield.iter().find(|c| c.definition.name == "Map").map(|c| c.id).expect("Map token");
+    g.add_card_to_library(0, catalog::forest()); // land on top → explore to hand
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: map, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).expect("sac Map to explore");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(map).is_none(), "Map sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "explored land to hand");
+}
+
+/// CR 510.1c / 702.2e — a trample + deathtouch attacker assigns only 1 (lethal
+/// under deathtouch) to the blocker and tramples the rest to the player.
+#[test]
+fn cr_510_1c_deathtouch_trample_assigns_one() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::pest_reaper_b120()); // 4/4 trample+deathtouch
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.block_map.insert(blocker, attacker);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    let life_before = g.players[1].life;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).is_none(), "blocker dies to deathtouch");
+    assert_eq!(g.players[1].life, life_before - 3, "1 lethal to blocker, 3 trample over");
+}
+
+// ── CR 702.122 — Crew ───────────────────────────────────────────────────────
+
+/// CR 702.122 — tapping creatures with total power ≥ the crew cost turns a
+/// Vehicle into an artifact creature until end of turn.
+#[test]
+fn cr_702_122_crew_animates_vehicle() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(0, catalog::broadcast_rambler()); // Crew 1
+    let crewer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crewer);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(!g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature),
+        "uncrewed Vehicle is not a creature");
+    g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![crewer] })
+        .expect("crew");
+    assert!(g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature),
+        "crewed Vehicle becomes an artifact creature");
+}
+
+// ── CR 702.171 — Saddle ─────────────────────────────────────────────────────
+
+/// CR 702.171 — tapping creatures with total power ≥ the saddle cost saddles a
+/// Mount, enabling its "attacks while saddled" trigger.
+#[test]
+fn cr_702_171_saddle_enables_attack_trigger() {
+    let mut g = two_player_game();
+    let mount = g.add_card_to_battlefield(0, catalog::alacrian_jaguar()); // Saddle 1, 4/4
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mount);
+    g.clear_sickness(helper);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Saddle { mount, creatures: vec![helper] }).expect("saddle");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: mount, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mount).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "attacks-while-saddled gave +2/+2");
+}
+
+// ── CR 702.179 — Start your engines! ─────────────────────────────────────────
+
+/// CR 702.179a — a "Start your engines!" permanent entering sets its
+/// controller's speed to 1 (the speed starts at 0).
+#[test]
+fn cr_702_179_start_your_engines_sets_speed_to_one() {
+    let mut g = two_player_game();
+    assert_eq!(g.players[0].speed, 0, "no speed before any engine");
+    g.move_card_to_battlefield_for_test(0, catalog::glitch_ghost_surveyor());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].speed, 1, "Start your engines! set speed to 1");
+}
+
+// ── CR 702.2e / 510.1c — trample + deathtouch over multiple blockers ──────────
+
+/// A trample + deathtouch attacker assigns only 1 (the deathtouch lethal) to
+/// each blocker, so the rest tramples through (CR 510.1c lethal accounting +
+/// CR 702.2e "any nonzero amount is lethal under deathtouch").
+fn trample_deathtoucher(power: i32) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    CardDefinition {
+        name: "Test Trample Deathtoucher",
+        cost: crate::mana::cost(&[crate::mana::generic(3), crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        power,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+#[test]
+fn cr_702_2e_trample_deathtouch_assigns_one_per_blocker_then_tramples() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, trample_deathtoucher(4)); // 4/4
+    g.clear_sickness(attacker);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    let life_before = g.players[1].life;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    // 1 lethal (deathtouch) to each blocker → both die; 4 - 1 - 1 = 2 tramples over.
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(),
+        "deathtouch kills both blockers with 1 damage each");
+    assert_eq!(g.players[1].life, life_before - 2, "the remaining 2 power tramples through");
+}
+
+// ── CR 305.7 / 613 — a type-set effect swaps which tribal lord applies ─────────
+
+/// Turn to Frog's `BecomeCreatureType` replaces the creature's types (layer 4),
+/// so a non-Frog joins a Frog lord's umbrella — checked through the layer
+/// pipeline (CR 613 ordering: type set at L4 feeds the L7c anthem).
+#[test]
+fn cr_305_7_type_change_swaps_lord_applicability() {
+    use crate::card::{CardType, CreatureType, StaticAbility, StaticEffect, SelectionRequirement, Selector};
+    let mut g = two_player_game();
+    // A Frog lord: "Other Frogs you control get +1/+1."
+    let lord = crate::card::CardDefinition {
+        name: "Test Frog Lord",
+        cost: crate::mana::cost(&[crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Frog], ..Default::default()
+        },
+        power: 2, toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Frogs you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Frog)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    g.add_card_to_battlefield(0, lord);
+    // A vanilla 2/2 that is NOT a Frog — unaffected by the lord at first.
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 2, "non-Frog unbuffed");
+
+    // Turn the bears into a 1/1 Frog — sets its type at layer 4.
+    let spell = g.add_card_to_hand(0, catalog::turn_to_frog());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Turn to Frog castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "now a Frog");
+    // Base 1/1 (Turn to Frog) + the Frog lord's +1/+1 → 2/2.
+    assert_eq!((cp.power, cp.toughness), (2, 2), "the Frog lord now buffs the new Frog");
+}
+
+// ── CR 604.3 — characteristic-defining P/T recomputes live ─────────────────────
+
+#[test]
+fn cr_604_3_lhurgoyf_pt_tracks_graveyard_creatures() {
+    // A CDA P/T (Lhurgoyf = creature cards in all graveyards / +1 toughness) is
+    // recomputed continuously, so adding a creature card to a graveyard grows it.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lhurgoyf());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1), "empty graveyards → 0/1");
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "two creature cards across graveyards → 2/3");
+}
+
+// ── CR 108.3 / 800.4a — ownership independent of control ───────────────────────
+
+#[test]
+fn cr_108_3_gain_control_of_permanents_you_own() {
+    // Gruul Charm mode 1: "Gain control of all permanents you own." A creature
+    // you OWN but an opponent CONTROLS returns to you (SelectionRequirement::
+    // OwnedByYou keys off owner, not controller — CR 108.3).
+    use crate::card::Effect;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Hand it to the opponent's control while P0 keeps ownership.
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1);
+    let Effect::ChooseMode(m) = catalog::gruul_charm().effect else { panic!() };
+    g.resolve_effect(&m[1], &crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0,
+        "you regain control of a permanent you own");
+}
+
+// ── CR 702.85 — Cascade granted to other spells (The First Sliver) ─────────────
+
+#[test]
+fn cr_702_85_first_sliver_grants_sliver_spells_cascade() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Library top: a nonland the cascade can hit (MV 2 < Megantic Sliver's MV 6).
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    // The First Sliver on the battlefield grants your Sliver spells cascade.
+    g.add_card_to_battlefield(0, catalog::the_first_sliver());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let meg = g.add_card_to_hand(0, catalog::megantic_sliver());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: meg, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Megantic Sliver castable for {5}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "the granted cascade casts the lower-MV card onto the battlefield");
+}
+
+// ── CR 506 — skip the active player's combat phase (Stonehorn Dignitary) ───────
+
+#[test]
+fn cr_506_active_player_skips_their_combat_phase() {
+    // A banked skip charge sends Begin Combat straight to the postcombat main:
+    // no declare/damage steps occur.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].skip_next_combat = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.advance_step(Vec::new()).expect("advance from precombat main");
+    assert_eq!(g.step, TurnStep::PostCombatMain, "combat phase skipped entirely");
+    assert_eq!(g.players[0].skip_next_combat, 0, "charge consumed");
+}
+
+#[test]
+fn cr_506_skip_only_eats_one_combat() {
+    // A second turn's combat is unaffected once the single charge is spent.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].skip_next_combat = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.advance_step(Vec::new()).expect("skip the first combat");
+    assert_eq!(g.step, TurnStep::PostCombatMain);
+    // Next time we reach Begin Combat there's no charge → normal combat.
+    g.step = TurnStep::PreCombatMain;
+    g.advance_step(Vec::new()).expect("advance again");
+    assert_eq!(g.step, TurnStep::BeginCombat, "no charge left, combat proceeds");
+}
+
+// ── CR 602.5b — remove-a-counter activation cost (quest cycle) ─────────────────
+
+#[test]
+fn cr_602_5b_quest_activation_needs_its_counters() {
+    let mut g = two_player_game();
+    let quest = g.add_card_to_battlefield(0, catalog::quest_for_the_gravelord());
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Only two counters — short of the three the cost demands.
+    g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 2);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: quest, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    });
+    assert!(res.is_err(), "can't pay the remove-three-counters cost");
+    // Top up and it activates, consuming the counters via sacrifice.
+    g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: quest, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    }).expect("now payable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie Giant"));
+}
+
+// ── CR 605.1c — "Spend this mana only to activate abilities" ────────────────
+
+/// Omen Hawker's mana funds ability activations but is rejected for spell
+/// casts (the new `SpendRestriction::AbilitiesOnly`, CR 605.1c).
+#[test]
+fn cr_605_1c_abilities_only_mana_funds_abilities_not_spells() {
+    use crate::mana::{ManaCost, SpellKind};
+    let mut g = two_player_game();
+    let hawker = g.add_card_to_battlefield(0, catalog::omen_hawker());
+    g.clear_sickness(hawker);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hawker, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None,
+    }).expect("tap for {C}{U}");
+    let pool = &mut g.players[0].mana_pool;
+    assert_eq!(pool.restricted_total(), 2, "two restricted mana (C and U)");
+    let one = ManaCost::new(vec![crate::mana::generic(1)]);
+    assert!(pool.pay_for_spell(&one, &SpellKind::default()).is_err(), "can't fund a spell");
+    let ability = SpellKind { activating_ability: true, ..Default::default() };
+    assert!(pool.pay_for_spell(&one, &ability).is_ok(), "funds an ability activation");
+}
+
+// ── CR 604.3 — characteristic-defining P/T from the controller's graveyard ──
+
+/// Nethergoyf's `*/1+*` reads card types in *its controller's own* graveyard
+/// (CR 604.3 — `DynamicPt::CardTypesInControllerGraveyard`), and an opponent's
+/// graveyard doesn't feed it.
+#[test]
+fn cr_604_3_nethergoyf_counts_only_your_graveyard_types() {
+    let mut g = two_player_game();
+    let goyf = g.add_card_to_battlefield(0, catalog::nethergoyf());
+    // Opponent's graveyard types must NOT count.
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let v = g.compute_battlefield();
+    let c = v.iter().find(|c| c.id == goyf).unwrap();
+    assert_eq!((c.power, c.toughness), (0, 1), "opponent graveyard ignored");
+    // Your own graveyard with three card types → 3/4.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());   // Creature
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());  // Instant
+    g.add_card_to_graveyard(0, catalog::forest());          // Land
+    let v = g.compute_battlefield();
+    let c = v.iter().find(|c| c.id == goyf).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "three of your card types → 3/4");
+}
+
+// ── CR 509.1b — a creature that "can't block" is an illegal blocker ─────────
+
+/// Hazardous Blast grants every opposing creature "can't block this turn"; the
+/// engine then refuses to declare such a creature as a blocker (CR 509.1b).
+#[test]
+fn cr_509_1b_cant_block_grant_rejects_the_blocker() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 survives the ping
+    let blast = g.add_card_to_hand(0, catalog::hazardous_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hazardous Blast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::CantBlock));
+    // Attack with a creature; the CantBlock wall can't be declared as a blocker.
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.block_map.clear();
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(wall, attacker)]));
+    assert!(err.is_err(), "a can't-block creature is an illegal blocker");
 }

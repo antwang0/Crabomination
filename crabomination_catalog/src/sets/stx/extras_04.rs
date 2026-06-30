@@ -88,12 +88,12 @@ pub fn sneaky_snacker() -> CardDefinition {
         cost: cost(&[u(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Rat, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
             ..Default::default()
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Menace],
+        keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -138,7 +138,7 @@ pub fn soulknife_spy() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Elf, CreatureType::Rogue],
             ..Default::default()
         },
         power: 3,
@@ -195,31 +195,18 @@ pub fn quandrix_cryptomancer() -> CardDefinition {
 /// "Daring Diversion deals 2 damage to each of two target creatures."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 2-damage divided burn
-/// spell that hits two creatures. The "divided as you choose" rider
-/// is collapsed to "2 damage to each" (slot 0 + slot 1 multi-target,
-/// each getting 2 damage). The full "divided" semantics need the
-/// engine-wide DealDamageDivided primitive. Tests:
-/// `daring_diversion_burns_one_creature`,
-/// `daring_diversion_burns_two_creatures_via_multi_target`,
-/// `daring_diversion_is_a_four_mana_red_sorcery`.
+/// Daring Diversion — {3}{R} Sorcery. Deals 4 damage divided as you choose
+/// among one or two target creatures (`Effect::DealDamageDivided`).
 pub fn daring_diversion() -> CardDefinition {
     CardDefinition {
         name: "Daring Diversion",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(2),
-            },
-            Effect::DealDamage {
-                to: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature,
-                },
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature,
+            max_targets: 2,
+        },
         ..Default::default()
     }
 }
@@ -234,18 +221,22 @@ pub fn daring_diversion() -> CardDefinition {
 /// cost. Then they put all cards exiled with this enchantment on the
 /// bottom of their library in a random order."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): The full Oracle requires
-/// a complex deferred-cast-from-exile primitive. We ship the body
-/// (enchantment + no triggered ability) as a chaos-engine placeholder
-/// that toggles a marker on the battlefield for future engine work.
-/// Currently a vanilla enchantment frame; will get its trigger when
-/// the cast-from-exile pipeline lands. Tests:
-/// `possibility_storm_is_a_three_mana_red_enchantment`.
+/// Push (modern_decks): now fully wired via `Effect::PossibilityStorm` — a
+/// "whenever a player casts a spell from their hand" trigger (the caster
+/// exiles it, digs until a shared-card-type card, may free-cast it, bottoms
+/// the rest). Tests: `possibility_storm_is_a_three_mana_red_enchantment`,
+/// `possibility_storm_digs_to_a_shared_type_card`.
 pub fn possibility_storm() -> CardDefinition {
+    use crate::card::{EventScope, Predicate, TriggeredAbility};
     CardDefinition {
         name: "Possibility Storm",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::CastFromHand),
+            effect: Effect::PossibilityStorm,
+        }],
         ..Default::default()
     }
 }
@@ -389,27 +380,24 @@ pub fn mage_hunter_defender() -> CardDefinition {
 
 // ── Detention Sphere (synthesised STX-flavor enchantment) ─────────────────
 
-/// Detention Sphere — {1}{W}{U} Enchantment (synthesised STX
-/// Silverquill-aligned hybrid removal). "When this enchantment
-/// enters, exile target nonland permanent."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A 3-mana hybrid exile-on-
-/// ETB. The printed "until this leaves" return rider is omitted (no
-/// exile-until-leaves replacement primitive — same gap as Banisher
-/// Priest / Tidehollow Sculler). Tests:
-/// `detention_sphere_exiles_target_nonland_permanent`,
+/// Detention Sphere — {1}{W}{U} Enchantment. "When this enters, exile target
+/// nonland permanent until this leaves the battlefield." (The "all other
+/// permanents with the same name" multi-exile rider is approximated to the
+/// single target.) Tests: `detention_sphere_exiles_until_it_leaves`,
 /// `detention_sphere_is_a_three_mana_white_blue_enchantment`.
 pub fn detention_sphere() -> CardDefinition {
+    use crate::card::ExileReturnZone;
     CardDefinition {
         name: "Detention Sphere",
         cost: cost(&[generic(1), w(), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Exile {
+            effect: Effect::ExileUntilSourceLeaves {
                 what: target_filtered(
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                 ),
+                return_to: ExileReturnZone::Battlefield,
             },
         }],
         ..Default::default()

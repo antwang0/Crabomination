@@ -11,14 +11,26 @@ use crate::effect::{Predicate, Value};
 use crate::mana::ManaSymbol;
 use crate::game::{GameState, StackItem, Target};
 
+/// OTJ — a card is an outlaw if it is a creature that's an Assassin, Mercenary,
+/// Pirate, Rogue, or Warlock (Changeling satisfies any type).
+pub(crate) fn card_is_outlaw(card: &CardInstance) -> bool {
+    use crate::card::CreatureType::*;
+    card.definition.is_creature()
+        && (card.has_keyword(&crate::card::Keyword::Changeling)
+            || [Assassin, Mercenary, Pirate, Rogue, Warlock]
+                .iter()
+                .any(|t| card.definition.subtypes.creature_types.contains(t)))
+}
+
 impl GameState {
     /// CR 700.5 — `player`'s devotion to `colors`: the number of mana
     /// symbols matching any listed color among the mana costs of
     /// permanents they control. A hybrid / Phyrexian / mono-hybrid pip
     /// counts once if it contains any of the colors.
     pub(crate) fn devotion_to(&self, player: usize, colors: &[crate::mana::Color]) -> i32 {
-                let matches = |c: &crate::mana::Color| colors.contains(c);
-        self.battlefield
+        let matches = |c: &crate::mana::Color| colors.contains(c);
+        let pips = self
+            .battlefield
             .iter()
             .filter(|card| card.controller == player)
             .flat_map(|card| card.definition.cost.symbols.iter())
@@ -29,7 +41,23 @@ impl GameState {
                 ManaSymbol::Hybrid(a, b) => matches(a) || matches(b),
                 _ => false,
             })
-            .count() as i32
+            .count() as i32;
+        // CR 700.5 — Altar of the Pantheon adds 1 to every non-empty devotion
+        // query (to each color and combination).
+        let bonus = if colors.is_empty() {
+            0
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|card| card.controller == player)
+                .filter(|card| {
+                    card.definition.static_abilities.iter().any(|s| {
+                        matches!(s.effect, crate::effect::StaticEffect::DevotionBonus)
+                    })
+                })
+                .count() as i32
+        };
+        pips + bonus
     }
 
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {
@@ -156,6 +184,12 @@ impl GameState {
                 .map(|&p| self.players[p].creatures_attacked_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::NoncreatureSpellsCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].noncreature_spells_cast_this_game_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::DistinctPowerYouControl => {
                 let mut powers: Vec<i32> = self
                     .battlefield
@@ -166,6 +200,29 @@ impl GameState {
                 powers.sort_unstable();
                 powers.dedup();
                 powers.len() as i32
+            }
+            Value::DifferentlyNamedLandsControlled => {
+                let mut names: Vec<String> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_land())
+                    .map(|c| c.definition.name.to_string())
+                    .collect();
+                names.sort_unstable();
+                names.dedup();
+                names.len() as i32
+            }
+            Value::TotalToughnessControlled => {
+                let ids: Vec<_> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                ids.iter()
+                    .filter_map(|id| self.computed_permanent(*id))
+                    .map(|cp| cp.toughness.max(0))
+                    .sum()
             }
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
             Value::MaxGraveyardSize => self
@@ -180,7 +237,20 @@ impl GameState {
             Value::TriggerEventAmount => ctx.event_amount as i32,
             Value::LastDieRoll => self.last_die_roll as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
+            Value::MutateCount => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .or(ctx.source)
+                .and_then(|id| self.battlefield_find(id))
+                .map(|c| c.mutate_stack.len().saturating_sub(1) as i32)
+                .unwrap_or(0),
             Value::DevotionTo(colors) => self.devotion_to(ctx.controller, colors),
+            Value::AurasYouControlledOnDyingSubject => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .and_then(|host| self.auras_at_death.get(&host))
+                .map(|auras| auras.iter().filter(|(_, c)| *c == ctx.controller).count() as i32)
+                .unwrap_or(0),
             Value::CountersOn { what, kind } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
@@ -189,15 +259,20 @@ impl GameState {
                         EntityRef::Permanent(c) | EntityRef::Card(c) => c,
                         _ => return None,
                     };
-                    // CR 122 — counters persist on a card when it moves
-                    // between zones. So a die-trigger that reads "its
-                    // +1/+1 counters" needs to be able to find the
-                    // freshly-died card in its new graveyard zone. The
-                    // battlefield lookup stays first (the common case),
-                    // then we fall through to graveyards and exile —
-                    // matching the cross-zone search shape of
-                    // `evaluate_requirement_static` for WithCounter.
+                    // CR 122.2 strips counters on zone change, so a
+                    // die-trigger that reads "its +1/+1 counters"
+                    // (Ambitious Augmenter's transfer) consults the
+                    // leaves-battlefield LKI snapshot (CR 603.10) when its
+                    // source is mid-resolution off the battlefield; the
+                    // dispatch-time `died_card_snapshots` cache covers
+                    // filter evaluation before the trigger resolves.
                     self.battlefield_find(cid)
+                        .or_else(|| {
+                            self.resolving_lki_source
+                                .filter(|s| *s == cid)
+                                .and_then(|_| self.leaves_bf_lki.get(&cid))
+                        })
+                        .or_else(|| self.died_card_snapshots.get(&cid))
                         .or_else(|| self.players.iter().find_map(
                             |p| p.graveyard.iter().find(|c| c.id == cid)))
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
@@ -210,6 +285,27 @@ impl GameState {
                 // — unblocking "total +1/+1 counters across all creatures
                 // you control" cards (Reflective Anatomy). Lock-in test:
                 // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`.
+                .sum(),
+            Value::TotalCountersOn { what } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| {
+                    let cid = match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => return None,
+                    };
+                    // Same LKI fallback chain as `CountersOn` so a source
+                    // sacrificed as a cost (Twitching Doll) reads its last
+                    // counter total (CR 603.10 / 608.2).
+                    self.battlefield_find(cid)
+                        .or_else(|| {
+                            self.resolving_lki_source
+                                .filter(|s| *s == cid)
+                                .and_then(|_| self.leaves_bf_lki.get(&cid))
+                        })
+                        .or_else(|| self.died_card_snapshots.get(&cid))
+                        .map(|inst| inst.counters.values().sum::<u32>() as i32)
+                })
                 .sum(),
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
@@ -226,7 +322,9 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::TappedForCostPower => self.tapped_for_cost_power.unwrap_or(0),
             Value::SacrificedToughness => self.sacrificed_toughness.unwrap_or(0),
+            Value::SacrificedManaValue => self.sacrificed_mana_value.unwrap_or(0) as i32,
             Value::CardsDiscardedThisEffect => self.cards_discarded_this_resolution as i32,
             Value::MaxCardsDiscardedThisEffectByAnyPlayer => self
                 .cards_discarded_per_player_this_resolution
@@ -281,7 +379,15 @@ impl GameState {
                 {
                     return ms;
                 }
-                ctx.mana_spent as i32
+                if ctx.mana_spent > 0 {
+                    return ctx.mana_spent as i32;
+                }
+                // ETB rider reading the cost after the spell left the stack:
+                // the value was stamped onto the entered permanent.
+                ctx.source
+                    .and_then(|s| self.battlefield_find(s))
+                    .map(|c| c.cast_mana_spent as i32)
+                    .unwrap_or(ctx.mana_spent as i32)
             }
             Value::LoyaltyOf(s) => self
                 .resolve_selector(s, ctx)
@@ -330,6 +436,36 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::HighestManaValueAmong(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .filter_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32)
+                    }
+                    EntityRef::Player(_) => None,
+                })
+                .max()
+                .unwrap_or(0),
+            Value::ColorCountOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .or_else(|| {
+                            self.players.iter().find_map(|p| {
+                                p.graveyard
+                                    .iter()
+                                    .find(|c| c.id == cid)
+                                    .or_else(|| p.hand.iter().find(|c| c.id == cid))
+                            })
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|c| c.definition.printed_colors().len() as i32),
+                    EntityRef::Player(_) => None,
+                })
+                .unwrap_or(0),
             Value::DistinctTypesInTopOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -341,6 +477,34 @@ impl GameState {
                     }
                 }
                 seen.len() as i32
+            }
+            Value::CardsInGraveyardMatching { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0; };
+                let ids: Vec<CardId> = self.players[p].graveyard.iter().map(|c| c.id).collect();
+                ids.into_iter()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .count() as i32
+            }
+            Value::CardsInHandMatching { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0; };
+                let ids: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
+                ids.into_iter()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .count() as i32
             }
             Value::DistinctTypesInGraveyard { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
@@ -380,10 +544,22 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)
                 .unwrap_or(0),
+            Value::PermanentsSacrificedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].permanents_sacrificed_this_turn as i32)
+                .unwrap_or(0),
             Value::CreaturesDiedThisTurnTotal => self
                 .players
                 .iter()
                 .map(|p| p.creatures_died_this_turn as i32)
+                .sum(),
+            Value::ControllerCreaturesDiedThisTurn => {
+                self.players[ctx.controller].creatures_died_this_turn as i32
+            }
+            Value::ZuberasDiedThisTurnTotal => self
+                .players
+                .iter()
+                .map(|p| p.zuberas_died_this_turn as i32)
                 .sum(),
             Value::LowestLifeTotal => self
                 .players
@@ -420,6 +596,11 @@ impl GameState {
                         .filter(|c| c.controller == seat && c.definition.is_creature())
                         .count() as i32
                 })
+                .unwrap_or(0),
+            Value::TimesDescendedThisTurn => self
+                .players
+                .get(ctx.controller)
+                .map(|pl| pl.descend_count_this_turn as i32)
                 .unwrap_or(0),
             Value::NonbasicLandCountControlledBy(p) => self
                 .resolve_player(p, ctx)
@@ -495,15 +676,29 @@ impl GameState {
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
             Predicate::ValueIsOdd(v) => self.evaluate_value(v, ctx).rem_euclid(2) == 1,
+            Predicate::ValueIsPrime(v) => {
+                let n = self.evaluate_value(v, ctx) as i64;
+                n >= 2 && (2..=((n as f64).sqrt() as i64)).all(|d| n % d != 0)
+            }
             Predicate::PlayerSacrificedThisResolution(pref) => self
                 .resolve_player(pref, ctx)
                 .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
+            Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::CurrentStepIs(step) => self.step == *step,
             Predicate::EntityMatches { what, filter } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
                 .all(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller, ctx.source)
+                    }
+                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                }),
+            Predicate::EntityMatchesAny { what, filter } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .any(|e| match e {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
                         self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller, ctx.source)
                     }
@@ -526,10 +721,15 @@ impl GameState {
                 .any(|p| self.players[p].city_blessing),
             Predicate::IsDay => self.day_night == Some(crate::game::types::DayNight::Day),
             Predicate::IsNight => self.day_night == Some(crate::game::types::DayNight::Night),
+            Predicate::DieResultAtLeast(n) => ctx.event_amount >= *n as u32,
             Predicate::IsMonarch { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.monarch == Some(p)),
+            Predicate::SpeedAtLeast { who, speed } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].speed >= *speed),
             Predicate::PlayerDamagedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -538,10 +738,18 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].lost_life_this_turn),
+            Predicate::PlayerDrewAtLeastThisTurn { who, n } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].cards_drawn_this_turn >= *n),
             Predicate::PlayerLifeAtMost { who, life } => self
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.effective_life(p) <= *life),
+            Predicate::PlayerLifeAtLeast { who, life } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.effective_life(p) >= *life),
             Predicate::PlayerHasMostLife { who } => {
                 let max_life = (0..self.players.len())
                     .filter(|&p| !self.players[p].eliminated)
@@ -570,6 +778,14 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.monstrous)
                 .unwrap_or(false),
+            Predicate::SourceIsRenowned => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| c.renowned)
+                .unwrap_or(false),
+            Predicate::SourceIsEquipped => {
+                ctx.source.is_some_and(|cid| self.attached_equipment_count(cid) > 0)
+            }
             Predicate::SourceIsSuspected => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
@@ -589,6 +805,18 @@ impl GameState {
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.cast_from_escape)
+                .unwrap_or(false),
+            Predicate::SourceWasCast => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| {
+                    !c.is_token
+                        && (c.cast_from_hand
+                            || c.cast_from_exile
+                            || c.cast_via_flashback
+                            || c.cast_from_suspend
+                            || c.cast_from_escape)
+                })
                 .unwrap_or(false),
             Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
                 self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))
@@ -616,6 +844,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].attacked_this_turn),
+            Predicate::DealtCombatDamageToPlayerThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].dealt_combat_damage_to_player_this_turn),
             Predicate::AnotherCreatureEnteredControlLastTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -634,6 +866,16 @@ impl GameState {
                 .into_iter()
                 .any(|p| {
                     self.nonland_cards_discarded_per_player_this_resolution
+                        .get(&p)
+                        .copied()
+                        .unwrap_or(0)
+                        > 0
+                }),
+            Predicate::DiscardedThisEffect { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| {
+                    self.cards_discarded_per_player_this_resolution
                         .get(&p)
                         .copied()
                         .unwrap_or(0)
@@ -676,6 +918,12 @@ impl GameState {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)
                     .map(|p| self.players[p].creatures_died_this_turn >= n)
+                    .unwrap_or(false)
+            }
+            Predicate::PermanentsSacrificedThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].permanents_sacrificed_this_turn >= n)
                     .unwrap_or(false)
             }
             Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least } => {
@@ -731,6 +979,32 @@ impl GameState {
                         self.evaluate_requirement_on_card(filter, card, ctx.controller)
                     }
                     _ => false,
+                })
+            }
+            Predicate::SharesCardTypeWithExiledBySource => {
+                let Some(src) = ctx.source else { return false };
+                // Card types of whatever this source exiled (CR — the
+                // "exiled card"). No exiled card → the clause is false.
+                let exiled_types: Vec<CardType> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .flat_map(|c| c.definition.card_types.clone())
+                    .collect();
+                if exiled_types.is_empty() {
+                    return false;
+                }
+                // The triggering card (cast spell on the stack, or the played
+                // land now on the battlefield).
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.find_card_anywhere(cid).is_some_and(|trig| {
+                    trig.definition
+                        .card_types
+                        .iter()
+                        .any(|t| exiled_types.contains(t))
                 })
             }
             Predicate::CastSpellWasKicked => {
@@ -891,6 +1165,31 @@ impl GameState {
                 // artifact/enchantment/token sacrificed) at cast time.
                 ctx.bargained
             }
+            Predicate::SpellWasMayhem => {
+                // CR 702.187 — true iff this spell was cast from the graveyard
+                // for its Mayhem cost.
+                ctx.cast_via_mayhem
+            }
+            Predicate::CastSpellTargetsSource => {
+                // CR 702.85 — Heroic. The just-cast spell (trigger source,
+                // a card on the stack) targets this trigger's own source.
+                match (ctx.source, ctx.trigger_source) {
+                    (Some(src), Some(EntityRef::Card(spell_id))) => {
+                        self.stack.iter().any(|si| match si {
+                            StackItem::Spell { card, target, additional_targets, .. }
+                                if card.id == spell_id =>
+                            {
+                                target
+                                    .iter()
+                                    .chain(additional_targets.iter())
+                                    .any(|t| matches!(t, Target::Permanent(p) if *p == src))
+                            }
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
             Predicate::OpponentControlsMoreLandsThanYou => {
                 // Walk the battlefield, count lands per seat. True iff
                 // any opponent of `ctx.controller` has strictly more
@@ -950,11 +1249,52 @@ impl GameState {
                         && count_creatures(i, self) > your_creatures
                 })
             }
+            Predicate::AnOpponentHasMoreCardsInHand => {
+                let you = ctx.controller;
+                let your_hand = self.players[you].hand.len();
+                self.players.iter().enumerate().any(|(i, p)| {
+                    i != you && !p.eliminated && !self.same_team(i, you) && p.hand.len() > your_hand
+                })
+            }
+            Predicate::CovenActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let powers: std::collections::HashSet<i32> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
+                    .collect();
+                powers.len() >= 3
+            }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
+            Predicate::AttackedWithTotalPowerAtLeast { who, at_least } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let total: i32 = self
+                    .attacking
+                    .iter()
+                    .filter_map(|a| self.battlefield_find(a.attacker).map(|c| (a.attacker, c.controller)))
+                    .filter(|(_, ctrl)| *ctrl == p)
+                    .filter_map(|(id, _)| self.computed_permanent(id).map(|cp| cp.power.max(0)))
+                    .sum();
+                total as u32 >= *at_least
+            }
+            Predicate::CommittedCrimeThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].committed_crime_this_turn),
+            Predicate::ControlsOutlaw { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.battlefield.iter().any(|c| c.controller == p && card_is_outlaw(c))
+            }
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
+            Predicate::VoidActive { who } => {
+                self.nonland_permanent_left_bf_this_turn
+                    || self
+                        .resolve_player(who, ctx)
+                        .is_some_and(|p| self.players[p].warped_spell_this_turn)
+            }
             Predicate::DeliriumActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let mut kinds: std::collections::HashSet<&crate::card::CardType> =
@@ -966,6 +1306,21 @@ impl GameState {
                 }
                 kinds.len() >= 4
             }
+            Predicate::DescendActive { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count()
+                    >= *count as usize
+            }
+            Predicate::DescendedThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].descended_this_turn),
+            Predicate::ArtifactEnteredThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].artifacts_entered_this_turn > 0),
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this
@@ -1040,12 +1395,42 @@ impl GameState {
                     .unwrap_or(false),
                 Target::Player(p) => !self.same_team(*p, controller),
             },
+            R::OwnedByYou => match target {
+                Target::Permanent(cid) => {
+                    self.battlefield_find(*cid).map(|c| c.owner == controller).unwrap_or(false)
+                }
+                Target::Player(_) => false,
+            },
             R::DealtDamageToControllerThisTurn => match target {
                 Target::Permanent(cid) => self.players[controller]
                     .creatures_that_damaged_me_this_turn
                     .contains(cid),
                 Target::Player(_) => false,
             },
+            R::PlayerDamagedBySourceThisTurn => match target {
+                Target::Player(p) => source.is_some_and(|s| {
+                    self.players[*p].creatures_that_damaged_me_this_turn.contains(&s)
+                }),
+                Target::Permanent(_) => false,
+            },
+            R::ControllerDescend(n) => {
+                // Count permanent cards in the candidate's controller's
+                // graveyard (CR 701.x — LCI Descend). For a `SelfHasKeywordWhile`
+                // condition the controller arg already is the source's
+                // controller, so read it directly.
+                let owner = match target {
+                    Target::Permanent(cid) => {
+                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                    }
+                    Target::Player(p) => *p,
+                };
+                let count = self.players[owner]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count();
+                count >= *n as usize
+            }
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Look on the battlefield first; fall through to graveyards,
@@ -1060,6 +1445,18 @@ impl GameState {
                 });
                 let card = self
                     .battlefield_find(*cid)
+                    // Dies-trigger filters (Felisa's "with a +1/+1 counter on
+                    // it") read the dying object's last-known battlefield
+                    // state, not the counter-stripped graveyard copy
+                    // (CR 603.10 LKI; CR 122.2 cleared the counters on the
+                    // zone change). Consulted before the terminal zones; the
+                    // cache only holds cards from the in-flight die batch.
+                    .or_else(|| self.died_card_snapshots.get(cid))
+                    .or_else(|| {
+                        self.resolving_lki_source
+                            .filter(|s| s == cid)
+                            .and_then(|_| self.leaves_bf_lki.get(cid))
+                    })
                     .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
                     .or_else(|| self.exile.iter().find(|c| c.id == *cid))
                     .or(stack_card)
@@ -1071,15 +1468,7 @@ impl GameState {
                     // permission-checked at the call site (effects target
                     // the controller's own library).
                     .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
-                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)))
-                    // Dying-card snapshot, populated at SBA die-time and
-                    // cleared after trigger dispatch.
-                    // Lets predicates like
-                    // `EntityMatches { TriggerSource, HasCreatureType(Pest) }`
-                    // read the dying card's printed types even when the
-                    // card vanished from every zone via CR 111.7c
-                    // (token-ceases-to-exist).
-                    .or_else(|| self.died_card_snapshots.get(cid));
+                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)));
                 let Some(card) = card else { return false; };
                 // Layer-4-aware card types for battlefield permanents
                 // (CR 613.2): an artifact-ized creature (Phyrexian
@@ -1110,10 +1499,16 @@ impl GameState {
                     R::Noncreature => !has_type(CT::Creature),
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
-                    // CR 105.2/202.2 — hybrid/Phyrexian pips count via
-                    // `ManaCost::colors()` (bare `Colored` scan missed them).
-                    R::HasColor(c) => card.definition.cost.colors().contains(c),
+                    R::DealtDamageThisTurn => card.dealt_damage_this_turn,
+                    R::DamagedBySourceThisTurn => {
+                        source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
+                    }
+                    // CR 105.2/202.2 — color is the union of the mana cost's
+                    // colors and the color indicator (tokens, DFC backs), and
+                    // empty under Devoid. `printed_colors` folds all three in.
+                    R::HasColor(c) => card.definition.printed_colors().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
+                    R::HasMutate => card.definition.mutate.is_some(),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
                         crate::card::Keyword::Cycling(_)
@@ -1121,10 +1516,21 @@ impl GameState {
                             | crate::card::Keyword::Landcycling(_, _)
                             | crate::card::Keyword::Typecycling(_)
                     )),
+                    R::HasDisturb => card
+                        .definition
+                        .keywords
+                        .iter()
+                        .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
                     R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::ToughnessGreaterThanPower => {
+                        card.definition.is_creature() && card.toughness() > card.power()
+                    }
+                    R::PowerGreaterThanBasePower => {
+                        card.definition.is_creature() && card.power() > card.definition.power
+                    }
                     R::PowerPlusToughnessAtMost(n) => {
                         card.definition.is_creature() && card.power() + card.toughness() <= *n
                     }
@@ -1152,6 +1558,10 @@ impl GameState {
                             })
                     }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
+                    R::WithAnyCounter => {
+                        card.counters.values().any(|&n| n > 0)
+                            || card.keyword_counters.values().any(|&n| n > 0)
+                    }
                     R::HasNoCounters => {
                         card.counters.values().all(|&n| n == 0)
                             && card.keyword_counters.values().all(|&n| n == 0)
@@ -1159,16 +1569,25 @@ impl GameState {
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
                     R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
+                    R::IsOutlaw => card_is_outlaw(card),
                     R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
                     R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
                     R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+                    R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
                     R::IsToken => card.is_token,
                     R::NotToken => !card.is_token,
+
+                    R::Warped => card.warped,
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+                    R::IsUnblocked => {
+                        self.attacking.iter().any(|a| a.attacker == card.id)
+                            && !self.blocked_attackers.contains(&card.id)
+                    }
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     R::AttackedThisTurn => card.attacked_this_turn,
+                    R::FaceDown => card.face_down,
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
                     R::EnteredFromGraveyardThisTurn => {
@@ -1181,9 +1600,11 @@ impl GameState {
                         o.attached_to == Some(*cid) && o.definition.is_enchantment()
                     }),
                     // CR 301.5 — "equipped" = an Equipment is attached.
-                    R::IsEquipped => self.battlefield.iter().any(|o| {
-                        o.attached_to == Some(*cid) && o.definition.is_equipment()
-                    }),
+                    R::IsEquipped => self.attached_equipment_count(*cid) > 0,
+                    // CR 301.5 — equipped by at least `n` Equipment (Balan).
+                    R::EquippedByAtLeast(n) => {
+                        self.attached_equipment_count(*cid) as u32 >= *n
+                    }
                     // CR 700.9 — counters, equipped, or enchanted by an Aura
                     // the permanent's own controller controls.
                     R::IsModified => {
@@ -1207,6 +1628,25 @@ impl GameState {
                         self.block_map.len() == 1 && self.block_map.contains_key(&card.id)
                     }
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
+                    // CR 115 — a stack spell that targets the chooser or a
+                    // permanent they control (Hindering Light).
+                    R::SpellTargetsControllerOrControlled => self.stack.iter().any(|si| {
+                        let StackItem::Spell { card: c, target, additional_targets, .. } = si else { return false };
+                        if c.id != card.id { return false; }
+                        target.iter().chain(additional_targets.iter()).any(|t| match t {
+                            crate::game::types::Target::Player(p) => *p == controller,
+                            crate::game::types::Target::Permanent(id) => self
+                                .battlefield
+                                .iter()
+                                .any(|o| o.id == *id && o.controller == controller),
+                        })
+                    }),
+                    // Wash Away's base mode: a stack spell cast from
+                    // anywhere but its owner's hand (CR 702.148 bracket).
+                    R::SpellNotCastFromHand => self.stack.iter().any(|si| matches!(
+                        si,
+                        StackItem::Spell { card: c, .. } if c.id == card.id && !c.cast_from_hand
+                    )),
                     R::HasAbilityOnStack => self.stack.iter().any(|si| matches!(
                         si,
                         StackItem::Trigger { source, .. } if *source == card.id
@@ -1220,23 +1660,35 @@ impl GameState {
                             .count() as u32;
                         card.definition.cost.cmc() <= n
                     }
+                    R::ManaValueAtMostPermanentsInYourGraveyard => {
+                        let n = self.players[controller]
+                            .graveyard
+                            .iter()
+                            .filter(|c| c.definition.is_permanent())
+                            .count() as u32;
+                        card.definition.cost.cmc() <= n
+                    }
                     // Unresolved X-relative filter (no X in scope here).
-                    R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
+                    R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
+                    R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
                     R::ManaValueEqualsSacrificedPlus(off) => {
                         card.definition.cost.cmc()
                             == self.sacrificed_mana_value.unwrap_or(0) + *off
+                    }
+                    R::ManaValueAtMostSacrificedPlus(off) => {
+                        card.definition.cost.cmc()
+                            <= self.sacrificed_mana_value.unwrap_or(0) + *off
                     }
                     R::ManaValueLessThanEventAmount => {
                         card.definition.cost.cmc() < self.trigger_event_amount_scratch
                     }
                     R::HasCardType(ct) => {
-                        // CR 715 — an adventuring card is its instant/sorcery
-                        // half while on the stack, so report the adventure types.
-                        if card.adventuring {
-                            card.definition.adventure.as_ref()
-                                .map(|a| a.card_types.contains(ct)).unwrap_or(false)
+                        // CR 715 / 702.183 — an Adventure/Omen card is its
+                        // instant/sorcery half on the stack; report those types.
+                        if let Some(half) = card.alt_spell_half() {
+                            half.card_types.contains(ct)
                         } else {
                             card.definition.card_types.contains(ct)
                         }
@@ -1258,6 +1710,9 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::ManaValueAtMostCastManaSpent => source
+                        .and_then(|s| self.battlefield_find(s))
+                        .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
                     R::InGraveyard => self
                         .players
                         .iter()
@@ -1266,6 +1721,11 @@ impl GameState {
                         .players
                         .get(controller)
                         .is_some_and(|p| p.graveyard.iter().any(|c| c.id == *cid)),
+                    R::InOpponentGraveyard => self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == *cid)),
                     R::InExile => self.exile.iter().any(|c| c.id == *cid),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
@@ -1328,7 +1788,11 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.named_card.as_deref())
                         .is_some_and(|n| n == card.definition.name),
-                    _ => unreachable!("handled above"),
+                    // Zone-agnostic atoms (spell/enchantment subtype, token
+                    // flags, …) the battlefield walker doesn't special-case
+                    // are evaluated against the located card. Keeps the two
+                    // requirement walkers from drifting apart (TODO P3).
+                    _ => self.evaluate_requirement_on_card(req, card, controller),
                 }
             }
         }
@@ -1358,23 +1822,31 @@ impl GameState {
             R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
+            R::OwnedByYou => card.owner == controller,
             R::Creature => card.definition.is_creature(),
             R::Artifact => card.definition.is_artifact(),
             R::Enchantment => card.definition.is_enchantment(),
             R::Planeswalker => card.definition.is_planeswalker(),
-            R::Permanent => card.definition.is_permanent(),
+            R::Permanent | R::PermanentCard => card.definition.is_permanent(),
+            R::ControllerDescend(n) => {
+                self.players[controller]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count()
+                    >= *n as usize
+            }
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
             R::Noncreature => !card.definition.is_creature(),
-            // A card's color is set by every colored symbol in its cost,
-            // including hybrid ({R/W}), Phyrexian ({R/P}) and mono-hybrid
-            // ({2/W}) pips — so a {R/W} card is both red and white. Defer to
-            // the shared `ManaCost::colors()` helper (the same expansion the
-            // battlefield path uses via `colors_from_card`); a bare
-            // `Colored`-pip scan would mis-read hybrid/Phyrexian cards as
-            // colorless in hidden zones.
-            R::HasColor(c) => card.definition.cost.colors().contains(c),
+            // CR 105.2/202.2 — color is the union of the mana cost's colors
+            // (incl. hybrid {R/W}, Phyrexian {R/P}, mono-hybrid {2/W}) and the
+            // color indicator (tokens, DFC backs), and empty under Devoid.
+            // `printed_colors` folds all three in — matching the battlefield
+            // path (`colors_from_card`) for cards in hidden zones too.
+            R::HasColor(c) => card.definition.printed_colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
+            R::HasMutate => card.definition.mutate.is_some(),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                 k,
                 crate::card::Keyword::Cycling(_)
@@ -1382,6 +1854,11 @@ impl GameState {
                     | crate::card::Keyword::Landcycling(_, _)
                     | crate::card::Keyword::Typecycling(_)
             )),
+            R::HasDisturb => card
+                .definition
+                .keywords
+                .iter()
+                .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             // No source/battlefield context in the on-card evaluator (used
@@ -1392,17 +1869,28 @@ impl GameState {
             R::PowerGreaterThanSource => false,
             R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
             R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::ToughnessGreaterThanPower => {
+                card.definition.is_creature() && card.toughness() > card.power()
+            }
+            R::PowerGreaterThanBasePower => {
+                card.definition.is_creature() && card.power() > card.definition.power
+            }
             R::PowerPlusToughnessAtMost(n) => {
                 card.definition.is_creature() && card.power() + card.toughness() <= *n
             }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
+            R::IsOutlaw => card_is_outlaw(card),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
             R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
             R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+            R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
+            R::HasSpellSubtype(s) => card.definition.subtypes.spell_subtypes.contains(s),
             R::IsToken => card.is_token,
             R::NotToken => !card.is_token,
+
+            R::Warped => card.warped,
             // CR 603.4 — entered this turn (hidden-zone cards are never
             // stamped, so this is false off the battlefield).
             R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
@@ -1420,25 +1908,37 @@ impl GameState {
                     .count() as u32;
                 card.definition.cost.cmc() <= n
             }
+            R::ManaValueAtMostPermanentsInYourGraveyard => {
+                let n = self.players[controller]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .count() as u32;
+                card.definition.cost.cmc() <= n
+            }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
-            R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
+            // `CastManaSpent` is source-relative; no source here, so vacuous.
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
+            R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
             // Unresolved source-counter MV gate (concretized at resolution
             // via `resolve_source_counters`).
             R::ManaValueEqualsSourceCounters(_) => false,
             R::ManaValueEqualsSacrificedPlus(off) => {
                 card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off
             }
+            R::ManaValueAtMostSacrificedPlus(off) => {
+                card.definition.cost.cmc() <= self.sacrificed_mana_value.unwrap_or(0) + *off
+            }
             R::ManaValueLessThanEventAmount => {
                 card.definition.cost.cmc() < self.trigger_event_amount_scratch
             }
             R::HasCardType(ct) => {
-                        // CR 715 — an adventuring card is its instant/sorcery
-                        // half while on the stack, so report the adventure types.
-                        if card.adventuring {
-                            card.definition.adventure.as_ref()
-                                .map(|a| a.card_types.contains(ct)).unwrap_or(false)
+                        // CR 715 / 702.183 — an Adventure/Omen card is its
+                        // instant/sorcery half on the stack; report those types.
+                        if let Some(half) = card.alt_spell_half() {
+                            half.card_types.contains(ct)
                         } else {
                             card.definition.card_types.contains(ct)
                         }
@@ -1464,6 +1964,11 @@ impl GameState {
                 .players
                 .get(controller)
                 .is_some_and(|p| p.graveyard.iter().any(|c| c.id == card.id)),
+            R::InOpponentGraveyard => self
+                .players
+                .iter()
+                .enumerate()
+                .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == card.id)),
             R::InExile => self.exile.iter().any(|c| c.id == card.id),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
@@ -1511,11 +2016,14 @@ impl GameState {
                     .is_some_and(|c| c.definition.name == card.definition.name)
             }),
             // Battlefield-state predicates can't be evaluated for library cards.
-            R::Tapped | R::Untapped | R::WithCounter(_)
-            | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::AttackedThisTurn | R::HasAbilityOnStack
-            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted
-            | R::IsEquipped | R::IsModified => false,
+            R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
+            | R::IsAttacking | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
+            | R::AttackedThisTurn | R::FaceDown | R::HasAbilityOnStack
+            | R::IsSpellOnStack | R::SpellNotCastFromHand
+            | R::SpellTargetsControllerOrControlled
+            | R::DealtDamageToControllerThisTurn | R::IsEnchanted
+            | R::IsEquipped | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
+            | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,
         }
     }
 }

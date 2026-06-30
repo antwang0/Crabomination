@@ -33,9 +33,6 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // dredge/mill shells, where self-mill can race the clock.
         StatChipKind::DeckLow => (Color::srgba(0.40, 0.26, 0.10, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Grave => (Color::srgba(0.16, 0.16, 0.16, 1.0), theme::TEXT_SECONDARY),
-        // Poison shades from a sickly green toward a warning red as it
-        // approaches the CR 104.3c / 704.5c lethal threshold of 10.
-        StatChipKind::Poison => (Color::srgba(0.20, 0.32, 0.14, 1.0), theme::TEXT_PRIMARY),
         // Emblems (CR 114) are permanent command-zone effects — a regal
         // gold tint distinguishes them from the other counters.
         StatChipKind::Emblem => (Color::srgba(0.34, 0.28, 0.10, 1.0), theme::TEXT_PRIMARY),
@@ -43,6 +40,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Energy (CR 122) — a Kaladesh aether teal.
         StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
+        // Rad counters (CR 122) — a Phyrexian hazard green; a slow mill/poison
+        // clock the player wants to keep an eye on.
+        StatChipKind::Rad => (Color::srgba(0.14, 0.32, 0.12, 1.0), theme::TEXT_PRIMARY),
         // Draw cap (CR 121.2b) — a muted warning amber: drawing is locked.
         StatChipKind::DrawCap => (Color::srgba(0.36, 0.24, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Storm/magecraft count (spells cast this turn) — an Izzet ember
@@ -59,9 +59,34 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Night => (Color::srgba(0.14, 0.16, 0.30, 1.0), theme::TEXT_PRIMARY),
         // No-lifegain lock (CR 119.7) — a muted blood red.
         StatChipKind::NoLifegain => (Color::srgba(0.34, 0.12, 0.12, 1.0), theme::TEXT_PRIMARY),
+        // Combat-damage fog (CR 615.1) — a hazy slate grey.
+        StatChipKind::Fog => (Color::srgba(0.30, 0.32, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
+        // Speed (CR 702.179 — "Start your engines!") — a Aetherdrift racing
+        // crimson that brightens toward max speed.
+        StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Coven (Innistrad) — a witchy moonlit green: 3+ creatures, distinct powers.
+        StatChipKind::Coven => (Color::srgba(0.14, 0.30, 0.20, 1.0), theme::TEXT_PRIMARY),
+        // Spell-cast lock (Rule of Law / Deafening Silence / Ethersworn
+        // Canonist) — a stern slate so a barred extra cast reads as "stop".
+        StatChipKind::SpellLock => (Color::srgba(0.30, 0.14, 0.18, 1.0), theme::TEXT_PRIMARY),
+        // The Ring tempts you (CR 701.54) — a One-Ring gold that deepens with
+        // each temptation level.
+        StatChipKind::Ring => (Color::srgba(0.36, 0.28, 0.06, 1.0), theme::TEXT_PRIMARY),
+        // Committed a crime this turn (CR 700.13, OTJ) — an outlaw red.
+        StatChipKind::Crime => (Color::srgba(0.34, 0.12, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // EOE Void — a deep starless violet for the Edge-of-Eternities payoffs.
+        StatChipKind::Void => (Color::srgba(0.18, 0.10, 0.30, 1.0), theme::TEXT_PRIMARY),
+        // LCI Descend — a cavern earth-brown that deepens as the graveyard fills.
+        StatChipKind::Descend => (Color::srgba(0.26, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Skipped combat (CR 506 — Stonehorn Dignitary) — a muted stone grey
+        // so a player knows their next swing is off the table.
+        StatChipKind::SkipCombat => (Color::srgba(0.24, 0.24, 0.26, 1.0), theme::TEXT_PRIMARY),
+        // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
+        // blue so total prevention reads as a hard shield, not a partial one.
+        StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -72,10 +97,10 @@ pub(super) enum StatChipKind {
     Deck,
     DeckLow,
     Grave,
-    Poison,
     Emblem,
     Devotion,
     Energy,
+    Rad,
     DrawCap,
     Storm,
     Monarch,
@@ -83,7 +108,17 @@ pub(super) enum StatChipKind {
     Day,
     Night,
     NoLifegain,
+    Fog,
     TopCard,
+    Speed,
+    Coven,
+    SpellLock,
+    Ring,
+    Crime,
+    Void,
+    Descend,
+    SkipCombat,
+    Shield,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -312,6 +347,45 @@ fn spawn_commander_damage_chip(
         });
 }
 
+/// `(background, text)` for a poison chip, graded by proximity to the
+/// CR 104.3c / 704.5c lethal threshold of 10 poison counters. A sickly green
+/// while low, ambering as it climbs, danger-red once one more Toxic/Infect hit
+/// from a typical source could be lethal. Pure helper.
+fn poison_chip_style(count: u32) -> (Color, Color) {
+    match count {
+        0..=4 => (Color::srgba(0.20, 0.32, 0.14, 1.0), theme::TEXT_PRIMARY),
+        5..=7 => (Color::srgba(0.40, 0.26, 0.10, 1.0), Color::srgb(1.0, 0.80, 0.42)),
+        _ => (Color::srgb(0.52, 0.12, 0.12), theme::TEXT_PRIMARY),
+    }
+}
+
+/// Spawn the poison chip — `☠ N/10` — coloured by how close the tally is to a
+/// poison-out. Its own spawn fn (rather than a flat `StatChipKind`) so the
+/// colour can track the count, mirroring [`spawn_commander_damage_chip`].
+fn spawn_poison_chip(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, count: u32) {
+    let (bg, fg) = poison_chip_style(count);
+    parent
+        .spawn((
+            Node {
+                padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            BackgroundColor(bg),
+            Pickable::IGNORE,
+        ))
+        .with_children(|chip| {
+            chip.spawn((
+                Text::new(format!("\u{2620} {count}/10")),
+                ui_fonts.tf(12.0),
+                TextColor(fg),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
 // ── Seat-stamp + targeting outline ───────────────────────────────────────────
 
 /// Patch the viewer's `PlayerHudPanel.seat` to match the current
@@ -493,16 +567,20 @@ pub fn update_player_stats_chips(
         // the chip once the player has actually been poisoned to avoid
         // cluttering the HUD in non-infect games.
         if p.poison_counters > 0 {
-            spawn_stat_chip(
-                row,
-                &ui_fonts,
-                StatChipKind::Poison,
-                format!("☠ {}/10", p.poison_counters),
-            );
+            spawn_poison_chip(row, &ui_fonts, p.poison_counters);
         }
         // CR 122 energy — only surface once the player has banked any {E}.
         if p.energy > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+        }
+        // CR 702.179 speed — surface once "Start your engines!" has started it.
+        if p.speed > 0 {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
+        }
+        // CR 122 rad counters — only surface once the player has any (Phyrexia
+        // poison-mill clock).
+        if p.rad_counters > 0 {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
         }
         // Storm / magecraft count — surface once a second spell lands this
         // turn so Storm / prowess / magecraft payoffs can be read at a glance.
@@ -522,6 +600,33 @@ pub fn update_player_stats_chips(
                 StatChipKind::DrawCap,
                 format!("✎ {}/{}", p.cards_drawn_this_turn, cap),
             );
+        }
+        // CR 611.2 spell-cast lock — surface only the categories this player has
+        // already spent (Rule of Law / Deafening Silence / Ethersworn Canonist).
+        {
+            let lock = &p.spell_cast_lock;
+            let label = if lock.any_reached {
+                Some("⊘ spell")
+            } else if lock.noncreature_reached {
+                Some("⊘ noncreature")
+            } else if lock.nonartifact_reached {
+                Some("⊘ nonartifact")
+            } else {
+                None
+            };
+            if let Some(label) = label {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, label.to_string());
+            }
+        }
+        // CR 506 skipped combat (Stonehorn Dignitary) — surface so the player
+        // knows their next combat phase won't happen.
+        if p.skip_next_combat > 0 {
+            let label = if p.skip_next_combat == 1 {
+                "⚔ skip".to_string()
+            } else {
+                format!("⚔ skip×{}", p.skip_next_combat)
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SkipCombat, label);
         }
         // CR 114 emblems — only surface when the player actually owns one.
         if !p.emblems.is_empty() {
@@ -549,6 +654,45 @@ pub fn update_player_stats_chips(
         if p.has_city_blessing {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
         }
+        // Innistrad Coven — lit when this player controls 3+ creatures with
+        // different powers, so coven-gated payoffs are online.
+        if p.coven_active {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
+        }
+        // CR 700.13 (OTJ) — lit once this player has committed a crime this turn.
+        if p.committed_crime_this_turn {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Crime, "🔫 crime".to_string());
+        }
+        // EOE Void — lit when this player's Void condition is met this turn, so
+        // Void-matters payoffs are online.
+        if p.void_active {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Void, "✦ void".to_string());
+        }
+        // LCI Descend — show the permanent-card-in-graveyard count once it's
+        // non-zero, so descend-4 / descend-8 thresholds are easy to track. When
+        // the player has descended this turn, append the per-turn count too, so
+        // CR 700.11 per-turn payoffs (The Mycotyrant) are legible at a glance.
+        if p.descend_count > 0 {
+            let label = if p.descended_this_turn_count > 0 {
+                format!(
+                    "\u{26CF} descend {} (+{} turn)",
+                    p.descend_count, p.descended_this_turn_count
+                )
+            } else {
+                format!("\u{26CF} descend {}", p.descend_count)
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Descend, label);
+        }
+        // CR 701.54 The Ring — show the temptation level once the Ring has
+        // tempted this player at least once.
+        if p.ring_temptations > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Ring,
+                format!("\u{27E1} the Ring ×{}", p.ring_temptations),
+            );
+        }
         // CR 119.7 — warn when this player can't gain life (Sunspine Lynx, Erebos).
         if p.cannot_gain_life {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
@@ -558,6 +702,15 @@ pub fn update_player_stats_chips(
             Some(true) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Day, "☀ day".to_string()),
             Some(false) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Night, "☾ night".to_string()),
             None => {}
+        }
+        // CR 615.1 fog — a global turn state; surface once, on the active
+        // player's row, so combat won't surprise either seat.
+        if cv.combat_damage_prevented_this_turn && p.seat == cv.active_player {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Fog, "🌫 fog".to_string());
+        }
+        // CR 615 — blanket damage immunity (Glacial Chasm) on the viewer.
+        if p.damage_fully_prevented {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
         }
     });
 }
@@ -777,15 +930,16 @@ pub fn update_opponent_stats_rows(
                 }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
                 if p.poison_counters > 0 {
-                    spawn_stat_chip(
-                        row,
-                        &ui_fonts,
-                        StatChipKind::Poison,
-                        format!("☠ {}/10", p.poison_counters),
-                    );
+                    spawn_poison_chip(row, &ui_fonts, p.poison_counters);
                 }
                 if p.energy > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+                }
+                if p.speed > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
+                }
+                if p.rad_counters > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
                 }
                 if let Some(cap) = p.draw_cap {
                     spawn_stat_chip(
@@ -820,6 +974,10 @@ pub fn update_opponent_stats_rows(
                 // CR 119.7 — an opponent who can't gain life.
                 if p.cannot_gain_life {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
+                }
+                // CR 615 — an opponent with blanket damage immunity (Glacial Chasm).
+                if p.damage_fully_prevented {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
                 }
             });
         }
@@ -946,7 +1104,21 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{commander_damage_style, commander_short_name, deck_chip_kind, storm_chip_visible, StatChipKind};
+    use super::{commander_damage_style, commander_short_name, deck_chip_kind, poison_chip_style, storm_chip_visible, StatChipKind};
+
+    #[test]
+    fn poison_chip_reddens_as_it_nears_ten() {
+        // Distinct backgrounds at the safe / warning / danger bands.
+        let safe = poison_chip_style(2).0;
+        let warn = poison_chip_style(6).0;
+        let danger = poison_chip_style(9).0;
+        assert_ne!(safe, warn, "warning band differs from safe");
+        assert_ne!(warn, danger, "danger band differs from warning");
+        // The danger band is the reddest (highest red, lowest green).
+        let to_lin = |c: bevy::prelude::Color| c.to_srgba();
+        assert!(to_lin(danger).red > to_lin(safe).red);
+        assert!(to_lin(danger).green < to_lin(warn).green);
+    }
 
     #[test]
     fn storm_chip_hidden_until_second_spell() {

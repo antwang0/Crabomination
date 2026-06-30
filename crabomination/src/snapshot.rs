@@ -565,7 +565,7 @@ mod tests {
         g.perform_action(GameAction::ActivateAbility {
             card_id: bio,
             ability_index: 0,
-            target: None, x_value: None })
+            target: None, additional_targets: Vec::new(), x_value: None })
         .expect("Mindful Biomancer pump activatable");
         // Drain the stack so the activation commits.
         while !g.stack.is_empty() {
@@ -594,7 +594,7 @@ mod tests {
         g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cc, ability_index: 0, target: None, x_value: None })
+            card_id: cc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
             .expect("transform");
         while !g.stack.is_empty() {
             g.perform_action(GameAction::PassPriority).unwrap();

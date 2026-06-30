@@ -173,6 +173,18 @@ pub fn etb_tap_then_surveil_one() -> TriggeredAbility {
     }
 }
 
+/// Triggered ability: when this permanent enters, tap it AND scry 1
+/// (the Theros "scry tapland" cycle — Temple of Abandon et al.).
+pub fn etb_tap_then_scry_one() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: Selector::This },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+    }
+}
+
 /// Triggered ability: when this permanent enters, tap it AND gain 1 life
 /// (the Khans "life-gain tapland" cycle — Tranquil Cove et al.).
 pub fn etb_tap_then_gain_one() -> TriggeredAbility {
@@ -250,14 +262,29 @@ pub fn dual_land_with(
     }
 }
 
+/// Enters-tapped tri-land that taps for any of three colors (the Khans
+/// "wedge" cycle — Sandsteppe Citadel et al.). Untyped (matching the print).
+pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(a), tap_add(b), tap_add(c)],
+        triggered_abilities: vec![etb_tap()],
+        ..Default::default()
+    }
+}
+
 pub mod all_factories;
 pub mod akh;
 pub mod all;
 pub mod ap;
 pub mod arn;
+pub mod bro;
 pub mod chk;
 pub mod dis;
+pub mod eoe;
 pub mod fem;
+pub mod fin;
 pub mod gpt;
 pub mod ice;
 pub mod inv;
@@ -267,12 +294,15 @@ pub mod ktk;
 pub mod lci;
 pub mod lea;
 pub mod m11;
+pub mod mh3;
 pub mod mkm;
 pub mod ogw;
+pub mod one;
 pub mod pc2;
 pub mod por;
 pub mod rav;
 pub mod rtr;
+pub mod shm;
 pub mod thb;
 pub mod ths;
 pub mod tmp;

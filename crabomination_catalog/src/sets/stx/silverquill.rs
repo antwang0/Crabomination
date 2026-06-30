@@ -44,7 +44,7 @@ pub fn spirited_companion() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dog, CreatureType::Spirit],
+            creature_types: vec![CreatureType::Dog],
             ..Default::default()
         },
         power: 1,
@@ -167,7 +167,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![Keyword::Lifelink, Keyword::Menace],
         static_abilities: vec![StaticAbility {
             description: "Spells you cast that target a creature cost {2} less to cast.",
             effect: StaticEffect::CostReductionTargetingFilter {
@@ -234,12 +234,12 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
             ..Default::default()
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -261,19 +261,12 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 /// Mavinda, Students' Advocate — {2}{W}, 2/3 Legendary Human Cleric,
 /// Flying + Vigilance.
 ///
-/// Push (modern_decks, batch 73): the `{0}` cast-from-graveyard
-/// activated ability is **now wired** via the Move(target → Exile) +
-/// `GrantMayPlay { exile_after: true }` permission-grant pattern (same
-/// shape as Nita Forum Conciliator's activation, which lands a gy IS
-/// card in exile with may-play-this-turn + exile-on-resolve). Cost
-/// {0} + `once_per_turn: true` (printed "Activate only once each
-/// turn"). The target filter is "Instant ∨ Sorcery" in your graveyard
-/// — the printed "that targets only a single creature" sub-filter is
-/// approximated to all IS cards (the engine has no "card in gy that
-/// would target only a creature" introspection since gy cards aren't
-/// on the stack — non-creature-target IS spells in your gy can still
-/// be picked, a minor convenience extension over the printed Oracle).
-/// Body/flying/vigilance unchanged.
+/// Once each turn, cast an instant/sorcery from your graveyard by paying
+/// {2} more rather than its mana cost; exile it if it would hit the
+/// graveyard. Modeled as a once-per-turn {2} ability that moves the card
+/// to exile and grants a pay-own-cost, exile-after may-play — so the total
+/// is the spell's cost + {2}, matching the printed surcharge. (The "targets
+/// only a single creature" sub-filter is approximated to all IS cards.)
 pub fn mavinda_students_advocate() -> CardDefinition {
     let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
         SelectionRequirement::HasCardType(CardType::Instant)
@@ -285,17 +278,17 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Bird, CreatureType::Advisor],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: ManaCost::default(),
+            mana_cost: ManaCost::new(vec![generic(2)]),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_is_in_your_gy,
@@ -306,7 +299,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: true, any_color: false,
                 },
             ]),
             once_per_turn: true,
@@ -397,7 +390,7 @@ pub fn silverquill_pledgemage() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![],
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -521,27 +514,35 @@ pub fn tenured_inkcaster() -> CardDefinition {
 /// "Sacrifice this creature: Creatures you control gain indestructible
 /// until end of turn."
 ///
-/// Push (modern_decks): front-face only of the MDFC Selfless Glyphweaver
-/// // Deadly Vanity. The back-face mass-sacrifice is too complex (each
-/// opponent picks which creature to keep — no multi-pick decision shape
-/// yet) and is omitted. The front face is a respectable 3-mana 2/3 body
-/// with a one-shot indestructible-all-creatures-EOT activation that
-/// protects the board through a Wrath.
+/// MDFC Selfless Glyphweaver // Deadly Vanity. The back face (Deadly Vanity —
+/// {4}{B}{B}{B} Sorcery: "Each player chooses a creature or planeswalker they
+/// control, then sacrifices the rest.") is wired via
+/// `Effect::EachPlayerKeepsOneSacrificeRest` and castable from hand through
+/// `GameAction::CastSpellBack`.
 ///
-/// The activation is a `sac_cost` activated ability (mirroring Shattered
-/// Acolyte and similar sac-self payoff cards) whose effect grants
-/// Indestructible (EOT) to each creature the controller owns. Because
+/// The front's activation is a `sac_cost` activated ability whose effect
+/// grants Indestructible (EOT) to each creature the controller owns. Because
 /// the source is sacrificed as part of the cost (before resolution), it
 /// won't grant indestructible to itself — matching the printed Oracle
 /// where the sacrificed Glyphweaver is no longer on the battlefield
 /// when the effect resolves.
 pub fn selfless_glyphweaver() -> CardDefinition {
+    let deadly_vanity = CardDefinition {
+        name: "Deadly Vanity",
+        cost: cost(&[generic(4), b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachPlayerKeepsOneSacrificeRest {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+        },
+        ..Default::default()
+    };
     CardDefinition {
         name: "Selfless Glyphweaver",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -570,6 +571,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
+        back_face: Some(Box::new(deadly_vanity)),
         ..Default::default()
     }
 }
@@ -4984,9 +4986,7 @@ pub fn silverquill_sealwright() -> CardDefinition {
 // Magecraft templates. Each card uses existing engine primitives — no
 // engine changes required. All 22 are ✅ status; each has a lock-in
 // test in `tests::stx`. After this batch the Silverquill school is
-// fully closed-out (only Mavinda, Students' Advocate stays 🟡 pending
-// the cast-from-graveyard-targeting-only-a-single-creature engine
-// primitive — tracked separately).
+// fully closed-out.
 //
 // Names verified against `crabomination/src/catalog/sets/` for
 // uniqueness; "Silverquill Vanguard" already exists upstream, so this
@@ -13839,7 +13839,7 @@ pub fn silverquill_apprentice() -> CardDefinition {
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,
@@ -13866,7 +13866,7 @@ pub fn shadewing_laureate() -> CardDefinition {
         cost: cost(&[w(), hybrid(Color::White, Color::Black), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird, CreatureType::Warlock],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,
@@ -14316,8 +14316,10 @@ pub fn inkling_cantor_b175() -> CardDefinition {
 }
 
 /// Silverquill Penkeeper (b175) — {1}{B} 1/2 Vampire Warlock.
-/// Magecraft: each opp discards a card (collapsed to single discard, simplified).
-/// Actually we'll use Drain 1 as simpler stand-in.
+/// Magecraft — "Whenever you cast or copy an instant or sorcery spell, each
+/// opponent discards a card." Wired faithfully via `magecraft(Effect::Discard
+/// { EachOpponent })`; each opponent chooses their own discard (auto-decider
+/// discards by hand order).
 pub fn silverquill_penkeeper_b175() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Penkeeper (b175)",
@@ -14329,7 +14331,11 @@ pub fn silverquill_penkeeper_b175() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        triggered_abilities: vec![magecraft(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
         ..Default::default()
     }
 }
@@ -14654,10 +14660,10 @@ pub fn silverquill_pridecrier_b178() -> CardDefinition {
 }
 
 /// Silverquill Wordweaver (b177) — {3}{W}{B} 3/4 Vampire Bard Flying.
-/// ETB: each opp discards a card. (Approximated as Drain 1 — no targeted discard target.)
-/// We'll use drain to mark a meaningful effect; alternative is to skip and use a vanilla body.
+/// "When this enters, each opponent discards a card." Wired faithfully via
+/// `etb(Effect::Discard { EachOpponent })`; each opponent chooses their own
+/// discard (auto-decider discards by hand order).
 pub fn silverquill_wordweaver_b177() -> CardDefinition {
-    use crate::effect::shortcut::etb_drain;
     CardDefinition {
         name: "Silverquill Wordweaver (b177)",
         cost: cost(&[generic(3), w(), b()]),
@@ -14669,7 +14675,11 @@ pub fn silverquill_wordweaver_b177() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb_drain(2)],
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
         ..Default::default()
     }
 }

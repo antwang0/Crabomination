@@ -176,8 +176,8 @@ pub fn generate_card_mipmaps(
         if !is_card {
             continue;
         }
-        if let Some(image) = images.get_mut(*id) {
-            generate_mipmaps(image);
+        if let Some(mut image) = images.get_mut(*id) {
+            generate_mipmaps(&mut image);
         }
     }
 }

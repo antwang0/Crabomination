@@ -766,6 +766,63 @@ fn cr_510_1c_ui_player_orders_and_assigns_combat_damage() {
     assert!(g.battlefield_find(b1).is_some(), "b1 only took 1 and survived");
 }
 
+/// CR 509.2 / 510.1c — Banding: when an attacker is blocked by a band that
+/// includes a creature with banding, the *defending* player (not the
+/// attacker) announces the attacker's damage order and assignment. Here the
+/// bot attacks and the human defender, holding a banding blocker, is the one
+/// prompted — and assigns all 3 to one bear, sparing the other.
+#[test]
+fn cr_509_2_banding_blocker_lets_defender_assign_damage() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::decision::{Decision, DecisionAnswer};
+    use crate::game::types::{ResumeContext, TurnStep};
+    let mut g = two_player_game();
+    // Defender (P1) drives the UI; the attacking bot (P0) does not.
+    g.players[1].wants_ui = true;
+    let beater = CardDefinition {
+        name: "Three Three",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    };
+    let atk = g.add_card_to_battlefield(0, beater);
+    let hero = g.add_card_to_battlefield(1, catalog::benalish_hero()); // 1/1 banding
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(hero, atk), (bear, atk)]))
+        .expect("band-block with the banding hero");
+    drain_stack(&mut g);
+
+    while g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        assert!(!g.is_game_over());
+    }
+    // The order decision is routed to the *defending* player (P1).
+    let pd = g.pending_decision.as_ref().expect("combat suspends on ordering");
+    assert!(matches!(pd.resume, ResumeContext::CombatDamage { player: 1, .. }),
+        "banding routes the assignment to the defending player, got {:?}", pd.resume);
+    assert!(matches!(pd.decision, Decision::CombatDamageOrder { .. }));
+    g.submit_decision(DecisionAnswer::DamageOrder(vec![bear, hero])).expect("defender orders");
+    // Assignment also goes to the defender: dump all 3 into the bear, none on
+    // the hero, so the 1/1 banding hero survives.
+    g.submit_decision(DecisionAnswer::CombatDamageAssignment(vec![(bear, 3), (hero, 0)]))
+        .expect("defender assigns");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear took all 3 and died");
+    assert!(g.battlefield_find(hero).is_some(), "banding hero spared by the defender");
+}
+
 /// CR 702.85b (Cascade): the exile walk stops at the first nonland card
 /// with mana value *strictly less* than the cascading spell's. A card whose
 /// MV equals the cascade MV is not a valid hit — it's exiled past and
@@ -1071,7 +1128,7 @@ fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![land])]));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     })
     .expect("Zimone land-drop ability");
     drain_stack(&mut g);
@@ -1088,7 +1145,7 @@ fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
     g.players[0].mana_pool.add_colorless(4);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     })
     .expect("Zimone draw ability");
     drain_stack(&mut g);
@@ -1096,21 +1153,51 @@ fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
 }
 
 #[test]
-fn academic_probation_taps_and_stuns_target_creature() {
+fn academic_probation_mode0_locks_opponent_from_casting_named_spell() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::academic_probation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Name "Grizzly Bears" — opponent then can't cast their copy.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
+        "Grizzly Bears".to_string(),
+    )]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("Academic Probation mode 0 castable");
+    drain_stack(&mut g);
+    let opp_bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    // Hand priority to the opponent so they attempt the cast.
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: opp_bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect_err("named spell can't be cast by the opponent");
+    assert!(matches!(err, crate::game::GameError::SpellNameLocked), "got {err:?}");
+}
+
+#[test]
+fn academic_probation_mode1_target_cant_attack_or_block() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::card::Keyword;
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::academic_probation());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![], mode: None, x_value: None,
+        additional_targets: vec![], mode: Some(1), x_value: None,
     })
-    .expect("Academic Probation castable for {1}{W}");
+    .expect("Academic Probation mode 1 castable");
     drain_stack(&mut g);
-    let bear = g.battlefield_find(opp_bear).unwrap();
-    assert!(bear.tapped, "target creature tapped");
-    assert_eq!(bear.counter_count(CounterType::Stun), 1, "one stun counter added");
+    let kws = g.computed_permanent(opp_bear).unwrap().keywords;
+    assert!(kws.contains(&Keyword::CantAttack), "target can't attack");
+    assert!(kws.contains(&Keyword::CantBlock), "target can't block");
 }
 
 #[test]
@@ -1159,40 +1246,43 @@ fn unwilling_ingredient_dies_no_draw_when_declined() {
 }
 
 #[test]
-fn cr_122_1d_academic_probation_stun_persists_through_untap() {
-    // End-to-end CR 122.1d via a real card: Academic Probation taps a
-    // creature and gives it a stun counter; the creature does not untap
-    // on its controller's next untap step and instead removes one stun
-    // counter, untapping only on the following untap.
+fn cr_122_1d_stun_counter_persists_through_untap() {
+    // End-to-end CR 122.1d via Containment Studies: it taps a creature and
+    // gives it two stun counters; each of the controller's untap steps
+    // consumes one counter instead of untapping, untapping only once both
+    // are gone.
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::academic_probation());
+    let id = g.add_card_to_hand(0, catalog::containment_studies());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(opp_bear)),
         additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Academic Probation castable for {1}{W}");
+    .expect("Containment Studies castable for {2}{W}");
     drain_stack(&mut g);
     {
         let bear = g.battlefield_find(opp_bear).unwrap();
         assert!(bear.tapped);
-        assert_eq!(bear.counter_count(CounterType::Stun), 1);
+        assert_eq!(bear.counter_count(CounterType::Stun), 2);
     }
-    // Untap step for the stunned creature's controller (seat 1): the
-    // stun counter is consumed instead of untapping.
     g.active_player_idx = 1;
     g.do_untap();
     {
         let bear = g.battlefield_find(opp_bear).unwrap();
         assert!(bear.tapped, "stun keeps the creature tapped through one untap");
-        assert_eq!(bear.counter_count(CounterType::Stun), 0, "the stun counter is consumed");
+        assert_eq!(bear.counter_count(CounterType::Stun), 1, "one stun counter consumed");
     }
-    // Next untap: counter gone, untaps normally.
+    g.do_untap();
+    {
+        let bear = g.battlefield_find(opp_bear).unwrap();
+        assert!(bear.tapped, "still tapped with one stun counter left");
+        assert_eq!(bear.counter_count(CounterType::Stun), 0, "second stun counter consumed");
+    }
     g.do_untap();
     assert!(!g.battlefield_find(opp_bear).unwrap().tapped,
-        "untaps normally once the stun counter is gone");
+        "untaps normally once the stun counters are gone");
 }
 
 #[test]
@@ -1221,7 +1311,7 @@ fn opposition_taps_a_creature_to_tap_a_permanent() {
     let opp_id = g.battlefield.iter().find(|c| c.definition.name == "Opposition").unwrap().id;
     g.perform_action(GameAction::ActivateAbility {
         card_id: opp_id, ability_index: 0,
-        target: Some(Target::Permanent(target)), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).expect("Opposition activates by tapping a creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(tapper).unwrap().tapped, "creature tapped to pay cost");
@@ -1236,7 +1326,7 @@ fn opposition_requires_an_untapped_creature() {
     // No untapped creature to tap → activation rejected.
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: opp, ability_index: 0,
-        target: Some(Target::Permanent(target)), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).is_err(), "no creature to tap means no activation");
 }
 
@@ -1257,7 +1347,7 @@ fn opposition_ui_activator_chooses_creature_to_tap() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: opp, ability_index: 0,
-        target: Some(Target::Permanent(target)), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     })
     .expect("activation suspends for the tap-cost choice");
 
@@ -1511,22 +1601,22 @@ fn eager_first_year_magecraft_pumps_a_creature() {
 }
 
 #[test]
-fn disciplined_duelist_is_two_one_first_strike() {
+fn disciplined_duelist_is_two_one_double_strike() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::disciplined_duelist());
     assert_eq!(g.battlefield_find(id).unwrap().power(), 2);
     assert_eq!(g.battlefield_find(id).unwrap().toughness(), 1);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::FirstStrike),
-        "has first strike");
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::DoubleStrike),
+        "has double strike");
 }
 
 #[test]
-fn codespell_cleric_is_one_one_lifelink() {
+fn codespell_cleric_is_one_one_vigilance() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::codespell_cleric());
     assert_eq!(g.battlefield_find(id).unwrap().power(), 1);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Lifelink),
-        "has lifelink");
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Vigilance),
+        "has vigilance");
 }
 
 #[test]

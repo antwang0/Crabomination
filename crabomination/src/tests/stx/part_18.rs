@@ -2393,13 +2393,13 @@ fn witherbloom_mossglobe_b154_taps_for_black_or_green_then_sacs_for_three_life()
     let mg = g.add_card_to_battlefield(0, catalog::witherbloom_mossglobe_b154());
     // Tap for {B}
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mg, ability_index: 0, target: None, x_value: None,
+        card_id: mg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("mana ability {B}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
     // Untap and try {G}
     if let Some(c) = g.battlefield_find_mut(mg) { c.tapped = false; }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mg, ability_index: 1, target: None, x_value: None,
+        card_id: mg, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("mana ability {G}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
     // Untap, pay 2 generic mana + sac for 3 life
@@ -2407,7 +2407,7 @@ fn witherbloom_mossglobe_b154_taps_for_black_or_green_then_sacs_for_three_life()
     g.players[0].mana_pool.add_colorless(2);
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mg, ability_index: 2, target: None, x_value: None,
+        card_id: mg, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac for 3 life");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before + 3, "+3 life");
@@ -2448,7 +2448,7 @@ fn witherbloom_pestbinder_b154_etb_mints_pest_and_sac_shrinks_target() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: pb, ability_index: 0,
-        target: Some(Target::Permanent(bear)), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("Sac pest activation");
     drain_stack(&mut g);
     let _ = g.check_state_based_actions();

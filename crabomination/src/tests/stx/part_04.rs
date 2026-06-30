@@ -30,7 +30,7 @@ fn prismari_channeler_taps_for_blue_or_red() {
     let mut g = two_player_game();
     let pc = g.add_card_to_battlefield(0, catalog::prismari_channeler());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pc, ability_index: 0, target: None, x_value: None }).expect("blue tap");
+        card_id: pc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("blue tap");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Blue) >= 1, "blue added");
 }
@@ -811,7 +811,7 @@ fn witherbloom_apothecary_sacs_and_drains() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: apothecary_id,
         ability_index: 0,
-        target: None, x_value: None }).expect("Apothecary activation works");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Apothecary activation works");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "fodder went to gy");
     assert_eq!(g.players[1].life, oppbefore - 1, "opp lost 1");
@@ -831,6 +831,7 @@ fn witherbloom_apothecary_cannot_activate_without_another_creature() {
         card_id: wa,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     });
     assert!(res.is_err(), "no other creature to sacrifice → rejected");
@@ -1768,7 +1769,7 @@ fn quandrix_geologist_can_tap_for_g_or_u() {
     let qg = g.add_card_to_battlefield(0, catalog::quandrix_geologist());
     let pool_g_before = g.players[0].mana_pool.amount(Color::Green);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: qg, ability_index: 0, target: None, x_value: None }).expect("Tap for G");
+        card_id: qg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Tap for G");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), pool_g_before + 1, "added G");
 }
@@ -2509,7 +2510,7 @@ fn witherbloom_brewer_taps_for_two_colors_paying_two_life() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Brewer activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 2, "paid 2 life");
@@ -2861,7 +2862,7 @@ fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Sanctum can tap for {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
@@ -2874,7 +2875,7 @@ fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Surveil ability activatable");
     drain_stack(&mut g);
     // Library should either shrink by 1 (surveiled to gy) or be the same.
@@ -2961,7 +2962,7 @@ fn mystic_slate_taps_for_scry_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Slate scry activatable");
     drain_stack(&mut g);
     let bf = g.battlefield_find(id).expect("Slate on bf");

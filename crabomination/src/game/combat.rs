@@ -4,6 +4,39 @@ use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
+    /// True if `card` carries a `CanAttackIgnoringDefenderWhile` static whose
+    /// condition currently holds — it may attack despite Defender
+    /// (Drowsing Tyrannodon).
+    pub(crate) fn ignores_defender_for_attack(&self, card: &CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        // CR 508.1a — a turn-scoped grant (Krotiq Nestguard's activated ability).
+        if self.attack_despite_defender_this_turn.contains(&card.id) {
+            return true;
+        }
+        let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
+        card.definition.static_abilities.iter().any(|sa| {
+            if let StaticEffect::CanAttackIgnoringDefenderWhile { condition } = &sa.effect {
+                self.evaluate_predicate(condition, &ctx)
+            } else {
+                false
+            }
+        })
+    }
+
+    /// CR 509.1a — true if `controller` has a permanent granting "tapped
+    /// creatures you control can block as though they were untapped" (Masako
+    /// the Humorless).
+    pub(crate) fn tapped_creatures_can_block(&self, controller: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::TappedCreaturesCanBlock))
+        })
+    }
+
     // ── Declare attackers ─────────────────────────────────────────────────────
 
     pub(crate) fn declare_attackers(
@@ -45,6 +78,21 @@ impl GameState {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
                     }
                 }
+                // CR 508.4 — a battle is a legal target as long as the active
+                // player isn't its protector (you can attack your own Siege,
+                // which a teammate-checked planeswalker arm would reject).
+                AttackTarget::Battle(b_id) => {
+                    let b = self
+                        .battlefield_find(b_id)
+                        .ok_or(GameError::InvalidPlaneswalkerAttackTarget(b_id))?;
+                    let protector = b.protected_by;
+                    if !b.definition.is_battle()
+                        || protector == Some(self.active_player_idx)
+                        || protector.is_none_or(|pr| !self.players[pr].is_alive())
+                    {
+                        return Err(GameError::InvalidPlaneswalkerAttackTarget(b_id));
+                    }
+                }
             }
         }
 
@@ -59,6 +107,18 @@ impl GameState {
                     .iter()
                     .find(|c| c.id == atk.attacker)
                     .is_some_and(|c| c.keywords.contains(&Keyword::AttacksAlone))
+            }) {
+                return Err(GameError::CannotAttack(attacks[0].attacker));
+            }
+        }
+
+        // CR 508.0 — "can't attack alone" (Militia Rallier). A lone attacker
+        // carrying CantAttackAlone makes the batch illegal.
+        if attacks.len() == 1 {
+            let computed_pre = self.compute_battlefield();
+            if computed_pre.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
+                c.keywords.contains(&Keyword::CantAttackAlone)
+                    || c.keywords.contains(&Keyword::CantAttackOrBlockAlone)
             }) {
                 return Err(GameError::CannotAttack(attacks[0].attacker));
             }
@@ -107,7 +167,7 @@ impl GameState {
                 let kws = computed_kw(c.id);
                 let able = c.definition.is_creature()
                     && !c.tapped
-                    && !kws.contains(&Keyword::Defender)
+                    && (!kws.contains(&Keyword::Defender) || self.ignores_defender_for_attack(c))
                     && !kws.contains(&Keyword::CantAttack)
                     && (!c.summoning_sick || kws.contains(&Keyword::Haste));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
@@ -174,6 +234,25 @@ impl GameState {
                         return Err(GameError::CannotAttack(id));
                     }
                 }
+                // "Can't attack unless you control N+ [filter]" (Topiary
+                // Stomper — seven or more lands).
+                if let Some((req, min)) = computed_kw(id).iter().find_map(|kw| match kw {
+                    Keyword::CantAttackOrBlockUnlessYouControlCount {
+                        filter, min, block_only: false, ..
+                    } => Some((filter.clone(), *min)),
+                    _ => None,
+                }) {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p && self.evaluate_requirement_on_card(&req, c, p)
+                        })
+                        .count();
+                    if (n as u32) < min {
+                        return Err(GameError::CannotAttack(id));
+                    }
+                }
                 // "Even number of counters" gate (Sab-Sunen). Zero is even.
                 if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                     && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
@@ -193,11 +272,46 @@ impl GameState {
                     .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     .unwrap_or_else(|| card.definition.is_creature());
                 let kws = computed_kw(id);
+                // CR 508.1a — Goblin Cohort can't attack unless its controller
+                // cast a creature spell this turn.
+                let cohort_locked = kws
+                    .contains(&Keyword::CantAttackUnlessCastCreatureThisTurn)
+                    && self.players[p].creatures_cast_this_turn == 0;
+                // CR 508.1a — Hazoret-class: can't attack unless hand is small.
+                let hand_locked = kws.iter().any(|k| {
+                    matches!(k, Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
+                        if self.players[p].hand.len() as u32 > *n)
+                });
+                // CR 508.1a — Delirium gate (Patchwork Beastie).
+                let delirium_locked = kws.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
+                    && !self.delirium_active(p);
+                // CR 508.1a — "a creature died under your control this turn"
+                // gate (Bontu the Glorified).
+                let creature_died_locked =
+                    kws.contains(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
+                        && self.players[p].creatures_died_this_turn == 0;
+                // CR 508.1a — Descend N gate (The Ancient One).
+                let descend_locked = kws.iter().any(|k| {
+                    matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
+                        if self.descend_count(p) < *n as usize)
+                });
+                // CR 508.1a — city's blessing gate (Wayward Swordtooth).
+                let blessing_locked =
+                    kws.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
+                        && !self.players[p].city_blessing;
+                let defender_locked =
+                    kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
                     && !card.tapped
                     && card.detained_by.is_none()
-                    && !kws.contains(&Keyword::Defender)
+                    && !defender_locked
                     && !kws.contains(&Keyword::CantAttack)
+                    && !cohort_locked
+                    && !hand_locked
+                    && !delirium_locked
+                    && !creature_died_locked
+                    && !descend_locked
+                    && !blessing_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
@@ -205,8 +319,13 @@ impl GameState {
                     }
                     // CR 701.35 — a detained permanent can't attack.
                     if card.detained_by.is_some()
-                        || kws.contains(&Keyword::Defender)
+                        || defender_locked
                         || kws.contains(&Keyword::CantAttack)
+                        || cohort_locked
+                        || hand_locked
+                        || delirium_locked
+                        || descend_locked
+                        || blessing_locked
                     {
                         return Err(GameError::CannotAttack(id));
                     }
@@ -228,6 +347,11 @@ impl GameState {
                 crate::game::types::AttackTarget::Player(d) => (Some(d), false),
                 crate::game::types::AttackTarget::Planeswalker(pw) => {
                     (self.battlefield_find(pw).map(|c| c.controller), true)
+                }
+                // The protector's attack taxes apply when attacking their
+                // battle; not a planeswalker for `protect_planeswalkers`.
+                crate::game::types::AttackTarget::Battle(b) => {
+                    (self.battlefield_find(b).and_then(|c| c.protected_by), false)
                 }
             };
             let Some(d) = defender else { continue };
@@ -262,6 +386,7 @@ impl GameState {
             }
         }
 
+        let any_attackers = !attacks.is_empty();
         for atk in attacks {
             let id = atk.attacker;
             // Statics-granted triggers ("Slivers you control have
@@ -272,6 +397,17 @@ impl GameState {
                 .iter()
                 .find(|c| c.id == id)
                 .map(|c| self.statics_granted_triggers_for(c))
+                .unwrap_or_default();
+            // Equipment-granted Attacks triggers (CR 702.6e) — e.g. "whenever
+            // equipped creature attacks, …". These fire off the creature, so
+            // gather them here alongside the printed/static SelfSource set
+            // (the general dispatch hardcodes-skips SelfSource Attacks to avoid
+            // double-firing, so equip grants must be picked up on this path).
+            let equip_granted = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| self.equip_granted_triggers_for(c))
                 .unwrap_or_default();
             // Validated above — commit only. Filter by *controller*, not
             // *owner*: a stolen creature (Threaten / Mind Control) attacks
@@ -324,6 +460,7 @@ impl GameState {
                 .iter()
                 .chain(granted)
                 .chain(static_granted.iter())
+                .chain(equip_granted.iter())
             {
                 // Only SelfSource Attacks triggers are hardcoded here.
                 // YourControl-scoped Attacks triggers (Exalted via
@@ -363,6 +500,17 @@ impl GameState {
                     filter: crate::card::SelectionRequirement::Permanent,
                 };
                 triggers.push((id, sac_effect, p, None));
+            }
+            // Firebending N — CR 702.189a: a triggered mana ability (resolves
+            // without the stack, CR 605.3b). Add N {R} now; the mana survives
+            // step/phase emptying until end of combat (`firebending_kept_red`).
+            if let Some(n) = computed_kw(id).iter().find_map(|kw| match kw {
+                Keyword::Firebending(n) => Some(*n),
+                _ => None,
+            }) {
+                self.players[p].mana_pool.add(crate::mana::Color::Red, n);
+                self.players[p].firebending_kept_red =
+                    self.players[p].firebending_kept_red.saturating_add(n);
             }
             // ControllerAttackedByOpponent (CR 508.1g listeners): permanents
             // the defending player controls that fire "when a creature an
@@ -425,6 +573,7 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    cast_via_mayhem: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&predicate, &ctx) {
@@ -438,6 +587,32 @@ impl GameState {
                     .target(auto_target)
                     .build(),
             );
+        }
+
+        // CR 508 — "Whenever you attack" fires once for the attacking player
+        // when one or more attackers are declared. Walk every permanent the
+        // active player controls for a `YouAttack` trigger (SelfSource or
+        // YourControl scope are equivalent here — the event is player-wide).
+        if any_attackers {
+            let ap = self.active_player_idx;
+            let you_attack: Vec<(CardId, Effect)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ap)
+                .flat_map(|c| {
+                    c.definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| t.event.kind == EventKind::YouAttack)
+                        .map(move |t| (c.id, t.effect.clone()))
+                })
+                .collect();
+            for (src, effect) in you_attack {
+                let auto_target = self.auto_target_for_effect_avoiding(&effect, ap, Some(src));
+                self.stack.push(
+                    TriggerPush::new(src, ap, effect).target(auto_target).build(),
+                );
+            }
         }
 
         self.give_priority_to_active();
@@ -501,7 +676,9 @@ impl GameState {
             let blocker_is_creature = cp_of(blocker_id)
                 .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
                 .unwrap_or(false);
-            if !blocker_is_creature || blocker.tapped {
+            if !blocker_is_creature
+                || (blocker.tapped && !self.tapped_creatures_can_block(blocker.controller))
+            {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
@@ -535,6 +712,25 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // "Can't block unless you control N+ [filter]" (Topiary Stomper).
+            // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
+            if let Some((req, min)) = kws_of(blocker_id).iter().find_map(|kw| match kw {
+                Keyword::CantAttackOrBlockUnlessYouControlCount {
+                    filter, min, attack_only: false, ..
+                } => Some((filter.clone(), *min)),
+                _ => None,
+            }) {
+                let owner = blocker.controller;
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == owner && self.evaluate_requirement_on_card(&req, c, owner))
+                    .count();
+                if (n as u32) < min {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
+            }
+
             let attacker = self
                 .battlefield_find(attacker_id)
                 .ok_or(GameError::CardNotOnBattlefield(attacker_id))?;
@@ -552,6 +748,15 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // CR 701.54c (level 1+) — a Ring-bearer can't be blocked by
+            // creatures with greater power.
+            if self.effective_ring_bearer(attacker.controller) == Some(attacker_id)
+                && self.players[attacker.controller].ring_temptations >= 1
+                && blocker_cp.power > atk_power
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // Landwalk (CR 702.15): the attacker can't be blocked while the
             // defending player controls a land of the named type. Needs
             // game state (the defender's lands), so it lives here rather
@@ -561,6 +766,36 @@ impl GameState {
                     && self.defender_controls_land_type(defender_idx, lt)
                 {
                     return Err(GameError::CannotBlock(blocker_id));
+                }
+            }
+
+            // CR 509.1b — "can't be blocked if you've cast N+ spells this turn"
+            // (Illvoi Infiltrator). Reads the attacker's controller's spell
+            // count this turn, so it lives here rather than in the pure
+            // two-creature check.
+            if let Some(atk_ctl) = self.battlefield_find(attacker_id).map(|c| c.controller) {
+                for kw in kws_of(attacker_id) {
+                    if let Keyword::CantBeBlockedIfControllerCastSpells(n) = kw
+                        && self.players[atk_ctl].spells_cast_this_turn >= *n
+                    {
+                        return Err(GameError::CannotBlock(blocker_id));
+                    }
+                }
+            }
+        }
+
+        // CR 509.1c — "can't block alone". A creature blocks alone if it's the
+        // only creature blocking this combat; count the merged block set
+        // (this batch plus any earlier-declared blockers).
+        {
+            let mut all_blockers: std::collections::HashSet<CardId> =
+                self.block_map.keys().copied().collect();
+            all_blockers.extend(assignments.iter().map(|(b, _)| *b));
+            if all_blockers.len() == 1 {
+                for &(blocker_id, _) in &assignments {
+                    if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockAlone) {
+                        return Err(GameError::CannotBlock(blocker_id));
+                    }
                 }
             }
         }
@@ -739,7 +974,10 @@ impl GameState {
             if !self.attacking.iter().any(|a| a.attacker == required) { continue; }
             let b_is_creature = cp_of(b.id)
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
-            if !b_is_creature || b.tapped || kws_of(b.id).contains(&Keyword::CantBlock) {
+            if !b_is_creature
+                || (b.tapped && !self.tapped_creatures_can_block(b.controller))
+                || kws_of(b.id).contains(&Keyword::CantBlock)
+            {
                 continue;
             }
             let Some(attacker) = self.battlefield_find(required) else { continue };
@@ -1169,7 +1407,6 @@ impl GameState {
             self.combat_damage_plan_step = Some(self.step);
         }
         let active = self.active_player_idx;
-        let wants_ui = self.players[active].wants_ui;
         for atk in attacker_infos.iter().filter(|a| a.should_deal) {
             let mut blocker_ids: Vec<CardId> = self
                 .block_map
@@ -1182,14 +1419,27 @@ impl GameState {
                 continue;
             }
 
+            // CR 509.2 / 510.1c — Banding: if any blocking creature has
+            // banding, the *defending* player (the blockers' controller), not
+            // the attacking player, announces this attacker's damage order and
+            // assignment. Otherwise the active (attacking) player decides.
+            let banding_assigner = blocker_ids.iter().find_map(|bid| {
+                computed
+                    .iter()
+                    .find(|c| c.id == *bid && c.keywords.contains(&Keyword::Banding))
+                    .map(|c| c.controller)
+            });
+            let assigner = banding_assigner.unwrap_or(active);
+            let assigner_ui = self.players[assigner].wants_ui;
+
             // 1) Blocker order (CR 510.1c).
             if !self.combat_damage_order.contains_key(&atk.id) {
                 let decision = self.combat_damage_order_decision(atk.id, &blocker_ids);
-                if wants_ui {
+                if assigner_ui {
                     self.pending_decision = Some(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
-                            player: active,
+                            player: assigner,
                             attacker: atk.id,
                             kind: CombatDecisionKind::Order,
                         },
@@ -1204,7 +1454,7 @@ impl GameState {
 
             // 2) Damage assignment across the ordered blockers (CR 510.1d).
             if !self.combat_damage_assignment.contains_key(&atk.id) {
-                let total_power = if self.prevent_combat_damage_this_turn {
+                let total_power = if self.combat_damage_prevented_for_dealer(atk.id) {
                     0
                 } else {
                     atk.power.max(0) as u32
@@ -1218,11 +1468,11 @@ impl GameState {
                 }
                 let decision =
                     self.assign_combat_damage_decision(atk.id, total_power, &lethals);
-                if wants_ui {
+                if assigner_ui {
                     self.pending_decision = Some(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
-                            player: active,
+                            player: assigner,
                             attacker: atk.id,
                             kind: CombatDecisionKind::Assign,
                         },
@@ -1298,8 +1548,8 @@ impl GameState {
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
                     .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
-                let power = atk_cp.map(|c| c.power).unwrap_or(0);
-                let total_power = if self.prevent_combat_damage_this_turn {
+                let power = atk_cp.map(combat_damage_value).unwrap_or(0);
+                let total_power = if self.combat_damage_prevented_for_dealer(attacker) {
                     0
                 } else {
                     power.max(0) as u32
@@ -1344,14 +1594,16 @@ impl GameState {
                     id: cp.id,
                     target: atk.target,
                     defender_player,
-                    power: cp.power,
+                    power: combat_damage_value(cp),
                     has_trample: kws.contains(&Keyword::Trample),
                     has_lifelink: kws.contains(&Keyword::Lifelink),
                     has_deathtouch: kws.contains(&Keyword::Deathtouch),
                     has_infect: kws.contains(&Keyword::Infect),
                     has_wither: kws.contains(&Keyword::Wither),
                     toxic: kws.iter().filter_map(|k| match k {
-                        Keyword::Toxic(n) => Some(*n),
+                        // Poisonous N (CR 702.70) folds into the same
+                        // combat-damage poison rider as Toxic (CR 702.180).
+                        Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
                         _ => None,
                     }).sum(),
                     // CR 510.1 — a creature with "deals no combat damage this
@@ -1384,8 +1636,9 @@ impl GameState {
         // set, every combat damage assignment yields 0; lifelink scales
         // off actual damage dealt (CR 702.15a), so prevention zeros
         // lifelink life-gain as well. Triggers that would fire off
-        // "deals combat damage to a player" never see a damage event.
-        let prevent_combat_damage = self.prevent_combat_damage_this_turn;
+        // "deals combat damage to a player" never see a damage event. With
+        // an exception filter (Inspire Awe) the prevention is per-dealer, so
+        // it's recomputed inside the per-attacker loop below.
 
         // CR 614.2 / 614.5 — global combat-damage doubling (Furnace of Rath)
         // and halving (Ghosts of the Innocent). Scaling applies to the amount
@@ -1403,6 +1656,7 @@ impl GameState {
             if !atk.should_deal {
                 continue;
             }
+            let prevent_combat_damage = self.combat_damage_prevented_for_dealer(atk.id);
 
             // CR 510.1c: the attacking player chose the order in which an
             // attacker assigns combat damage to its multiple blockers; that
@@ -1521,8 +1775,18 @@ impl GameState {
                         Some(atk.id),
                         &mut events,
                     ) as i32;
+                    // Ironscale Hydra replaces the damage with a +1/+1 counter
+                    // (and so the attacker's lifelink scales off 0).
+                    let dealt = self.ironscale_replace(blocker_id, dealt, &mut events);
+                    // CR 615 — a blocker that prevents all damage to itself
+                    // (Wall of Denial) takes none, and grants no lifelink.
+                    let dealt = if self.combat_damage_prevented_to_self(blocker_id) { 0 } else { dealt };
                     lifelink_dealt += dealt;
 
+                    if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
+                        b.dealt_damage_this_turn = true;
+                        b.damaged_by_this_turn.push(atk.id);
+                    }
                     if atk.has_infect || atk.has_wither {
                         if dealt > 0
                             && let Some(blocker) = self.battlefield_find_mut(blocker_id)
@@ -1592,14 +1856,16 @@ impl GameState {
                     .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
                     // CR 615.7 — chosen-source prevention (Forge-Tender).
                     .filter(|bid| !self.damage_prevented_sources.contains(bid))
+                    // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
+                    .filter(|&bid| !self.combat_damage_prevented_for_dealer(bid))
                     // CR 702.16e — a blocker whose color the attacker has
                     // protection from deals no combat damage to it.
                     .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))
                     .collect();
 
-                let attacker_takes_strike_back = !prevent_combat_damage
+                let attacker_takes_strike_back =
                     // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
-                    && !self.combat_damage_prevented_creatures.contains(&atk.id)
+                    !self.combat_damage_prevented_creatures.contains(&atk.id)
                     // CR 615 — Iroas shields attacking creatures you control.
                     && !self.damage_to_attacker_prevented(atk.id);
 
@@ -1612,7 +1878,7 @@ impl GameState {
                         std::collections::HashMap::new();
                     for &bid in &dealing_blocker_ids {
                         let Some(bc) = computed_of(bid) else { continue };
-                        let power = bc.power.max(0) as u32;
+                        let power = combat_damage_value(bc).max(0) as u32;
                         if power == 0 {
                             continue;
                         }
@@ -1626,12 +1892,20 @@ impl GameState {
                             Some(bid),
                             &mut events,
                         );
+                        // Ironscale Hydra replaces the blocker's strike-back
+                        // with a +1/+1 counter (blocker's lifelink sees 0).
+                        let dmg = self.ironscale_replace(atk.id, dmg as i32, &mut events) as u32;
+                        // CR 615 — an attacker that prevents all damage to itself
+                        // takes none from this blocker (and gives no lifelink).
+                        let dmg = if self.combat_damage_prevented_to_self(atk.id) { 0 } else { dmg };
                         if dmg == 0 {
                             continue;
                         }
                         let infect = bc.keywords.contains(&Keyword::Infect)
                             || bc.keywords.contains(&Keyword::Wither);
                         if let Some(attacker) = self.battlefield_find_mut(atk.id) {
+                            attacker.dealt_damage_this_turn = true;
+                            attacker.damaged_by_this_turn.push(bid);
                             if infect {
                                 attacker
                                     .add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
@@ -1688,6 +1962,18 @@ impl GameState {
             }
         }
 
+        // CR 614 — a source with the exile-on-death damage rider (Kumano's
+        // Pupils, Kumano) exiles instead of buries any creature it damaged
+        // this turn that would die. Mirrors the non-combat path in
+        // `deal_damage_to_from`.
+        for &(source, damaged, _) in &creature_damage {
+            if self
+                .battlefield_find(source)
+                .is_some_and(|c| c.definition.damage_exiles_if_dies)
+            {
+                self.dies_to_exile_eot.insert(damaged);
+            }
+        }
         // CR 510.2 — now that all combat damage in this step has been dealt,
         // put `DealsCombatDamageToCreature` triggers on the stack.
         for (source, damaged, amount) in creature_damage {
@@ -1708,6 +1994,69 @@ impl GameState {
     /// Target-aware scaling for a combat-damage event aimed at a player or
     /// planeswalker attack target (CR 614.2 / 614.5). `source` is the
     /// attacking creature (Torbran's source-scoped bonus).
+    /// CR 615.1 — is `dealer`'s combat damage prevented this turn? True when
+    /// the global fog flag is set, unless an exception filter (Inspire Awe)
+    /// is in play and `dealer` matches it (enchanted / enchantment creatures
+    /// still deal damage).
+    pub(crate) fn combat_damage_prevented_for_dealer(&self, dealer: CardId) -> bool {
+        if !self.prevent_combat_damage_this_turn {
+            return false;
+        }
+        // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
+        // its controller controls can't be prevented, so fog doesn't stop it.
+        if let Some(ctrl) = self.battlefield_find(dealer).map(|c| c.controller)
+            && self.battlefield.iter().any(|c| {
+                c.controller == ctrl
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+                        )
+                    })
+            })
+        {
+            return false;
+        }
+        match &self.prevent_combat_damage_except {
+            None => true,
+            Some(filter) => {
+                let controller =
+                    self.battlefield_find(dealer).map(|c| c.controller).unwrap_or(0);
+                !self.evaluate_requirement(filter, &Target::Permanent(dealer), controller)
+            }
+        }
+    }
+
+    /// Ironscale Hydra (CR 615) — does `id` replace incoming combat damage
+    /// with a +1/+1 counter? Reads `StaticEffect::PreventCombatDamageToSelfAndGrow`.
+    fn creature_prevents_combat_damage_grows(&self, id: CardId) -> bool {
+        self.battlefield_find(id).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|s| {
+                matches!(s.effect, crate::effect::StaticEffect::PreventCombatDamageToSelfAndGrow)
+            })
+        })
+    }
+
+    /// Apply the Ironscale replacement to `recipient` taking `dealt` combat
+    /// damage: if it has the static and `dealt > 0`, add one +1/+1 counter,
+    /// emit the event, and return 0 (the damage is prevented); otherwise
+    /// return `dealt` unchanged.
+    fn ironscale_replace(&mut self, recipient: CardId, dealt: i32, events: &mut Vec<GameEvent>) -> i32 {
+        if dealt > 0 && self.creature_prevents_combat_damage_grows(recipient) {
+            if let Some(c) = self.battlefield_find_mut(recipient) {
+                c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+            }
+            events.push(GameEvent::CounterAdded {
+                card_id: recipient,
+                counter_type: crate::card::CounterType::PlusOnePlusOne,
+                count: 1,
+            });
+            0
+        } else {
+            dealt
+        }
+    }
+
     fn scale_combat_damage(
         &self,
         source: Option<crate::card::CardId>,
@@ -1718,6 +2067,7 @@ impl GameState {
         let ent = match target {
             AttackTarget::Player(p) => EntityRef::Player(p),
             AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
+            AttackTarget::Battle(b) => EntityRef::Permanent(b),
         };
         self.scale_damage_to(source, ent, amount)
     }
@@ -1732,10 +2082,18 @@ impl GameState {
         use crate::game::effects::EntityRef;
         match target {
             AttackTarget::Player(p) => {
+                // CR 615 — Glacial-Chasm-style blanket prevention soaks the whole
+                // combat hit before any shield is consumed.
+                if self.all_damage_to_player_prevented(p) {
+                    return 0;
+                }
                 self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {
                 self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events)
+            }
+            AttackTarget::Battle(b) => {
+                self.apply_prevention_shields(EntityRef::Permanent(b), amount, source, events)
             }
         }
     }
@@ -1755,6 +2113,8 @@ impl GameState {
                 {
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage += amount;
+                        c.dealt_damage_this_turn = true;
+                        c.damaged_by_this_turn.push(atk.id);
                     }
                     events.push(GameEvent::DamageDealt {
                         amount,
@@ -1855,6 +2215,22 @@ impl GameState {
                     });
                 }
             }
+            AttackTarget::Battle(b_id) => {
+                // CR 310.10 — combat damage to a battle removes that many
+                // defense counters. The defeat trigger fires from the SBA once
+                // the last counter is gone.
+                if let Some(b) = self.battlefield_find_mut(b_id) {
+                    let current = b.counter_count(crate::card::CounterType::Defense);
+                    let new_defense = current.saturating_sub(amount);
+                    b.counters
+                        .insert(crate::card::CounterType::Defense, new_defense);
+                    events.push(GameEvent::DamageDealt {
+                        amount,
+                        to_player: None,
+                        to_card: Some(b_id),
+                    });
+                }
+            }
         }
     }
 
@@ -1880,6 +2256,12 @@ impl GameState {
         damaged_player: usize,
         damage_amount: u32,
     ) {
+        // CR 702.179 — the dealing creature's controller has now dealt combat
+        // damage to a player this turn (Freerunning's alt-cost gate).
+        if let Some(c) = self.battlefield_find(source) {
+            let controller = c.controller;
+            self.players[controller].dealt_combat_damage_to_player_this_turn = true;
+        }
         self.fire_combat_damage_triggers(
             source,
             EventKind::DealsCombatDamageToPlayer,
@@ -2004,11 +2386,14 @@ impl GameState {
         // Phase 1.5: walk all battlefield permanents for `YourControl`-scope
         // combat-damage triggers. This handles "whenever a creature you
         // control deals combat damage to a player" listeners (e.g.,
-        // Quandrix Echocrasher b171). The listener's controller must
-        // match the attacker's controller.
+        // Quandrix Echocrasher b171, Enduring Curiosity). The listener's
+        // controller must match the attacker's controller. The source itself
+        // counts ("a creature you control" includes the dealer) — its
+        // `YourControl` trigger isn't gathered in Phase 1 (SelfSource-only),
+        // so it would otherwise never fire.
         if let Some(atk_ctrl) = attacker_controller {
             for c in &self.battlefield {
-                if c.id == source || c.controller != atk_ctrl {
+                if c.controller != atk_ctrl {
                     continue;
                 }
                 for t in &c.definition.triggered_abilities {
@@ -2057,6 +2442,20 @@ impl GameState {
                     triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl));
                 }
             }
+            // CR 701.54c (level 4+) — "Whenever your Ring-bearer deals combat
+            // damage to a player, each opponent loses 3 life."
+            if self.players[atk_ctrl].ring_temptations >= 4
+                && self.effective_ring_bearer(atk_ctrl) == Some(source)
+            {
+                triggers.push((
+                    source,
+                    Effect::LoseLife {
+                        who: crate::effect::Selector::Player(crate::effect::PlayerRef::EachOpponent),
+                        amount: crate::effect::Value::Const(3),
+                    },
+                    atk_ctrl,
+                ));
+            }
         }
 
         for (trig_source, effect, controller) in triggers {
@@ -2085,6 +2484,18 @@ impl GameState {
                     .build(),
             );
         }
+    }
+}
+
+/// The combat-damage value a creature assigns: its toughness when it has
+/// `Keyword::AssignsCombatDamageByToughness` (Doran, the Siege Tower; Bill the
+/// Pony), otherwise its power (CR 510.1c). The substitution is unconditional —
+/// a 5/1 Doran-creature assigns 1.
+fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
+    if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+        cp.toughness
+    } else {
+        cp.power
     }
 }
 

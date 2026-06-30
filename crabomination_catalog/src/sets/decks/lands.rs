@@ -9,6 +9,7 @@
 use super::super::{
     dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
     fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
+    tri_land,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
@@ -832,7 +833,7 @@ pub fn needle_spires() -> CardDefinition {
 /// mana-cost ability that animates it into a creature until end of turn. The
 /// "artifact creature" half of Mishra's/Inkmoth/Blinkmoth is approximated as a
 /// plain creature (no artifact-type add yet).
-fn colorless_manland(
+pub(crate) fn colorless_manland(
     name: &'static str,
     animate_cost: ManaCost,
     power: i32,
@@ -1088,8 +1089,8 @@ pub fn restless_spire() -> CardDefinition {
 
 /// Build a Channel land: a legendary land that taps for one color and has a
 /// from-hand "Channel — [cost], Discard this card: [effect]" ability (CR
-/// 702.16, via `from_hand` + `discard_self_cost`). Channel-cost-reduction and
-/// basic-land-search riders are dropped.
+/// 702.16, via `from_hand` + `discard_self_cost`). The "costs {1} less per
+/// legendary creature you control" rider rides `cost_reduction_per`.
 fn channel_land(
     name: &'static str,
     color: Color,
@@ -1124,11 +1125,17 @@ fn channel_land(
 }
 
 /// Boseiju, Who Endures — `{T}: Add {G}`. Channel — {1}{G}: destroy target
-/// artifact, enchantment, or nonbasic land an opponent controls; they may
-/// fetch a basic tapped.
+/// artifact, enchantment, or nonbasic land an opponent controls; that player
+/// may fetch an untapped land with a basic land type.
 pub fn boseiju_who_endures() -> CardDefinition {
-    use crate::card::SelectionRequirement as R;
+    use crate::card::{LandType, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
+    let owner = PlayerRef::ControllerOf(Box::new(Selector::Target(0)));
+    let has_basic_type = R::HasLandType(LandType::Plains)
+        .or(R::HasLandType(LandType::Island))
+        .or(R::HasLandType(LandType::Swamp))
+        .or(R::HasLandType(LandType::Mountain))
+        .or(R::HasLandType(LandType::Forest));
     channel_land(
         "Boseiju, Who Endures",
         Color::Green,
@@ -1143,12 +1150,9 @@ pub fn boseiju_who_endures() -> CardDefinition {
                 ),
             },
             Effect::Search {
-                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                filter: R::IsBasicLand,
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
+                who: owner.clone(),
+                filter: has_basic_type,
+                to: crate::effect::ZoneDest::Battlefield { controller: owner, tapped: false },
             },
         ]),
     )
@@ -1170,22 +1174,24 @@ pub fn otawara_soaring_city() -> CardDefinition {
     )
 }
 
-/// Eiganjo, Seat of the Empire — `{T}: Add {W}`. Channel — {1}{W}: deal 4
-/// damage to target creature. (The printed attacking/blocking restriction and
-/// X-scaling are simplified to a flat 4 to any creature.)
+/// Eiganjo, Seat of the Empire — `{T}: Add {W}`. Channel — {2}{W}: deal 4
+/// damage to target attacking or blocking creature.
 pub fn eiganjo_seat_of_the_empire() -> CardDefinition {
     use crate::card::SelectionRequirement as R;
     use crate::effect::shortcut::target_filtered;
     channel_land(
         "Eiganjo, Seat of the Empire",
         Color::White,
-        cost(&[generic(1), crate::mana::w()]),
-        Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+        cost(&[generic(2), crate::mana::w()]),
+        Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            amount: Value::Const(4),
+        },
     )
 }
 
-/// Sokenzan, Crucible of Defiance — `{T}: Add {R}`. Channel — {1}{R}: create
-/// two 1/1 red Spirit creature tokens with haste.
+/// Sokenzan, Crucible of Defiance — `{T}: Add {R}`. Channel — {3}{R}: create
+/// two 1/1 colorless Spirit creature tokens with haste.
 pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
     let spirit = crate::card::TokenDefinition {
         name: "Spirit".into(),
@@ -1193,7 +1199,6 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
         toughness: 1,
         keywords: vec![crate::card::Keyword::Haste],
         card_types: vec![CardType::Creature],
-        colors: vec![Color::Red],
         subtypes: Subtypes {
             creature_types: vec![crate::card::CreatureType::Spirit],
             ..Default::default()
@@ -1203,31 +1208,33 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
     channel_land(
         "Sokenzan, Crucible of Defiance",
         Color::Red,
-        cost(&[generic(1), crate::mana::r()]),
+        cost(&[generic(3), crate::mana::r()]),
         Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: spirit },
     )
 }
 
-/// Takenuma, Abandoned Mire — `{T}: Add {B}`. Channel — {1}{B}: return a
-/// creature or planeswalker card from your graveyard to your hand. (Cost
-/// reduction dropped.)
+/// Takenuma, Abandoned Mire — `{T}: Add {B}`. Channel — {3}{B}: mill three,
+/// then return a creature or planeswalker card from your graveyard to hand.
 pub fn takenuma_abandoned_mire() -> CardDefinition {
     use crate::card::SelectionRequirement as R;
     channel_land(
         "Takenuma, Abandoned Mire",
         Color::Black,
-        cost(&[generic(1), crate::mana::b()]),
-        Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: R::Creature.or(R::Planeswalker),
-                },
-                Value::Const(1),
-            ),
-            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
-        },
+        cost(&[generic(3), crate::mana::b()]),
+        Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: R::Creature.or(R::Planeswalker),
+                    },
+                    Value::Const(1),
+                ),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
     )
 }
 
@@ -1434,6 +1441,54 @@ pub fn rugged_highlands() -> CardDefinition {
 pub fn blossoming_sands() -> CardDefinition {
     dual_land_with("Blossoming Sands", LandType::Forest, LandType::Plains,
         Color::Green, Color::White, vec![etb_tap_then_gain_one()])
+}
+
+// IKO completes the enemy-pair half of the gain-tapland cycle.
+pub fn jungle_hollow() -> CardDefinition {
+    dual_land_with("Jungle Hollow", LandType::Swamp, LandType::Forest,
+        Color::Black, Color::Green, vec![etb_tap_then_gain_one()])
+}
+
+pub fn scoured_barrens() -> CardDefinition {
+    dual_land_with("Scoured Barrens", LandType::Plains, LandType::Swamp,
+        Color::White, Color::Black, vec![etb_tap_then_gain_one()])
+}
+
+pub fn swiftwater_cliffs() -> CardDefinition {
+    dual_land_with("Swiftwater Cliffs", LandType::Island, LandType::Mountain,
+        Color::Blue, Color::Red, vec![etb_tap_then_gain_one()])
+}
+
+pub fn thornwood_falls() -> CardDefinition {
+    dual_land_with("Thornwood Falls", LandType::Forest, LandType::Island,
+        Color::Green, Color::Blue, vec![etb_tap_then_gain_one()])
+}
+
+pub fn wind_scarred_crag() -> CardDefinition {
+    dual_land_with("Wind-Scarred Crag", LandType::Mountain, LandType::Plains,
+        Color::Red, Color::White, vec![etb_tap_then_gain_one()])
+}
+
+// ── Khans wedge tri-lands (enters tapped, taps for three colors) ────────────
+
+pub fn sandsteppe_citadel() -> CardDefinition {
+    tri_land("Sandsteppe Citadel", Color::White, Color::Black, Color::Green)
+}
+
+pub fn mystic_monastery() -> CardDefinition {
+    tri_land("Mystic Monastery", Color::Blue, Color::Red, Color::White)
+}
+
+pub fn opulent_palace() -> CardDefinition {
+    tri_land("Opulent Palace", Color::Black, Color::Green, Color::Blue)
+}
+
+pub fn nomad_outpost() -> CardDefinition {
+    tri_land("Nomad Outpost", Color::Red, Color::White, Color::Black)
+}
+
+pub fn frontier_bivouac() -> CardDefinition {
+    tri_land("Frontier Bivouac", Color::Green, Color::Blue, Color::Red)
 }
 
 /// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it
@@ -1931,4 +1986,109 @@ pub fn lair_of_the_hydra() -> CardDefinition {
         triggered_abilities: vec![fastland_etb_conditional_tap()],
         ..Default::default()
     }
+}
+
+/// Fountainport — `{T}: Add {C}`. `{2}, {T}, Sacrifice a token: Draw a card.`
+/// `{3}, {T}, Pay 1 life: Create a 1/1 blue Fish.` `{4}, {T}: Create a Treasure.`
+pub fn fountainport() -> CardDefinition {
+    let fish = crate::card::TokenDefinition {
+        name: "Fish".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes {
+            creature_types: vec![crate::card::CreatureType::Fish],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Fountainport",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                sac_other_filter: Some((SelectionRequirement::IsToken, 1)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                life_cost: 1,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: fish },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::treasure_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Duskmourn (DSK) "Gloomlake" painlands ────────────────────────────────────
+//
+// "This land enters tapped unless a player has 13 or less life." Modeled like
+// the check-lands: a SelfSource ETB trigger taps the land unless some player
+// is at 13 or fewer life (CR 614 — the post-ETB life totals are stable).
+
+/// A DSK painland: `{T}: Add {a} or {b}`; enters tapped unless a player has 13
+/// or less life.
+fn dsk_painland(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(a), tap_add(b)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::PlayerLifeAtMost { who: PlayerRef::EachPlayer, life: 13 },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn abandoned_campground() -> CardDefinition {
+    dsk_painland("Abandoned Campground", Color::White, Color::Blue)
+}
+pub fn bleeding_woods() -> CardDefinition {
+    dsk_painland("Bleeding Woods", Color::Red, Color::Green)
+}
+pub fn etched_cornfield() -> CardDefinition {
+    dsk_painland("Etched Cornfield", Color::Green, Color::White)
+}
+pub fn lakeside_shack() -> CardDefinition {
+    dsk_painland("Lakeside Shack", Color::Green, Color::Blue)
+}
+pub fn murky_sewer() -> CardDefinition {
+    dsk_painland("Murky Sewer", Color::Blue, Color::Black)
+}
+pub fn neglected_manor() -> CardDefinition {
+    dsk_painland("Neglected Manor", Color::White, Color::Black)
+}
+pub fn peculiar_lighthouse() -> CardDefinition {
+    dsk_painland("Peculiar Lighthouse", Color::Blue, Color::Red)
+}
+pub fn raucous_carnival() -> CardDefinition {
+    dsk_painland("Raucous Carnival", Color::Red, Color::White)
+}
+pub fn razortrap_gorge() -> CardDefinition {
+    dsk_painland("Razortrap Gorge", Color::Black, Color::Red)
+}
+pub fn strangled_cemetery() -> CardDefinition {
+    dsk_painland("Strangled Cemetery", Color::Black, Color::Green)
 }

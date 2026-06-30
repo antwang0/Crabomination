@@ -198,40 +198,34 @@ pub fn expanded_anatomy() -> CardDefinition {
 
 /// Mercurial Transformation — {1}{U} Sorcery.
 ///
-/// "Target creature or artifact becomes a blue Frog creature with base
-/// power and toughness 3/3 and loses all abilities until end of turn."
-///
-/// Push (modern_decks): wired via the engine's `Effect::SetBasePT`
-/// layer-7b primitive (same path used by Square Up). The "loses all
-/// abilities" rider is **not yet enforced** (no clear-abilities
-/// continuous effect primitive); the target keeps its printed
-/// abilities, which is a mild over-statement for the +typical use case
-/// (turning a threatening 5/5 menacing-deathtouch creature into a
-/// 3/3 Frog that's still menacing). Tracked in TODO.md as the
-/// `StaticEffect::ClearAbilities` gap. The base-P/T override is the
-/// headline play pattern (shrinking a 7/7 Force of Wills's-target
-/// down to a 3/3, or growing a 1/1 token into a 3/3 attacker), and
-/// resolves cleanly via the same layer-7b code as Square Up.
+/// "Until end of turn, target nonland permanent loses all abilities and
+/// becomes your choice of a blue Frog 1/1 or a blue Octopus 4/4."
+/// `ChooseMode` over `ResetCreature` (layer 4/6/7b — sets the creature
+/// type + base P/T and strips abilities) + `BecomeColor` (layer 5 → blue).
 pub fn mercurial_transformation() -> CardDefinition {
+    fn frog_or_octopus(ct: CreatureType, p: i32, t: i32) -> Effect {
+        Effect::Seq(vec![
+            Effect::ResetCreature {
+                what: target_filtered(SelectionRequirement::Nonland),
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                creature_types: vec![ct],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeColor {
+                what: target_filtered(SelectionRequirement::Nonland),
+                colors: vec![Color::Blue],
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    }
     CardDefinition {
         name: "Mercurial Transformation",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::SetBasePT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-                ),
-                power: Value::Const(3),
-                toughness: Value::Const(3),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::LoseAllAbilities {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-                ),
-                duration: Duration::EndOfTurn,
-            },
+        effect: Effect::ChooseMode(vec![
+            frog_or_octopus(CreatureType::Frog, 1, 1),
+            frog_or_octopus(CreatureType::Octopus, 4, 4),
         ]),
         ..Default::default()
     }

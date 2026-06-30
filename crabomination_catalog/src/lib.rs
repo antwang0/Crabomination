@@ -34,7 +34,7 @@ mod game {
     pub mod effects {
         pub use crabomination_base::tokens::{
             blood_token, clue_token, detective_token, eldrazi_spawn_token, food_token,
-            goldspan_treasure_token, map_token, treasure_token,
+            goldspan_treasure_token, map_token, powerstone_token, treasure_token,
         };
     }
 }
@@ -46,9 +46,12 @@ pub use sets::akh::*;
 pub use sets::all::*;
 pub use sets::ap::*;
 pub use sets::arn::*;
+pub use sets::bro::*;
 pub use sets::chk::*;
 pub use sets::dis::*;
+pub use sets::eoe::*;
 pub use sets::fem::*;
+pub use sets::fin::*;
 pub use sets::gpt::*;
 pub use sets::ice::*;
 pub use sets::inv::*;
@@ -58,12 +61,15 @@ pub use sets::ktk::*;
 pub use sets::lci::*;
 pub use sets::lea::*;
 pub use sets::m11::*;
+pub use sets::mh3::*;
 pub use sets::mkm::*;
 pub use sets::ogw::*;
+pub use sets::one::*;
 pub use sets::pc2::*;
 pub use sets::por::*;
 pub use sets::rav::*;
 pub use sets::rtr::*;
+pub use sets::shm::*;
 pub use sets::tmp::*;
 pub use sets::zen::*;
 pub use sets::thb::*;

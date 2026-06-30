@@ -105,14 +105,30 @@ const RECONNECT_GRACE: Duration = Duration::from_secs(60);
 /// is a human and `CRAB_ACTION_TIMEOUT_SECS` is set (> 0), the match actor
 /// waits at most this long for their action, then acts for them —
 /// AutoDecider's answer for a pending decision, or a priority pass.
-/// Unset / 0 / unparsable → disabled (the pre-rope behavior: humans may
-/// think forever).
+/// Unset / 0 → disabled (the pre-rope behavior: humans may think forever).
 fn action_timeout_from_env() -> Option<Duration> {
-    std::env::var("CRAB_ACTION_TIMEOUT_SECS")
-        .ok()
-        .and_then(|v| v.parse::<u64>().ok())
-        .filter(|&secs| secs > 0)
-        .map(Duration::from_secs)
+    parse_action_timeout(std::env::var("CRAB_ACTION_TIMEOUT_SECS").ok().as_deref())
+}
+
+/// Pure parser for `CRAB_ACTION_TIMEOUT_SECS` (whitespace-trimmed). `None`/
+/// empty/`0` → `None` (rope disabled). A non-numeric value warns loudly and
+/// disables the rope rather than failing silently — a typo like `"30s"` should
+/// not quietly leave human seats able to stall forever.
+fn parse_action_timeout(raw: Option<&str>) -> Option<Duration> {
+    match raw.map(str::trim) {
+        None | Some("") => None,
+        Some(s) => match s.parse::<u64>() {
+            Ok(0) => None,
+            Ok(secs) => Some(Duration::from_secs(secs)),
+            Err(_) => {
+                eprintln!(
+                    "warning: CRAB_ACTION_TIMEOUT_SECS={s:?} not a non-negative integer — \
+                     rope disabled (human seats may think forever)",
+                );
+                None
+            }
+        },
+    }
 }
 
 /// Messages the match actor multiplexes onto its single inbound channel.
@@ -749,6 +765,22 @@ fn run_match_inner(
                     publish_snapshot(&state, &snapshot_sink);
                 }
             }
+            ClientMsg::Chat { text } => {
+                if let Some(text) = sanitize_chat(&text) {
+                    let name = state
+                        .players
+                        .get(seat)
+                        .map(|p| p.name.clone())
+                        .unwrap_or_else(|| format!("P{seat}"));
+                    let msg = ServerMsg::Chat { seat, name, text };
+                    for tx in seat_tx.iter().flatten() {
+                        let _ = tx.send(msg.clone());
+                    }
+                    for tx in &spectator_tx {
+                        let _ = tx.send(msg.clone());
+                    }
+                }
+            }
             // Lobby messages are meaningless once a match is under way (the
             // lobby driver consumes them before the match begins).
             ClientMsg::ListLobbies
@@ -763,6 +795,18 @@ fn run_match_inner(
             | ClientMsg::SpectateMatch { .. } => {}
         }
     }
+}
+
+/// Sanitize an inbound chat line: strip control characters, trim, and
+/// clamp to 200 chars (on a char boundary). `None` for an empty result.
+fn sanitize_chat(raw: &str) -> Option<String> {
+    let cleaned: String = raw
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(200)
+        .collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
 }
 
 fn publish_snapshot(state: &GameState, sink: &Option<SnapshotSink>) {
@@ -1213,6 +1257,39 @@ mod tests {
         for _ in 0..3 {
             let _ = seat.rx.recv();
         }
+    }
+
+    #[test]
+    fn chat_relays_to_both_seats_sanitized() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        c0.tx.send(ClientMsg::Chat { text: "  gg\u{7} well played  ".into() }).unwrap();
+        for seat in [&c0, &c1] {
+            match seat.rx.recv().unwrap() {
+                ServerMsg::Chat { seat: 0, text, .. } => {
+                    assert_eq!(text, "gg well played", "trimmed + control chars stripped");
+                }
+                other => panic!("expected Chat, got {other:?}"),
+            }
+        }
+        // Whitespace-only chat is dropped (no message arrives; the next
+        // real chat is the next thing both seats see).
+        c1.tx.send(ClientMsg::Chat { text: "   ".into() }).unwrap();
+        c1.tx.send(ClientMsg::Chat { text: "hi".into() }).unwrap();
+        match c0.rx.recv().unwrap() {
+            ServerMsg::Chat { seat: 1, text, .. } => assert_eq!(text, "hi"),
+            other => panic!("expected the second chat, got {other:?}"),
+        }
+        drop(c0);
+        drop(c1);
+        handle.join().unwrap();
     }
 
     #[test]
@@ -2181,6 +2258,17 @@ mod tests {
         let _ = done_rx.recv_timeout(Duration::from_secs(30));
         let _ = handle.join();
     }
+    #[test]
+    fn parse_action_timeout_handles_edge_cases() {
+        assert_eq!(parse_action_timeout(None), None, "unset → disabled");
+        assert_eq!(parse_action_timeout(Some("")), None, "empty → disabled");
+        assert_eq!(parse_action_timeout(Some("0")), None, "0 → disabled");
+        assert_eq!(parse_action_timeout(Some(" 45 ")), Some(Duration::from_secs(45)),
+            "whitespace is trimmed");
+        // A typo (non-numeric) warns and disables rather than panicking.
+        assert_eq!(parse_action_timeout(Some("30s")), None, "garbage → disabled");
+    }
+
     /// With an action timeout set, a stalled human seat is auto-passed:
     /// the turn advances without the client ever submitting an action.
     #[test]

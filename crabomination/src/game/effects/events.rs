@@ -21,6 +21,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
         (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
+        (
+            EventKind::CreatureLeavesBattlefieldNotDying,
+            GameEvent::CreatureLeftWithoutDying { .. },
+        ) => true,
         (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
@@ -39,6 +43,7 @@ pub(crate) fn event_matches_spec(
         // match `DamageDealt` events that hit a card (not a player).
         (EventKind::DealtDamage, GameEvent::DamageDealt { to_card: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
+        (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
         (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
@@ -53,20 +58,57 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
+        (
+            EventKind::CrewsOrSaddles,
+            GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
+        ) => true,
+        (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
+        (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
+        (EventKind::Mutated, GameEvent::Mutated { .. }) => true,
         (EventKind::TurnedFaceUp, GameEvent::TurnedFaceUp { .. }) => true,
+        (EventKind::TokenCreated, GameEvent::TokenCreated { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
+        (EventKind::CommittedCrime, GameEvent::CommittedCrime { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
+        (EventKind::AuraAttached, GameEvent::AuraAttached { .. }) => true,
+        (EventKind::DayNightChanged, GameEvent::DayNightChanged { was_transition, .. }) => {
+            *was_transition
+        }
         _ => false,
     };
     if !kind_ok {
         return false;
+    }
+
+    // CR 702.122/702.171 — the printed crew/saddle triggers fire only "during
+    // your main phase." Bake that rider into the match (both DFT cards carry
+    // it): the controller must be the active player in a main phase.
+    if matches!(spec.kind, EventKind::CrewsOrSaddles)
+        && !(source.controller == state.active_player_idx && state.step.is_main_phase())
+    {
+        return false;
+    }
+
+    // CR 303.4 — "Whenever an Aura you control becomes attached to a creature
+    // you control" (Siona). The YourControl scope below gates on the Aura's
+    // controller; here we additionally require the attached-to permanent to be
+    // a creature the trigger's controller controls.
+    if let (EventKind::AuraAttached, GameEvent::AuraAttached { attached_to, .. }) =
+        (&spec.kind, event)
+    {
+        let host_ok = state.battlefield_find(*attached_to).is_some_and(|c| {
+            c.controller == source.controller && c.definition.is_creature()
+        });
+        if !host_ok {
+            return false;
+        }
     }
 
     // BecameTarget has an implicit "the trigger source is the targeted
@@ -79,8 +121,12 @@ pub(crate) fn event_matches_spec(
         && *target != source.id
         // The "any permanent you control" scope intentionally fires for
         // subjects other than the source, so skip the implicit check there.
+        // `AnyPlayer` is the global "whenever a creature becomes the target
+        // of a spell or ability" rail (Horobi, Death's Wail) — it fires for
+        // any creature targeted, with the `with_filter` predicate refining.
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
+        && spec.scope != EventScope::AnyPlayer
     {
         return false;
     }
@@ -173,6 +219,11 @@ pub(crate) fn event_matches_spec(
             event,
             GameEvent::Transformed { card_id } if *card_id == source.id
         ) || matches!(
+            // CR 702.140f — "Whenever this creature mutates." Source (any card
+            // in the merged pile) is the merged host.
+            event,
+            GameEvent::Mutated { card_id } if *card_id == source.id
+        ) || matches!(
             // CR 708.8 — "When this is turned face up." Source must equal
             // the flipped permanent.
             event,
@@ -184,6 +235,20 @@ pub(crate) fn event_matches_spec(
             // Dragon's Treasure, Phantasmal Image's sacrifice rider).
             event,
             GameEvent::BecameTarget { target, .. } if *target == source.id
+        ) || matches!(
+            // "Whenever this creature leaves the battlefield without dying"
+            // (Three Tree Scribe's self half). The source is gone by dispatch,
+            // so this matches by id from the event's snapshot.
+            event,
+            GameEvent::CreatureLeftWithoutDying { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // CR 702.122/702.171 — "Whenever this creature crews a Vehicle or
+            // saddles a Mount." The source must be among the crew / riders.
+            event,
+            GameEvent::VehicleCrewed { crew, .. } if crew.contains(&source.id)
+        ) || matches!(
+            event,
+            GameEvent::MountSaddled { riders, .. } if riders.contains(&source.id)
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A
@@ -225,7 +290,13 @@ pub(crate) fn event_matches_spec(
                 // is populated at die-time in `check_state_based_actions`
                 // so AnotherOfYours-scope triggers (Witherbloom Pestmaster,
                 // Felisa, Fang of Silverquill) still fire on token death.
-                .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller));
+                .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller))
+                // A creature that left without dying is gone from every zone;
+                // its last controller rides the event (Dour Port-Mage).
+                .or(match event {
+                    GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+                    _ => None,
+                });
             subject_controller == Some(source.controller)
         }
         EventScope::FromYourGraveyard => event_actor(state, event)
@@ -258,6 +329,14 @@ pub(crate) fn event_matches_spec(
         // listeners get the attacker's controller bound into the target
         // slot), so the unified dispatcher must not also fire it.
         EventScope::ControllerAttackedByOpponent => false,
+        // "When enchanted creature dies" — the dying creature must have
+        // carried this source Aura (recorded in `auras_at_death`).
+        EventScope::EnchantedBySource => matches!(
+            event,
+            GameEvent::CreatureDied { card_id }
+                if state.auras_at_death.get(card_id)
+                    .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id))
+        ),
     };
 
     if !scope_ok {
@@ -293,14 +372,22 @@ pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize>
     if let Some(c) = state.battlefield_find(cid) {
         return Some(c.controller);
     }
+    // CR 603.10 — for a death event the actor is the creature's *last
+    // controller*, not the graveyard owner: a stolen creature that dies fires
+    // the thief's "a creature you control dies" watcher. The die-snapshot
+    // cache captures that controller (and is also the sole source for token
+    // deaths, which leave no graveyard card), so prefer it over the owner
+    // zone-walk fallback (correct only when controller and owner coincide).
     state
-        .players
-        .iter()
-        .position(|p| p.graveyard.iter().any(|c| c.id == cid))
-        // Token deaths: zone walk fails because the token ceases to exist
-        // in the same SBA pass. Fall back to the snapshot cache populated
-        // at die-time in `check_state_based_actions`.
-        .or_else(|| state.died_card_snapshots.get(&cid).map(|c| c.controller))
+        .died_card_snapshots
+        .get(&cid)
+        .map(|c| c.controller)
+        .or_else(|| {
+            state
+                .players
+                .iter()
+                .position(|p| p.graveyard.iter().any(|c| c.id == cid))
+        })
 }
 
 fn event_player(event: &GameEvent) -> Option<usize> {
@@ -319,10 +406,13 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CardPutIntoGraveyard { player, .. }
         | GameEvent::CardCycled { player, .. }
         | GameEvent::EnergyGained { player, .. }
+        | GameEvent::Discovered { player, .. }
         | GameEvent::Expended { player, .. }
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::RingTempted { player, .. }
+        | GameEvent::CommittedCrime { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
         // For BecameTarget the "actor" is the caster of the spell or
         // ability that picked the target. This drives YourControl /
@@ -337,6 +427,13 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // would use OpponentControl.
         GameEvent::CreatureSacrificed { who, .. } => Some(*who),
         GameEvent::PermanentSacrificed { who, .. } => Some(*who),
+        // The leaving creature is gone from every zone by dispatch time, so
+        // its last controller travels in the event (drives YourControl /
+        // OpponentControl scope for Three Tree Scribe).
+        GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+        // DSK Eerie — the unlocking player drives "whenever you fully unlock
+        // a Room" (YourControl scope).
+        GameEvent::RoomFullyUnlocked { controller, .. } => Some(*controller),
         _ => None,
     }
 }
@@ -360,6 +457,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CreatureLeftWithoutDying { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
             if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker },
@@ -368,11 +466,21 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        // CR 702.122/702.171 — bind `Selector::TriggerSource` to the crewed
+        // Vehicle / saddled Mount ("that Mount or Vehicle gains …").
+        GameEvent::VehicleCrewed { vehicle, .. } => Some(EntityRef::Permanent(*vehicle)),
+        GameEvent::MountSaddled { mount, .. } => Some(EntityRef::Permanent(*mount)),
         GameEvent::PermanentPhasedIn { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BecameMonstrous { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
+        // DSK — bind `Selector::TriggerSource` to the turned-up permanent
+        // ("put a +1/+1 counter on it" — Sumala Sentry) and to the Room that
+        // was fully unlocked.
+        GameEvent::TurnedFaceUp { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::RoomFullyUnlocked { room, .. } => Some(EntityRef::Permanent(*room)),
         // Enrage: the subject is the damaged permanent, so trigger bodies
         // referencing `Selector::TriggerSource` (and the implicit
         // SelfSource scope) bind to the creature that took the damage.
@@ -384,17 +492,33 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Lorehold the Historian's miracle grant relies on this.
         GameEvent::CardDrawn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardDiscarded { card_id, .. } => Some(EntityRef::Card(*card_id)),
-        GameEvent::CardMilled { player, .. }
-        | GameEvent::LifeGained { player, .. }
+        // Bind TriggerSource to the milled card (now in a graveyard) so filter
+        // predicates can introspect it ("a creature card put into a graveyard
+        // from a library" — Dreadhound). SelfSource milled triggers match by
+        // id in the scope check, so this rebind doesn't affect them.
+        GameEvent::CardMilled { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::EnergyGained { player, .. }
+        | GameEvent::Discovered { player, .. }
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::CommittedCrime { player }
         | GameEvent::ColorlessManaAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // Bind `Selector::TriggerSource` to the permanent that received the
+        // counters, so "whenever one or more counters are put on a creature, …"
+        // payoffs can introspect it / its controller (Auntie Ool's draw-or-drain
+        // off her own Ward—Blight; CR 122 / 603.6).
+        GameEvent::CounterAdded { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        // CR 701.54 — the Ring-bearer chosen this temptation is the subject,
+        // so "whenever you choose a Ring-bearer" payoffs can reference it.
+        GameEvent::RingTempted { bearer, player, .. } => bearer
+            .map(EntityRef::Permanent)
+            .or(Some(EntityRef::Player(*player))),
         // The "subject" of a BecameTarget event is the permanent that
         // became the target — what `Selector::TriggerSource` should bind
         // to for any filter predicate.
@@ -408,6 +532,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Triggerer` then resolves to its controller (the activating
         // player — Flamescroll Celebrant's "that player").
         GameEvent::AbilityActivated { source } => Some(EntityRef::Permanent(*source)),
+        // Bind TriggerSource to the host the Aura attached to (the "creature
+        // you control" in Siona's payoff).
+        GameEvent::AuraAttached { attached_to, .. } => Some(EntityRef::Permanent(*attached_to)),
         _ => None,
     }
 }
@@ -448,6 +575,7 @@ pub(crate) fn emblem_event_matches(
         EventScope::FromYourGraveyard
         | EventScope::YourPermanentTargetedByOpponent
         | EventScope::YourCreatureTargeted
+        | EventScope::EnchantedBySource
         | EventScope::ControllerAttackedByOpponent => false,
     }
 }
@@ -461,14 +589,17 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CardCycled { card_id, .. }
         | GameEvent::CardMilled { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
+        | GameEvent::CreatureLeftWithoutDying { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::Explored { card_id, .. }
         | GameEvent::BecameMonstrous { card_id }
         | GameEvent::Transformed { card_id }
+        | GameEvent::Mutated { card_id }
         | GameEvent::TokenCreated { card_id }
         | GameEvent::CounterAdded { card_id, .. }
+        | GameEvent::TurnedFaceUp { card_id }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
         GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
         GameEvent::AttackerWentUnblocked { attacker } => Some(*attacker),
@@ -482,6 +613,9 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // The activated ability's source — its controller is the actor
         // for YourControl / OpponentControl scope checks (Flamescroll).
         GameEvent::AbilityActivated { source } => Some(*source),
+        // The Aura's controller is the actor — "an Aura YOU control became
+        // attached" gates on the Aura's controller (Siona).
+        GameEvent::AuraAttached { aura, .. } => Some(*aura),
         _ => None,
     }
 }

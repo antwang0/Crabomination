@@ -547,19 +547,25 @@ fn inkling_cantor_b175_etb_scrys_and_gains_life() {
 }
 
 #[test]
-fn silverquill_penkeeper_b175_magecraft_drains() {
+fn silverquill_penkeeper_b175_magecraft_each_opp_discards() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::silverquill_penkeeper_b175());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card for the opponent to discard
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     let p1_life = g.players[1].life;
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_grave_before = g.players[1].graveyard.len();
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt");
     drain_stack(&mut g);
-    // Magecraft drain 1 + bolt 3 = -4 life.
-    assert_eq!(g.players[1].life, p1_life - 4);
+    // Magecraft now makes each opponent discard a card — only the bolt's
+    // 3 damage hits life (no drain).
+    assert_eq!(g.players[1].life, p1_life - 3, "bolt damage only; magecraft no longer drains");
+    assert_eq!(g.players[1].hand.len(), p1_hand_before - 1, "opponent discarded one card");
+    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 1, "the discard hit the graveyard");
 }
 
 #[test]
@@ -646,6 +652,40 @@ fn witherbloom_pestmaster_b175_on_other_dies_mints_pest() {
         .filter(|c| c.is_token && c.definition.name == "Pest" && c.controller == 0)
         .count();
     assert_eq!(pest_count, 1);
+}
+
+#[test]
+fn witherbloom_necromancer_b156_pays_one_to_reanimate_the_dead_creature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_necromancer_b156());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // P0 floats {1} to pay the optional reanimate cost.
+    g.players[0].mana_pool.add_colorless(1);
+    // Accept the "Pay {1}?" MayPay prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    // Opponent bolts P0's fodder; it dies and the dies trigger fires.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(fodder)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+
+    // The dead creature is reanimated to P0's battlefield (same card id),
+    // and the {1} was spent.
+    assert!(
+        g.battlefield_find(fodder).is_some_and(|c| c.controller == 0),
+        "the dead creature returns to the battlefield under your control",
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "it left the graveyard (the {{1}} cost is implied — the body only runs on a successful pay)",
+    );
 }
 
 #[test]
@@ -1524,6 +1564,7 @@ fn lorehold_sparkscholar_b178_taps_for_two_damage() {
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activated");
     drain_stack(&mut g);
@@ -1578,20 +1619,24 @@ fn inkling_stylekeeper_b177_magecraft_drains() {
 }
 
 #[test]
-fn silverquill_wordweaver_b177_etb_drains_two() {
+fn silverquill_wordweaver_b177_etb_each_opp_discards() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_wordweaver_b177());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card for the opponent to discard
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     let p1_life = g.players[1].life;
-    let p0_life = g.players[0].life;
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_grave_before = g.players[1].graveyard.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life - 2);
-    assert_eq!(g.players[0].life, p0_life + 2);
+    // ETB now makes each opponent discard a card (no life change).
+    assert_eq!(g.players[1].life, p1_life, "ETB no longer drains the opponent");
+    assert_eq!(g.players[1].hand.len(), p1_hand_before - 1, "opponent discarded one card");
+    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 1, "the discard hit the graveyard");
 }
 
 #[test]

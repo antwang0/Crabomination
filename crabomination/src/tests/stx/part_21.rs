@@ -1242,11 +1242,32 @@ fn elemental_expressionism_bounces_and_creates() {
 }
 
 #[test]
-fn rush_of_knowledge_draws_four() {
+fn elemental_expressionism_bounces_up_to_two() {
     let mut g = two_player_game();
-    for _ in 0..5 {
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::elemental_expressionism());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![Target::Permanent(b2)], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == b1 || c.id == b2),
+        "both targeted creatures were bounced");
+}
+
+#[test]
+fn rush_of_knowledge_draws_highest_mv_you_control() {
+    let mut g = two_player_game();
+    for _ in 0..8 {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }
+    // Highest-MV permanent we control is Colossal Dreadmaw (CMC 6).
+    g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // CMC 2, ignored
     let id = g.add_card_to_hand(0, catalog::rush_of_knowledge());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
@@ -1255,8 +1276,8 @@ fn rush_of_knowledge_draws_four() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
-    // Cast (removed 1) + draw 4 = +3 net.
-    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    // Cast (removed 1) + draw 6 = +5 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 5);
 }
 
 #[test]
@@ -2370,7 +2391,7 @@ fn witherbloom_sapsprite_b171_sac_drains_two() {
     let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none(), "sapsprite sacrificed");

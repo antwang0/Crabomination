@@ -57,6 +57,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Defender => "Def",
         Indestructible => "Ind",
         Hexproof => "Hex",
+        HexproofFromColor(_) => "HexC",
         Shroud => "Shr",
         Unblockable => "Unb",
         Intimidate => "Int",
@@ -68,17 +69,71 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Horsemanship => "Hrs",
         Landwalk(_) => "Wlk",
         Protection(_) => "Pro",
+        ProtectionFromManaValueExcept(_) => "ProMV",
+        ProtectionFromManaValueParity { odd } => if *odd { "Pro-odd" } else { "Pro-even" },
+        ProtectionFromMulticolored => "ProMC",
+        ProtectionFromInstants => "ProI",
+        ProtectionFromEverything => "Pro★",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
+        Poisonous(_) => "Psn",
+        // Combat-relevant statuses worth a glance on the board.
+        CantBlock => "NoBlk",
+        // "Can't attack" (Pacifism / Cage of Hands) and the conditional
+        // Goblin-Cohort lock both read at a glance on the board.
+        CantAttack => "NoAtk",
+        CantAttackUnlessCastCreatureThisTurn => "Atk?",
+        // Hazoret-class hellbent gate reads at a glance on the board.
+        CantAttackOrBlockUnlessHandSizeAtMost(_) => "Hand?",
+        CantAttackOrBlockUnlessDelirium => "Dlr?",
+        CantAttackOrBlockUnlessCreatureDiedThisTurn => "Died?",
+        CantAttackOrBlockUnlessDescend(_) => "Dsc?",
+        CantAttackOrBlockUnlessCityBlessing => "Bless?",
+        Decayed => "Dcy",
         Flanking => "Flk",
+        // Combat-pump statics from the Kamigawa/legacy sets read at a glance.
         Bushido(_) => "Bsd",
         Rampage(_) => "Rmp",
+        Banding => "Bnd",
+        // Generalized menace — "can't be blocked except by N or more."
+        CantBeBlockedExceptByN(_) => "Men+",
+        // Evasion by blocker quality: "can only be blocked by [filter]"
+        // (Serpent of Yawning Depths) or "can't be blocked by [filter]"
+        // (Temple Thief) — both read as evasion at a glance.
+        CantBeBlockedExceptBy(_) | CantBeBlockedBy(_) => "Eva",
+        // "Can't be blocked by more than one creature" (anti-gang-block).
+        CantBeBlockedByMoreThanOne => "1Blk",
+        // Power-gated evasion — "can't be blocked by creatures with power
+        // less than this" (Formation Breaker) / "power N or less" (Questing
+        // Beast).
+        CantBeBlockedByPowerLess | CantBeBlockedByPowerAtMost(_) => "Eva",
+        // "Can block only creatures with flying" (Wanderlight Spirit).
+        CanBlockOnlyFlying => "FlyBlk",
+        MustBeBlocked => "Lure",
+        // "Attacks each combat if able" (Impending Doom, The Akroan War II) —
+        // a board-relevant combat compulsion.
+        MustAttack => "Atk!",
+        // Crew N on a Vehicle — a glanceable reminder it can be animated.
+        Crew(_) => "Crew",
+        // Resilience keywords — "this dies but comes back" reads at a glance and
+        // changes how an opponent should attack/block into it.
         Persist => "Per",
         Undying => "Und",
+        // Eldrazi annihilator — a combat threat worth surfacing on the board.
+        Annihilator(_) => "Ann",
+        // Firebending — attack-triggered red mana worth flagging on the board.
+        Firebending(_) => "FB",
+        // "Assigns combat damage equal to its toughness" (Doran) — changes how
+        // its combat math reads at a glance.
+        AssignsCombatDamageByToughness => "T-dmg",
+        // Status keywords that change what a creature can be targeted/blocked by
+        // or how it reads in combat.
         Phasing => "Phs",
-        Banding => "Bnd",
-        MustBeBlocked => "Lure",
-        CantBeBlockedExceptByN(_) => "Men+",
+        Changeling => "Chg",
+        Reconfigure(_) => "Rcfg",
+        // Ability-lock granted by auras/effects (Petrify) — its activated
+        // abilities can't be activated, worth surfacing alongside NoAtk/NoBlk.
+        CantActivateAbilities => "NoAbil",
         _ => return None,
     })
 }
@@ -211,14 +266,72 @@ mod tests {
     use crabomination::card::Keyword;
 
     #[test]
-    fn strip_surfaces_combat_keywords_dedup_in_order() {
-        let s = keyword_strip(&[
+    fn strip_dedupes_and_orders_combat_keywords() {
+        let kws = vec![
             Keyword::Flying,
-            Keyword::Persist,
-            Keyword::Flying, // dup → elided
-            Keyword::Bushido(2),
-            Keyword::Flashback(Default::default()), // casting-only → hidden
-        ]);
-        assert_eq!(s, "Fly Per Bsd");
+            Keyword::Deathtouch,
+            Keyword::Flying, // duplicate — dropped
+            Keyword::CantBlock,
+            Keyword::Decayed,
+        ];
+        assert_eq!(keyword_strip(&kws), "Fly DT NoBlk Dcy");
+    }
+
+    #[test]
+    fn strip_skips_non_displayable_keywords() {
+        // Flash isn't a board-glance combat status → no badge.
+        assert_eq!(keyword_strip(&[Keyword::Flash]), "");
+    }
+
+    #[test]
+    fn strip_surfaces_resilience_and_status_keywords() {
+        assert_eq!(keyword_strip(&[Keyword::Persist]), "Per");
+        assert_eq!(keyword_strip(&[Keyword::Undying]), "Und");
+        assert_eq!(keyword_strip(&[Keyword::Annihilator(2)]), "Ann");
+        assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
+    }
+
+    #[test]
+    fn strip_surfaces_generalized_menace_and_lure() {
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedExceptByN(3)]), "Men+");
+        assert_eq!(keyword_strip(&[Keyword::MustBeBlocked]), "Lure");
+    }
+
+    #[test]
+    fn strip_surfaces_block_quality_evasion() {
+        use crabomination::card::SelectionRequirement;
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(
+                SelectionRequirement::HasKeyword(Keyword::Flying),
+            ))]),
+            "Eva"
+        );
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::Enchantment))]),
+            "Eva"
+        );
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByMoreThanOne]), "1Blk");
+    }
+
+    #[test]
+    fn strip_surfaces_cant_attack_statuses() {
+        assert_eq!(keyword_strip(&[Keyword::CantAttack]), "NoAtk");
+        assert_eq!(
+            keyword_strip(&[Keyword::CantAttackUnlessCastCreatureThisTurn]),
+            "Atk?"
+        );
+    }
+
+    #[test]
+    fn strip_surfaces_combat_pump_statics() {
+        assert_eq!(keyword_strip(&[Keyword::Bushido(2)]), "Bsd");
+        assert_eq!(keyword_strip(&[Keyword::Rampage(1)]), "Rmp");
+        assert_eq!(keyword_strip(&[Keyword::Banding]), "Bnd");
+    }
+
+    #[test]
+    fn strip_surfaces_must_attack_and_crew() {
+        assert_eq!(keyword_strip(&[Keyword::MustAttack]), "Atk!");
+        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
     }
 }

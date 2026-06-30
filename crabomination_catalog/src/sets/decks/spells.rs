@@ -337,7 +337,8 @@ pub fn force_of_negation() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -396,7 +397,7 @@ pub fn goryos_vengeance() -> CardDefinition {
 pub fn prismatic_ending() -> CardDefinition {
     CardDefinition {
         name: "Prismatic Ending",
-        cost: cost(&[w()]),
+        cost: cost(&[x(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
             cond: Predicate::ValueAtMost(
@@ -545,7 +546,8 @@ pub fn mystical_dispute() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }

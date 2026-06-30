@@ -84,6 +84,14 @@ const SPARK_START_R: f32 = 0.15;
 const SPARK_END_R: f32 = 0.95;
 const SPARK_SPOKES: usize = 6;
 
+/// Library-dig pulse for explore (CR 701.40) and discover (CR 701.57) — a soft
+/// cyan ring so the player notices a top-of-library reveal even when it only
+/// shuffles cards around off-board.
+const DIG_TTL: f32 = 0.4;
+const DIG_START_R: f32 = 0.2;
+const DIG_END_R: f32 = 1.3;
+const DIG_SPOKES: usize = 7;
+
 /// Raise the burst slightly off the table so it reads above the card faces and
 /// any counter coins sitting on them.
 const BURST_Y: f32 = 0.25;
@@ -109,6 +117,11 @@ fn death_color() -> Color {
 /// Hot, near-white spark for damage landing.
 fn spark_color() -> Color {
     LinearRgba::new(3.0, 2.2, 1.2, 1.0).into()
+}
+
+/// Cool cyan for a library dig (explore / discover).
+fn dig_color() -> Color {
+    LinearRgba::new(0.4, 1.8, 2.6, 1.0).into()
 }
 
 /// HDR mana-pip colour for a travelling mote; `None` is colorless.
@@ -194,6 +207,15 @@ pub fn spawn_impact_effects(
                 {
                     spawn_damage_numeral(&mut commands, &ui_fonts, *amount, screen);
                 }
+            }
+            GameEventWire::Explored { card_id, .. } => {
+                if let Some(p) = pos_of(*card_id) {
+                    spawn_burst(&mut commands, p, dig_color(), DIG_TTL, DIG_START_R, DIG_END_R, DIG_SPOKES);
+                }
+            }
+            GameEventWire::Discovered { player, .. } => {
+                let at = player_hand_anchor(*player, cv.your_seat, cv.players.len());
+                spawn_burst(&mut commands, at, dig_color(), DIG_TTL, DIG_START_R, DIG_END_R, DIG_SPOKES);
             }
             GameEventWire::LifeLost { player, amount } if *player == cv.your_seat => {
                 // Replace any in-flight vignette so rapid hits don't stack into

@@ -71,8 +71,10 @@ fn targeted_effects_carry_slot_filters() {
             count: Value::Const(1),
             source: tgt(),
             extra_creature_types: vec![],
+            extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
     ];
     for e in &cases {

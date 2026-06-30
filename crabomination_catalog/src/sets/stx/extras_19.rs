@@ -563,6 +563,7 @@ fn lukka_wayward_bonder() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Lukka, Wayward Bonder".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                             .with_filter(Predicate::EntityMatches {
@@ -724,6 +725,7 @@ pub fn rowan_scholar_of_sparks() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Rowan, Scholar of Sparks".into(),
+                    statics: vec![],
                     triggered: vec![magecraft(Effect::MayPay {
                         description: "Pay {2} to copy that spell (you may choose new targets).".into(),
                         mana_cost: cost(&[generic(2)]),

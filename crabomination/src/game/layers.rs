@@ -98,6 +98,9 @@ pub enum Modification {
     SetCreatureTypes(Vec<CreatureType>),
     AddLandType(LandType),
     SetLandTypes(Vec<LandType>),
+    /// CR 205.4 — grant a supertype (Legendary, etc.). Used by the Ring's
+    /// level-1 emblem (CR 701.54c — "your Ring-bearer is legendary").
+    AddSupertype(Supertype),
 
     // ── Layer 5 ──────────────────────────────────────────────────────────────
     AddColor(Color),
@@ -111,6 +114,10 @@ pub enum Modification {
 
     // ── Layer 7 ──────────────────────────────────────────────────────────────
     SetPowerToughness(i32, i32),   // 7b
+    /// Set base power only (layer 7b), leaving base toughness intact — "this
+    /// creature's base power becomes N" (Belligerent Yearling). Ordered with
+    /// `SetPowerToughness` by timestamp; later wins.
+    SetPower(i32),                 // 7b
     ModifyPower(i32),              // 7c
     ModifyToughness(i32),          // 7c
     ModifyPowerToughness(i32, i32),// 7c
@@ -297,25 +304,41 @@ fn compute_permanent(
     // pass 1 excludes them, pass 2 re-runs the full walk with each gate
     // resolved against that power. Keyword grants don't feed back into
     // layer 7, so the result is a fixpoint after one re-run.
-    let has_gated = effects
+    let has_power_gated = effects
         .iter()
         .any(|e| matches!(e.affected, AffectedPermanents::CardMatchPowerGated { .. }));
-    if !has_gated {
-        return compute_permanent_pass(card, effects, None);
+    // CR 613.8 — a creature-type lord (AllWithCreatureType) must see the
+    // *computed* types, so a creature animated/retyped into the lord's tribe
+    // (Turn to Frog into a Frog lord, Arcane Adaptation, etc.) gets the buff.
+    // Only re-run when both a type-changer and a type lord are present.
+    let has_type_changer = effects.iter().any(|e| {
+        matches!(
+            e.modification,
+            Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
+        )
+    });
+    let has_type_lord = effects
+        .iter()
+        .any(|e| matches!(e.affected, AffectedPermanents::AllWithCreatureType { .. }));
+    let has_type_gated = has_type_changer && has_type_lord;
+    if !has_power_gated && !has_type_gated {
+        return compute_permanent_pass(card, effects, None, None);
     }
-    let pass1 = compute_permanent_pass(card, effects, None);
-    compute_permanent_pass(card, effects, Some(pass1.power))
+    let pass1 = compute_permanent_pass(card, effects, None, None);
+    let gate_types = has_type_gated.then(|| pass1.subtypes.creature_types.clone());
+    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref())
 }
 
 fn compute_permanent_pass(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
     gate_power: Option<i32>,
+    gate_types: Option<&[CreatureType]>,
 ) -> ComputedPermanent {
     // Start from the base card definition.
     let mut controller = card.controller;
     let mut card_types = card.definition.card_types.clone();
-    let supertypes = card.definition.supertypes.clone();
+    let mut supertypes = card.definition.supertypes.clone();
     let mut subtypes = card.definition.subtypes.clone();
     // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
     // not a creature. Strip the Creature type and add the Aura subtype so
@@ -383,6 +406,7 @@ fn compute_permanent_pass(
     };
 
     let mut set_pt: Option<(i32, i32)> = None;
+    let mut set_power_only: Option<i32> = None;
     let mut mod_power: i32 = 0;
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
@@ -391,7 +415,7 @@ fn compute_permanent_pass(
     // Sort effects by layer, then sublayer, then timestamp.
     let mut sorted: Vec<&ContinuousEffect> = effects
         .iter()
-        .filter(|e| affects(e, card, gate_power))
+        .filter(|e| affects(e, card, gate_power, gate_types))
         .chain(eot_grants.iter())
         .collect();
     sorted.sort_by(|a, b| {
@@ -433,6 +457,9 @@ fn compute_permanent_pass(
             }
             Modification::RemoveCardType(t) => card_types.retain(|x| x != t),
             Modification::SetCardTypes(ts) => card_types = ts.clone(),
+            Modification::AddSupertype(s) => {
+                if !supertypes.contains(s) { supertypes.push(*s); }
+            }
             Modification::AddCreatureType(ct) => {
                 if !subtypes.creature_types.contains(ct) {
                     subtypes.creature_types.push(*ct);
@@ -463,8 +490,12 @@ fn compute_permanent_pass(
                 lost_all_abilities = true;
             }
 
-            // Layer 7
-            Modification::SetPowerToughness(p, t) => set_pt = Some((*p, *t)),
+            // Layer 7 (modifications arrive in timestamp order; later wins)
+            Modification::SetPowerToughness(p, t) => {
+                set_pt = Some((*p, *t));
+                set_power_only = None;
+            }
+            Modification::SetPower(p) => set_power_only = Some(*p),
             Modification::ModifyPower(n) => mod_power += n,
             Modification::ModifyToughness(n) => mod_toughness += n,
             Modification::ModifyPowerToughness(p, t) => {
@@ -485,6 +516,10 @@ fn compute_permanent_pass(
     } else {
         (base_power, base_toughness)
     };
+    // Layer-7b "base power becomes N" (power only) overrides the power half.
+    if let Some(p) = set_power_only {
+        power = p;
+    }
     power += mod_power + card.power_bonus + card.perm_power_bonus;
     toughness += mod_toughness + card.toughness_bonus + card.perm_toughness_bonus;
     // Counters applied after 7c (CR 613.7f).
@@ -521,8 +556,9 @@ fn affects(
     effect: &ContinuousEffect,
     card: &crate::card::CardInstance,
     gate_power: Option<i32>,
+    gate_types: Option<&[CreatureType]>,
 ) -> bool {
-    affected_includes_gated(&effect.affected, effect.source, card, gate_power)
+    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types)
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -539,7 +575,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power))
+    affected_includes_gated(affected, source, card, Some(printed_power), None)
 }
 
 fn affected_includes_gated(
@@ -547,6 +583,9 @@ fn affected_includes_gated(
     source: CardId,
     card: &crate::card::CardInstance,
     gate_power: Option<i32>,
+    // CR 613.8 — the affected card's *computed* creature types (pass 2 of a
+    // type lord recompute). `None` falls back to printed types.
+    gate_types: Option<&[CreatureType]>,
 ) -> bool {
     match affected {
         AffectedPermanents::Source => source == card.id,
@@ -589,8 +628,12 @@ fn affected_includes_gated(
             }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let is_creature = card.definition.card_types.contains(&CardType::Creature);
-            let has_type = card.definition.subtypes.creature_types.contains(creature_type)
-                || card.definition.keywords.contains(&Keyword::Changeling);
+            // CR 613.8 — match against computed types when a type-changer is in
+            // play (pass 2), else the printed type line.
+            let has_type = match gate_types {
+                Some(types) => types.contains(creature_type),
+                None => card.definition.subtypes.creature_types.contains(creature_type),
+            } || card.definition.keywords.contains(&Keyword::Changeling);
             ctrl_ok && is_creature && has_type
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
@@ -631,7 +674,7 @@ fn affected_includes_gated(
 pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
     use SelectionRequirement as R;
     match req {
-        R::Any | R::Permanent | R::Creature | R::Artifact | R::Enchantment
+        R::Any | R::Permanent | R::PermanentCard | R::Creature | R::Artifact | R::Enchantment
         | R::Planeswalker | R::Land | R::Nonland | R::Noncreature | R::IsBasicLand
         | R::IsNonbasicLand | R::IsToken | R::NotToken | R::ControlledByYou
         | R::ControlledByOpponent | R::Colorless => true,
@@ -641,10 +684,13 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::Tapped | R::Untapped => true,
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
-        | R::HasKeyword(_) => true,
+        | R::HasKeyword(_) | R::HasMutate => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
+        // Read against printed P/T + counters on each layer recompute (the
+        // same approximation `CardMatchPowerGated` uses) — Tapestry Warden.
+        R::ToughnessGreaterThanPower => true,
         R::And(a, b) | R::Or(a, b) => {
             requirement_is_card_only(a) && requirement_is_card_only(b)
         }
@@ -679,6 +725,7 @@ pub(crate) fn requirement_matches_card(
     let def = &card.definition;
     match req {
         R::Any | R::Permanent => true,
+        R::PermanentCard => def.is_permanent(),
         R::Creature => def.card_types.contains(&CardType::Creature),
         R::Artifact => def.card_types.contains(&CardType::Artifact),
         R::Enchantment => def.card_types.contains(&CardType::Enchantment),
@@ -694,6 +741,7 @@ pub(crate) fn requirement_matches_card(
         R::Untapped => !card.tapped,
         R::ControlledByYou => card.controller == source_controller,
         R::ControlledByOpponent => card.controller != source_controller,
+        R::OwnedByYou => card.owner == source_controller,
         R::HasCardType(t) => def.card_types.contains(t),
         R::HasSupertype(s) => def.supertypes.contains(s),
         R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)
@@ -702,6 +750,7 @@ pub(crate) fn requirement_matches_card(
         R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
         R::HasKeyword(k) => def.keywords.contains(k),
+        R::HasMutate => def.mutate.is_some(),
         R::HasColor(c) => def
             .cost
             .symbols
@@ -727,6 +776,15 @@ pub(crate) fn requirement_matches_card(
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,
+        // CR 613 lord scope read against printed P/T + counters (same
+        // approximation `CardMatchPowerGated` uses): Tapestry Warden grants
+        // its keyword to "creatures you control with toughness greater than
+        // their power".
+        R::ToughnessGreaterThanPower => {
+            let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
+            let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
+            (def.base_toughness() + plus - minus) > (def.base_power() + plus - minus)
+        }
         _ => false,
     }
 }

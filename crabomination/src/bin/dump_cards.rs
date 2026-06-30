@@ -54,6 +54,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Deathtouch => "Deathtouch",
         Keyword::Indestructible => "Indestructible",
         Keyword::Hexproof => "Hexproof",
+        Keyword::HexproofFromColor(_) => "Hexproof from",
         Keyword::Shroud => "Shroud",
         Keyword::Flash => "Flash",
         Keyword::Defender => "Defender",
@@ -73,6 +74,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Infect => "Infect",
         Keyword::Wither => "Wither",
         Keyword::Toxic(_) => "Toxic",
+        Keyword::Poisonous(_) => "Poisonous",
         Keyword::Changeling => "Changeling",
         Keyword::Companion => "Companion",
         Keyword::Daybound => "Daybound",
@@ -93,8 +95,12 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Saddle(_) => "Saddle",
         Keyword::Casualty(_) => "Casualty",
         Keyword::Soulbond => "Soulbond",
+        Keyword::StartYourEngines => "Start your engines!",
         Keyword::Devoid => "Devoid",
         Keyword::Annihilator(_) => "Annihilator",
+        Keyword::Firebending(_) => "Firebending",
+        Keyword::Sneak(_) => "Sneak",
+        Keyword::Bloodthirst(_) => "Bloodthirst",
         Keyword::Flanking => "Flanking",
         Keyword::Bushido(_) => "Bushido",
         Keyword::Absorb(_) => "Absorb",
@@ -118,6 +124,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Landcycling(_, _) => "Landcycling",
         Keyword::Typecycling(_) => "Typecycling",
         Keyword::Madness(_) => "Madness",
+        Keyword::Mayhem(_) => "Mayhem",
+        Keyword::Harmonize(_) => "Harmonize",
         Keyword::Morph(_) => "Morph",
         Keyword::Megamorph(_) => "Megamorph",
         Keyword::Disguise(_) => "Disguise",
@@ -128,10 +136,18 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Offspring(_) => "Offspring",
         Keyword::Squad(_) => "Squad",
         Keyword::Replicate(_) => "Replicate",
+        Keyword::Conspire => "Conspire",
         Keyword::Fortify(_) => "Fortify",
         Keyword::Protection(_)
         | Keyword::ProtectionFromColoredSpells
-        | Keyword::ProtectionFromSpells => "Protection",
+        | Keyword::ProtectionFromSpells
+        | Keyword::ProtectionFromCreatureType(_)
+        | Keyword::ProtectionFromSpellSubtype(_)
+        | Keyword::ProtectionFromManaValueExcept(_)
+        | Keyword::ProtectionFromManaValueParity { .. }
+        | Keyword::ProtectionFromMulticolored
+        | Keyword::ProtectionFromInstants
+        | Keyword::ProtectionFromEverything => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }
@@ -145,10 +161,21 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::MustAttack | Keyword::MustBlock
         | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)
+        | Keyword::CantAttackOrBlockUnlessYouControlCount { .. }
         | Keyword::CantAttackOrBlockUnlessEvenCounters
-        | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
+        | Keyword::CantAttackOrBlockUnlessHandSizeAtMost(_)
+        | Keyword::CantAttackOrBlockUnlessDelirium
+        | Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn
+        | Keyword::CantAttackOrBlockUnlessDescend(_)
+        | Keyword::CantAttackOrBlockUnlessCityBlessing
+        | Keyword::AttacksAlone | Keyword::CantAttackAlone | Keyword::CantAttackOrBlockAlone | Keyword::CantAttackUnlessCastCreatureThisTurn
+        | Keyword::DealsNoCombatDamage | Keyword::AssignsCombatDamageByToughness
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
+        | Keyword::CantBeBlockedByPowerLess
+        | Keyword::CantBeBlockedByPowerAtMost(_)
+        | Keyword::CantBeBlockedIfControllerCastSpells(_)
+        | Keyword::CanBlockOnlyFlying
         | Keyword::CantBeCounteredIfXAtLeast(_)
         | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor => return None,
         Keyword::Unleash => "Unleash",

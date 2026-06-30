@@ -249,6 +249,10 @@ pub enum Decision {
         source: CardId,
         total: u32,
         targets: Vec<Target>,
+        /// What's being divided, for UI labelling — "damage" for divided-damage
+        /// spells, "+1/+1 counter" for `Effect::DistributeCounters` (which
+        /// reuses this decision). The division math is identical either way.
+        noun: String,
     },
 
     /// CR 510.1c-d — divide an attacker's combat damage among its multiple

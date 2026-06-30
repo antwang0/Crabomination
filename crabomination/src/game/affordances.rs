@@ -224,6 +224,7 @@ impl GameState {
                     card_id: *id,
                     ability_index: idx,
                     target,
+                    additional_targets: Vec::new(),
                     x_value: None,
                 })
             });
@@ -254,7 +255,15 @@ impl GameState {
         use crate::card::Keyword;
         self.battlefield
             .iter()
-            .filter(|c| c.controller == seat && c.can_attack())
+            // Like `can_attack()` but defers the Defender check to the
+            // kws block below, which honors the ignore-defender exception.
+            .filter(|c| {
+                c.controller == seat
+                    && c.definition.is_creature()
+                    && !c.tapped
+                    && !c.has_keyword(&Keyword::CantAttack)
+                    && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
+            })
             .filter(|c| {
                 // Honor layer-granted Defender / can't-attack and the
                 // per-defender attack restriction (Dandân) so the client's
@@ -263,7 +272,9 @@ impl GameState {
                     .computed_permanent(c.id)
                     .map(|cp| cp.keywords.clone())
                     .unwrap_or_else(|| c.definition.keywords.clone());
-                if kws.contains(&Keyword::Defender) || kws.contains(&Keyword::CantAttack) {
+                if (kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(c))
+                    || kws.contains(&Keyword::CantAttack)
+                {
                     return false;
                 }
                 kws.iter().all(|kw| match kw {
@@ -285,6 +296,33 @@ impl GameState {
                         .any(|p| p.controller == seat && self.evaluate_requirement_on_card(req, p, seat)),
                     Keyword::CantAttackOrBlockUnlessEvenCounters => {
                         c.counters.values().sum::<u32>() % 2 == 0
+                    }
+                    Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
+                        self.players[seat].hand.len() as u32 <= *n
+                    }
+                    Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
+                    Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
+                        self.players[seat].creatures_died_this_turn > 0
+                    }
+                    Keyword::CantAttackOrBlockUnlessDescend(n) => {
+                        self.descend_count(seat) >= *n as usize
+                    }
+                    Keyword::CantAttackOrBlockUnlessCityBlessing => {
+                        self.players[seat].city_blessing
+                    }
+                    Keyword::CantAttackOrBlockUnlessYouControlCount {
+                        filter, min, block_only, ..
+                    } => {
+                        *block_only
+                            || self
+                                .battlefield
+                                .iter()
+                                .filter(|p| {
+                                    p.controller == seat
+                                        && self.evaluate_requirement_on_card(filter, p, seat)
+                                })
+                                .count() as u32
+                                >= *min
                     }
                     _ => true,
                 })
@@ -525,6 +563,64 @@ impl GameState {
         out
     }
 
+    /// CR 702.78 — hand cards with Conspire the caster could cast right now,
+    /// tapping the first two eligible untapped creatures that share a color
+    /// with the spell. The chosen pair is a probe only; the client re-picks.
+    fn conspirable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        use crate::card::Keyword;
+        let hand: Vec<(CardId, Vec<crate::mana::Color>, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.keywords.contains(&Keyword::Conspire))
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (
+                    c.id,
+                    c.definition.printed_colors(),
+                    needs_target,
+                    needs_target.then(|| c.definition.effect.clone()),
+                )
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, spell_colors, needs_target, effect) in &hand {
+            // Two untapped creatures the caster controls sharing a color.
+            let pair: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == caster
+                        && !c.tapped
+                        && c.definition.is_creature()
+                        && self
+                            .computed_permanent(c.id)
+                            .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                            .unwrap_or(false)
+                })
+                .map(|c| c.id)
+                .take(2)
+                .collect();
+            if pair.len() < 2 {
+                continue;
+            }
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellConspire {
+                card_id: *id, conspire_creatures: [pair[0], pair[1]],
+                target, additional_targets, mode: None, x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// [`buyback_hand_cards`] against a prebuilt probe template; the caller
     /// owns the priority short-circuit.
     ///
@@ -702,6 +798,39 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand they could cast for their Warp cost right now
+    /// (EOE). Surfaced in `PlayerView.warpable_hand` so the client can offer a
+    /// "Warp" affordance alongside Dash/Blitz.
+    pub fn warpable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.warpable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`warpable_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`warpable_hand_cards`]: Self::warpable_hand_cards
+    fn warpable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(|a| a.warp))
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(template, GameAction::CastSpellAlternative {
+                    card_id: id,
+                    pitch_card: None,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .collect()
+    }
+
     /// Cards in `caster`'s hand they could suspend right now (CR 702.62):
     /// the card has `Keyword::Suspend` and the suspend action would be
     /// accepted (cost affordable + timing legal). Surfaced in
@@ -787,6 +916,34 @@ impl GameState {
                 Self::would_accept_on(
                     template,
                     GameAction::CastAdventure {
+                        card_id: id, target, additional_targets, mode: None, x_value: None,
+                    },
+                )
+                .then_some(id)
+            })
+            .collect()
+    }
+
+    /// Cards in `caster`'s hand with an Omen half they could cast right now
+    /// (CR 702.183). The probe auto-targets the omen effect.
+    fn omenable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter_map(|c| {
+                let omen = c.definition.has_omen()?;
+                let (target, additional_targets) = if omen.effect.requires_target() {
+                    let (t, extras) =
+                        template.auto_targets_for_effect_all_slots(&omen.effect, caster, None);
+                    t.as_ref()?;
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                let id = c.id;
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastOmen {
                         card_id: id, target, additional_targets, mode: None, x_value: None,
                     },
                 )
@@ -892,14 +1049,17 @@ impl GameState {
             bestowable: self.bestowable_hand_cards_on(&template, seat),
             dashable: self.dashable_hand_cards_on(&template, seat),
             blitzable: self.blitzable_hand_cards_on(&template, seat),
+            warpable: self.warpable_hand_cards_on(&template, seat),
             suspendable: self.suspendable_hand_cards_on(&template, seat),
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             plottable: self.plottable_hand_cards_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
+            omenable: self.omenable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             bargainable: self.bargainable_hand_cards_on(&template, seat),
             squadable: self.squadable_hand_cards_on(&template, seat),
             replicatable: self.replicatable_hand_cards_on(&template, seat),
+            conspirable: self.conspirable_hand_cards_on(&template, seat),
             multikickable: self.multikickable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
@@ -911,7 +1071,30 @@ impl GameState {
             room_unlockable: self.room_unlockable_on(&template, seat),
             prepare_castable: self.prepare_castable_on(&template, seat),
             back_castable: self.back_castable_hand_cards_on(&template, seat),
+            prototypable: self.prototypable_hand_cards_on(&template, seat),
         }
+    }
+
+    /// CR 702.160 — hand cards with a Prototype face castable for the
+    /// prototype cost right now. Auto-targets the body's effect (ETB
+    /// triggers, not a cast target — prototype creatures don't target on
+    /// cast), so cost payability and timing are what gate the report.
+    fn prototypable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| c.definition.has_prototype().is_some())
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(template, GameAction::CastPrototype {
+                    card_id: id,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .collect()
     }
 
     /// SOS Prepare — prepared creatures `seat` controls whose prepare spell
@@ -942,19 +1125,29 @@ impl GameState {
             .collect()
     }
 
-    /// Hand MDFCs whose back face is castable right now. The front-face
+    /// MDFC cards whose back face is castable right now — from hand, plus any
+    /// in the graveyard carrying the one-shot `may_cast_back_from_graveyard`
+    /// permission (Pestilent Cauldron's "cast it transformed"). The front-face
     /// sweep (`castable_hand_cards_on`) never probes the back, so a
     /// pathway-style card whose only affordable half is the back would
     /// otherwise read as a dead card — no highlight, and `auto_advance`
     /// would pass priority windows where it's a legal play.
     fn back_castable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
-        self.players[seat]
+        let from_hand = self.players[seat]
             .hand
             .iter()
+            .filter(|c| c.definition.back_face.as_ref().is_some_and(|b| !b.is_land()))
+            .map(|c| c.id);
+        let from_graveyard = self.players[seat]
+            .graveyard
+            .iter()
             .filter(|c| {
-                c.definition.back_face.as_ref().is_some_and(|b| !b.is_land())
+                c.may_cast_back_from_graveyard
+                    && c.definition.back_face.as_ref().is_some_and(|b| !b.is_land())
             })
-            .map(|c| c.id)
+            .map(|c| c.id);
+        from_hand
+            .chain(from_graveyard)
             .filter(|&id| {
                 Self::would_accept_on(template, GameAction::CastSpellBack {
                     card_id: id,
@@ -1063,7 +1256,7 @@ impl GameState {
         else {
             return 0;
         };
-        crate::game::actions::extra_cost_for_spell(self, caster, card)
+        crate::game::actions::extra_cost_for_spell(self, caster, card, None)
     }
 }
 

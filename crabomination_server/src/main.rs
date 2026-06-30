@@ -96,7 +96,12 @@ fn main() {
             let guard = match slots.try_acquire(peer.ip()) {
                 Ok(g) => g,
                 Err(reason) => {
-                    eprintln!("refusing {peer}: {reason:?}");
+                    let s = slots.snapshot();
+                    eprintln!(
+                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/IP)",
+                        s.current, s.peak, s.refused_global, s.refused_per_ip,
+                        rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip,
+                    );
                     let _ = stream.shutdown(std::net::Shutdown::Both);
                     continue;
                 }
@@ -241,6 +246,7 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
                 let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
                 s.record_pair(duration, bin_format);
                 s.observe_turns(outcome.final_turn);
+                s.observe_format_turns(bin_format, outcome.final_turn);
                 s.observe_winner(outcome.winner);
                 if let Some(Some(w)) = outcome.winner {
                     s.observe_win_life_delta(w, &outcome.final_life_totals);
@@ -267,7 +273,12 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
         let guard = match slots.try_acquire(peer.ip()) {
             Ok(g) => g,
             Err(reason) => {
-                eprintln!("refusing {peer}: {reason:?}");
+                let s = slots.snapshot();
+                eprintln!(
+                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/IP)",
+                    s.current, s.peak, s.refused_global, s.refused_per_ip,
+                    rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip,
+                );
                 let _ = stream.shutdown(std::net::Shutdown::Both);
                 continue;
             }
@@ -289,29 +300,60 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
     }
 }
 
+/// Run a match body, catching any panic so a single buggy game logs with
+/// context and lets the thread unwind cleanly (dropping its seats/streams and
+/// releasing its slot) instead of dying with an opaque default backtrace.
+/// Returns `None` if the match panicked.
+fn run_match_caught(
+    state: crabomination::game::GameState,
+    seats: Vec<SeatOccupant>,
+    ctx: &str,
+) -> Option<MatchOutcome> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_match(state, seats))) {
+        Ok(outcome) => Some(outcome),
+        Err(payload) => {
+            eprintln!(
+                "match aborted: engine panic ({ctx}): {} — connections dropped, slot released",
+                panic_message(payload.as_ref()),
+            );
+            None
+        }
+    }
+}
+
+/// Recover the human-readable message from a caught panic payload. `panic!`
+/// stores a `&'static str` or a `String`; anything else logs as a generic
+/// note so the abort line always carries *some* context.
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&'static str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
+
 fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) {
     let seat = match tcp_seat(stream) {
         Ok(s) => s,
         Err(e) => { eprintln!("tcp_seat failed for {peer}: {e}"); return; }
     };
     let started = Instant::now();
-    let outcome = run_match(
+    let Some(outcome) = run_match_caught(
         format.build(),
         vec![
             SeatOccupant::Human(seat),
             SeatOccupant::Bot(Box::new(RandomBot::new())),
         ],
-    );
+        &format!("bot match {peer}, format={}", format.label()),
+    ) else {
+        return;
+    };
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.record_bot(duration, format);
-        s.observe_turns(outcome.final_turn);
-        s.observe_winner(outcome.winner);
-        if let Some(Some(w)) = outcome.winner {
-            s.observe_win_life_delta(w, &outcome.final_life_totals);
-            s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
-        }
+        s.record_outcome(&outcome, format, duration, false);
         *s
     };
     eprintln!(
@@ -351,20 +393,17 @@ fn run_pair_match(
         }
     };
     let started = Instant::now();
-    let outcome = run_match(
+    let Some(outcome) = run_match_caught(
         format.build(),
         vec![SeatOccupant::Human(a_seat), SeatOccupant::Human(b_seat)],
-    );
+        &format!("pair match {a_peer} ↔ {b_peer}, format={}", format.label()),
+    ) else {
+        return;
+    };
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.record_pair(duration, format);
-        s.observe_turns(outcome.final_turn);
-        s.observe_winner(outcome.winner);
-        if let Some(Some(w)) = outcome.winner {
-            s.observe_win_life_delta(w, &outcome.final_life_totals);
-            s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
-        }
+        s.record_outcome(&outcome, format, duration, true);
         *s
     };
     eprintln!(
@@ -387,6 +426,16 @@ mod tests {
     use crabomination::server::LossReason;
     use std::env;
     use std::net::IpAddr;
+
+    #[test]
+    fn panic_message_recovers_str_and_string_payloads() {
+        let s = std::panic::catch_unwind(|| panic!("boom")).unwrap_err();
+        assert_eq!(panic_message(s.as_ref()), "boom");
+        let owned = std::panic::catch_unwind(|| panic!("{}", format!("n={}", 3))).unwrap_err();
+        assert_eq!(panic_message(owned.as_ref()), "n=3");
+        let other = std::panic::catch_unwind(|| std::panic::panic_any(7u32)).unwrap_err();
+        assert_eq!(panic_message(other.as_ref()), "non-string panic payload");
+    }
 
     /// Process-global env mutex for the test module. `cargo test` runs
     /// tests in parallel by default, but env vars are process-wide — without
@@ -444,9 +493,25 @@ mod tests {
 
     #[test]
     pub(crate) fn format_from_env_unknown_value_falls_back_to_demo() {
-        let f = with_env("CRAB_FORMAT", Some("Cube"), Format::from_env);
-        assert_eq!(f.label(), "demo",
-            "case-sensitive: 'Cube' is not a recognized value");
+        let f = with_env("CRAB_FORMAT", Some("pauper"), Format::from_env);
+        assert_eq!(f.label(), "demo", "unrecognized value falls back to demo");
+    }
+
+    #[test]
+    pub(crate) fn format_from_env_is_case_and_whitespace_insensitive() {
+        assert_eq!(with_env("CRAB_FORMAT", Some("Cube"), Format::from_env).label(), "cube");
+        assert_eq!(with_env("CRAB_FORMAT", Some("  COMMANDER "), Format::from_env).label(), "commander");
+    }
+
+    #[test]
+    pub(crate) fn deck_overrides_ignored_outside_demo_format() {
+        let set = ["CRAB_DECK", "CRAB_BOT_DECK"];
+        // Demo honors both → nothing flagged.
+        assert!(Format::Demo.ignored_override_keys(&set).is_empty());
+        // Cube / SOS / Commander flag every present override key.
+        assert_eq!(Format::Cube.ignored_override_keys(&set), set);
+        assert_eq!(Format::Sos.ignored_override_keys(&["CRAB_DECK"]), ["CRAB_DECK"]);
+        assert!(Format::Commander.ignored_override_keys(&[]).is_empty());
     }
 
     #[test]
@@ -540,6 +605,29 @@ mod tests {
         ));
         // A different IP is still admitted.
         let _c = s.try_acquire(ip("10.0.0.2")).expect("other ip");
+    }
+
+    #[test]
+    pub(crate) fn slot_manager_snapshot_tracks_peak_and_refusals() {
+        let s = SlotManager::new(2, 1);
+        let a = s.try_acquire(ip("10.0.0.1")).expect("first");
+        let b = s.try_acquire(ip("10.0.0.2")).expect("second");
+        // Global cap is 2 → a third distinct IP is refused globally.
+        assert!(matches!(s.try_acquire(ip("10.0.0.3")), Err(SlotRefusal::GlobalCapReached)));
+        // Free a global slot, then the first IP (at its per-IP cap of 1) is
+        // refused on the per-IP path.
+        drop(b);
+        assert!(matches!(s.try_acquire(ip("10.0.0.1")), Err(SlotRefusal::PerIpCapReached)));
+        let snap = s.snapshot();
+        assert_eq!(snap.current, 1, "only seat a still held");
+        assert_eq!(snap.peak, 2, "peaked at two concurrent");
+        assert_eq!(snap.refused_global, 1);
+        assert_eq!(snap.refused_per_ip, 1);
+        assert_eq!(snap.distinct_ips, 1, "one IP still holds a slot");
+        drop(a);
+        let final_snap = s.snapshot();
+        assert_eq!(final_snap.current, 0, "all released");
+        assert_eq!(final_snap.distinct_ips, 0, "no IPs hold slots once released");
     }
 
     #[test]
@@ -740,6 +828,22 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn draw_pct_is_share_of_all_matches() {
+        // 2 draws out of 4 total → 50% (vs decisive_pct, which is over resolved).
+        let mut s = MatchStats { bot_matches: 4, ..Default::default() };
+        s.observe_winner(Some(Some(0)));
+        s.observe_winner(Some(None));
+        s.observe_winner(Some(None));
+        s.observe_winner(None); // inconclusive
+        assert_eq!(s.draws, 2);
+        assert_eq!(s.draw_pct(), 50);
+        // decisive_pct counts only resolved (1 win + 2 draws) → 1/3 = 33%.
+        assert_eq!(s.decisive_pct(), 33);
+        // Empty stats → 0, no divide-by-zero.
+        assert_eq!(MatchStats::default().draw_pct(), 0);
+    }
+
+    #[test]
     pub(crate) fn decisive_pct_zero_before_any_resolution() {
         let s = MatchStats::default();
         assert_eq!(s.decisive_pct(), 0);
@@ -782,6 +886,29 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn record_outcome_folds_all_counters_at_once() {
+        use crabomination::server::MatchOutcome;
+        let mut s = MatchStats::default();
+        let outcome = MatchOutcome {
+            final_turn: 9,
+            winner: Some(Some(0)),
+            final_life_totals: vec![14, 0],
+            loss_reasons: vec![None, Some(LossReason::LifeDepleted)],
+            ..Default::default()
+        };
+        s.record_outcome(&outcome, Format::Demo, std::time::Duration::from_secs(30), false);
+        assert_eq!(s.bot_matches, 1, "bot-kind tally bumped");
+        assert_eq!(s.pair_matches, 0);
+        assert_eq!(s.wins, 1, "winner observed");
+        assert_eq!(s.total_turns, 9, "turns folded in");
+        assert_eq!(s.deckout_wins, 0, "life-depletion win is not an alternate win");
+        // The pair path bumps the other tally and accumulates.
+        s.record_outcome(&outcome, Format::Demo, std::time::Duration::from_secs(30), true);
+        assert_eq!(s.pair_matches, 1);
+        assert_eq!(s.total_turns, 18);
+    }
+
+    #[test]
     pub(crate) fn observe_win_kind_classifies_from_loss_reasons() {
         let mut s = MatchStats::default();
         // Seat 0 wins; seat 1 decked out → alternate + deck bucket.
@@ -796,6 +923,13 @@ mod tests {
         // Precise life-depletion loss is NOT an alternate win.
         s.observe_win_kind(0, &[6, -1], &[None, Some(LossReason::LifeDepleted)]);
         assert_eq!(s.deckout_wins, 2, "life-damage loss stays out of alt bucket");
+        // Concession / "you lose the game" → alternate + the `other` bucket.
+        s.observe_win_kind(1, &[4, 7], &[Some(LossReason::Other), None]);
+        assert_eq!(s.deckout_wins, 3);
+        assert_eq!(s.other_wins, 1);
+        // other_pct is a share of recorded wins.
+        let shared = MatchStats { wins: 4, other_wins: 1, ..Default::default() };
+        assert_eq!(shared.other_pct(), 25);
     }
 
     #[test]
@@ -848,6 +982,23 @@ mod tests {
         let mut s = MatchStats::default();
         s.observe_win_life_delta(5, &[20, 0]); // seat 5 doesn't exist
         assert_eq!(s.win_life_samples, 0, "out-of-range silently skipped");
+    }
+
+    #[test]
+    pub(crate) fn format_match_stats_shows_per_format_avg_turns() {
+        let mut s = MatchStats::default();
+        // Two demo matches (8 and 12 turns → avg 10), one cube (20 turns).
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_format_turns(Format::Demo, 8);
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_format_turns(Format::Demo, 12);
+        s.record_bot(Duration::from_secs(60), Format::Cube);
+        s.observe_format_turns(Format::Cube, 20);
+        assert_eq!(s.format_avg_turns(format_index(Format::Demo)), Some(10));
+        assert_eq!(s.format_avg_turns(format_index(Format::Cube)), Some(20));
+        let line = format_match_stats(&s);
+        assert!(line.contains("demo:2(10t)"), "got: {line}");
+        assert!(line.contains("cube:1(20t)"), "got: {line}");
     }
 
     #[test]

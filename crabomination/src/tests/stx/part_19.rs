@@ -924,7 +924,7 @@ fn witherbloom_sapling_b155_activation_grows_self() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, x_value: None,
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Activation succeeds");
     drain_stack(&mut g);
     let counters = g.battlefield_find(s).map(|c| {
@@ -1605,6 +1605,7 @@ fn cr_118_8_exile_from_graveyard_cost_pre_flight_no_mana_burned() {
         card_id: pm,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     });
     assert!(result.is_err(), "must reject without legal gy-exile target");
@@ -1783,6 +1784,32 @@ fn bot_attacks_finishable_planeswalker_with_proper_power() {
             );
         }
         other => panic!("expected DeclareAttackers, got {other:?}"),
+    }
+}
+
+#[test]
+fn bot_stifles_a_threatening_opponent_ability() {
+    // Server/bot: react to an opponent ability on the stack with Stifle.
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    // P0 casts Devourer of Destiny — its on-cast Scry trigger lands on the stack.
+    let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    // Seat 1 holds Stifle and gets priority with the ability on the stack.
+    let stifle = g.add_card_to_hand(1, catalog::stifle());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    let mut bot = RandomBot::new();
+    match bot.next_action(&g, 1) {
+        Some(GameAction::CastSpell { card_id, target, .. }) => {
+            assert_eq!(card_id, stifle, "bot casts Stifle");
+            assert_eq!(target, Some(Target::Permanent(dev)),
+                "Stifle targets the ability's source");
+        }
+        other => panic!("expected the bot to Stifle the trigger, got {other:?}"),
     }
 }
 
@@ -2040,6 +2067,7 @@ fn cr_603_4_intervening_if_re_checked_at_resolve_time() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: Some(pred),
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2078,6 +2106,7 @@ fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: Some(pred),
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2134,6 +2163,7 @@ fn cr_705_3_coin_flip_advantage_lets_tails_be_recovered() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2177,6 +2207,7 @@ fn cr_705_3_no_advantage_means_one_flip_one_result() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -3191,6 +3222,7 @@ fn cr_705_3_static_grants_coin_flip_advantage() {
         source: src, controller: 0, effect: Box::new(body), target: None, mode: None,
         x_value: 0, converged_value: 0, trigger_source: None, mana_spent: 0,
         event_amount: 0, intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);

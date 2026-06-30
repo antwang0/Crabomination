@@ -41,6 +41,7 @@ mod prismari;
 mod quandrix;
 mod shared;
 mod silverquill;
+mod sta;
 mod witherbloom;
 
 #[allow(ambiguous_glob_reexports)]
@@ -89,4 +90,5 @@ pub use prismari::*;
 pub use quandrix::*;
 pub use shared::*;
 pub use silverquill::*;
+pub use sta::*;
 pub use witherbloom::*;

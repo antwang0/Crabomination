@@ -25,6 +25,12 @@ pub struct Emblem {
     pub name: String,
     /// Abilities the emblem grants its owner.
     pub triggered: Vec<crate::effect::TriggeredAbility>,
+    /// Static abilities the emblem grants its owner (anthem-style emblems —
+    /// Vivien Reid's −8 "Creatures you control get +2/+2 …"). Synthesized into
+    /// continuous effects in `gather_continuous_effects`. Defaults to empty for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub statics: Vec<crate::card::StaticAbility>,
 }
 
 /// CR 702.50 — a resolved Epic spell, snapshotted for the per-upkeep copy.
@@ -92,6 +98,15 @@ pub struct Player {
     /// each turn" (CR 611.2). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub spells_cast_this_game_turn: u32,
+    /// Like `spells_cast_this_game_turn` but counting only noncreature spells
+    /// (Deafening Silence's "each player can't cast more than one noncreature
+    /// spell each turn"). Reset for every player at Cleanup. `#[serde(default)]`.
+    #[serde(default)]
+    pub noncreature_spells_cast_this_game_turn: u32,
+    /// Like `spells_cast_this_game_turn` but counting only nonartifact spells
+    /// (Ethersworn Canonist). Reset for every player at Cleanup. `#[serde(default)]`.
+    #[serde(default)]
+    pub nonartifact_spells_cast_this_game_turn: u32,
     /// Total life gained by this player this turn (sum of every
     /// `Effect::GainLife` and `Effect::Drain`-to-this-player resolution).
     /// Reset to 0 in `do_untap`. Powers Strixhaven's **Infusion** rider —
@@ -129,6 +144,11 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub creatures_died_this_turn: u32,
+    /// Zubera that died under this player's control this turn. Reset in
+    /// `do_untap`. Powers the Champions-of-Kamigawa Zubera cycle's "for each
+    /// Zubera that died this turn" death triggers. `#[serde(default)]`.
+    #[serde(default)]
+    pub zuberas_died_this_turn: u32,
     /// Creatures that entered the battlefield under this player's control
     /// this turn (stamped at the shared ETB funnels). Rotated into
     /// `creatures_entered_last_turn` at end of turn — Ephara, God of the
@@ -138,6 +158,12 @@ pub struct Player {
     /// Last turn's `creatures_entered_this_turn` (see above).
     #[serde(default)]
     pub creatures_entered_last_turn: Vec<crate::card::CardId>,
+    /// CR 603 — count of artifacts that entered under this player's control
+    /// this turn. Drives "if an artifact entered the battlefield under your
+    /// control this turn" intervening-`if` gates (Akal Pakal). Reset at the
+    /// active player's turn boundary.
+    #[serde(default)]
+    pub artifacts_entered_this_turn: u32,
     /// Number of times an "Nth time this turn" landfall ability this player
     /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
     /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
@@ -200,10 +226,25 @@ pub struct Player {
     /// Powers `Value::CreaturesAttackedWithThisTurn` (Windbrisk Heights).
     #[serde(default)]
     pub creatures_attacked_this_turn: u32,
+    /// True once a creature this player controlled dealt combat damage to a
+    /// player this turn (CR 702.179 — Freerunning). Set in
+    /// `fire_combat_damage_to_player_triggers`, reset at the turn boundary.
+    #[serde(default)]
+    pub dealt_combat_damage_to_player_this_turn: bool,
+    /// CR 700.13 — this player has committed a crime this turn (cast a spell or
+    /// activated an ability targeting an opponent / their stuff). Set when a
+    /// `CommittedCrime` event fires, reset at the turn boundary. Powers
+    /// "if you've committed a crime this turn" gates (Nimble Brigand).
+    #[serde(default)]
+    pub committed_crime_this_turn: bool,
     /// Revel in Silence: this player can't cast spells or activate loyalty
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
     pub silenced_this_turn: bool,
+    /// True once this player has cast a spell for its Warp cost this turn (EOE).
+    /// Reset at the turn boundary; the right half of `Predicate::VoidActive`.
+    #[serde(default)]
+    pub warped_spell_this_turn: bool,
     /// True once this player has searched their own library this turn
     /// (CR 701.19). Reset for every player at the turn boundary. Powers
     /// `Predicate::SearchedLibraryThisTurn` (Archive Trap's free alt cost).
@@ -214,6 +255,14 @@ pub struct Player {
     /// them is prevented. Cleared when their turn begins.
     #[serde(default)]
     pub protected_from_everything: bool,
+    /// CR 401.6 — turn-scoped "you may look at the top card of your library
+    /// any time, and you may play lands and cast spells from the top of your
+    /// library" grant (The Belligerent, Bonehoard's Dracosaur-style player
+    /// permissions). Unlike `StaticEffect::PlayFromLibraryTop` this is a
+    /// player flag set at resolution and cleared at end of turn. Read by
+    /// `library_top_playable` and the top-revealed view.
+    #[serde(default)]
+    pub play_from_top_this_turn: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -229,6 +278,17 @@ pub struct Player {
     /// Trap's free alt cost).
     #[serde(default)]
     pub cards_to_graveyard_this_turn: u32,
+    /// CR 700.11 — true if a *permanent* card was put into this player's
+    /// graveyard from anywhere this turn ("you descended this turn"). Set in
+    /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
+    /// riders (Deep Goblin Skulltaker, Child of the Volcano).
+    #[serde(default)]
+    pub descended_this_turn: bool,
+    /// CR 700.11 — how many times this player descended this turn (a permanent
+    /// card hitting the graveyard). Reset at untap. Powers "X = the number of
+    /// times you descended this turn" (The Mycotyrant).
+    #[serde(default)]
+    pub descend_count_this_turn: u32,
     /// Number of instant or sorcery spells this player has cast on the
     /// current turn. Reset to 0 in `do_untap`. Refines
     /// `spells_cast_this_turn` (which counts every spell type) so cards
@@ -254,6 +314,17 @@ pub struct Player {
     /// Bumped in `discard_card`; reset in `do_untap`.
     #[serde(default)]
     pub cards_discarded_this_turn: u32,
+    /// CR 702.187 — ids of cards this player discarded this turn, so Mayhem
+    /// can offer a graveyard cast only for cards actually discarded this turn.
+    /// Populated in `discard_card`; cleared in `do_untap`.
+    #[serde(default)]
+    pub discarded_this_turn: std::collections::HashSet<crate::card::CardId>,
+    /// Number of permanents this player has sacrificed so far this turn.
+    /// Bumped in `dispatch_triggers_for_events` per `PermanentSacrificed`
+    /// event; reset in `do_untap`. Powers "if you sacrificed a permanent
+    /// this turn" payoffs (Sawblade Skinripper).
+    #[serde(default)]
+    pub permanents_sacrificed_this_turn: u32,
     /// "[Filter] spells you cast this turn cost {N} less" grants
     /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
     /// Each entry applies to every matching spell for the rest of the
@@ -278,6 +349,30 @@ pub struct Player {
     pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// CR 701.54 — how many times the Ring has tempted this player (0–4; the
+    /// printed abilities are "two/three/four or more", so we cap the stored
+    /// value at 4). Each step up activates another of The Ring's emblem
+    /// abilities. Default 0 for snapshot back-compat.
+    #[serde(default)]
+    pub ring_temptations: u32,
+    /// CR 701.54a/b — this player's designated Ring-bearer, if any. A
+    /// non-copiable permanent designation; cleared lazily (the
+    /// `effective_ring_bearer` helper re-checks battlefield presence and
+    /// control). Default `None`.
+    #[serde(default)]
+    pub ring_bearer: Option<crate::card::CardId>,
+    /// CR 702.179 — this player's speed (0–4). Starts at 0; a "Start your
+    /// engines!" object sets it to 1, and it increases by 1 (once per the
+    /// player's own turn, capped at 4) the first time an opponent loses life
+    /// during their turn. "Max speed —" abilities are active at 4. Default 0
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub speed: u32,
+    /// CR 702.179 — set once this player's speed has already increased on the
+    /// current turn (the "increases once on each of your turns" clause). Reset
+    /// at the start of each of this player's turns.
+    #[serde(default)]
+    pub speed_increased_this_turn: bool,
     /// CR 122 / 107.16 — energy counters ({E}) this player has. A
     /// generic resource pool added by `Effect::AddEnergy` and spent by
     /// `Effect::PayEnergy`. Defaults to 0 for snapshot back-compat.
@@ -318,6 +413,28 @@ pub struct Player {
     /// to 0 for snapshot back-compat.
     #[serde(default)]
     pub skip_turns: u32,
+    /// CR 502.3 — number of this player's upcoming untap steps to skip
+    /// (Yosei, the Morning Star; Frost Titan-style locks). Decremented when
+    /// their untap step would run; while > 0 their permanents don't untap.
+    #[serde(default)]
+    pub skip_next_untap_step: u32,
+    /// CR 506 — number of this player's upcoming combat phases to skip
+    /// (Stonehorn Dignitary). Consumed when their turn reaches Begin Combat,
+    /// jumping straight to the postcombat main. Defaults to 0 for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub skip_next_combat: u32,
+    /// Number of this player's upcoming untap steps in which the **lands** they
+    /// control don't untap (Bontu's Last Reckoning). Decremented when their
+    /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
+    #[serde(default)]
+    pub lands_dont_untap_next_untap: u32,
+    /// CR 702.189 — red mana added by Firebending this combat that survives
+    /// step/phase mana emptying ("you don't lose this mana as steps and phases
+    /// end"). Re-seeded into the pool by `empty_mana_pools`; cleared at end of
+    /// combat. `#[serde(default)]`.
+    #[serde(default)]
+    pub firebending_kept_red: u32,
     /// CR 500.7 — extra turns this player will take. When `advance_turn`
     /// would pass the turn, an active player with `extra_turns > 0`
     /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
@@ -365,6 +482,14 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub spells_uncounterable_this_turn: bool,
+    /// Colors this player (and their permanents) have hexproof from for the
+    /// rest of the turn (Veil of Summer's "you and permanents you control
+    /// gain hexproof from blue and from black until end of turn"). Set by
+    /// `Effect::GrantHexproofFromColorThisTurn`; reset for every player at
+    /// the active player's `do_untap`. Consulted by the targeting-legality
+    /// checks. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub hexproof_from_colors_this_turn: Vec<crate::mana::Color>,
     /// True once this player has cast a blue or black spell this turn. Set
     /// in `finalize_cast`; reset for every player at the active player's
     /// `do_untap`. Powers Veil of Summer's "draw a card if an opponent has
@@ -378,6 +503,12 @@ pub struct Player {
     /// active player's `do_untap`. Consulted by the cast-legality gate.
     #[serde(default)]
     pub cant_cast_noncreature_this_turn: bool,
+    /// Card names this player's opponents can't cast until this player's next
+    /// turn (Academic Probation mode 0 — "Opponents can't cast spells with the
+    /// chosen name until your next turn"). Reset for every player at the active
+    /// player's `do_untap`; consulted by the cast-legality gate.
+    #[serde(default)]
+    pub opponents_cant_cast_named: Vec<String>,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -418,25 +549,35 @@ impl Player {
             extra_land_plays: 0,
             spells_cast_this_turn: 0,
             spells_cast_this_game_turn: 0,
+            noncreature_spells_cast_this_game_turn: 0,
+            nonartifact_spells_cast_this_game_turn: 0,
             life_gained_this_turn: 0,
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
+            zuberas_died_this_turn: 0,
             creatures_entered_this_turn: Vec::new(),
             creatures_entered_last_turn: Vec::new(),
+            artifacts_entered_this_turn: 0,
             escalating_resolutions_this_turn: 0,
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,
             graveyard_cast_types_this_turn: Vec::new(),
+            play_from_top_this_turn: false,
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
             prowl_types_this_turn: Vec::new(),
             prowl_any_type_this_turn: false,
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
+            dealt_combat_damage_to_player_this_turn: false,
+            committed_crime_this_turn: false,
+            descended_this_turn: false,
+            descend_count_this_turn: 0,
             silenced_this_turn: false,
+            warped_spell_this_turn: false,
             searched_library_this_turn: false,
             protected_from_everything: false,
             cards_exiled_this_turn: 0,
@@ -446,20 +587,32 @@ impl Player {
             pending_spell_discounts: Vec::new(),
             turn_spell_discounts: Vec::new(),
             cards_discarded_this_turn: 0,
+            discarded_this_turn: std::collections::HashSet::new(),
+            permanents_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,
+            hexproof_from_colors_this_turn: Vec::new(),
             cast_blue_or_black_this_turn: false,
             cant_cast_noncreature_this_turn: false,
+            opponents_cant_cast_named: Vec::new(),
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            ring_temptations: 0,
+            ring_bearer: None,
+            speed: 0,
+            speed_increased_this_turn: false,
             energy: 0,
             rad_counters: 0,
             city_blessing: false,
             max_hand_size: default_max_hand_size(),
             eliminated: false,
             skip_turns: 0,
+            skip_next_untap_step: 0,
+            skip_next_combat: 0,
+            lands_dont_untap_next_untap: 0,
+            firebending_kept_red: 0,
             extra_turns: 0,
             epic_spells: Vec::new(),
             emblems: Vec::new(),
@@ -518,8 +671,17 @@ impl Player {
             .map(|i| self.hand.remove(i))
     }
 
-    pub fn send_to_graveyard(&mut self, card: CardInstance) {
+    pub fn send_to_graveyard(&mut self, mut card: CardInstance) {
+        // CR 122.2 — counters cease to exist on zone change; the graveyard
+        // object carries none (dies-with-counters triggers read LKI caches).
+        card.counters.clear();
+        card.keyword_counters.clear();
         self.cards_to_graveyard_this_turn += 1;
+        // CR 700.11 — descending requires a *permanent* card hitting the gy.
+        if card.definition.is_permanent() {
+            self.descended_this_turn = true;
+            self.descend_count_this_turn += 1;
+        }
         self.graveyard.push(card);
     }
 

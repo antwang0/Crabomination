@@ -909,6 +909,7 @@ fn silverquill_lectern_b160_activation_drains_one() {
     let life1_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: lect, ability_index: 0, target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("Lectern activatable");
     drain_stack(&mut g);

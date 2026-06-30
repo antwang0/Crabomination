@@ -14,21 +14,46 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Mana(c) => c.cmc() == 0,
         WardCost::Life(n) => *n == 0,
         WardCost::Discard(n) => *n == 0,
+        WardCost::Blight(n) => *n == 0,
         WardCost::SacrificeCreature => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
-        WardCost::GenericSourcePower => false,
+        WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
     }
 }
 
 /// Returns true if the given effect is purely a mana ability — only adds
 /// mana and uses no targets. Mana abilities resolve immediately without the stack.
 fn is_mana_ability(effect: &Effect) -> bool {
-    match effect {
-        Effect::AddMana { .. } => true,
-        Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
-        _ => false,
+    // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
+    // doesn't target, and doesn't have an illegal trigger. It may still carry
+    // incidental non-stack riders (Altar of the Pantheon's "gain 1 life").
+    fn produces_mana(e: &Effect) -> bool {
+        match e {
+            Effect::AddMana { .. } => true,
+            Effect::Seq(steps) => steps.iter().any(produces_mana),
+            Effect::If { then, else_, .. } => produces_mana(then) || produces_mana(else_),
+            _ => false,
+        }
     }
+    fn mana_compatible(e: &Effect) -> bool {
+        match e {
+            Effect::AddMana { .. } | Effect::Noop => true,
+            // Incidental you-only life gain (Altar of the Pantheon).
+            Effect::GainLife { who: crate::effect::Selector::You, .. } => true,
+            // Incidental non-targeting self-counter (Twitching Doll's "put a
+            // nest counter on this creature") — CR 605.1a rider, no stack use.
+            Effect::AddCounter { what: crate::effect::Selector::This, .. } => true,
+            Effect::Seq(steps) => steps.iter().all(mana_compatible),
+            // A board-state-conditional that only ever adds mana on both
+            // branches is still a mana ability (Ilysian Caryatid's "add one
+            // of any color; add two instead if you control a power-4+
+            // creature").
+            Effect::If { then, else_, .. } => mana_compatible(then) && mana_compatible(else_),
+            _ => false,
+        }
+    }
+    produces_mana(effect) && mana_compatible(effect)
 }
 
 /// The set of colours `card`'s untapped mana abilities can produce, in
@@ -120,6 +145,9 @@ pub(crate) fn flashback_additional_cost_for_name(
             filter: S::Creature.and(S::ControlledByYou),
             count: 1,
         }],
+        // "Flashback—{1}{U}, Pay 3 life" (the {1}{U} is the printed flashback
+        // mana cost on the card; the life is the additional rider).
+        "Deep Analysis" => vec![A::PayLife { amount: 3 }],
         _ => vec![],
     }
 }
@@ -128,6 +156,7 @@ pub(crate) fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut tax = 0u32;
@@ -179,6 +208,26 @@ pub(crate) fn extra_cost_for_spell(
                 {
                     tax += amount;
                 }
+                // Defense Grid: each spell costs {amount} more except during its
+                // controller's turn (CR — read off the caster's active status).
+                StaticEffect::SpellsCostMoreExceptOnControllerTurn { amount }
+                    if caster != state.active_player_idx =>
+                {
+                    tax += amount;
+                }
+                // Jubilant Skybonder: opponents' spells targeting a qualifying
+                // permanent the source controls cost {amount} more.
+                StaticEffect::TaxOpponentSpellsTargeting { target_filter, amount }
+                    if src.controller != caster =>
+                {
+                    if let Some(crate::game::Target::Permanent(pid)) = target
+                        && let Some(tc) = state.battlefield_find(*pid)
+                        && tc.controller == src.controller
+                        && state.evaluate_requirement_on_card(target_filter, tc, src.controller)
+                    {
+                        tax += amount;
+                    }
+                }
                 _ => {}
             }
         }
@@ -223,13 +272,45 @@ pub(crate) fn cost_reduction_for_spell(
     card: &crate::card::CardInstance,
     target: Option<&crate::game::Target>,
 ) -> u32 {
+    cost_reduction_for_spell_zoned(state, caster, card, target, false)
+}
+
+/// Like `cost_reduction_for_spell`, but `from_graveyard` toggles the
+/// graveyard-cast-only statics (Gravebreaker Lamia). The graveyard-cast paths
+/// (flashback / retrace / escape / disturb / aftermath) pass `true`.
+pub(crate) fn cost_reduction_for_spell_zoned(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+    from_graveyard: bool,
+) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
     for src in &state.battlefield {
         for sa in &src.definition.static_abilities {
             match &sa.effect {
+                StaticEffect::GraveyardCastCostReduction { amount }
+                    if from_graveyard && src.controller == caster =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReduction { filter, amount }
                     if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += amount;
+                }
+                StaticEffect::CostReductionDuringOpponentsTurn { filter, amount }
+                    if src.controller == caster
+                        && state.active_player_idx != caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += amount;
+                }
+                StaticEffect::CostReductionNthSpell { filter, nth, amount }
+                    if src.controller == caster
+                        && state.players[caster].spells_cast_this_turn + 1 == *nth
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
                 {
                     reduction += amount;
@@ -297,6 +378,32 @@ pub(crate) fn cost_reduction_for_spell(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
+    // Card-intrinsic target-conditional reduction (Ride's End): "{amount}
+    // less if it targets a permanent matching `filter`." Generic-only.
+    if let Some((filter, amount)) = &card.definition.self_cost_reduction_if_target
+        && let Some(tgt) = target
+        && state.evaluate_requirement_static(filter, tgt, caster, Some(card.id))
+    {
+        reduction = reduction.saturating_add(*amount);
+    }
+    // Card-intrinsic board-state-gated flat reductions (Pearl of Wisdom,
+    // Geistlight Snare): each "{amount} less if you control a permanent
+    // matching `filter`" clause applies independently.
+    for (filter, amount) in &card.definition.self_cost_reduction_if_control {
+        if state
+            .battlefield
+            .iter()
+            .any(|c| state.evaluate_requirement_on_card(filter, c, caster))
+        {
+            reduction = reduction.saturating_add(*amount);
+        }
+    }
+    // Card-intrinsic "costs {amount} less if it's night" (Moonrager's Slash).
+    if let Some(amount) = card.definition.self_cost_reduction_if_night
+        && state.day_night == Some(crate::game::types::DayNight::Night)
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by
@@ -316,12 +423,87 @@ pub(crate) fn cost_reduction_for_spell(
             .unwrap_or(0);
         reduction = reduction.saturating_add(greatest);
     }
+    // Card-intrinsic "costs {X} less, where X is the total power of creatures
+    // you control" (Ghalta, Primal Hunger). Generic-only, clamped by the caller.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByTotalPower))
+    {
+        let total: u32 = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == caster && c.definition.is_creature())
+            .map(|c| c.power().max(0) as u32)
+            .sum();
+        reduction = reduction.saturating_add(total);
+    }
+    // Card-intrinsic "costs {1} less for each creature card in your graveyard"
+    // (Ghoultree). Generic-only, clamped by the caller.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedPerCreatureInGraveyard))
+    {
+        let n = state.players[caster]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_creature())
+            .count() as u32;
+        reduction = reduction.saturating_add(n);
+    }
+    // Card-intrinsic "costs {amount} less if a creature died this turn" (Bone
+    // Picker). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount } = sa.effect
+            && state.players.iter().any(|p| p.creatures_died_this_turn > 0)
+        {
+            reduction = reduction.saturating_add(amount);
+        }
+    }
     // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
     // — distinct basic land types among the caster's lands. Generic-only,
     // clamped by the caller via `ManaCost::reduce_generic`.
     for sa in &card.definition.static_abilities {
         if let StaticEffect::SelfCostReducedByDomain { per } = sa.effect {
             reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
+        }
+    }
+    // Card-intrinsic "costs {X} less, where X is the number of differently
+    // named lands you control" (Fungal Colossus). Generic-only, clamped by the
+    // caller via `ManaCost::reduce_generic`.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByDistinctLandNames))
+    {
+        let mut names: Vec<&str> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == caster && c.definition.is_land())
+            .map(|c| c.definition.name)
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        reduction = reduction.saturating_add(names.len() as u32);
+    }
+    // Card-intrinsic "costs {amount} less during your turn" (Mental Modulation).
+    // Generic-only, clamped by the caller.
+    if state.active_player_idx == caster {
+        for sa in &card.definition.static_abilities {
+            if let StaticEffect::SelfCostReducedDuringYourTurn { amount } = sa.effect {
+                reduction = reduction.saturating_add(amount);
+            }
+        }
+    }
+    // Card-intrinsic "costs {X} less, where X is your devotion to [colors]"
+    // (Theros — Daybreak Chimera). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedByDevotion { colors } = &sa.effect {
+            reduction = reduction.saturating_add(state.devotion_to(caster, colors) as u32);
         }
     }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
@@ -349,12 +531,59 @@ pub(crate) fn cost_reduction_for_spell(
             }
         }
     }
+    // Card-intrinsic "costs {N} less if you control a permanent matching each
+    // filter" (Of One Mind). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIfControlEach { filters, amount } = &sa.effect {
+            let all_present = filters.iter().all(|f| {
+                state
+                    .battlefield
+                    .iter()
+                    .any(|c| c.controller == caster && state.evaluate_requirement_on_card(f, c, caster))
+            });
+            if all_present {
+                reduction = reduction.saturating_add(*amount);
+            }
+        }
+    }
+    // Card-intrinsic "costs {N} less if [predicate]" (Gigastorm Titan, Lashwhip
+    // Predator). Predicate evaluated with the caster as controller. Generic-only.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIf { condition, amount } = &sa.effect {
+            let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+            if state.evaluate_predicate(condition, &ctx) {
+                reduction = reduction.saturating_add(*amount);
+            }
+        }
+    }
     // Card-intrinsic "costs {N} less per card you've discarded this turn"
     // (Hollow One). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {
         if let StaticEffect::SelfCostReducedPerDiscardThisTurn { per } = &sa.effect {
             reduction = reduction
                 .saturating_add(per * state.players[caster].cards_discarded_this_turn);
+        }
+    }
+    // CR 702.125 — Undaunted: "costs {N} less to cast for each opponent."
+    // Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerOpponent { per } = &sa.effect {
+            let opponents = state.opponents_of(caster).len() as u32;
+            reduction = reduction.saturating_add(per * opponents);
+        }
+    }
+    // Card-intrinsic "costs {N} less per creature you attacked with this turn"
+    // (Search Party Captain). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per, all_players } =
+            &sa.effect
+        {
+            let count: u32 = if *all_players {
+                state.players.iter().map(|p| p.creatures_attacked_this_turn).sum()
+            } else {
+                state.players[caster].creatures_attacked_this_turn
+            };
+            reduction = reduction.saturating_add(per * count);
         }
     }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
@@ -719,6 +948,33 @@ impl crate::game::GameState {
         false
     }
 
+    /// Lier, Disciple of the Drowned: if `seat` controls a permanent granting
+    /// "each instant and sorcery card in your graveyard has flashback (= its
+    /// mana cost)", returns the flashback cost for an I/S `card` that lacks a
+    /// printed/granted flashback of its own. Consulted by the flashback-cast
+    /// path and the graveyard view.
+    pub(crate) fn graveyard_flashback_grant(
+        &self,
+        seat: usize,
+        card: &crate::card::CardInstance,
+    ) -> Option<crate::mana::ManaCost> {
+        if card.effective_flashback().is_some()
+            || !(card.definition.is_instant() || card.definition.is_sorcery())
+        {
+            return None;
+        }
+        let granted = self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback
+                    )
+                })
+        });
+        granted.then(|| card.definition.cost.clone())
+    }
+
     /// Note restricted-mana riders from a cast's payment: spending
     /// Cavern-of-Souls mana stamps the cast uncounterable (consumed by
     /// `finalize_cast`).
@@ -953,6 +1209,9 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             ManaPayload::ImprintedCardColor => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
+        Effect::If { then, else_, .. } => {
+            effect_produces_color(then, color) || effect_produces_color(else_, color)
+        }
         _ => false,
     }
 }
@@ -1224,14 +1483,72 @@ impl GameState {
                 break;
             }
         }
+        // CR 614 — an "enters untapped" replacement (Spelunking) overrides the
+        // enters-tapped effects for lands the static-source's controller owns.
+        if should_tap && self.battlefield[idx].definition.is_land() {
+            let entrant_controller = self.battlefield[idx].controller;
+            let overridden = self.battlefield.iter().any(|src| {
+                src.controller == entrant_controller
+                    && src
+                        .definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::LandsEnterUntapped))
+            });
+            if overridden {
+                should_tap = false;
+            }
+        }
         if should_tap {
             self.battlefield[idx].tapped = true;
         }
     }
 
+    /// CR 704.5g (Zilortha) — true iff some active `LethalDamageByPower` static
+    /// matches the creature `card_id`, so its lethal-damage threshold is power
+    /// rather than toughness.
+    pub(crate) fn lethal_damage_by_power(&self, card_id: CardId) -> bool {
+        use crate::effect::StaticEffect;
+        use crate::game::layers::{AffectedPermanents, affected_includes};
+        let Some(target) = self.battlefield_find(card_id) else { return false };
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                let StaticEffect::LethalDamageByPower { applies_to } = &sa.effect else {
+                    continue;
+                };
+                let Some(mut affected) = super::selector_to_affected(applies_to, src) else {
+                    continue;
+                };
+                if let AffectedPermanents::AllOpponents { source_controller, friendly_seats, .. } =
+                    &mut affected
+                    && friendly_seats.is_empty()
+                {
+                    let mut seats = self.teammates(*source_controller);
+                    seats.push(*source_controller);
+                    *friendly_seats = seats;
+                }
+                if affected_includes(&affected, src.id, target) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub(crate) fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
         // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
         self.apply_enters_tapped_replacement(card_id);
+        // CR 702.179 — a "Start your engines!" permanent entering gives its
+        // controller speed 1 if they have none.
+        if controller < self.players.len()
+            && self.players[controller].speed == 0
+            && self
+                .battlefield
+                .iter()
+                .any(|c| c.id == card_id && c.definition.keywords.contains(&crate::card::Keyword::StartYourEngines))
+        {
+            self.players[controller].speed = 1;
+        }
         use crate::effect::{EventKind, EventScope};
         let etb_triggers: Vec<Effect> = self
             .battlefield
@@ -1263,12 +1580,17 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
+            // CR 115.1c — maximize an "up to N target" self-source ETB trigger
+            // (Gavony Silversmith) by filling slots 1.. with distinct picks.
+            let additional =
+                self.auto_extra_targets_for(&effect, card_id, controller, auto_target.clone());
             // CR 700.2b — modal ETB trigger mode pick at push-time.
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             for _ in 0..multiplier {
                 self.stack.push(
                     TriggerPush::new(card_id, controller, effect.clone())
                         .target(auto_target.clone())
+                        .additional_targets(additional.clone())
                         .mode(mode)
                         .build(),
                 );
@@ -1294,6 +1616,29 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         if !self.players[p].has_in_hand(card_id) {
+            // MDFC back-face cast from the graveyard (Pestilent Cauldron):
+            // when the card is in the controller's graveyard with the one-shot
+            // `may_cast_back_from_graveyard` permission, hop it into hand for
+            // the normal back-face cast pipeline (the Muldrotha idiom),
+            // consuming the permission. Restore it to the graveyard on failure.
+            let gy_pos = self.players[p].graveyard.iter().position(|c| {
+                c.id == card_id
+                    && c.may_cast_back_from_graveyard
+                    && c.definition.back_face.is_some()
+            });
+            if let Some(pos) = gy_pos {
+                let mut card = self.players[p].graveyard.remove(pos);
+                card.may_cast_back_from_graveyard = false; // one-shot
+                self.players[p].hand.push(card);
+                let r = self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value);
+                if r.is_err()
+                    && let Some(hand_pos) = self.players[p].hand.iter().position(|c| c.id == card_id)
+                {
+                    let card = self.players[p].hand.remove(hand_pos);
+                    self.players[p].send_to_graveyard(card);
+                }
+                return r;
+            }
             return Err(GameError::CardNotInHand(card_id));
         }
         // Snapshot the front-face definition AND look up the back face.
@@ -1337,6 +1682,124 @@ impl GameState {
             c.definition = front_def;
         }
         result
+    }
+
+    /// CR 702.160 — cast a Prototype artifact creature for its prototype
+    /// cost. Models the alternative cast like the MDFC back face: swap the
+    /// in-hand definition to the prototype-applied one (smaller cost, color,
+    /// and size; same abilities/types) and flag the instance so it persists
+    /// through the stack onto the battlefield and round-trips a snapshot.
+    /// The regular cast pipeline then handles payment, timing, and triggers.
+    pub(crate) fn cast_prototype(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.players[p].has_in_hand(card_id) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let (front_def, proto_def) = {
+            let card = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .expect("has_in_hand verified");
+            match card.definition.with_prototype_applied() {
+                Some(d) => (card.definition.clone(), d),
+                None => return Err(GameError::InvalidTarget),
+            }
+        };
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            c.prototype_printed = Some(front_def.clone());
+            c.definition = std::sync::Arc::new(proto_def);
+            c.cast_as_prototype = true;
+        }
+        let result = self.cast_spell(card_id, target, additional_targets, mode, x_value);
+        // On rejection the inner cast returned the card to hand with the
+        // prototype definition; restore the printed front face so the player
+        // can still cast either face on retry.
+        if result.is_err()
+            && let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
+        {
+            c.definition = front_def;
+            c.cast_as_prototype = false;
+        }
+        result
+    }
+
+    /// CR 702.140 — cast a creature with Mutate for its mutate cost, merging
+    /// it onto `host` (a non-Human creature you own). Paid like a normal
+    /// creature spell whose cost is the mutate cost; on resolution the spell
+    /// merges instead of entering (`resolve_top_of_stack`).
+    pub(crate) fn cast_mutate(
+        &mut self,
+        card_id: CardId,
+        host: CardId,
+        on_top: bool,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::CreatureType;
+        let p = self.priority.player_with_priority;
+        if !self.players[p].has_in_hand(card_id) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let (printed, mutate_cost) = {
+            let card = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .expect("has_in_hand verified");
+            match card.definition.mutate.clone() {
+                Some(c) => (card.definition.clone(), c),
+                None => return Err(GameError::InvalidTarget),
+            }
+        };
+        // CR 702.140a — target must be a non-Human creature its controller owns.
+        let legal_host = self.battlefield.iter().any(|c| {
+            c.id == host
+                && c.owner == p
+                && c.definition.is_creature()
+                && !c.definition.has_creature_type(CreatureType::Human)
+        });
+        if !legal_host {
+            return Err(GameError::InvalidTarget);
+        }
+        // Pay the mutate cost via the normal pipeline by swapping in a
+        // mutate-cost definition; restore the printed face after the cast so
+        // the merged pile carries the real characteristics.
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            let mut d = (*printed).clone();
+            d.cost = mutate_cost;
+            c.definition = std::sync::Arc::new(d);
+            c.mutate_onto = Some((host, on_top));
+        }
+        let result = self.cast_spell(card_id, None, Vec::new(), None, x_value);
+        match result {
+            Ok(events) => {
+                // Restore the printed definition on the stack spell so the
+                // merge unions the real card (its printed cost/abilities).
+                for item in self.stack.iter_mut().rev() {
+                    if let StackItem::Spell { card, .. } = item
+                        && card.id == card_id
+                    {
+                        card.definition = printed;
+                        break;
+                    }
+                }
+                Ok(events)
+            }
+            Err(e) => {
+                if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+                    c.definition = printed;
+                    c.mutate_onto = None;
+                }
+                Err(e)
+            }
+        }
     }
 
     /// SOS Prepare — cast a copy of a prepared creature's inset prepare
@@ -1425,7 +1888,7 @@ impl GameState {
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
             && !self.players[p].graveyard.iter().any(|c| {
                 c.id == card_id
-                    && self.cast_from_zone_blocked(&c.definition, crate::card::Zone::Graveyard)
+                    && self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
             })
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
@@ -1456,7 +1919,7 @@ impl GameState {
         // the normal cast pipeline; restore it to the top on failure.
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
             && !self.players[p].library.first().is_some_and(|c| {
-                self.cast_from_zone_blocked(&c.definition, crate::card::Zone::Library)
+                self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Library)
             })
             && self.library_top_playable(p, card_id)
         {
@@ -1524,6 +1987,11 @@ impl GameState {
         let Some(card) = self.players[p].library.first() else { return false };
         if card.id != card_id {
             return false;
+        }
+        // CR 401.6 — turn-scoped "play lands and cast spells from the top of
+        // your library" grant (The Belligerent) covers any top card.
+        if self.players[p].play_from_top_this_turn {
+            return true;
         }
         self.battlefield.iter().any(|c| {
             c.controller == p
@@ -1788,6 +2256,71 @@ impl GameState {
             // may choose new targets.
             self.copy_stack_spell(card_id, times as usize, true, &mut events);
         }
+        Ok(events)
+    }
+
+    /// CR 702.78 — cast a spell paying its optional Conspire cost: tap two
+    /// untapped creatures you control that each share a color with the spell;
+    /// the spell is then copied once (the copy may choose new targets).
+    pub(crate) fn cast_spell_conspire(
+        &mut self,
+        card_id: CardId,
+        conspire_creatures: [CardId; 2],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_conspire_inner(card_id, conspire_creatures, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_conspire_inner(
+        &mut self,
+        card_id: CardId,
+        conspire_creatures: [CardId; 2],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let [c0, c1] = conspire_creatures;
+        if c0 == c1 {
+            return Err(GameError::InvalidTarget);
+        }
+        // Spell must have Conspire and at least one color (a colorless spell
+        // can never satisfy "shares a color" — CR 702.79b).
+        let spell_colors = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Conspire))
+            .map(|c| c.definition.printed_colors())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Each conspirer must be an untapped creature you control sharing a
+        // color with the spell (computed colors, so granted/hybrid count).
+        for cid in [c0, c1] {
+            let on_bf = self.battlefield.iter().any(|c| {
+                c.id == cid && c.controller == p && !c.tapped && c.definition.is_creature()
+            });
+            let shares = self
+                .computed_permanent(cid)
+                .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                .unwrap_or(false);
+            if !on_bf || !shares {
+                return Err(GameError::InvalidTarget);
+            }
+        }
+        // Tap both as the additional cost, then cast and copy once.
+        for cid in [c0, c1] {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                c.tapped = true;
+            }
+        }
+        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        self.copy_stack_spell(card_id, 1, true, &mut events);
         Ok(events)
     }
 
@@ -2107,13 +2640,18 @@ impl GameState {
         &mut self,
         card_id: CardId,
         right: bool,
-        _events: &mut Vec<GameEvent>,
+        events: &mut Vec<GameEvent>,
     ) {
         let Some(card) = self.battlefield_find_mut(card_id) else { return };
         if !card.unlock_room_door(right) {
             return;
         }
         let controller = card.controller;
+        // DSK Eerie (CR 709.5) — both doors now open: "you fully unlock a
+        // Room". Surface the event so Eerie triggers fire via normal dispatch.
+        if card.unlocked_doors == 0b11 {
+            events.push(GameEvent::RoomFullyUnlocked { room: card_id, controller });
+        }
         let unlock_triggers: Vec<crate::effect::Effect> = card
             .definition
             .room
@@ -2350,6 +2888,10 @@ impl GameState {
         if self.foretold_this_turn.contains(&card_id) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
+        if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let foretell_cost = self.exile[pos]
             .definition
             .foretell_cost
@@ -2461,6 +3003,68 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.183 — cast a card's Omen half from hand for its Omen cost. The
+    /// card becomes an instant/sorcery spell; on resolution or counter it is
+    /// shuffled into its owner's library instead of going to the graveyard.
+    pub(crate) fn cast_omen(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let omen = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.has_omen().cloned())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // An Omen spell is a noncreature spell — respect a noncreature lock.
+        if self.players[p].cant_cast_noncreature_this_turn {
+            return Err(GameError::CantCastNoncreature);
+        }
+        let must_be_sorcery_speed = !omen.is_instant_speed() || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        let mut cost = if omen.cost.has_x() {
+            omen.cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            omen.cost.clone()
+        };
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        card.cast_from_hand = true;
+        card.cast_from_exile = false;
+        card.omen_casting = true;
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            mana_spent,
+        );
+        Ok(events)
+    }
+
     /// CR 715 — cast the creature half of a card that's in exile after going
     /// on an adventure. Pays the card's regular mana cost.
     pub(crate) fn cast_adventure_creature(
@@ -2477,6 +3081,10 @@ impl GameState {
             .iter()
             .position(|c| c.id == card_id && c.on_adventure && c.owner == p)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
+        if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let is_instant = self.exile[pos].definition.is_instant_speed();
         let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -2734,6 +3342,10 @@ impl GameState {
         if self.plotted_this_turn.contains(&card_id) || !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
+        if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         if let Some(ref tgt) = target {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
         }
@@ -2803,7 +3415,7 @@ impl GameState {
         delve_cards: &[CardId],
         flags: CastFlags,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let CastFlags { kicked, buyback, bestow, entwine, room_door } = flags;
+        let CastFlags { kicked, buyback, bestow, entwine, room_door, gift } = flags;
         let p = self.priority.player_with_priority;
 
         if !self.players[p].has_in_hand(card_id) {
@@ -2822,6 +3434,31 @@ impl GameState {
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(sa.effect, crate::effect::StaticEffect::NamedSpellCantBeCast)
                     })
+            })
+        {
+            return Err(GameError::SpellNameLocked);
+        }
+        // Ashiok's Erasure — an opponent of the caster controls a permanent
+        // whose `OpponentsCantCastNamed` static locks this spell's name (the
+        // card exiled by the Erasure). The lock lives as long as that
+        // permanent stays on the battlefield.
+        if let Some(name) = spell_name
+            && self.battlefield.iter().any(|c| {
+                c.named_card.as_deref() == Some(name)
+                    && !self.same_team(c.controller, p)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantCastNamed)
+                    })
+            })
+        {
+            return Err(GameError::SpellNameLocked);
+        }
+        // Academic Probation mode 0 — an opponent of the caster named this
+        // spell ("Opponents can't cast spells with the chosen name until your
+        // next turn"); the lock lives on the naming player until their turn.
+        if let Some(name) = spell_name
+            && self.players.iter().enumerate().any(|(i, pl)| {
+                !self.same_team(i, p) && pl.opponents_cant_cast_named.iter().any(|n| n == name)
             })
         {
             return Err(GameError::SpellNameLocked);
@@ -2955,6 +3592,9 @@ impl GameState {
         // CR 702.41 — opt-in Entwine; only sticks when the card has it.
         let entwine = entwine && card.definition.has_entwine().is_some();
         card.entwined = entwine;
+        // CR 702.165 — opt-in Gift; only sticks when the card has it. The
+        // promised gift carries no mana cost, so nothing folds into the cost.
+        card.gift_promised = gift && card.definition.gift.is_some();
         // CR 709.5 — a Room cast remembers which door was cast (reusing the
         // split-cast slot); resolution unlocks that door.
         let room_door = room_door.filter(|_| card.definition.room.is_some());
@@ -2993,6 +3633,12 @@ impl GameState {
         if card.definition.is_permanent() && self.player_cant_cast_permanent_spells(p) {
             self.players[p].hand.push(card);
             return Err(GameError::CantCastPermanentSpells);
+        }
+
+        // Gaddock Teeg lock — high-mana-value / {X} noncreature spells can't be cast.
+        if self.noncreature_spell_cast_locked(&card.definition) {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
         }
 
         // Validate convoke/improvise helpers up-front (before any state
@@ -3131,12 +3777,93 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
-                // Protection from ALL spells (Emrakul, the World Anew).
-                if matches!(kw, Keyword::ProtectionFromSpells) {
+                // Protection from ALL spells (Emrakul, the World Anew), or from
+                // everything (Hexdrinker level 8+, Progenitus).
+                if matches!(kw, Keyword::ProtectionFromSpells | Keyword::ProtectionFromEverything) {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // CR 702.16 — protection from instants (Hexdrinker level 3-7):
+                // an instant spell can't target it.
+                if matches!(kw, Keyword::ProtectionFromInstants)
+                    && card.definition.card_types.contains(&CardType::Instant)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // CR 702.16 — protection from a spell subtype (Kitsune
+                // Riftwalker's "protection from Arcane").
+                if let Keyword::ProtectionFromSpellSubtype(sub) = kw
+                    && card.definition.subtypes.spell_subtypes.contains(sub)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // CR 702.16 — protection from each mana value other than N
+                // (Haktos): can't be targeted by a spell whose mana value
+                // isn't N.
+                if let Keyword::ProtectionFromManaValueExcept(n) = kw
+                    && card.definition.cost.cmc() != *n
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // CR 702.16 — protection from each mana value of a parity
+                // (Lavabrink Venturer): can't be targeted by a spell whose
+                // mana value matches the chosen odd/even quality.
+                if let Keyword::ProtectionFromManaValueParity { odd } = kw
+                    && (card.definition.cost.cmc() % 2 == 1) == *odd
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // CR 702.16 — protection from multicolored: can't be targeted
+                // by a spell that is two or more colors.
+                if matches!(kw, Keyword::ProtectionFromMulticolored)
+                    && spell_colors.len() >= 2
+                {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
             }
+        }
+
+        // CR 702.11e — hexproof from [color]: this object can't be targeted
+        // by opponents' spells of that color. Covers both printed
+        // `Keyword::HexproofFromColor` and the turn-scoped controller grant
+        // (Veil of Summer's "you and permanents you control gain hexproof
+        // from blue and black"). Applies to permanent and player targets.
+        let spell_colors = card.definition.cost.colors();
+        let hexproof_violation = match target {
+            Some(Target::Permanent(cid)) => self
+                .battlefield_find(cid)
+                .filter(|tc| tc.controller != p)
+                .is_some_and(|tc| {
+                    let controller = tc.controller;
+                    let printed = self
+                        .computed_permanent(cid)
+                        .map(|cp| cp.keywords)
+                        .unwrap_or_else(|| tc.definition.keywords.clone())
+                        .iter()
+                        .any(|kw| matches!(kw, Keyword::HexproofFromColor(c) if spell_colors.contains(c)));
+                    printed
+                        || self.players[controller]
+                            .hexproof_from_colors_this_turn
+                            .iter()
+                            .any(|c| spell_colors.contains(c))
+                }),
+            Some(Target::Player(tp)) => {
+                tp != p
+                    && self.players[tp]
+                        .hexproof_from_colors_this_turn
+                        .iter()
+                        .any(|c| spell_colors.contains(c))
+            }
+            None => false,
+        };
+        if hexproof_violation {
+            self.players[p].hand.push(card);
+            return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
         }
 
         // Enforce the spell's target selection requirement (e.g. Terror's
@@ -3149,29 +3876,35 @@ impl GameState {
         // even when the caster picked mode 1.
         // Multi-target spells (Snow Day, Render Speechless, Crackle with
         // Power) thread additional slots through `additional_targets`.
-        if let Some(ref tgt) = target
-            && let Some(filter) = card
-                .definition
-                .effect
-                .target_filter_for_slot_in_mode_kicked(0, mode, kicked)
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-            && !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
-        {
+        // CR 702.165 — a promised Gift validates (and later resolves) against
+        // its enhanced `gifted_effect`, whose target filter can be broader than
+        // the printed one (Into the Flood Maw: creature → nonland permanent).
+        // Compute the per-slot violation up front (releasing the borrow on
+        // `card`) so a rejected cast can move the card back to hand.
+        let filter_violation = {
+            let target_effect = if card.gift_promised {
+                card.definition.gift.as_ref().map(|g| &g.gifted_effect)
+            } else {
+                None
+            }
+            .unwrap_or(&card.definition.effect);
+            let slot_bad = |slot: u8, tgt: &Target| {
+                target_effect
+                    .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
+                    .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                    .is_some_and(|filter| {
+                        !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
+                    })
+            };
+            target.as_ref().is_some_and(|tgt| slot_bad(0, tgt))
+                || additional_targets
+                    .iter()
+                    .enumerate()
+                    .any(|(idx, tgt)| slot_bad((idx + 1) as u8, tgt))
+        };
+        if filter_violation {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
-        }
-        for (idx, tgt) in additional_targets.iter().enumerate() {
-            let slot = (idx + 1) as u8;
-            if let Some(filter) = card
-                .definition
-                .effect
-                .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-                && !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
-            {
-                self.players[p].hand.push(card);
-                return Err(GameError::SelectionRequirementViolated);
-            }
         }
 
         // CR 601.2b — additional cast costs ("As an additional cost to cast
@@ -3217,7 +3950,7 @@ impl GameState {
                 cost.symbols.push(*s);
             }
         }
-        let tax = extra_cost_for_spell(self, p, &card);
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -3415,6 +4148,19 @@ impl GameState {
         ranked.into_iter().take(count).map(|(id, _)| id).collect()
     }
 
+    /// Pick the `count` highest-power permanents from `candidates` (by id) —
+    /// the AutoDecider heuristic for a "Tap another creature: …" cost whose
+    /// payoff *scales* with the tapped creature's power (Station's charge add,
+    /// CR 702.184a). Ties keep battlefield order via a stable sort.
+    pub(crate) fn auto_pick_highest_power(&self, candidates: &[CardId], count: usize) -> Vec<CardId> {
+        let mut ranked: Vec<(CardId, i32)> = candidates
+            .iter()
+            .filter_map(|id| self.battlefield_find(*id).map(|c| (*id, c.power())))
+            .collect();
+        ranked.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+        ranked.into_iter().take(count).map(|(id, _)| id).collect()
+    }
+
     /// Pick the `count` lowest-mana-value cards (by id) from `player`'s
     /// graveyard among `candidates` — the AutoDecider heuristic for an
     /// "Exile N cards from your graveyard" cost, keeping higher-value cards.
@@ -3489,6 +4235,16 @@ impl GameState {
                 .exile
                 .iter()
                 .any(|c| !self.same_team(c.owner, p)),
+            A::TapPermanents { filter, count } => {
+                let matching = self.battlefield.iter().filter(|c| {
+                    c.controller == p
+                        && !c.tapped
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                }).count();
+                matching >= *count as usize
+            }
+            // CR 119.4 — life can be paid only if the total is at least N.
+            A::PayLife { amount } => self.players[p].life >= *amount as i32,
         })
     }
 
@@ -3705,6 +4461,36 @@ impl GameState {
                         self.route_to_graveyard(card, &mut events);
                     }
                 }
+                A::TapPermanents { filter, count } => {
+                    // Auto-tap the lowest-impact untapped matches (non-lands
+                    // first to preserve mana, then lowest mana value).
+                    let mut cands: Vec<&crate::card::CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && !c.tapped
+                                && self.evaluate_requirement_static(
+                                    filter, &Target::Permanent(c.id), p, None,
+                                )
+                        })
+                        .collect();
+                    cands.sort_by_key(|c| (c.definition.is_land(), c.definition.cost.cmc()));
+                    let ids: Vec<CardId> =
+                        cands.iter().take(*count as usize).map(|c| c.id).collect();
+                    for id in ids {
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: id });
+                        }
+                    }
+                }
+                A::PayLife { amount } => {
+                    let applied = self.adjust_life_applied(p, -(*amount as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
+                }
             }
         }
         (events, sac_power)
@@ -3745,14 +4531,11 @@ impl GameState {
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
-        // CR 715 — when cast as its adventure half the card is an
+        // CR 715 / 702.183 — when cast as its Adventure/Omen half the card is an
         // instant/sorcery spell, not a creature spell, so the spell-type
-        // tallies (Magecraft / Prowess) read the adventure's types.
-        let adv_types = card
-            .adventuring
-            .then(|| card.definition.adventure.as_ref().map(|a| &a.card_types))
-            .flatten();
-        let is_instant_or_sorcery = match adv_types {
+        // tallies (Magecraft / Prowess) read the half's types.
+        let alt_types = card.alt_spell_half().map(|h| &h.card_types);
+        let is_instant_or_sorcery = match alt_types {
             Some(types) => {
                 types.contains(&CardType::Instant) || types.contains(&CardType::Sorcery)
             }
@@ -3766,8 +4549,18 @@ impl GameState {
         if is_instant_or_sorcery {
             self.players[p].instants_or_sorceries_cast_this_turn += 1;
         }
-        if !card.adventuring && card.definition.is_creature() {
+        if !card.casting_alt_half() && card.definition.is_creature() {
             self.players[p].creatures_cast_this_turn += 1;
+        }
+        // Spell-type tallies for the per-turn lock pieces (Deafening Silence,
+        // Ethersworn Canonist). Read the cast half's types so an Adventure/Omen
+        // instant-or-sorcery half counts as a noncreature spell.
+        let cast_types = alt_types.unwrap_or(&card.definition.card_types);
+        if !cast_types.contains(&CardType::Creature) {
+            self.players[p].noncreature_spells_cast_this_game_turn += 1;
+        }
+        if !cast_types.contains(&CardType::Artifact) {
+            self.players[p].nonartifact_spells_cast_this_game_turn += 1;
         }
         // Veil of Summer gate: note when a player casts a blue or black
         // spell (color read off the printed mana cost).
@@ -3781,7 +4574,7 @@ impl GameState {
         }
         consume_first_spell_tax(self, p);
 
-        let on_cast_triggers = if card.adventuring {
+        let on_cast_triggers = if card.casting_alt_half() {
             Vec::new()
         } else {
             collect_self_cast_triggers(&card)
@@ -3789,7 +4582,7 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
             || std::mem::take(&mut self.cast_paid_uncounterable);
 
-        let was_creature_spell = !card.adventuring && card.definition.is_creature();
+        let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
         // night makes it day as the spell is put onto the stack.
         let casts_daybound = card.definition.keywords.contains(&Keyword::Daybound);
@@ -3902,7 +4695,54 @@ impl GameState {
         // honored. One event per permanent target on the just-pushed
         // spell. Used by SOS Tenured Concocter's "may draw" trigger.
         self.dispatch_became_target_events_for_cast(p, card_id);
+        // CR 700.13 — committing a crime by targeting an opponent / their
+        // permanents / cards with this spell (Kaervek, Gisa).
+        let crime_targets: Vec<Target> = self
+            .stack
+            .iter()
+            .rev()
+            .find_map(|si| match si {
+                StackItem::Spell { card, target, additional_targets, .. } if card.id == card_id => {
+                    Some(target.iter().cloned().chain(additional_targets.iter().cloned()).collect())
+                }
+                _ => None,
+            })
+            .unwrap_or_default();
+        self.dispatch_crime_for_targets(p, &crime_targets);
         self.give_priority_to_active();
+    }
+
+    /// CR 700.13 — does choosing `t` as a target for a spell/ability cast by
+    /// `caster` constitute a crime? True when `t` is an opponent, a permanent
+    /// an opponent controls, a spell an opponent controls, or any card an
+    /// opponent owns (graveyard / hand / library / exile).
+    pub(crate) fn target_is_crime(&self, caster: usize, t: &Target) -> bool {
+        match t {
+            Target::Player(p) => *p != caster && self.players.get(*p).is_some(),
+            Target::Permanent(id) => {
+                if let Some(c) = self.battlefield_find(*id) {
+                    return c.controller != caster;
+                }
+                for si in &self.stack {
+                    if let StackItem::Spell { card, caster: sc, .. } = si
+                        && card.id == *id
+                    {
+                        return *sc != caster;
+                    }
+                }
+                self.find_card_anywhere(*id).is_some_and(|c| c.owner != caster)
+            }
+        }
+    }
+
+    /// CR 700.13 — dispatch a single `CommittedCrime` event for `caster` if any
+    /// of `targets` qualifies as a crime. Fires once per spell/ability, not per
+    /// qualifying target.
+    pub(crate) fn dispatch_crime_for_targets(&mut self, caster: usize, targets: &[Target]) {
+        if targets.iter().any(|t| self.target_is_crime(caster, t)) {
+            self.players[caster].committed_crime_this_turn = true;
+            self.dispatch_triggers_for_events(&[GameEvent::CommittedCrime { player: caster }]);
+        }
     }
 
     /// Walk the just-pushed `StackItem::Spell` and emit one
@@ -4090,6 +4930,7 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    cast_via_mayhem: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
@@ -4117,6 +4958,8 @@ impl GameState {
     pub(crate) fn cast_disturb(
         &mut self,
         card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let graveyard_pos = self.players[p]
@@ -4126,7 +4969,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
-        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
         let disturb_cost = card
@@ -4145,7 +4988,7 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
         let mut cost = disturb_cost;
-        let reduction = cost_reduction_for_spell(self, p, &card, None);
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, None, true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4171,11 +5014,14 @@ impl GameState {
         card.front_face = Some(card.definition.clone());
         card.definition = std::sync::Arc::new(back);
         card.transformed = true;
+        // The back face is usually a creature (no target); when it's an Aura it
+        // needs an enchant target chosen as the spell goes on the stack (CR
+        // 601.2c). Resolution re-checks the target's legality (608.2b).
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
             GameEvent::SpellCast { player: p, card_id, face: CastFace::Front },
         ];
-        self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent);
+        self.finalize_cast(p, card, target, additional_targets, None, 0, 0, mana_spent);
         Ok(events)
     }
 
@@ -4200,7 +5046,7 @@ impl GameState {
 
         let card = self.players[p].graveyard[graveyard_pos].clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
-        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
 
@@ -4210,10 +5056,30 @@ impl GameState {
         // cost; same exile-after tail as flashback).
         let jumpstart = card.effective_flashback().is_none()
             && card.definition.keywords.contains(&Keyword::JumpStart);
+        // CR 702.187 — Mayhem: when the card has no flashback/jump-start but a
+        // Mayhem cost, it may be cast from the graveyard for that cost only if
+        // its owner discarded it this turn. Same exile-after tail as flashback.
+        let mayhem = card.effective_flashback().is_none()
+            && !jumpstart
+            && card.definition.mayhem_cost().is_some();
+        // Lier — battlefield static grants flashback (= mana cost) to I/S in
+        // the graveyard when nothing else applies.
+        let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem)
+            .then(|| self.graveyard_flashback_grant(p, &card))
+            .flatten();
         let flashback_cost = match card.effective_flashback() {
             Some(c) => c.clone(),
             None if jumpstart => card.definition.cost.clone(),
-            None => return Err(GameError::SorcerySpeedOnly),
+            None if mayhem => {
+                if !self.players[p].discarded_this_turn.contains(&card_id) {
+                    return Err(GameError::SorcerySpeedOnly);
+                }
+                card.definition.mayhem_cost().unwrap().clone()
+            }
+            None => match lier_cost {
+                Some(c) => c,
+                None => return Err(GameError::SorcerySpeedOnly),
+            },
         };
 
         // Timing: instants can be cast at instant speed, others at sorcery
@@ -4268,7 +5134,7 @@ impl GameState {
         // Flashback IS a cast (CR 702.34a), so Killian-style target-aware
         // cost reductions apply the same as for hand casts. Drain
         // generic-only pips after substituting X.
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4340,10 +5206,115 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             mana_spent,
+            mayhem,
         )?;
         // Sacrifice/discard events precede the cast events in the log.
         cost_events.append(&mut events);
         Ok(cost_events)
+    }
+
+    /// CR 702.180 — cast a graveyard card for its Harmonize cost, optionally
+    /// tapping one untapped creature you control to reduce the total cost by
+    /// generic mana equal to that creature's power. Same exile-after tail as
+    /// flashback. Models the alternative cost directly (no float-spend UI loop,
+    /// which the simpler graveyard-cast paths also skip).
+    pub(crate) fn cast_harmonize(
+        &mut self,
+        card_id: CardId,
+        tap_creature: Option<CardId>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let harmonize_cost = card
+            .definition
+            .harmonize_cost()
+            .ok_or(GameError::SorcerySpeedOnly)?
+            .clone();
+
+        // Timing: instants at instant speed, the rest at sorcery speed.
+        let must_be_sorcery_speed =
+            !card.definition.is_instant_speed() || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+
+        // CR 702.180b — validate the chosen creature (untapped, yours, a
+        // creature) and read its power for the generic-cost reduction.
+        let tap_power = if let Some(cid) = tap_creature {
+            let c = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == cid)
+                .ok_or(GameError::FlashbackTapInvalid)?;
+            if c.tapped || c.controller != p || !c.definition.is_creature() {
+                return Err(GameError::FlashbackTapInvalid);
+            }
+            self.computed_permanent(cid).map(|c| c.power.max(0) as u32).unwrap_or(0)
+        } else {
+            0
+        };
+
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+
+        // Build the total cost: harmonize cost (with X), reduced by the tapped
+        // creature's power plus any target-aware cost reductions.
+        let mut cost = if harmonize_cost.has_x() {
+            harmonize_cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            harmonize_cost
+        };
+        let reduction =
+            tap_power + cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+        apply_spell_cost_floor(self, &mut cost);
+
+        let forced_only = self.players[p].wants_ui;
+        let snapshot = self.snapshot_payment_state(p);
+        let receipt = self.try_pay_after_snapshot_mode(
+            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
+        )?;
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
+        self.note_cast_payment_riders(&receipt);
+
+        // CR 702.180b — tap the nominated creature as the cost is paid.
+        if let Some(cid) = tap_creature
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
+        {
+            c.tapped = true;
+        }
+
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        self.finalize_flashback_cast(
+            p,
+            card_id,
+            graveyard_pos,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            false,
+        )
     }
 
     /// Shared tail for `cast_flashback` and `cast_flashback_tap`:
@@ -4362,12 +5333,16 @@ impl GameState {
         mode: Option<usize>,
         x_value: u32,
         mana_spent: u32,
+        via_mayhem: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         self.entered_from_graveyard_this_turn.insert(card_id);
         card.cast_via_flashback = true;
+        // CR 702.187 — a Mayhem cast stamps the spell so "if the mayhem cost
+        // was paid" riders can branch at resolution (Sandman's Quicksand).
+        card.cast_via_mayhem = via_mayhem;
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
             GameEvent::SpellCast {
@@ -4400,7 +5375,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
-        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
         if !self.effective_retrace(&card, p) {
@@ -4439,7 +5414,7 @@ impl GameState {
         } else {
             card.definition.cost.clone()
         };
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4535,7 +5510,7 @@ impl GameState {
         } else {
             escape_cost
         };
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4653,6 +5628,7 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             0,
+            false,
         )
     }
 
@@ -4696,7 +5672,7 @@ impl GameState {
                         .find(|c| c.id == card_id)
                 }),
             }
-            .is_some_and(|c| self.cast_from_zone_blocked(&c.definition, source_zone));
+            .is_some_and(|c| self.cast_from_zone_blocked(p, &c.definition, source_zone));
             if blocked {
                 return Err(GameError::CardNotInHand(card_id));
             }
@@ -4968,7 +5944,7 @@ impl GameState {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
         }
-        let tax = extra_cost_for_spell(self, p, &card);
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(tax));
@@ -5078,6 +6054,7 @@ impl GameState {
                 event_amount: 0,
                 kicked: false,
                 bargained: false,
+                cast_via_mayhem: false,
                     entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -5199,6 +6176,35 @@ impl GameState {
                 (None, 0)
             };
 
+        // CR 702.48 — Offering: pick the creature to sacrifice (auto: highest
+        // MV for max reduction) and record its whole mana cost. Rejected up
+        // front if the caster controls no matching creature. Sacrificed after
+        // payment; the cost reduction is by the full cost, color included.
+        let offering_pick: Option<(CardId, crate::mana::ManaCost)> =
+            if let Some(filter) = &alt.offering {
+                let best = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && c.definition.is_creature()
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                None,
+                            )
+                    })
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| (c.id, c.definition.cost.clone()));
+                match best {
+                    Some(x) => Some(x),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            } else {
+                None
+            };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -5233,6 +6239,12 @@ impl GameState {
         }
         if alt.blitz {
             card.blitzed = true;
+        }
+        if alt.warp {
+            // EOE Warp — stamp the resolving permanent and satisfy Void for
+            // the rest of the turn.
+            card.warped = true;
+            self.players[p].warped_spell_this_turn = true;
         }
         if alt.impending > 0 {
             // CR 702.183 — enters with N time counters; stamped now, applied
@@ -5294,7 +6306,7 @@ impl GameState {
         } else {
             alt.mana_cost.clone()
         };
-        let tax = extra_cost_for_spell(self, p, &card);
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -5306,6 +6318,9 @@ impl GameState {
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction;
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
+        }
+        if let Some((_, ref sac_cost)) = offering_pick {
+            mana_cost.reduce_by_cost(sac_cost);
         }
         apply_spell_cost_floor(self, &mut mana_cost);
         // CR 601.2g — float-spend confirmation. The spell card is back-in-hand
@@ -5408,6 +6423,16 @@ impl GameState {
         {
             auto_events.push(GameEvent::PermanentSacrificed { card_id: sac_cid, who: p });
             let mut die_evs = self.remove_to_graveyard_with_triggers(sac_cid);
+            auto_events.append(&mut die_evs);
+        }
+
+        // CR 702.48 — Offering: sacrifice the offered creature now that the
+        // (reduced) cost is paid.
+        if let Some((sac_cid, _)) = &offering_pick
+            && self.battlefield_find(*sac_cid).is_some()
+        {
+            auto_events.push(GameEvent::PermanentSacrificed { card_id: *sac_cid, who: p });
+            let mut die_evs = self.remove_to_graveyard_with_triggers(*sac_cid);
             auto_events.append(&mut die_evs);
         }
 
@@ -5562,6 +6587,112 @@ impl GameState {
         })
     }
 
+    /// Gaddock Teeg lock — true if `card` is a noncreature spell barred from
+    /// being cast by some `NoncreatureSpellsCantBeCastIf` static anywhere on
+    /// the battlefield (global, all players).
+    pub(crate) fn noncreature_spell_cast_locked(&self, card: &crate::card::CardDefinition) -> bool {
+        use crate::effect::StaticEffect;
+        if card.is_creature() {
+            return false;
+        }
+        let mv = card.cost.cmc();
+        let has_x = card.cost.has_x();
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect,
+                    StaticEffect::NoncreatureSpellsCantBeCastIf { min_mana_value, or_has_x }
+                    if mv >= min_mana_value || (or_has_x && has_x))
+            })
+        })
+    }
+
+    /// CR 702.16c — a permanent with protection from a quality can't be the
+    /// target of an *ability* from a source with that quality. `source` is the
+    /// ability's source permanent. Mirrors the cast-time spell gate but reads
+    /// the source's qualities (color / creature-ness / creature type) rather
+    /// than a spell's colors.
+    pub(crate) fn ability_target_has_protection(&self, target: &Target, source: CardId) -> bool {
+        let Target::Permanent(tid) = target else {
+            // Player target: only the turn-scoped hexproof-from-color grant
+            // (Veil of Summer) applies — and only against opponents' abilities.
+            if let Target::Player(tp) = target {
+                let src_controller = self.battlefield_find(source).map(|c| c.controller);
+                if let Some(srcc) = src_controller
+                    && srcc != *tp
+                    && !self.players[*tp].hexproof_from_colors_this_turn.is_empty()
+                    && let Some(src) = self.computed_permanent(source)
+                {
+                    return self.players[*tp]
+                        .hexproof_from_colors_this_turn
+                        .iter()
+                        .any(|c| src.colors.contains(c));
+                }
+            }
+            return false;
+        };
+        let Some(tgt) = self.computed_permanent(*tid) else { return false };
+        let tgt_controller = tgt.controller;
+        let src_is_opponent = self
+            .battlefield_find(source)
+            .is_some_and(|c| c.controller != tgt_controller);
+        let printed_hexproof_color = tgt
+            .keywords
+            .iter()
+            .any(|kw| matches!(kw, Keyword::HexproofFromColor(_)));
+        let turn_hexproof_color = !self.players[tgt_controller]
+            .hexproof_from_colors_this_turn
+            .is_empty();
+        if !tgt.keywords.iter().any(|kw| {
+            matches!(
+                kw,
+                Keyword::Protection(_)
+                    | Keyword::ProtectionFromCreatures
+                    | Keyword::ProtectionFromCreatureType(_)
+                    | Keyword::ProtectionFromManaValueExcept(_)
+                    | Keyword::ProtectionFromManaValueParity { .. }
+                    | Keyword::ProtectionFromMulticolored
+                    | Keyword::ProtectionFromEverything
+            )
+        }) && !(src_is_opponent && (printed_hexproof_color || turn_hexproof_color))
+        {
+            return false;
+        }
+        let Some(src) = self.computed_permanent(source) else { return false };
+        let src_is_creature = src.card_types.contains(&CardType::Creature);
+        let src_mv = self
+            .battlefield_find(source)
+            .map(|c| c.definition.cost.cmc())
+            .unwrap_or(0);
+        // Hexproof from [color] (printed or Veil's turn grant) blocks an
+        // opponent's same-color ability.
+        if src_is_opponent {
+            let blocks_color = |color: &ManaColor| src.colors.contains(color);
+            if turn_hexproof_color
+                && self.players[tgt_controller]
+                    .hexproof_from_colors_this_turn
+                    .iter()
+                    .any(blocks_color)
+            {
+                return true;
+            }
+            if tgt.keywords.iter().any(
+                |kw| matches!(kw, Keyword::HexproofFromColor(c) if src.colors.contains(c)),
+            ) {
+                return true;
+            }
+        }
+        tgt.keywords.iter().any(|kw| match kw {
+            Keyword::Protection(color) => src.colors.contains(color),
+            Keyword::ProtectionFromCreatures => src_is_creature,
+            Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
+            Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
+            Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
+            Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
+            Keyword::ProtectionFromEverything => true,
+            _ => false,
+        })
+    }
+
     /// True if `player` controls any permanent granting "you have hexproof"
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
@@ -5633,10 +6764,18 @@ impl GameState {
                     && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellCastThisTurn)
             });
         self.delayed_triggers = rest;
+        // Expose the cast spell's mana value so bodies can gate on it
+        // (Vivien, Monsters' Advocate — "a creature card with lesser mana
+        // value" via `ManaValueLessThanEventAmount`).
+        let cast_mv = self
+            .find_card_anywhere(cast_card)
+            .map(|c| c.definition.cost.cmc())
+            .unwrap_or(0);
         for dt in next_cast {
             self.stack.push(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                    .event_amount(cast_mv)
                     .build(),
             );
             // Repeating watchers ("whenever you cast a spell this turn",
@@ -5644,6 +6783,31 @@ impl GameState {
             if !dt.fires_once {
                 self.delayed_triggers.push(dt);
             }
+        }
+        // CR 603.7e (name-gated) — "when you cast a spell with the chosen name
+        // for the first time this turn" (Medomai's Prophecy III). Only a cast
+        // whose name matches the watching source's `named_card` consumes the
+        // one-shot; other casts leave it armed.
+        let cast_name = self
+            .find_card_anywhere(cast_card)
+            .map(|c| c.definition.name.to_string());
+        let (named_fire, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
+            .into_iter()
+            .partition(|dt| {
+                dt.controller == controller
+                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
+                    && self
+                        .battlefield_find(dt.source)
+                        .and_then(|s| s.named_card.clone())
+                        == cast_name
+            });
+        self.delayed_triggers = rest;
+        for dt in named_fire {
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                    .build(),
+            );
         }
         // CR 113.10b — permanents under a "loses all abilities" continuous
         // effect (Mercurial Transformation / Turn to Frog) don't fire
@@ -5676,7 +6840,8 @@ impl GameState {
         // fire from non-caster permanents (Wandering Archaic etc.). The
         // ability's effective controller is its own permanent's controller,
         // *not* the spell-caster's index.
-        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
+        #[allow(clippy::type_complexity)]
+        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> = self
             .battlefield
             .iter()
             .filter(|c| !stripped.contains(&c.id))
@@ -5685,7 +6850,8 @@ impl GameState {
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(move |t| {
+                    .enumerate()
+                    .filter(move |(_, t)| {
                         if t.event.kind != EventKind::SpellCast {
                             return false;
                         }
@@ -5703,11 +6869,19 @@ impl GameState {
                             _ => false,
                         }
                     })
-                    .map(move |t| (c.id, c_controller, t.effect.clone(), t.event.filter.clone()))
+                    .map(move |(idx, t)| {
+                        (c.id, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn)
+                    })
             })
             .collect();
 
-        for (source, listener_controller, effect, filter) in candidates {
+        for (source, listener_controller, effect, filter, trig_idx, once_per_turn) in candidates {
+            // CR 603.3d — "This ability triggers only once each turn"
+            // (Whispering Wizard, Welcoming Vampire-style SpellCast payoffs).
+            let once_key = (source, trig_idx);
+            if once_per_turn && self.triggered_once_per_turn_used.contains(&once_key) {
+                continue;
+            }
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
                     controller: listener_controller,
@@ -5723,11 +6897,16 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    cast_via_mayhem: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
                 }
+            }
+            // The trigger is firing this cast — consume its once-per-turn slot.
+            if once_per_turn {
+                self.triggered_once_per_turn_used.insert(once_key);
             }
             let auto_target = self.auto_target_for_effect_avoiding(
                 &effect,
@@ -6353,7 +7532,7 @@ impl GameState {
                 // the right answer.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let result = self.activate_ability(id, idx, None, None);
+                let result = self.activate_ability(id, idx, None, Vec::new(), None);
                 self.decider = prev_decider;
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
@@ -6373,7 +7552,7 @@ impl GameState {
                     .map(|(idx, _)| (c.id, idx))
             }).next();
             let Some((id, idx)) = source else { break };
-            if let Ok(mut evs) = self.activate_ability(id, idx, None, None) {
+            if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None) {
                 events.append(&mut evs);
             } else {
                 break;
@@ -6665,6 +7844,17 @@ impl GameState {
                 out.extend(bonus.activated_abilities.iter().cloned());
             }
         }
+        // CR 721.2a — Station `{N+}` activated-ability bands. While the source's
+        // charge-counter count meets a band threshold, that band's activated
+        // abilities are usable (a Planet's `12+ | {cost}: …`).
+        if let Some(c) = self.battlefield_find(card_id)
+            && !c.definition.station.is_empty()
+        {
+            let charges = c.counter_count(crate::card::CounterType::Charge);
+            for band in c.definition.station.iter().filter(|b| charges >= b.min) {
+                out.extend(band.activated.iter().cloned());
+            }
+        }
         out
     }
 
@@ -6673,6 +7863,7 @@ impl GameState {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
@@ -6888,6 +8079,36 @@ impl GameState {
             }
         }
 
+        // Grand Abolisher — during the active player's turn, that player's
+        // opponents can't activate abilities of artifacts, creatures, or
+        // enchantments (mana abilities included). Lands and other permanents
+        // are unaffected.
+        {
+            let active = self.active_player_idx;
+            let src_is_ace = !source_in_gy
+                && !source_in_hand
+                && self.battlefield_find(card_id).is_some_and(|c| {
+                    c.definition.is_artifact()
+                        || c.definition.card_types.contains(&crate::card::CardType::Creature)
+                        || c.definition.card_types.contains(&crate::card::CardType::Enchantment)
+                });
+            if src_is_ace
+                && p != active
+                && !self.same_team(p, active)
+                && self.battlefield.iter().any(|c| {
+                    c.controller == active
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantActDuringYourTurn
+                            )
+                        })
+                })
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // CR 701.35 — a detained permanent's activated abilities can't be
         // activated (all of them, mana abilities included) until the detainer's
         // next turn.
@@ -6948,6 +8169,26 @@ impl GameState {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
+        // CR 702.56 — Forecast / other hand-activated "once each turn"
+        // abilities (the card stays in hand). The hand instance's
+        // per-turn budget rides the global `triggered_once_per_turn_used`
+        // set, which is cleared at turn cleanup.
+        if source_in_hand
+            && ability.once_per_turn
+            && self.triggered_once_per_turn_used.contains(&(card_id, ability_index))
+        {
+            return Err(GameError::AbilityAlreadyUsedThisTurn);
+        }
+
+        // CR 702.177 — Exhaust: an exhaust ability can be activated only once
+        // per game. `exhausted_abilities` (never cleared at turn start) records
+        // spent indices on the source permanent.
+        if !source_in_gy && !source_in_hand && ability.exhaust {
+            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
+            if self.battlefield[pos].exhausted_abilities.contains(&ability_index) {
+                return Err(GameError::AbilityAlreadyUsedThisTurn);
+            }
+        }
 
         // Sorcery-speed gate: reject the activation if the ability is
         // flagged sorcery-speed and the controller can't currently
@@ -6981,6 +8222,7 @@ impl GameState {
                 event_amount: 0,
                 kicked: false,
                 bargained: false,
+                cast_via_mayhem: false,
                     entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -6993,6 +8235,9 @@ impl GameState {
         // and self-targeting abilities don't pass a target so they bypass.
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
+            if self.ability_target_has_protection(tgt, card_id) {
+                return Err(GameError::TargetHasProtection(card_id));
+            }
             // Ward enforcement happens via push_ward_triggers_for_cast
             // after finalize_cast, not as a synchronous cost payment.
             let _ = tgt; let _ = p;
@@ -7004,8 +8249,40 @@ impl GameState {
         // activated abilities went unchecked, which let bots/UIs aim a
         // Wasteland at a Plains. Mirror the cast-side gate for parity.
         if let Some(tgt) = &target
-            && let Some(filter) = ability.effect.target_filter_for_slot(0)
-            && !self.evaluate_requirement_static(filter, tgt, p, Some(card_id))
+            && let Some(filter) = ability
+                .effect
+                .target_filter_for_slot(0)
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+            && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
+        // Two-target activated abilities (Autumn-Tail): validate slots 1+ the
+        // same way — legality (hexproof/shroud/…) plus the per-slot filter.
+        for (i, tgt) in additional_targets.iter().enumerate() {
+            self.check_target_legality(tgt, p)?;
+            if self.ability_target_has_protection(tgt, card_id) {
+                return Err(GameError::TargetHasProtection(card_id));
+            }
+            if let Some(filter) = ability
+                .effect
+                .target_filter_for_slot((i + 1) as u8)
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
+            {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+        // Reject when the effect still references a target slot we weren't
+        // given (a two-target ability invoked with too few targets — the
+        // bot / affordance path passes only slot 0). Without this the extra
+        // slot resolves to nothing and the effect half-fires.
+        if target.is_some()
+            && ability
+                .effect
+                .target_filter_for_slot(1 + additional_targets.len() as u8)
+                .is_some()
         {
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -7083,6 +8360,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target,
+                        additional_targets: additional_targets.clone(),
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::ExileOther,
                     },
@@ -7091,6 +8369,46 @@ impl GameState {
             } else {
                 self.auto_pick_lowest_cmc_gy(p, &candidates, count)
             }
+        } else {
+            Vec::new()
+        };
+
+        // Pre-flight Craft gate (CR 702.169): collect `count` *other* objects
+        // matching the filter from among permanents the activator controls
+        // and/or cards in their graveyard. Reject cleanly when fewer than
+        // `count` match. Auto-picks graveyard cards first, then the lowest-power
+        // battlefield permanents, so higher-value board pieces stay put. The
+        // exile happens after tap/mana/life payment succeeds. (`(card_id, true)`
+        // marks a graveyard pick; `(id, false)` a battlefield pick.)
+        let craft_exile_picks: Vec<(CardId, bool)> = if let Some((filter, count)) =
+            ability.craft_exile_cost.as_ref()
+        {
+            let count = *count as usize;
+            let gy: Vec<CardId> = self.players[p]
+                .graveyard
+                .iter()
+                .filter(|c| c.id != card_id)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            let mut bf: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            if gy.len() + bf.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            let mut picks: Vec<(CardId, bool)> =
+                gy.into_iter().take(count).map(|id| (id, true)).collect();
+            if picks.len() < count {
+                let need = count - picks.len();
+                bf = self.auto_pick_lowest_power(&bf, need);
+                picks.extend(bf.into_iter().map(|id| (id, false)));
+            }
+            picks
         } else {
             Vec::new()
         };
@@ -7151,6 +8469,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target,
+                        additional_targets: additional_targets.clone(),
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::SacOther,
                     },
@@ -7168,7 +8487,20 @@ impl GameState {
         // cost's filter. A `wants_ui` activator with more than one candidate
         // chooses which to tap (suspend + replay, like the sacrifice cost);
         // bots and the no-real-choice case tap the lowest-power match so
-        // higher-value creatures stay open. Tapped after payment succeeds.
+        // higher-value creatures stay open — *unless* the payoff scales with the
+        // tapped creature's power (Station's charge add, CR 702.184a), in which
+        // case tapping the highest-power creature is strictly better.
+        // Tapped after payment succeeds.
+        let prefer_highest_tap = serde_json::to_string(&ability.effect)
+            .map(|s| s.contains("TappedForCostPower"))
+            .unwrap_or(false);
+        let auto_tap_pick = |g: &Self, candidates: &[CardId]| -> Option<CardId> {
+            if prefer_highest_tap {
+                g.auto_pick_highest_power(candidates, 1).first().copied()
+            } else {
+                g.auto_pick_lowest_power(candidates, 1).first().copied()
+            }
+        };
         let tap_other_pick: Option<CardId> = if let Some(filter) =
             ability.tap_other_filter.as_ref()
         {
@@ -7187,7 +8519,7 @@ impl GameState {
                 if candidates.contains(&chosen) {
                     Some(chosen)
                 } else {
-                    self.auto_pick_lowest_power(&candidates, 1).first().copied()
+                    auto_tap_pick(self, &candidates)
                 }
             } else if candidates.len() > 1 && self.players[p].wants_ui {
                 let source_name = self
@@ -7206,13 +8538,14 @@ impl GameState {
                         card_id,
                         ability_index,
                         target,
+                        additional_targets: additional_targets.clone(),
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::TapOther,
                     },
                 });
                 return Ok(vec![]);
             } else {
-                self.auto_pick_lowest_power(&candidates, 1).first().copied()
+                auto_tap_pick(self, &candidates)
             }
         } else {
             None
@@ -7419,6 +8752,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target: target.clone(),
+                        additional_targets: Vec::new(),
                         x_value,
                     }),
                 },
@@ -7504,9 +8838,21 @@ impl GameState {
         // queueing — all of which are guaranteed to commit if we get here.)
         if ability.once_per_turn
             && !source_in_gy
+            && !source_in_hand
             && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             card.once_per_turn_used.push(ability_index);
+        }
+        // CR 702.56 — record a hand (Forecast) once-per-turn activation.
+        if ability.once_per_turn && source_in_hand {
+            self.triggered_once_per_turn_used.insert((card_id, ability_index));
+        }
+        // CR 702.177 — record the exhaust activation (never cleared this game).
+        if ability.exhaust
+            && !source_in_gy
+            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            card.exhausted_abilities.push(ability_index);
         }
 
         // P/T of a creature sacrificed as part of this activation's cost,
@@ -7514,6 +8860,10 @@ impl GameState {
         // `Value::SacrificedPower/Toughness` survive intervening
         // resolutions (Witch's Oven's "toughness 4 or greater" branch).
         let mut cost_sac_pt: Option<(i32, i32)> = None;
+        // Mana value of the cost-sacrificed permanent, threaded the same way
+        // so the `ManaValueEqualsSacrificedPlus` search filter resolves
+        // correctly at ability resolution (Transfigure → Fleshwrither).
+        let mut cost_sac_mv: u32 = 0;
 
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
         // source. The effect runs/queues after, and any selectors that
@@ -7553,14 +8903,30 @@ impl GameState {
                     self.sacrificed_toughness = Some(t_val);
                     self.sacrificed_mana_value = Some(mv);
                     cost_sac_pt = Some((p_val, t_val));
+                    cost_sac_mv = mv;
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
-                    self.died_card_snapshots.insert(card_id, snap);
+                    self.died_card_snapshots.insert(card_id, snap.clone());
+                    // CR 603.10 — also stash it as leaves-battlefield LKI so a
+                    // body that reads the sacrificed source's own counters at
+                    // resolution (Twitching Doll's "Spider per counter on it")
+                    // sees the last-known total; `died_card_snapshots` is
+                    // cleared after event dispatch, but `leaves_bf_lki` lives
+                    // until the ability resolves (scoped in `resolve_stack_item`).
+                    self.leaves_bf_lki.insert(card_id, snap);
                 }
                 // CR 701.16 — emit the sacrifice-specific event first.
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id });
+            } else if let Some(snap) = self.battlefield_find(card_id).cloned() {
+                // CR 603.10 — a noncreature `sac_cost` source whose body reads
+                // its own last-known counters at resolution (Ratchet Bomb's
+                // "destroy each nonland with mana value = charge counters")
+                // needs the same leaves-battlefield LKI stash; counters are
+                // stripped on the move to the graveyard (CR 122.2).
+                self.died_card_snapshots.insert(card_id, snap.clone());
+                self.leaves_bf_lki.insert(card_id, snap);
             }
             // Generic permanent-sacrifice event (CR 701.16) — fires for
             // every sacrificed permanent regardless of type so
@@ -7604,17 +8970,23 @@ impl GameState {
                 .battlefield_find(other_cid)
                 .map(|c| c.controller)
                 .unwrap_or(p);
+            // Stamp the sacrificed permanent's P/T and mana value on the
+            // resolution scratch so downstream `Value::SacrificedManaValue` /
+            // `Value::SacrificedPower` read correctly — for *any* sacrificed
+            // permanent, not just creatures (Memorial Vault — "exile 1 + the
+            // sacrificed artifact's mana value").
+            let snap_pt = self
+                .battlefield_find(other_cid)
+                .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
+            if let Some((p_val, t_val, mv, snap)) = snap_pt {
+                self.sacrificed_power = Some(p_val);
+                self.sacrificed_toughness = Some(t_val);
+                self.sacrificed_mana_value = Some(mv);
+                cost_sac_pt = Some((p_val, t_val));
+                cost_sac_mv = mv;
+                self.died_card_snapshots.insert(other_cid, snap);
+            }
             if is_creature {
-                let snap_pt = self
-                    .battlefield_find(other_cid)
-                    .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
-                if let Some((p_val, t_val, mv, snap)) = snap_pt {
-                    self.sacrificed_power = Some(p_val);
-                    self.sacrificed_toughness = Some(t_val);
-                    self.sacrificed_mana_value = Some(mv);
-                    cost_sac_pt = Some((p_val, t_val));
-                    self.died_card_snapshots.insert(other_cid, snap);
-                }
                 events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id: other_cid });
             }
@@ -7642,10 +9014,14 @@ impl GameState {
 
         // Tap-another-as-cost (CR 602.5b): with tap/mana/life paid, tap the
         // pre-selected untapped permanent. Opposition's "Tap an untapped
-        // creature you control" cost runs here.
+        // creature you control" cost runs here. Capture its power first so a
+        // Station ability (CR 702.184a) can stamp the counter count at
+        // resolution via `Effect::WithTappedPower`.
+        let mut tap_other_power: Option<i32> = None;
         if let Some(other_cid) = tap_other_pick
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
         {
+            tap_other_power = Some(c.power());
             c.tapped = true;
         }
 
@@ -7668,6 +9044,32 @@ impl GameState {
                 &crate::game::effects::EffectContext::for_ability(card_id, p, None),
                 &mut events,
             );
+        }
+
+        // Craft-exile-as-cost (CR 702.169): with tap/mana/life paid, exile
+        // each cost-picked object. Battlefield permanents route through
+        // `move_card_to` so leaves-the-battlefield triggers fire; graveyard
+        // cards move straight to exile. Validated by the pre-flight
+        // `craft_exile_picks` gate.
+        for (other_cid, in_gy) in craft_exile_picks {
+            if in_gy {
+                if let Some(idx) = self.players[p].graveyard.iter().position(|c| c.id == other_cid) {
+                    let card = self.players[p].graveyard.remove(idx);
+                    self.exile.push(card);
+                    events.push(GameEvent::CardLeftGraveyard { player: p, card_id: other_cid });
+                    self.players[p].cards_left_graveyard_this_turn =
+                        self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+                }
+                self.players[p].cards_exiled_this_turn =
+                    self.players[p].cards_exiled_this_turn.saturating_add(1);
+            } else {
+                self.move_card_to(
+                    other_cid,
+                    &crate::effect::ZoneDest::Exile,
+                    &crate::game::effects::EffectContext::for_ability(card_id, p, None),
+                    &mut events,
+                );
+            }
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile
@@ -7787,20 +9189,27 @@ impl GameState {
             let ability_target = target.clone();
             // Carry a cost-sacrificed creature's P/T into resolution
             // (intervening resolutions reset the scratch).
-            let queued_effect = match cost_sac_pt {
+            let mut queued_effect = match cost_sac_pt {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
                     toughness,
+                    mana_value: cost_sac_mv,
                     body: Box::new(ability.effect),
                 },
                 None => ability.effect,
             };
+            // Carry the Station-tapped creature's power into resolution
+            // (CR 702.184a) so `Value::TappedForCostPower` reads it.
+            if let Some(power) = tap_other_power {
+                queued_effect = Effect::WithTappedPower { power, body: Box::new(queued_effect) };
+            }
             // CR 601.2b — a modal activated ability's mode is chosen as part
             // of the activation (Shifting Ceratops's reach/trample/haste).
             let mode = self.pick_trigger_mode(&queued_effect, card_id, p);
             self.stack.push(
                 TriggerPush::new(card_id, p, queued_effect)
                     .target(target)
+                    .additional_targets(additional_targets.clone())
                     .mode(mode)
                     .x_value(activated_x)
                     .build(),
@@ -7813,12 +9222,23 @@ impl GameState {
             // BecameTarget — fire per permanent target the activation
             // chose (CR 603.x). The unified dispatcher handles APNAP and
             // the trigger filter.
-            if let Some(Target::Permanent(target_id)) = ability_target {
+            if let Some(Target::Permanent(target_id)) = &ability_target {
                 let evs = vec![GameEvent::BecameTarget {
-                    target: target_id,
+                    target: *target_id,
                     caster: p,
                 }];
                 self.dispatch_triggers_for_events(&evs);
+            }
+            // CR 700.13 — activating a targeted ability against an opponent /
+            // their permanents is also a crime. Queue the event alongside the
+            // activation's other events (e.g. a sacrifice-cost death trigger)
+            // so `perform_action` dispatches them together, in order, rather
+            // than firing this out-of-band mid-activation.
+            if let Some(t) = &ability_target
+                && self.target_is_crime(p, t)
+            {
+                self.players[p].committed_crime_this_turn = true;
+                events.push(GameEvent::CommittedCrime { player: p });
             }
             self.give_priority_to_active();
         }
@@ -7872,4 +9292,6 @@ pub(crate) struct CastFlags {
     pub entwine: bool,
     /// CR 709.5 — Room door being cast (`Some(0)` left, `Some(1)` right).
     pub room_door: Option<u8>,
+    /// CR 702.165 — the spell's Gift was promised to an opponent.
+    pub gift: bool,
 }

@@ -126,3 +126,31 @@ pub fn plateau() -> CardDefinition {
 pub fn tropical_island() -> CardDefinition {
     dual("Tropical Island", LandType::Forest, LandType::Island, Color::Green, Color::Blue)
 }
+
+/// The Snow-Covered basics (KHM printing): basic snow lands, one per color.
+fn snow_basic(name: &'static str, land_type: LandType, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        supertypes: vec![Supertype::Basic, Supertype::Snow],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![land_type], ..Default::default() },
+        activated_abilities: vec![tap_add(color)],
+        ..Default::default()
+    }
+}
+
+pub fn snow_covered_plains() -> CardDefinition {
+    snow_basic("Snow-Covered Plains", LandType::Plains, Color::White)
+}
+pub fn snow_covered_island() -> CardDefinition {
+    snow_basic("Snow-Covered Island", LandType::Island, Color::Blue)
+}
+pub fn snow_covered_swamp() -> CardDefinition {
+    snow_basic("Snow-Covered Swamp", LandType::Swamp, Color::Black)
+}
+pub fn snow_covered_mountain() -> CardDefinition {
+    snow_basic("Snow-Covered Mountain", LandType::Mountain, Color::Red)
+}
+pub fn snow_covered_forest() -> CardDefinition {
+    snow_basic("Snow-Covered Forest", LandType::Forest, Color::Green)
+}

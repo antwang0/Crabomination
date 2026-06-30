@@ -33,7 +33,7 @@ pub fn galazeth_prismari() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
             ..Default::default()
         },
         power: 3,
@@ -85,12 +85,12 @@ pub fn beledros_witherbloom() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Demon],
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
             ..Default::default()
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
+        keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -352,7 +352,7 @@ pub fn shaile_dean_of_radiance() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            creature_types: vec![CreatureType::Bird, CreatureType::Cleric],
             ..Default::default()
         },
         power: 4,

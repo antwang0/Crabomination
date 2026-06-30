@@ -29,8 +29,21 @@ def main(names):
         pt = ""
         if data.get("power") is not None:
             pt = f" {data.get('power')}/{data.get('toughness')}"
+        if data.get("defense") is not None:
+            pt += f" defense {data.get('defense')}"
         print(f"{name}: {cost} {tline}{pt}")
         print(f"  {otext}")
+        # Multi-face cards (flip / DFC / split) carry per-face data.
+        for face in data.get("card_faces", []) or []:
+            fpt = ""
+            if face.get("defense") is not None:
+                fpt = f" defense {face.get('defense')}"
+            if face.get("power") is not None:
+                fpt = f" {face.get('power')}/{face.get('toughness')}"
+            ftext = (face.get("oracle_text", "") or "").replace("\n", " | ")
+            print(f"  [face] {face.get('name')}: {face.get('mana_cost','')} "
+                  f"{face.get('type_line','')}{fpt}")
+            print(f"    {ftext}")
 
 
 if __name__ == "__main__":

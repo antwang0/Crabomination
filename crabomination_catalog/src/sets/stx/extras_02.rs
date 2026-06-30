@@ -194,7 +194,8 @@ pub fn mizzium_mortars() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -326,7 +327,8 @@ pub fn past_in_flames() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -420,7 +422,8 @@ pub fn resurgent_belief() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -654,14 +657,11 @@ pub fn krosan_grip() -> CardDefinition {
 ///
 /// ✅ Wired as `Effect::ChooseN { picks: [2, 4], modes }` — auto-decider
 /// picks bounce a nonland permanent + draw a card (the two modes that
-/// share a single target slot most naturally). Counter target spell
-/// (mode 0), counter target ability (mode 1), and copy target creature
-/// (mode 3) sit in `modes` for future mode-pick UI: the engine has no
-/// ability-counter primitive (mode 1) and no permanent-copy primitive
-/// (mode 3); both fall back to Noop in their slots. Mode 0 (counter
-/// spell) is selectable via the mode-pick UI but uses an incompatible
-/// target filter (spell on stack vs. nonland permanent), so the
-/// default auto-pick avoids it.
+/// share a single target slot most naturally). All five modes are real:
+/// counter spell (`CounterSpell`), counter ability (`CounterAbility`),
+/// bounce (`Move`), copy a creature you control (`CreateTokenCopyOf`),
+/// and draw. Mode 0/1 use stack-object target filters, so the default
+/// auto-pick avoids them (no compatible bounce/copy target slot).
 pub fn sublime_epiphany() -> CardDefinition {
     CardDefinition {
         name: "Sublime Epiphany",
@@ -675,9 +675,9 @@ pub fn sublime_epiphany() -> CardDefinition {
                     what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 },
                 // Mode 1: Counter target activated or triggered ability.
-                // Engine doesn't model ability counters yet; placeholder
-                // Noop preserves the printed mode count.
-                Effect::Noop,
+                Effect::CounterAbility {
+                    what: target_filtered(SelectionRequirement::HasAbilityOnStack),
+                },
                 // Mode 2: Return target nonland permanent to its owner's hand.
                 Effect::Move {
                     what: target_filtered(
@@ -685,9 +685,20 @@ pub fn sublime_epiphany() -> CardDefinition {
                     ),
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 },
-                // Mode 3: Copy target creature you control — permanent-
-                // copy primitive ⏳, falls back to Noop.
-                Effect::Noop,
+                // Mode 3: Create a token that's a copy of target creature you control.
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
+                    legendary: false,
+                },
                 // Mode 4: Target player draws a card.
                 Effect::Draw {
                     who: Selector::You,
@@ -841,7 +852,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -955,21 +966,15 @@ pub fn symbol_of_strength() -> CardDefinition {
 
 // ── Magmatic Sinkhole (STA reprint, Modern Horizons 2) ─────────────────────
 
-/// Magmatic Sinkhole — {5}{R} Sorcery (STA reprint). "Surveil 2, then
-/// Magmatic Sinkhole deals 4 damage to target creature or planeswalker."
-///
-/// ✅ Wired as `Seq(Surveil 2 → DealDamage 4 to Creature/PW)`. The
-/// "delve" alternative cost rider from the original printing is omitted
-/// (no exile-from-gy alt-cost-cmc-reduction primitive). Body fully ships
-/// the printed primary effect at the base cost.
-///
-/// Note: in some real printings Magmatic Sinkhole has Delve; the STA
-/// reprint exists at {1}{B}{R} without Delve.
+/// Magmatic Sinkhole — {5}{R} Sorcery with Delve. "Surveil 2, then it deals
+/// 4 damage to target creature or planeswalker." Delve exiles graveyard cards
+/// to pay the generic part of the cost (`Keyword::Delve` + `CastSpellDelve`).
 pub fn magmatic_sinkhole() -> CardDefinition {
     CardDefinition {
         name: "Magmatic Sinkhole",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Delve],
         effect: Effect::Seq(vec![
             Effect::Surveil {
                 who: PlayerRef::You,
@@ -1092,7 +1097,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Drake],
             ..Default::default()
         },
         power: 2,
@@ -1292,7 +1297,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         cost: cost(&[generic(7), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Plant],
+            creature_types: vec![CreatureType::Fungus, CreatureType::Beast],
             ..Default::default()
         },
         power: 9,
@@ -1427,14 +1432,10 @@ pub fn brawn() -> CardDefinition {
 /// "Target player draws two cards and loses 2 life. / Flashback—{1}{U},
 /// Pay 3 life."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Blue card-draw with a
-/// graveyard recursion mode. Wired as a `Seq(Draw 2, LoseLife 2)`
-/// against the targeted player (collapsed to PlayerRef::Target(0)).
-/// Flashback {1}{U} is wired via `Keyword::Flashback` — the additional
-/// life payment ("Pay 3 life") on the flashback cost is an engine-wide
-/// alt-cost-with-life-cost gap, so the flashback path here is the
-/// plain mana-cost path. The card-advantage and graveyard-reload are
-/// the headline play patterns.
+/// Wired as `Seq(Draw 2, LoseLife 2)` against the targeted player
+/// (collapsed to `PlayerRef::Target(0)`). Flashback {1}{U} via
+/// `Keyword::Flashback`; the "Pay 3 life" flashback rider is applied via
+/// `flashback_additional_cost_for_name` (`AdditionalCastCost::PayLife`).
 pub fn deep_analysis() -> CardDefinition {
     CardDefinition {
         name: "Deep Analysis",
@@ -1452,36 +1453,28 @@ pub fn deep_analysis() -> CardDefinition {
 
 // ── Kasmina's Transmutation (STA reprint, Strixhaven Loyalty) ──────────────
 
-/// Kasmina's Transmutation — {1}{U} Sorcery (STA reprint, Strixhaven).
-///
-/// "Target creature loses all abilities and becomes a blue Frog with
-/// base power and toughness 1/1 until end of turn."
-///
-/// Push (modern_decks): the "loses all abilities" rider now lands via
-/// `Effect::LoseAllAbilities` (the same layer-6 strip primitive used by
-/// Mercurial Transformation, CR 113.10b). Body now resolves as
-/// `Seq(SetBasePT 1/1, LoseAllAbilities)` — the target shrinks to a
-/// 1/1 *and* loses Flying / triggered abilities / activated abilities
-/// for the rest of the turn. The "becomes a blue Frog" type-and-color
-/// rewrite (layer 4 + 5) is still omitted; the target keeps its
-/// printed creature types and colors.
+/// Kasmina's Transmutation — {1}{U} Aura (STA reprint, Strixhaven).
+/// Enchant creature. Enchanted creature loses all abilities and has base
+/// power and toughness 1/1.
 pub fn kasminas_transmutation() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
     CardDefinition {
         name: "Kasmina's Transmutation",
         cost: cost(&[generic(1), u()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::SetBasePT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::LoseAllAbilities {
-                what: target_filtered(SelectionRequirement::Creature),
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            remove_abilities: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -1683,12 +1676,12 @@ pub fn inkfathom_witch() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Fear],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DiscardChosen {
@@ -2024,7 +2017,7 @@ pub fn spiteful_squad() -> CardDefinition {
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Skeleton],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         keywords: vec![Keyword::Deathtouch],
@@ -2062,7 +2055,7 @@ pub fn master_symmetrist() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Rhino, CreatureType::Druid],
             ..Default::default()
         },
         power: 4,

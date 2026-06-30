@@ -15,7 +15,7 @@ pub fn savannah_lions() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Lion],
+            creature_types: vec![CreatureType::Cat],
             ..Default::default()
         },
         power: 2,
@@ -300,7 +300,7 @@ pub fn craw_wurm() -> CardDefinition {
 pub fn samite_healer() -> CardDefinition {
     CardDefinition {
         name: "Samite Healer",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -385,7 +385,7 @@ pub fn spined_wurm() -> CardDefinition {
 pub fn trained_armodon() -> CardDefinition {
     CardDefinition {
         name: "Trained Armodon",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
         power: 3,
@@ -640,11 +640,11 @@ pub fn wall_of_fire() -> CardDefinition {
 pub fn flame_spirit() -> CardDefinition {
     CardDefinition {
         name: "Flame Spirit",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
         power: 2,
-        toughness: 2,
+        toughness: 3,
         activated_abilities: vec![pump_one_zero(&[r()])],
         ..Default::default()
     }

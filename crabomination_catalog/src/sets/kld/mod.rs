@@ -76,7 +76,7 @@ pub fn rogue_refiner() -> CardDefinition {
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Artificer],
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
             ..Default::default()
         },
         power: 3,
@@ -134,7 +134,7 @@ pub fn bristling_hydra() -> CardDefinition {
     };
     CardDefinition {
         name: "Bristling Hydra",
-        cost: cost(&[generic(2), r(), g()]),
+        cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Hydra],
@@ -158,11 +158,11 @@ pub fn glint_sleeve_siphoner() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
             ..Default::default()
         },
-        power: 1,
-        toughness: 2,
+        power: 2,
+        toughness: 1,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![
             on_attack(Effect::AddEnergy(Value::Const(1))),
@@ -346,8 +346,8 @@ pub fn sage_of_shailas_claim() -> CardDefinition {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
             ..Default::default()
         },
-        power: 1,
-        toughness: 3,
+        power: 2,
+        toughness: 1,
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(3)))],
         ..Default::default()
     }
@@ -358,7 +358,7 @@ pub fn sage_of_shailas_claim() -> CardDefinition {
 pub fn live_fast() -> CardDefinition {
     CardDefinition {
         name: "Live Fast",
-        cost: cost(&[generic(1), b()]),
+        cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
@@ -490,7 +490,7 @@ pub fn aether_poisoner() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Rogue],
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
             ..Default::default()
         },
         power: 1,
@@ -523,13 +523,13 @@ pub fn aetherstream_leopard() -> CardDefinition {
     };
     CardDefinition {
         name: "Aetherstream Leopard",
-        cost: cost(&[generic(3), g()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Cat],
             ..Default::default()
         },
-        power: 4,
+        power: 2,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![sneak],
@@ -553,13 +553,13 @@ pub fn riparian_tiger() -> CardDefinition {
     };
     CardDefinition {
         name: "Riparian Tiger",
-        cost: cost(&[generic(3), g()]),
+        cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Cat],
             ..Default::default()
         },
-        power: 5,
+        power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![guard],
@@ -582,7 +582,7 @@ pub fn voltaic_brawler() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 1,
+        toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Menace],
         triggered_abilities: vec![on_attack(Effect::PayEnergy {
             amount: 2,
@@ -609,7 +609,7 @@ pub fn aetherborn_marauder() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 3,
+        toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EnergyGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -691,13 +691,13 @@ pub fn thriving_rhino() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
         name: "Thriving Rhino",
-        cost: cost(&[generic(3), g()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Rhino],
             ..Default::default()
         },
-        power: 3,
+        power: 2,
         toughness: 3,
         triggered_abilities: vec![on_attack(Effect::PayEnergy {
             amount: 2,

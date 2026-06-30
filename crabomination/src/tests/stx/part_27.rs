@@ -155,7 +155,7 @@ fn geometric_nexus_charges_on_spell_cast_then_mints_a_scaled_fractal() {
     g.clear_sickness(nexus);
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: nexus, ability_index: 0, target: None, x_value: None,
+        card_id: nexus, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate the Fractal-maker");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter()
@@ -565,7 +565,7 @@ fn elemental_masterpiece_discard_from_hand_makes_treasure() {
     let id = g.add_card_to_hand(0, catalog::elemental_masterpiece());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{U/R}{U/R}, Discard this card: make a Treasure");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded as cost");
@@ -765,7 +765,7 @@ fn biblioplex_taps_for_colorless_and_digs_for_spells() {
     let id = g.add_card_to_battlefield(0, catalog::the_biblioplex());
     // Mana ability.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
     // Dig: top card is an instant → goes to hand. Gate needs an empty hand.
@@ -774,7 +774,7 @@ fn biblioplex_taps_for_colorless_and_digs_for_spells() {
     g.add_card_to_library(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{2},{T}: dig");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
@@ -791,7 +791,7 @@ fn biblioplex_dig_gated_to_empty_or_full_hand() {
     g.players[0].hand.clear();
     for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "dig is illegal with 3 cards in hand");
 }
@@ -805,7 +805,7 @@ fn detention_vortex_locks_activated_abilities() {
     g.clear_sickness(prowler);
     // Sanity: the ability works before the aura.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: prowler, ability_index: 0, target: None, x_value: None,
+        card_id: prowler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("ability works pre-lock");
     drain_stack(&mut g);
     g.battlefield_find_mut(prowler).unwrap().tapped = false;
@@ -818,7 +818,7 @@ fn detention_vortex_locks_activated_abilities() {
     }).expect("aura castable");
     drain_stack(&mut g);
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: prowler, ability_index: 0, target: None, x_value: None,
+        card_id: prowler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "activated abilities are locked while enchanted");
 }
@@ -839,7 +839,7 @@ fn detention_vortex_only_opponents_destroy_the_aura() {
     // Controller (P0) can't activate the opponent-only escape.
     g.players[0].mana_pool.add_colorless(3);
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: aura, ability_index: 0, target: None, x_value: None,
+        card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "the Aura's controller can't activate the escape");
     // The opponent (P1), on their turn at sorcery speed, can.
@@ -847,7 +847,7 @@ fn detention_vortex_only_opponents_destroy_the_aura() {
     g.priority.player_with_priority = 1;
     g.players[1].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aura, ability_index: 0, target: None, x_value: None,
+        card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("an opponent may activate the escape");
     drain_stack(&mut g);
     assert!(g.battlefield_find(aura).is_none(), "the Aura is destroyed");
@@ -933,7 +933,7 @@ fn accomplished_alchemist_taps_for_life_gained() {
     g.players[0].life_gained_this_turn = 4;
     let before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("life-gained mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), before + 4, "added X=4 mana of one color");
@@ -952,7 +952,7 @@ fn oriq_loremage_mills_a_searched_card_to_graveyard() {
         crate::decision::DecisionAnswer::Search(Some(target_card)),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{T}: search to graveyard");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == target_card),
@@ -973,7 +973,7 @@ fn oriq_loremage_no_counter_when_searching_a_noninstant() {
         crate::decision::DecisionAnswer::Search(Some(target_card)),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{T}: search to graveyard");
     drain_stack(&mut g);
     let oriq = g.battlefield_find(id).unwrap();
@@ -986,7 +986,7 @@ fn illustrious_historian_recurs_a_spirit_from_graveyard() {
     let id = g.add_card_to_graveyard(0, catalog::illustrious_historian());
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{5}, exile from gy: make a Spirit");
     drain_stack(&mut g);
     let spirit = g.battlefield.iter()
@@ -1003,7 +1003,7 @@ fn grinning_ignus_bounces_itself_for_mana() {
     let id = g.add_card_to_battlefield(0, catalog::grinning_ignus());
     g.players[0].mana_pool.add(Color::Red, 1); // pays the {R} cost
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{R}, return self: add {C}{C}{R}");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "Ignus returned to hand");
@@ -1025,7 +1025,7 @@ fn rootha_bounces_itself_to_copy_a_spell() {
     }).expect("bolt on the stack");
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Permanent(bolt)), x_value: None,
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
     }).expect("{2}, return self: copy the bolt");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "Rootha returned to hand");

@@ -71,7 +71,7 @@ fn soothsayer_adept_activates_surveil_one() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Surveil 1 activates");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Surveil 1 activates");
     drain_stack(&mut g);
 
     // Surveil 1 either leaves card on top or sends it to graveyard.
@@ -271,7 +271,7 @@ fn hall_monitor_makes_a_creature_unable_to_block() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hm, ability_index: 0, target: Some(Target::Permanent(blocker)), x_value: None,
+        card_id: hm, ability_index: 0, target: Some(Target::Permanent(blocker)), additional_targets: Vec::new(), x_value: None,
     }).expect("{1}{R},{T}: can't block");
     drain_stack(&mut g);
     let b = g.compute_battlefield().into_iter().find(|c| c.id == blocker).unwrap();
@@ -2140,7 +2140,7 @@ fn star_pupils_papers_sac_activation_grants_counter() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: papers,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)), x_value: None })
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
     .expect("Sac-for-counter activation should be legal");
     drain_stack(&mut g);
 
@@ -2672,7 +2672,7 @@ fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: gw,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Selfless Glyphweaver sac activation");
     drain_stack(&mut g);
 
@@ -2693,34 +2693,55 @@ fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
     );
 }
 
-/// Mercurial Transformation overrides the target creature's base P/T to
-/// 3/3 until end of turn via `Effect::SetBasePT`. Reads through the
-/// layered P/T via `computed_permanent` (the same approach Square Up's
-/// test uses).
+/// Mercurial Transformation, mode 0: target becomes a blue Frog 1/1 with
+/// no abilities until end of turn (`ResetCreature` + `BecomeColor`).
 #[test]
-fn mercurial_transformation_sets_target_to_three_three_eot() {
+fn mercurial_transformation_frog_mode_makes_blue_one_one() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // Pick a creature with non-3/3 base P/T to verify the rewrite.
-    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5 flier
     g.clear_sickness(dragon);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
     let id = g.add_card_to_hand(0, catalog::mercurial_transformation());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(dragon)),
         additional_targets: vec![],
-        mode: None,
+        mode: Some(0),
         x_value: None,
     })
     .expect("Mercurial Transformation castable for {2}{U}");
     drain_stack(&mut g);
-
-    // SetBasePT applies via layer 7b; consult the computed permanent.
     let computed = g.computed_permanent(dragon).expect("Dragon still on bf");
-    assert_eq!(computed.power, 3, "Dragon should be reduced to base power 3");
-    assert_eq!(computed.toughness, 3, "Dragon should be reduced to base toughness 3");
+    assert_eq!((computed.power, computed.toughness), (1, 1), "becomes a 1/1 Frog");
+    assert!(!computed.keywords.contains(&Keyword::Flying), "loses all abilities");
+    assert!(computed.colors.contains(&Color::Blue) && computed.colors.len() == 1,
+        "becomes mono-blue");
+}
+
+/// Mode 1: target becomes a blue Octopus 4/4.
+#[test]
+fn mercurial_transformation_octopus_mode_makes_four_four() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, catalog::mercurial_transformation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Mercurial Transformation castable");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(bear).expect("Bear still on bf");
+    assert_eq!((computed.power, computed.toughness), (4, 4), "becomes a 4/4 Octopus");
 }
 
 /// Crux of Fate: mode 0 destroys Dragons (sparing non-Dragons); mode 1 destroys non-Dragons.
@@ -2763,7 +2784,7 @@ fn plargg_dean_of_chaos_taps_and_discards_to_loot() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Plargg loot activation");
     drain_stack(&mut g);
 
@@ -2794,7 +2815,7 @@ fn plargg_dean_of_chaos_reveals_and_free_casts_cheap_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Plargg reveal-cast activation");
     drain_stack(&mut g);
 
@@ -2843,7 +2864,7 @@ fn pestilent_cauldron_sac_mills_and_drains() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Cauldron activation");
     drain_stack(&mut g);
 
@@ -3287,7 +3308,7 @@ fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not()
     let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation, ability_index: 2,
-        target: Some(Target::Permanent(bear_gy)), x_value: None }).expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
+        target: Some(Target::Permanent(bear_gy)), additional_targets: Vec::new(), x_value: None }).expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
     drain_stack(&mut g);
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_gy));
     let spirits: Vec<_> = g.battlefield.iter()
@@ -3303,7 +3324,7 @@ fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not()
     let doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation, ability_index: 2,
-        target: Some(Target::Permanent(doj)), x_value: None }).expect("Lorehold Excavation gy-exile activates");
+        target: Some(Target::Permanent(doj)), additional_targets: Vec::new(), x_value: None }).expect("Lorehold Excavation gy-exile activates");
     drain_stack(&mut g);
     let spirits = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
@@ -3331,7 +3352,7 @@ fn lorehold_excavation_token_scales_with_creature_power() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation,
         ability_index: 2,
-        target: Some(Target::Permanent(angel_gy)), x_value: None })
+        target: Some(Target::Permanent(angel_gy)), additional_targets: Vec::new(), x_value: None })
     .expect("Lorehold Excavation gy-exile activates");
     drain_stack(&mut g);
 
@@ -4002,7 +4023,7 @@ fn manifold_key_grants_unblockable_to_target_creature() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)), x_value: None })
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
     .expect("Manifold Key {1},{T}: unblockable activatable");
     drain_stack(&mut g);
 
@@ -4039,7 +4060,7 @@ fn manifold_key_untaps_target_artifact() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 1,
-        target: Some(Target::Permanent(target_artifact)), x_value: None })
+        target: Some(Target::Permanent(target_artifact)), additional_targets: Vec::new(), x_value: None })
     .expect("Manifold Key {T}: untap artifact activatable");
     drain_stack(&mut g);
 
@@ -4249,7 +4270,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     let res_three = g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
         ability_index: 0,
-        target: None, x_value: None });
+        target: None, additional_targets: Vec::new(), x_value: None });
     assert!(
         res_three.is_err(),
         "PoK activation with only 3 charge counters fails"
@@ -4264,7 +4285,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("PoK activatable with 4+ charge counters");
     drain_stack(&mut g);
 
@@ -4802,4 +4823,136 @@ fn hofri_ghostforge_token_leaving_returns_exiled_card_to_graveyard() {
     assert!(g.battlefield_find(token).is_none(), "token gone");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
         "exiled card returned to its owner's graveyard");
+}
+
+/// Wandering Archaic // Explore the Vastlands — the MDFC back face is castable
+/// from hand: {4} Sorcery adds six colorless mana and gains 3 life.
+#[test]
+fn wandering_archaic_back_explore_the_vastlands_castable_from_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wandering_archaic());
+    g.players[0].mana_pool.add_colorless(4); // {4} for the back
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Explore the Vastlands (back face) castable for {4}");
+    drain_stack(&mut g);
+
+    // The sorcery resolved (not the creature): +3 life and six colorless mana.
+    assert_eq!(g.players[0].life, life + 3, "Explore the Vastlands gains 3 life");
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == id),
+        "casting the back face does not put the creature onto the battlefield",
+    );
+}
+
+/// Pestilent Cauldron // Restorative Burst — the (already-defined) back face is
+/// castable from hand: {2}{B} Sorcery drains 4.
+#[test]
+fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pestilent_cauldron());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Restorative Burst (back face) castable for {2}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4, "back-face drain hits the opponent for 4");
+    assert_eq!(g.players[0].life, p0 + 4, "you gain 4");
+}
+
+/// Selfless Glyphweaver // Deadly Vanity — the back face is a {4}{B}{B}{B}
+/// sorcery: each player keeps one creature/planeswalker and sacrifices the
+/// rest. Castable from hand via CastSpellBack.
+#[test]
+fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
+    let mut g = two_player_game();
+    // P0 controls three creatures, P1 controls two.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    for _ in 0..2 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::selfless_glyphweaver());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Deadly Vanity (back face) castable for {4}{B}{B}{B}");
+    drain_stack(&mut g);
+
+    let p0_creatures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    let p1_creatures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
+    assert_eq!(p0_creatures, 1, "P0 keeps exactly one creature");
+    assert_eq!(p1_creatures, 1, "P1 keeps exactly one creature");
+}
+
+/// Pestilent Cauldron — after sacrificing it (which grants the one-shot
+/// permission), its back face Restorative Burst is castable from the
+/// graveyard ("...then cast it transformed"), draining 4 more.
+#[test]
+fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
+    g.clear_sickness(pc);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(2); // {2} activation
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Cauldron activation");
+    drain_stack(&mut g);
+
+    // Sacrificed to the graveyard, carrying the one-shot back-cast permission.
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
+        "Cauldron is in the graveyard with the cast-back-from-graveyard permission",
+    );
+    assert_eq!(g.players[1].life, p1 - 3, "activation drains 3");
+    assert_eq!(g.players[0].life, p0 + 3);
+
+    // The graveyard back-cast is surfaced as an affordance once affordable
+    // (so the UI highlights it and auto_advance won't skip the window).
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(
+        g.compute_hand_affordances(0).back_castable.contains(&pc),
+        "the permitted graveyard back-cast is surfaced in affordances",
+    );
+
+    // Cast Restorative Burst (the back face) from the graveyard for {2}{B}.
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Restorative Burst castable from the graveyard for {2}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1 - 3 - 4, "Restorative Burst drains 4 more");
+    assert_eq!(g.players[0].life, p0 + 3 + 4);
+    // The one-shot permission was consumed.
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
+        "permission consumed after the back-face cast",
+    );
 }

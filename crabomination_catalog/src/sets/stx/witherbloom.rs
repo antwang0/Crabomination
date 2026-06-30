@@ -28,7 +28,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
             ..Default::default()
         },
         power: 2,
@@ -310,11 +310,10 @@ pub fn culling_ritual() -> CardDefinition {
 // ── Rushed Rebirth ─────────────────────────────────────────────────────────
 
 /// Rushed Rebirth — {B}{G} Instant. "Choose target creature. When that
-/// creature dies this turn, search your library for a creature card, put it
-/// onto the battlefield tapped, then shuffle." Wired via the event-keyed
-/// `WhenTargetDiesThisTurn` death watch. (The printed "lesser mana value"
-/// constraint on the fetch is approximated as any creature — no source-
-/// relative MV filter yet; tracked in TODO.md.)
+/// creature dies this turn, search your library for a creature card with
+/// lesser mana value, put it onto the battlefield tapped, then shuffle."
+/// The "lesser mana value" fetch reads the dead creature's MV through the
+/// death-watch's event amount (`ManaValueLessThanEventAmount`).
 pub fn rushed_rebirth() -> CardDefinition {
     CardDefinition {
         name: "Rushed Rebirth",
@@ -323,7 +322,10 @@ pub fn rushed_rebirth() -> CardDefinition {
         effect: Effect::WhenTargetDiesThisTurn {
             body: Box::new(Effect::Search {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
+                filter: SelectionRequirement::And(
+                    Box::new(SelectionRequirement::Creature),
+                    Box::new(SelectionRequirement::ManaValueLessThanEventAmount),
+                ),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
             }),
             slot: 0,
@@ -10702,10 +10704,12 @@ pub fn pest_surger_b155() -> CardDefinition {
 // ── Batch 156 (modern_decks) — Witherbloom counter / Pest payoff anchors ──
 
 /// Witherbloom Necromancer (b156) — {3}{B}{G} 2/3 Plant Wizard.
-/// Whenever another creature you control dies, you may pay {1}.
-/// If you do, return that card from your graveyard to the battlefield
-/// — collapsed to: drain 1 per other-creature-death (gy-reanimate
-/// requires UI prompt). Pure death-payoff anchor.
+/// "Whenever another creature you control dies, you may pay {1}. If you do,
+/// return that card from your graveyard to the battlefield." Wired faithfully
+/// via `on_other_dies(MayPay { {1} → Move(TriggerSource → battlefield) })` —
+/// the same dies-reanimate mechanism Minion's Return uses (`TriggerSource`
+/// resolves to the just-died creature in the graveyard). AutoDecider declines
+/// the optional payment.
 pub fn witherbloom_necromancer_b156() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Necromancer (b156)",
@@ -10717,7 +10721,15 @@ pub fn witherbloom_necromancer_b156() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![on_other_dies(drain(1))],
+        triggered_abilities: vec![on_other_dies(Effect::MayPay {
+            description: "Pay {1} to return the dead creature to the battlefield?".into(),
+            mana_cost: cost(&[generic(1)]),
+            body: Box::new(Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: None,
+        })],
         ..Default::default()
     }
 }

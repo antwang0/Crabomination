@@ -18,7 +18,7 @@ fn embalm_sacred_cat_mints_zombie_token_copy() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cat, ability_index: 0, target: None, x_value: None })
+        card_id: cat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
         .expect("Embalm {W} from graveyard");
     drain_stack(&mut g);
     // Original card is exiled (gone from graveyard).
@@ -44,7 +44,7 @@ fn eternalize_adorned_pouncer_mints_four_four() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: p, ability_index: 0, target: None, x_value: None })
+        card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
         .expect("Eternalize {3}{W}{W}");
     drain_stack(&mut g);
     let tok = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Adorned Pouncer")
@@ -66,7 +66,7 @@ fn embalm_rejected_at_instant_speed() {
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 1;
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: cat, ability_index: 0, target: None, x_value: None });
+        card_id: cat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
     assert!(res.is_err(), "Embalm only as a sorcery — rejected on opponent's turn");
 }
 
@@ -139,7 +139,7 @@ fn sinuous_striker_pumps_plus_one_minus_one() {
     g.clear_sickness(s);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, x_value: None })
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
         .expect("activate {U} pump");
     drain_stack(&mut g);
     let cp = g.computed_permanent(s).unwrap();
@@ -298,7 +298,7 @@ fn akh_green_batch_functionality() {
     g.clear_sickness(naga);
     g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: naga, ability_index: 0, target: None, x_value: None })
+        card_id: naga, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
         .expect("Naga taps for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 
@@ -312,4 +312,27 @@ fn akh_green_batch_functionality() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(hb).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 4), "3/2 +2/+2 = 5/4 exerted");
+}
+
+/// Greater Sandwurm's CantBeBlockedBy(PowerAtMost 2) is enforced at block
+/// declaration: a power-2 blocker is illegal, a power-4 blocker is legal.
+#[test]
+fn greater_sandwurm_power_evasion_enforced() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let sw = g.add_card_to_battlefield(0, catalog::greater_sandwurm()); // 7/7
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // power 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());     // power 4
+    g.clear_sickness(sw);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sw, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(small, sw)])).is_err(),
+        "power-2 creature can't block Greater Sandwurm");
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(big, sw)])).is_ok(),
+        "power-4 creature may block it");
 }

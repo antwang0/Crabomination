@@ -489,7 +489,7 @@ pub fn professor_of_symbology() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -503,17 +503,14 @@ pub fn professor_of_symbology() -> CardDefinition {
 }
 
 /// Academic Probation — {1}{W} Sorcery (Lesson).
-/// Choose a nonland card name. Until your next turn, your opponents
-/// can't cast spells with the chosen name.
-/// Approximated as Noop (name-choosing not implemented).
+/// Academic Probation — {1}{W} Sorcery — Lesson. "Choose one —
+/// • Choose a nonland card name. Opponents can't cast spells with the chosen
+///   name until your next turn. (`NameOpponentCastLock`.)
+/// • Choose target nonland permanent. Until your next turn, it can't attack or
+///   block. (Grant CantAttack + CantBlock for `UntilYourNextUntap`.)"
 pub fn academic_probation() -> CardDefinition {
-    // Printed: "Choose one — Tap target creature, then put a stun counter
-    // on it. / Until your next turn, target player can't cast spells with
-    // mana value 3 or less." Mode 0 (tap + stun) is wired faithfully. Mode
-    // 1 (the spell-casting lock) is omitted — the engine has no
-    // per-player "can't cast spells with MV <= N" restriction primitive.
-    // The card is reduced to its tap-down mode rather than left as a
-    // do-nothing Noop. Tracked in TODO.md.
+    use crate::card::Keyword;
+    use crate::effect::Duration;
     CardDefinition {
         name: "Academic Probation",
         cost: cost(&[generic(1), w()]),
@@ -522,15 +519,20 @@ pub fn academic_probation() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
-            Effect::Tap {
-                what: target_filtered(SelectionRequirement::Creature),
-            },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
+        effect: Effect::ChooseMode(vec![
+            Effect::NameOpponentCastLock,
+            Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Nonland),
+                    keyword: Keyword::CantAttack,
+                    duration: Duration::UntilYourNextUntap,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::UntilYourNextUntap,
+                },
+            ]),
         ]),
         ..Default::default()
     }
@@ -539,16 +541,20 @@ pub fn academic_probation() -> CardDefinition {
 /// Elemental Expressionism — {3}{U}{R} Sorcery.
 /// "Return up to two target creatures to their owners' hands. Create
 /// two 4/4 blue and red Elemental creature tokens."
-///
-/// Approximation: bounce one creature + create two 4/4 Elemental tokens.
 pub fn elemental_expressionism() -> CardDefinition {
-    use crate::effect::shortcut::return_target_to_hand;
     CardDefinition {
         name: "Elemental Expressionism",
         cost: cost(&[generic(3), u(), crate::mana::r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            return_target_to_hand(),
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -578,15 +584,18 @@ pub fn elemental_expressionism() -> CardDefinition {
 
 /// Rush of Knowledge — {4}{U} Sorcery.
 /// "Draw cards equal to the highest mana value among permanents you control."
-///
-/// Approximation: draw 4 (typical high-MV permanent on board).
 pub fn rush_of_knowledge() -> CardDefinition {
-    use crate::effect::shortcut::draw;
     CardDefinition {
         name: "Rush of Knowledge",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: draw(4),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::HighestManaValueAmong(Box::new(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Permanent,
+            })),
+        },
         ..Default::default()
     }
 }
@@ -599,7 +608,7 @@ pub fn unwilling_ingredient() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest],
+            creature_types: vec![CreatureType::Frog],
             ..Default::default()
         },
         power: 1,
@@ -793,8 +802,10 @@ pub fn replication_technique() -> CardDefinition {
                 SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
             ),
             extra_creature_types: vec![],
+            extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
         ..Default::default()

@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb_gain_life;
 use crate::effect::{Duration, PlayerRef, Predicate, Selector, StaticAbility, StaticEffect, Value};
-use crate::mana::{Color, ManaCost, b, cost, generic, w};
+use crate::mana::{Color, ManaCost, b, cost, generic, hybrid, w};
 
 // ── Strixhaven token helpers ────────────────────────────────────────────────
 
@@ -815,7 +815,7 @@ pub fn stirring_honormancer() -> CardDefinition {
         name: "Stirring Honormancer",
         // {2}{W}{W/B}{B}: the {W/B} pip is a real `ManaSymbol::Hybrid`
         // (CMC 5), payable with either white or black.
-        cost: cost(&[generic(2), w(), crate::mana::hybrid(Color::White, Color::Black), b()]),
+        cost: cost(&[generic(2), w(), hybrid(Color::White, Color::Black), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             // No "Rhino" subtype yet — bridge through Bard alone.
@@ -1834,23 +1834,12 @@ pub fn cuboid_colony() -> CardDefinition {
     }
 }
 
-/// Fractal Tender — {3}{G}{U}, 3/3 Elf Wizard.
-/// "Ward {2}. Increment (...) / At the beginning of each end step, if
-/// you put a counter on this creature this turn, create a 0/0 green
-/// and blue Fractal creature token and put three +1/+1 counters on
-/// it."
-///
-/// Increment wired via `shortcut::increment_self_plus_one()`. The
-/// end-step Fractal-with-counters payoff is still omitted (no
-/// per-permanent "got-a-counter-this-turn" flag yet — tracked in
-/// TODO.md). 3/3 Ward {2} body remains.
-/// Approximation: body + `Keyword::Ward(crate::card::WardCost::generic(2))` wired. Increment trigger
-/// and end-step Fractal-with-counters payoff are both omitted (Increment
-/// needs mana-spent introspection on cast; the end-step trigger
-/// needs a "did this creature gain a counter this turn"
-/// per-permanent flag the engine doesn't track yet). The card still
-/// slots into Quandrix as a 3/3 attacker with a Ward stub, and the
-/// keyword is wired so Ward enforcement picks it up.
+/// Fractal Tender — {3}{G}{U}, 3/3 Elf Wizard. Ward {2}. Increment
+/// (a +1/+1 counter when you spend 5+ mana on a spell). At each end
+/// step, if it gained a counter this turn, mint a 0/0 G/U Fractal with
+/// three +1/+1 counters. Fully wired: Increment via
+/// `increment_self_plus_one()`, the payoff via
+/// `Predicate::SourceGainedCounterThisTurn`.
 pub fn fractal_tender() -> CardDefinition {
     use crate::card::Predicate;
     use crate::catalog::sets::sos::sorceries::fractal_token;
@@ -3083,7 +3072,7 @@ pub fn abstract_paintmage() -> CardDefinition {
     use crate::mana::{r, u, SpendRestriction};
     CardDefinition {
         name: "Abstract Paintmage",
-        cost: cost(&[u(), crate::mana::hybrid(Color::Blue, Color::Red), r()]),
+        cost: cost(&[u(), hybrid(Color::Blue, Color::Red), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Sorcerer],
@@ -3257,7 +3246,8 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -3317,7 +3307,7 @@ pub fn exhibition_tidecaller() -> CardDefinition {
 /// `ManaSymbol::Hybrid(Red, White)`, payable with either red or white.
 pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::{r, w as wm};
+    use crate::mana::r;
     let nonperm_in_gy = SelectionRequirement::Nonland
         .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)));
     let target_card = Selector::take(
@@ -3330,7 +3320,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
     );
     CardDefinition {
         name: "Practiced Scrollsmith",
-        cost: cost(&[r(), crate::mana::hybrid(Color::Red, Color::White), wm()]),
+        cost: cost(&[r(), hybrid(Color::Red, Color::White), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Cleric],
@@ -3378,10 +3368,10 @@ pub fn practiced_scrollsmith() -> CardDefinition {
 /// a `DecisionAnswer::Discard(picked_ids)` to opt into discarding any
 /// subset of the hand. Tests: `colossus_of_the_blood_age_death_trigger_*`.
 pub fn colossus_of_the_blood_age() -> CardDefinition {
-    use crate::mana::{r, w as wm};
+    use crate::mana::r;
     CardDefinition {
         name: "Colossus of the Blood Age",
-        cost: cost(&[generic(4), r(), wm()]),
+        cost: cost(&[generic(4), r(), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Construct],
@@ -3440,7 +3430,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
     use crate::mana::w;
     CardDefinition {
         name: "Soaring Stoneglider",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
@@ -3467,7 +3457,8 @@ pub fn soaring_stoneglider() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -3563,8 +3554,10 @@ pub fn colorstorm_stallion() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::This,
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
             ]),
         )],
@@ -4098,7 +4091,7 @@ pub fn paradox_surveyor() -> CardDefinition {
     use crate::mana::{g, u};
     CardDefinition {
         name: "Paradox Surveyor",
-        cost: cost(&[g(), crate::mana::hybrid(Color::Green, Color::Blue), u()]),
+        cost: cost(&[g(), hybrid(Color::Green, Color::Blue), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -4394,14 +4387,10 @@ pub fn rubble_rouser() -> CardDefinition {
 /// Destroy target creature. / -7: You get an emblem with 'Whenever you
 /// gain life, target opponent loses that much life.'"
 ///
-/// Wired with the three numerical abilities (`+2 gain 3`, `0 draw 1 / lose
-/// 1`, `-3 destroy creature`). The `-7` emblem clause is omitted —
-/// emblems aren't a modelled zone yet (see TODO.md "Planeswalker
-/// Interactions"). The base shell is the standard Witherbloom
-/// removal-and-card-draw planeswalker, leveraging the existing engine
-/// loyalty-ability machinery; the `-3` ability uses
-/// `target_filtered(Creature)` so the auto-target picker takes a
-/// hostile creature when one is available.
+/// All four abilities wired: `+2 gain 3`, `0 draw 1 / lose 1`, `-3
+/// destroy creature`, and the ultimate emblem ("whenever you gain life,
+/// each opponent loses that much life" — a triggered emblem via
+/// `Effect::CreateEmblem`).
 pub fn professor_dellian_fel() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
     use crate::effect::shortcut::target_filtered;
@@ -4457,6 +4446,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Professor Dellian Fel".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
                         effect: Effect::LoseLife {
@@ -4883,7 +4873,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
         name: "Essenceknit Scholar",
-        cost: cost(&[b(), crate::mana::hybrid(Color::Black, Color::Green), g()]),
+        cost: cost(&[b(), hybrid(Color::Black, Color::Green), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dryad, CreatureType::Warlock],

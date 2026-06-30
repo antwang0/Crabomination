@@ -104,6 +104,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         exile: state.exile.iter().map(|c| exile_entry(c, viewer)).collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
+        combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
         combat_preview: combat_preview(state),
         // One pass over the hand builds a single library-stripped probe
@@ -122,13 +123,17 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         bargainable_hand: affordances.bargainable,
         squadable_hand: affordances.squadable,
         replicatable_hand: affordances.replicatable,
+        conspirable_hand: affordances.conspirable,
         multikickable_hand: affordances.multikickable,
         dashable_hand: affordances.dashable,
         blitzable_hand: affordances.blitzable,
+        warpable_hand: affordances.warpable,
         suspendable_hand: affordances.suspendable,
         foretellable_hand: affordances.foretellable,
         plottable_hand: affordances.plottable,
         adventurable_hand: affordances.adventurable,
+        omenable_hand: affordances.omenable,
+        prototypable_hand: affordances.prototypable,
         splittable_right_hand: affordances.splittable_right,
         activatable_permanents: affordances.activatable_permanents,
         hand_activatable: affordances.hand_activatable,
@@ -186,23 +191,32 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             .collect();
         let a_power = a.power.max(0);
         let lifelink = kw(a, &Keyword::Lifelink);
+        // CR 702.4 — a double striker deals its combat damage twice (the
+        // first-strike step *and* the regular step), so unblocked face damage,
+        // trample overflow, and lifelink all count it twice.
+        let strikes = if kw(a, &Keyword::DoubleStrike) { 2 } else { 1 };
         if blockers.is_empty() {
             // CR 510.1c — a blocked attacker whose blockers all left combat
             // stays blocked: no face damage without trample.
             if state.blocked_attackers().contains(&atk.attacker) && !kw(a, &Keyword::Trample) {
                 continue;
             }
-            // Unblocked: full damage to the defending player or planeswalker.
+            // Unblocked: full damage to the defending player or planeswalker
+            // (×2 for double strike).
+            let face = a_power * strikes;
             match atk.target {
                 AttackTarget::Player(p) => {
-                    *dmg.entry(p).or_insert(0) += a_power;
+                    *dmg.entry(p).or_insert(0) += face;
                 }
                 AttackTarget::Planeswalker(pw) => {
-                    *pw_dmg.entry(pw).or_insert(0) += a_power;
+                    *pw_dmg.entry(pw).or_insert(0) += face;
                 }
+                // Battle damage removes defense counters, not life — the board
+                // view shows the live counter total, so nothing to predict here.
+                AttackTarget::Battle(_) => {}
             }
-            if lifelink && a_power > 0 {
-                *lifegain.entry(a.controller).or_insert(0) += a_power;
+            if lifelink && face > 0 {
+                *lifegain.entry(a.controller).or_insert(0) += face;
             }
         } else {
             // Blocked: attacker assigns lethal to blockers in id order;
@@ -248,19 +262,30 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                     .map(|b| if kw(a, &Keyword::Deathtouch) { 1 } else { b.toughness.max(0) })
                     .sum();
                 let overflow = (a_power - assign_to_block).max(0);
-                if overflow > 0 {
+                // Double strike (CR 702.4): a second damage step. If the first
+                // strike killed every blocker, the whole power tramples through;
+                // otherwise the survivors soak the same lethal again.
+                let second_overflow = if strikes == 2 {
+                    if killed.len() == blockers.len() { a_power } else { overflow }
+                } else {
+                    0
+                };
+                let total_overflow = overflow + second_overflow;
+                if total_overflow > 0 {
                     match atk.target {
                         AttackTarget::Player(p) => {
-                            *dmg.entry(p).or_insert(0) += overflow;
+                            *dmg.entry(p).or_insert(0) += total_overflow;
                         }
                         AttackTarget::Planeswalker(pw) => {
-                            *pw_dmg.entry(pw).or_insert(0) += overflow;
+                            *pw_dmg.entry(pw).or_insert(0) += total_overflow;
                         }
+                        AttackTarget::Battle(_) => {}
                     }
                 }
             }
             if lifelink {
-                *lifegain.entry(a.controller).or_insert(0) += a_power;
+                // A double striker deals (and so lifelinks for) its power twice.
+                *lifegain.entry(a.controller).or_insert(0) += a_power * strikes;
             }
             // Blockers with lifelink gain their controller life for the
             // damage they deal to the attacker (a first-struck-dead blocker
@@ -299,6 +324,13 @@ fn exile_entry(card: &CardInstance, viewer: Option<usize>) -> ExileCardView {
         name: if hidden { "Face-down card".to_string() } else { card.definition.name.to_string() },
         owner: card.owner,
         may_play_recipient: card.may_play_until.as_ref().map(|p| p.player),
+        // Surface the alt-cast cost only while a may-play grant is live, so
+        // "play for {2}" can't leak from a stale cost on a plain exile card.
+        may_play_alt_cost: card
+            .may_play_until
+            .as_ref()
+            .and(card.granted_alt_cast_cost_eot.as_ref())
+            .map(|c| c.cmc()),
         mana_value: if hidden { 0 } else { card.definition.cost.cmc() },
         is_token: card.is_token,
         exiled_by: card.exiled_by.map(|l| l.source),
@@ -376,7 +408,8 @@ fn known_library_top(
     let revealed_to_all =
         lantern || has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed));
     let owner_may_look = viewer_seat == player_seat
-        && has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }));
+        && (has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }))
+            || state.players[player_seat].play_from_top_this_turn);
     if revealed_to_all || owner_may_look {
         state.players[player_seat].library.first().map(known_card).into_iter().collect()
     } else {
@@ -403,12 +436,45 @@ fn project_player(
     let has_prevention_shield = prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Player(player_seat));
+    let damage_fully_prevented = state.all_damage_to_player_prevented(player_seat);
+    // Coven — three or more controlled creatures with different (computed) powers.
+    let coven_active = {
+        let powers: std::collections::HashSet<i32> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player_seat && c.definition.is_creature())
+            .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power))
+            .collect();
+        powers.len() >= 3
+    };
+    // CR 611.2 — per-turn spell-cast locks in play, and whether this player has
+    // already cast a spell of each locked category this turn.
+    let spell_cast_lock = {
+        use crate::effect::StaticEffect;
+        let any_static = |pred: &dyn Fn(&StaticEffect) -> bool| {
+            state
+                .battlefield
+                .iter()
+                .any(|c| c.definition.static_abilities.iter().any(|sa| pred(&sa.effect)))
+        };
+        crate::net::SpellCastLock {
+            any_reached: player.spells_cast_this_game_turn >= 1
+                && any_static(&|e| matches!(e, StaticEffect::OneSpellPerTurn)),
+            noncreature_reached: player.noncreature_spells_cast_this_game_turn >= 1
+                && any_static(&|e| matches!(e, StaticEffect::OneNoncreatureSpellPerTurn)),
+            nonartifact_reached: player.nonartifact_spells_cast_this_game_turn >= 1
+                && any_static(&|e| matches!(e, StaticEffect::OneNonartifactSpellPerTurn)),
+        }
+    };
     PlayerView {
         seat: player_seat,
         name: player.name.clone(),
         life: player.life,
         poison_counters: player.poison_counters,
         energy: player.energy,
+        speed: player.speed,
+        at_max_speed: player.speed >= 4,
+        rad_counters: player.rad_counters,
         mana_pool: player.mana_pool.clone(),
         library: LibraryView {
             size: player.library.len(),
@@ -435,6 +501,8 @@ fn project_player(
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         spells_cast_this_turn: player.spells_cast_this_turn,
+        spell_cast_lock,
+        skip_next_combat: player.skip_next_combat,
         max_hand_size: player.max_hand_size,
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
@@ -447,14 +515,46 @@ fn project_player(
             .collect(),
         commanders: player.commanders.clone(),
         eliminated: player.eliminated,
-        emblems: player.emblems.iter().map(|e| e.name.clone()).collect(),
+        // Emblem label = source name plus any static-ability text, so the UI
+        // can show what an anthem emblem (Vivien Reid's −8) actually does
+        // rather than just its name. Triggered-only emblems keep the bare name.
+        emblems: player
+            .emblems
+            .iter()
+            .map(|e| {
+                if e.statics.is_empty() {
+                    e.name.clone()
+                } else {
+                    let text = e
+                        .statics
+                        .iter()
+                        .map(|s| s.description)
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    format!("{} — {}", e.name, text)
+                }
+            })
+            .collect(),
         has_prevention_shield,
+        damage_fully_prevented,
         devotion,
         is_monarch,
         has_city_blessing: player.city_blessing,
         cannot_gain_life,
         commander_damage_taken,
         team,
+        coven_active,
+        descend_count: state.players[player_seat]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_permanent())
+            .count() as u32,
+        descended_this_turn_count: state.players[player_seat].descend_count_this_turn,
+        committed_crime_this_turn: state.players[player_seat].committed_crime_this_turn,
+        ring_temptations: player.ring_temptations,
+        ring_bearer: state.effective_ring_bearer(player_seat),
+        void_active: state.nonland_permanent_left_bf_this_turn
+            || state.players[player_seat].warped_spell_this_turn,
     }
 }
 
@@ -524,7 +624,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .definition
             .alternative_cost
             .as_ref()
-            .map(|a| format_mana_cost_for_label(&a.mana_cost))
+            .map(format_alt_cost_label)
             .unwrap_or_default(),
         alt_cost_available: card.definition.alternative_cost.as_ref().is_none_or(|a| {
             // Condition-gated alt costs (Prowl, Archive Trap) and
@@ -539,7 +639,52 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 );
                 st.evaluate_predicate(c, &ctx)
             });
-            cond_ok && !(a.not_your_turn_only && st.active_player_idx == card.owner)
+            // CR 702.48 — Offering greys out unless the caster controls a
+            // creature of the offered type to sacrifice.
+            let offering_ok = a.offering.as_ref().is_none_or(|filter| {
+                st.battlefield.iter().any(|c| {
+                    c.controller == card.owner
+                        && c.definition.is_creature()
+                        && st.evaluate_requirement_static(
+                            filter,
+                            &crate::game::types::Target::Permanent(c.id),
+                            card.owner,
+                            None,
+                        )
+                })
+            });
+            // A return-to-hand / sacrifice additional cost greys out unless the
+            // caster controls enough matching permanents to pay it (Sneak needs
+            // an unblocked attacker, Web-slinging a tapped creature, Fireblast
+            // two Mountains).
+            let controls_at_least = |filter: &crate::card::SelectionRequirement, n: u32| {
+                st.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == card.owner
+                            && st.evaluate_requirement_static(
+                                filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                card.owner,
+                                None,
+                            )
+                    })
+                    .count() as u32
+                    >= n
+            };
+            let return_ok = a
+                .return_to_hand
+                .as_ref()
+                .is_none_or(|(f, n)| controls_at_least(f, *n));
+            let sac_ok = a
+                .sacrifice_permanents
+                .as_ref()
+                .is_none_or(|(f, n)| controls_at_least(f, *n));
+            cond_ok
+                && offering_ok
+                && return_ok
+                && sac_ok
+                && !(a.not_your_turn_only && st.active_player_idx == card.owner)
         }),
         back_face_name: card
             .definition
@@ -587,6 +732,41 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 && (card.definition.effect.requires_target()
                     || sp.right.effect.requires_target())
         }),
+        has_gift: card.definition.gift.is_some(),
+        gift_label: card
+            .definition
+            .gift
+            .as_ref()
+            .map(|g| g.label.to_string())
+            .unwrap_or_default(),
+        gift_needs_target: card
+            .definition
+            .gift
+            .as_ref()
+            .is_some_and(|g| g.gifted_effect.requires_target()),
+        has_omen: card.definition.omen.is_some(),
+        omen_label: card
+            .definition
+            .omen
+            .as_ref()
+            .map(|o| o.name.to_string())
+            .unwrap_or_default(),
+        omen_needs_target: card
+            .definition
+            .omen
+            .as_ref()
+            .is_some_and(|o| o.effect.requires_target()),
+        station_next_threshold: {
+            let charges = card.counter_count(crate::card::CounterType::Charge);
+            card.definition
+                .station
+                .iter()
+                .map(|b| b.min)
+                .filter(|&m| m > charges)
+                .min()
+        },
+        station_charges: (!card.definition.station.is_empty())
+            .then(|| card.counter_count(crate::card::CounterType::Charge)),
     }
 }
 
@@ -606,6 +786,34 @@ fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
     c.summary()
 }
 
+/// A player-facing label for an alternative cost: the mana portion plus any
+/// non-mana riders (return-to-hand / sacrifice / pitch / life), so a {0}-mana
+/// alt cost like Escape Detection's "return a blue creature" still reads
+/// sensibly in the cast prompt instead of showing nothing.
+fn format_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    let mana = format_mana_cost_for_label(&a.mana_cost);
+    if !mana.is_empty() {
+        parts.push(mana);
+    }
+    if let Some((_, n)) = &a.return_to_hand {
+        parts.push(format!("Return {n}"));
+    }
+    if let Some((_, n)) = &a.sacrifice_permanents {
+        parts.push(format!("Sacrifice {n}"));
+    }
+    if a.exile_from_graveyard_count > 0 {
+        parts.push(format!("Exile {} from graveyard", a.exile_from_graveyard_count));
+    }
+    if a.exile_filter.is_some() {
+        parts.push("Exile a card from hand".to_string());
+    }
+    if a.life_cost > 0 {
+        parts.push(format!("Pay {} life", a.life_cost));
+    }
+    parts.join(" + ")
+}
+
 fn graveyard_entry(
     card: &CardInstance,
     state: &GameState,
@@ -619,13 +827,19 @@ fn graveyard_entry(
         power: card.definition.base_power(),
         toughness: card.definition.base_toughness(),
         // Jump-start (CR 702.103) rides the flashback cast path at the
-        // card's own cost (+ discard, paid at cast time).
-        flashback_cost: card.definition.has_flashback().cloned().or_else(|| {
-            card.definition
-                .keywords
-                .contains(&crate::card::Keyword::JumpStart)
-                .then(|| card.definition.cost.clone())
-        }),
+        // card's own cost (+ discard, paid at cast time). Lier grants
+        // flashback (= mana cost) to I/S in the graveyard.
+        flashback_cost: card
+            .definition
+            .has_flashback()
+            .cloned()
+            .or_else(|| {
+                card.definition
+                    .keywords
+                    .contains(&crate::card::Keyword::JumpStart)
+                    .then(|| card.definition.cost.clone())
+            })
+            .or_else(|| state.graveyard_flashback_grant(seat, card)),
         retrace: state.effective_retrace(card, seat),
         escape: state.effective_escape(card, seat),
         bestow_cost: card.definition.has_bestow().cloned(),
@@ -634,7 +848,34 @@ fn graveyard_entry(
             crate::card::Keyword::Disturb(c) => Some(c.clone()),
             _ => None,
         }),
+        // CR 702.187 — Mayhem is castable only if this seat discarded the card
+        // this turn (the same gate `cast_flashback` enforces).
+        mayhem_cost: card.definition.mayhem_cost().cloned().filter(|_| {
+            state.players[seat].discarded_this_turn.contains(&card.id)
+        }),
+        harmonize_cost: card.definition.harmonize_cost().cloned(),
     }
+}
+
+/// CR 702.122e/702.171 — sum of "crews/saddles as though its power were N
+/// greater" bonuses applying to `cid`, computed from a battlefield slice (the
+/// view layer has no `GameState`). Mirrors `GameState::crew_saddle_power_bonus`.
+fn crew_saddle_power_bonus_in(cid: CardId, battlefield: &[CardInstance]) -> i32 {
+    use crate::effect::StaticEffect;
+    let Some(target) = battlefield.iter().find(|c| c.id == cid) else { return 0 };
+    let mut bonus = 0;
+    for src in battlefield {
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount } = &sa.effect
+                && let Some(affected) =
+                    crate::game::selector_to_affected(applies_to, src)
+                && crate::game::layers::affected_includes(&affected, src.id, target)
+            {
+                bonus += amount;
+            }
+        }
+    }
+    bonus
 }
 
 fn project_permanent(
@@ -672,6 +913,17 @@ fn project_permanent(
         counters: card.counters.iter().map(|(k, v)| (*k, *v)).collect(),
         attached_to: card.attached_to,
         is_token: card.is_token,
+        station_next_threshold: {
+            let charges = card.counter_count(crate::card::CounterType::Charge);
+            card.definition
+                .station
+                .iter()
+                .map(|b| b.min)
+                .filter(|&m| m > charges)
+                .min()
+        },
+        station_charges: (!card.definition.station.is_empty())
+            .then(|| card.counter_count(crate::card::CounterType::Charge)),
         attacking: attacking.contains(&card.id),
         blocking_attacker: block_map
             .iter()
@@ -687,7 +939,9 @@ fn project_permanent(
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
         suspected: card.suspected,
+        renowned: card.renowned,
         detained: card.detained_by.is_some(),
+        untap_locked: card.untap_locked_by.is_some(),
         impending_counters: {
             let n = card.counter_count(crate::card::CounterType::Time);
             let is_impending = card
@@ -701,7 +955,13 @@ fn project_permanent(
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
-            card.definition.is_creature()
+            // Creatures and Vehicles (CR 208.3 noncreature P/T — a `*`-power
+            // Vehicle like Lumbering Worldwagon shifts with the board) both
+            // carry a P/T box; flag it when the live value differs from base.
+            let has_pt_box = card.definition.is_creature()
+                || card.definition.subtypes.artifact_subtypes
+                    .contains(&crate::card::ArtifactSubtype::Vehicle);
+            has_pt_box
                 && (cp_power != card.definition.base_power()
                     || cp_toughness != card.definition.base_toughness())
         },
@@ -740,6 +1000,8 @@ fn project_permanent(
         regeneration_shields: card.regeneration_shields,
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
         crew_value: card.definition.crew_cost().unwrap_or(0),
+        crew_power_bonus: crew_saddle_power_bonus_in(card.id, battlefield),
+        saddled: card.saddled,
         marked_lethal: {
             let tough = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
             let indestructible = cp
@@ -797,6 +1059,19 @@ fn project_permanent(
             .prepare_spell
             .as_ref()
             .is_some_and(|p| p.effect.requires_target()),
+        creature_subtypes: cp
+            .map(|c| c.subtypes.creature_types.clone())
+            .unwrap_or_else(|| card.definition.subtypes.creature_types.clone()),
+        lost_all_abilities: cp.is_some_and(|c| c.lost_all_abilities),
+        colors: cp.map(|c| c.colors.clone()).unwrap_or_else(|| {
+            let mut cs = card.definition.cost.colors();
+            for c in &card.definition.color_indicator {
+                if !cs.contains(c) {
+                    cs.push(*c);
+                }
+            }
+            cs
+        }),
     }
 }
 
@@ -965,6 +1240,14 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::BecameTarget, EventScope::AnyPlayer) => "Any targets",
         (EventKind::CreatureSacrificed, EventScope::OpponentControl) => "Opp creature sac",
         (EventKind::PermanentSacrificed, EventScope::OpponentControl) => "Opp permanent sac",
+        // "Put into a graveyard from the battlefield" observers (CR 700.4) —
+        // used by equip-granted death watchers (Tarrian's Soulcleaver) and
+        // graveyard-matters payoffs.
+        (EventKind::PutIntoGraveyard, EventScope::SelfSource) => "Put into GY",
+        (EventKind::PutIntoGraveyard, EventScope::YourControl) => "Yours to GY",
+        (EventKind::PutIntoGraveyard, EventScope::OpponentControl) => "Opp to GY",
+        (EventKind::PutIntoGraveyard, EventScope::AnyPlayer) => "Any to GY",
+        (EventKind::LandPutIntoGraveyard, _) => "Land to GY",
         // Enrage (CR 702.130) — "Whenever this creature is dealt damage."
         (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",
         (EventKind::DealtDamage, EventScope::YourControl) => "Your crea dealt dmg",
@@ -1380,6 +1663,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
+        Effect::GrantHexproofFromColorThisTurn { .. } => "Hexproof from color",
         Effect::Explore { .. } => "Explore",
         Effect::Goad { .. } => "Goad",
         Effect::Provoke { .. } => "Provoke",
@@ -1412,6 +1696,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DigToHandLoseLife { .. } => "Dig, lose life per card kept",
         Effect::Suspect { .. } => "Suspect",
         Effect::Ascend { .. } => "Ascend",
+        Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
+        Effect::ReturnTopCreatureFromGraveyard { .. } => "Reanimate top creature",
         _ => "Activate",
     }
 }
@@ -1423,14 +1709,22 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
 /// player can pick a specific color before casting an off-color spell.
 fn is_mana_ability(effect: &Effect) -> bool {
     use crate::effect::ManaPayload;
-    match effect {
-        Effect::AddMana { pool, .. } => matches!(
-            pool,
+    fn no_choice_payload(pool: &ManaPayload) -> bool {
+        match pool {
             // No-choice payloads — auto-tap activates them on the user's
             // behalf without surfacing a menu entry.
-            ManaPayload::Colors(_) | ManaPayload::Colorless(_)
-                | ManaPayload::OfColor(_, _)
-        ),
+            ManaPayload::Colors(_) | ManaPayload::Colorless(_) | ManaPayload::OfColor(_, _) => true,
+            // Spend-restricted mana (Omen Hawker, the Strixhaven school
+            // dorks) is still a fixed-output mana ability — recurse past the
+            // restriction wrapper.
+            ManaPayload::Restricted(inner, _)
+            | ManaPayload::RestrictedToChosenType(inner)
+            | ManaPayload::RestrictedToChosenTypePlain(inner) => no_choice_payload(inner),
+            _ => false,
+        }
+    }
+    match effect {
+        Effect::AddMana { pool, .. } => no_choice_payload(pool),
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
         _ => false,
     }
@@ -1509,6 +1803,28 @@ mod tests {
         g.remove_from_battlefield_to_graveyard_raw(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
+    }
+
+    #[test]
+    fn project_surfaces_void_active() {
+        // EOE Void — the view flags a seat whose Void condition is met so the
+        // client can show a "✦ Void" chip.
+        let mut g = two_player_game();
+        assert!(!project(&g, 0).players[0].void_active, "dormant by default");
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.remove_from_battlefield_to_graveyard_raw(bear); // a nonland permanent left
+        assert!(project(&g, 0).players[0].void_active, "nonland leaving the battlefield → Void");
+    }
+
+    #[test]
+    fn project_surfaces_at_max_speed() {
+        // CR 702.179c — the view pre-derives the max-speed flag so the client
+        // can highlight live "Max speed —" abilities.
+        let mut g = two_player_game();
+        g.players[0].speed = 3;
+        assert!(!project(&g, 0).players[0].at_max_speed, "speed 3 is not max");
+        g.players[0].speed = 4;
+        assert!(project(&g, 0).players[0].at_max_speed, "speed 4 is max speed");
     }
 
     #[test]
@@ -1591,6 +1907,8 @@ mod tests {
             gain_life: false,
             source: None,
             one_event: false,
+            reflect: false,
+            source_controller: None,
         });
         state.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Permanent(bear),
@@ -1598,6 +1916,8 @@ mod tests {
             gain_life: false,
             source: None,
             one_event: false,
+            reflect: false,
+            source_controller: None,
         });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);
@@ -2341,6 +2661,19 @@ mod tests {
             "gate_label should mention 'hand' (got {:?})", draw_ability.gate_label);
     }
 
+    /// Omen Hawker taps for spend-restricted `{C}{U}` (`ManaPayload::Restricted`).
+    /// The projection should still classify it as a mana ability so the client
+    /// auto-taps it rather than surfacing a spurious menu entry.
+    #[test]
+    fn omen_hawker_restricted_mana_is_a_mana_ability() {
+        let mut state = two_player_game();
+        let hawker = state.add_card_to_battlefield(0, catalog::omen_hawker());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == hawker).unwrap();
+        assert!(perm.abilities.iter().all(|a| a.is_mana),
+            "Omen Hawker's restricted {{C}}{{U}} ability is a mana ability");
+    }
+
     /// Potioner's Trove's lifegain ability picked up a printed gate
     /// in push VIII (`SpellsCastThisTurnAtLeast(You, 1)`); the
     /// projection should expose it through `AbilityView.gate_label`.
@@ -2595,9 +2928,54 @@ mod tests {
         state.players[0].emblems.push(crate::player::Emblem {
             name: "Professor Dellian Fel".into(),
             triggered: vec![],
+            statics: vec![],
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
+    }
+
+    #[test]
+    fn project_surfaces_static_emblem_ability_text() {
+        use crate::card::StaticAbility;
+        use crate::effect::{Selector, StaticEffect};
+        let mut state = two_player_game();
+        state.players[0].emblems.push(crate::player::Emblem {
+            name: "Vivien Reid".into(),
+            triggered: vec![],
+            statics: vec![StaticAbility {
+                description: "Creatures you control get +2/+2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::This,
+                    power: 2,
+                    toughness: 2,
+                },
+            }],
+        });
+        let view = project(&state, 0);
+        assert_eq!(
+            view.players[0].emblems,
+            vec!["Vivien Reid — Creatures you control get +2/+2.".to_string()]
+        );
+    }
+
+    #[test]
+    fn spell_cast_lock_surfaces_after_casting_the_locked_category() {
+        // Deafening Silence in play, no spell cast yet → not reached.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::deafening_silence());
+        let before = project(&g, 0).players[0].spell_cast_lock.clone();
+        assert!(!before.noncreature_reached, "lock not reached before any cast");
+        // Cast a noncreature spell; the lock is now reached for player 0.
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.perform_action(crate::game::GameAction::CastSpell {
+            card_id: bolt, target: Some(crate::game::Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bolt");
+        crate::game::drain_stack(&mut g);
+        let after = project(&g, 0).players[0].spell_cast_lock.clone();
+        assert!(after.noncreature_reached, "noncreature lock reached after a noncreature cast");
+        assert!(!after.any_reached, "no Rule of Law in play → the any-spell lock stays clear");
     }
 
     #[test]
@@ -2616,6 +2994,13 @@ mod tests {
         assert!(k2.has_alternative_cost);
         assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
         assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
+
+        // Warp (Haliya) is a plain alt cost surfaced with its {W} label.
+        let haliya = crate::card::CardInstance::new(
+            crate::card::CardId(3), catalog::haliya_guided_by_light(), 0);
+        let k3 = known_card(&haliya);
+        assert!(k3.has_alternative_cost && !k3.alt_cost_needs_pitch);
+        assert_eq!(k3.alt_cost_label, "{W}", "warp cost label rendered");
     }
 
     #[test]
@@ -2653,5 +3038,61 @@ mod tests {
             view.exile.iter().any(|e| e.encoded_on == Some(bear)),
             "exile view surfaces the cipher carrier"
         );
+    }
+
+    /// CR 702.187 — the graveyard view only flags a Mayhem cost once the owner
+    /// has discarded that card this turn.
+    #[test]
+    fn graveyard_view_surfaces_mayhem_only_after_discard() {
+        let mut g = two_player_game();
+        let bolt = g.add_card_to_graveyard(0, catalog::electros_bolt());
+        // In the graveyard but not discarded this turn → no affordance.
+        let v0 = project(&g, 0);
+        let e0 = v0.players[0].graveyard.iter().find(|c| c.id == bolt).expect("bolt in graveyard view");
+        assert!(e0.mayhem_cost.is_none(), "no Mayhem affordance before a discard");
+        // Mark it discarded this turn → the affordance surfaces.
+        g.players[0].discarded_this_turn.insert(bolt);
+        let v1 = project(&g, 0);
+        let e1 = v1.players[0].graveyard.iter().find(|c| c.id == bolt).expect("bolt in graveyard view");
+        assert_eq!(e1.mayhem_cost.as_ref().map(|c| c.cmc()), Some(2), "the mayhem cost surfaced");
+    }
+
+    /// CR 208.3 — a noncreature `*`-power Vehicle surfaces its live power and is
+    /// flagged `pt_modified` once the board pushes it off its printed base.
+    #[test]
+    fn vehicle_dynamic_power_surfaces_in_view() {
+        let mut g = two_player_game();
+        let wagon = g.add_card_to_battlefield(0, catalog::lumbering_worldwagon());
+        for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+        let view = project(&g, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == wagon).expect("wagon in view");
+        assert_eq!(pv.power, 3, "power = lands controlled");
+        assert!(pv.pt_modified, "noncreature Vehicle flagged as P/T-modified");
+    }
+
+    /// CR 702.122e/702.171 — Deathless Pilot's crew-power rider surfaces in the
+    /// view so the client can badge "crews as +2".
+    #[test]
+    fn crew_power_bonus_surfaces_in_view() {
+        let mut g = two_player_game();
+        let pilot = g.add_card_to_battlefield(0, catalog::deathless_pilot());
+        let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&g, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == pilot).expect("pilot in view");
+        assert_eq!(pv.crew_power_bonus, 2, "rider surfaces");
+        let bv = view.battlefield.iter().find(|p| p.id == plain).expect("bears in view");
+        assert_eq!(bv.crew_power_bonus, 0, "no rider on a plain creature");
+    }
+
+    /// A non-mana alternative cost surfaces a descriptive label (Escape
+    /// Detection's freerunning is "return a creature", not blank).
+    #[test]
+    fn alt_cost_label_describes_non_mana_riders() {
+        let card = crate::card::CardInstance::new(
+            crate::card::CardId(1), catalog::escape_detection(), 0);
+        let k = known_card(&card);
+        assert!(k.has_alternative_cost);
+        assert!(k.alt_cost_label.contains("Return"),
+            "alt-cost label describes the return rider, got {:?}", k.alt_cost_label);
     }
 }

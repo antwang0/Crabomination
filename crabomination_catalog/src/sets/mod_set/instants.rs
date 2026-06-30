@@ -569,7 +569,8 @@ pub fn pyrokinesis() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -756,33 +757,23 @@ pub fn treasure_cruise() -> CardDefinition {
     }
 }
 
-/// Dig Through Time — {6}{U}{U} Instant. Delve. "Look at the top seven
-/// cards of your library. Put two of them into your hand and the rest on
-/// the bottom of your library in any order."
-///
-/// Delve (CR 702.66) is wired via `Keyword::Delve` — a full graveyard
-/// turns this into {U}{U}. The selection half is approximated as
-/// `Scry 7 → Draw 2`: scrying seven lets the controller see the top seven
-/// and arrange them (the two keepers on top, the rest to the bottom),
-/// then drawing two takes the keepers — gameplay-equivalent to the
-/// printed "put two into your hand, the rest on the bottom". Same
-/// approximation pattern as Stress Dream's "look at top 2, take 1".
+/// Dig Through Time — {6}{U}{U} Instant. Delve. Look at the top seven
+/// cards of your library, put two of them into your hand and the rest on
+/// the bottom (real two-card `ChooseCards` pick).
 pub fn dig_through_time() -> CardDefinition {
     CardDefinition {
         name: "Dig Through Time",
         cost: cost(&[generic(6), u(), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(7),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(7),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: Some(Value::Const(2)),
+            to_battlefield: false,
+        },
         ..Default::default()
     }
 }
@@ -797,7 +788,7 @@ pub fn dig_through_time() -> CardDefinition {
 pub fn lose_focus() -> CardDefinition {
     CardDefinition {
         name: "Lose Focus",
-        cost: cost(&[u()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
         effect: Effect::CounterUnlessPaid {
@@ -1133,8 +1124,10 @@ pub fn cackling_counterpart() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             extra_creature_types: vec![],
+            extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
+            legendary: false,
         },
         ..Default::default()
     }
@@ -1322,7 +1315,7 @@ pub fn force_of_vigor() -> CardDefinition {
 pub fn trumpet_blast() -> CardDefinition {
     CardDefinition {
         name: "Trumpet Blast",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
             what: Selector::EachPermanent(SelectionRequirement::IsAttacking),
@@ -1663,7 +1656,7 @@ pub fn teferis_protection() -> CardDefinition {
 pub fn comeuppance() -> CardDefinition {
     CardDefinition {
         name: "Comeuppance",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,
@@ -1673,16 +1666,15 @@ pub fn comeuppance() -> CardDefinition {
     }
 }
 
-/// Fact or Fiction — {3}{U} Instant. "Reveal the top five cards of your library.
-/// An opponent separates them into two piles; put one pile into your hand and
-/// the rest into your graveyard." Simplified to "draw two cards" (the
-/// reveal-and-split is not modeled).
+/// Fact or Fiction — {3}{U} Instant. Reveal the top five cards of your library;
+/// an opponent separates them into two piles; one pile to hand, the rest to
+/// graveyard (`Effect::FactOrFiction` value heuristic).
 pub fn fact_or_fiction() -> CardDefinition {
     CardDefinition {
         name: "Fact or Fiction",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::FactOrFiction { count: Value::Const(5) },
         ..Default::default()
     }
 }

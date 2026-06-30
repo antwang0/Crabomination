@@ -46,6 +46,9 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         // number of unique token names produced over a session.
         name: crate::static_str_serde::intern(resolved_name),
         cost: ManaCost::default(),
+        // CR 111.4 / 105.2c — a token's color comes from its creating effect,
+        // carried as a color indicator (tokens have no mana cost to define it).
+        color_indicator: token.colors.clone(),
         supertypes: token.supertypes.clone(),
         card_types: token.card_types.clone(),
         subtypes: token.subtypes.clone(),
@@ -57,6 +60,38 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         triggered_abilities: token.triggered_abilities.clone(),
         static_abilities: token.static_abilities.clone(),
         equipped_bonus: token.equipped_bonus.clone(),
+        back_face: token
+            .back_face
+            .as_ref()
+            .map(|b| Box::new(token_to_card_definition(b))),
+        ..Default::default()
+    }
+}
+
+/// CR 701.53b — the Incubator double-faced token. Front: a colorless Incubator
+/// artifact with "{2}: Transform this token." Back: a 0/0 colorless Phyrexian
+/// artifact creature ("Phyrexian Token"). `incubate N` mints this with N +1/+1
+/// counters, so transforming yields an N/N.
+pub fn incubator_token() -> TokenDefinition {
+    let back = TokenDefinition {
+        name: "Phyrexian Token".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        ..Default::default()
+    };
+    TokenDefinition {
+        name: "Incubator".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::new(vec![ManaSymbol::Generic(2)]),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(back)),
         ..Default::default()
     }
 }
@@ -154,6 +189,31 @@ pub fn treasure_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+/// Powerstone token (CR 111.10q): "{T}: Add {C}. This mana can't be spent
+/// to cast a nonartifact spell."
+pub fn powerstone_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Powerstone".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Powerstone],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::Const(1))),
+                    crate::mana::SpendRestriction::NoNonartifactSpells,
+                ),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -490,6 +550,35 @@ pub fn clue_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+/// A Lander token (EOE): a colorless Artifact with "{2}, {T}, Sacrifice this
+/// token: Search your library for a basic land card, put it onto the
+/// battlefield tapped, then shuffle."
+pub fn lander_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Lander".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Lander],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: ManaCost { symbols: vec![ManaSymbol::Generic(2)] },
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+            ..ActivatedAbility::default()
+        }],
         ..Default::default()
     }
 }

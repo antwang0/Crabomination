@@ -444,7 +444,7 @@ fn kianne_studies_top_card_land_to_hand_else_study_counter() {
     // Top is a nonland (bears) → exiled with a study counter.
     let bears = g.add_card_to_library(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kianne, ability_index: 0, target: None, x_value: None,
+        card_id: kianne, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Kianne study");
     drain_stack(&mut g);
     let e = g.exile.iter().find(|c| c.id == bears).expect("nonland exiled");
@@ -454,7 +454,7 @@ fn kianne_studies_top_card_land_to_hand_else_study_counter() {
     g.battlefield_find_mut(kianne).unwrap().tapped = false;
     let isl = g.add_card_to_library(0, catalog::island());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kianne, ability_index: 0, target: None, x_value: None,
+        card_id: kianne, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Kianne study a land");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == isl), "land studied into hand");
@@ -476,7 +476,7 @@ fn kianne_fractal_counts_distinct_study_mana_values() {
         g.exile.push(card);
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kianne, ability_index: 1, target: None, x_value: None,
+        card_id: kianne, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Kianne fractal");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter().find(|c| c.definition.name == "Fractal").expect("fractal");
@@ -496,7 +496,7 @@ fn imbraham_exiles_top_x_with_study_counters() {
         crate::decision::DecisionAnswer::Bool(false),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: imb, ability_index: 0, target: None, x_value: Some(2),
+        card_id: imb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2),
     }).expect("Imbraham X=2");
     drain_stack(&mut g);
     for id in ids {
@@ -540,7 +540,7 @@ fn uvilda_hones_instant_then_makes_it_castable_for_four_less() {
         crate::decision::DecisionAnswer::Discard(vec![behold]),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: uvilda, ability_index: 0, target: None, x_value: None,
+        card_id: uvilda, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Uvilda hone");
     drain_stack(&mut g);
     let e = g.exile.iter().find(|c| c.id == behold).expect("instant exiled");

@@ -1,0 +1,6 @@
+[toolchain]
+# Bevy 0.19 (crabomination_client) requires rustc >= 1.95. Pin it so the whole
+# workspace builds with a compatible compiler. The engine crates build on
+# 1.94+ too, but a single pin keeps `cargo build --workspace` honest.
+channel = "1.95.0"
+components = ["clippy", "rustfmt"]

@@ -52,6 +52,28 @@ impl GameState {
         if self.damage_cant_be_prevented_this_turn || self.damage_cant_be_prevented_now() {
             return amount;
         }
+        // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
+        // the controller controls can't be prevented. Bypass shields when the
+        // damage source is a creature whose controller has the static.
+        if let Some(src_id) = source
+            && let Some(src) = self.battlefield_find(src_id)
+            && src.definition.is_creature()
+        {
+            let ctrl = src.controller;
+            let unpreventable = self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::CombatDamageCantBePrevented)
+                        || (c.controller == ctrl
+                            && matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+                            ))
+                })
+            });
+            if unpreventable {
+                return amount;
+            }
+        }
         // Protection from everything (The One Ring) — all damage to the
         // player is prevented until their next turn.
         if let EntityRef::Player(p) = ent
@@ -127,6 +149,11 @@ impl GameState {
         let mut prevented = 0u32;
         // CR 615.1 — life gained by `gain_life` shields that soak damage.
         let mut life_gain = 0u32;
+        // Deflecting Palm — damage soaked by `reflect` shields, dealt to
+        // the source's controller after the shield pass (stamped controller
+        // as the fallback when the source has left every visible zone).
+        let mut reflected = 0u32;
+        let mut reflect_ctrl: Option<usize> = None;
         // One-event (Circle of Protection) shields spent in this event.
         let mut spent_one_event: Vec<usize> = Vec::new();
         for (i, shield) in self
@@ -158,6 +185,10 @@ impl GameState {
             if shield.gain_life {
                 life_gain += soak;
             }
+            if shield.reflect {
+                reflected += soak;
+                reflect_ctrl = reflect_ctrl.or(shield.source_controller);
+            }
         }
         // Drop spent "next N" shields and used one-event shields.
         let mut idx = 0;
@@ -173,6 +204,30 @@ impl GameState {
             let applied = self.adjust_life_applied(p, life_gain as i32);
             if applied > 0 {
                 events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+            }
+        }
+        // Deflecting Palm's "deals that much damage to that source's
+        // controller". The reflected damage is its own event (source: the
+        // prevention effect, not the original source), so it can itself be
+        // prevented/replaced — bounded because each reflect shield is
+        // one-event and already spent.
+        if reflected > 0 {
+            let ctrl = source
+                .and_then(|src| {
+                    self.battlefield_find(src)
+                        .map(|c| c.controller)
+                        .or_else(|| {
+                            self.stack.iter().find_map(|si| match si {
+                                crate::game::StackItem::Spell { card, caster, .. }
+                                    if card.id == src => Some(*caster),
+                                _ => None,
+                            })
+                        })
+                        .or_else(|| self.died_card_snapshots.get(&src).map(|c| c.controller))
+                })
+                .or(reflect_ctrl);
+            if let Some(ctrl) = ctrl {
+                self.deal_damage_to_from(EntityRef::Player(ctrl), reflected, None, events);
             }
         }
         remaining
@@ -238,12 +293,34 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Glacial-Chasm-style "prevent all damage that would be dealt
+        // to you" (combat and noncombat alike).
+        if let EntityRef::Player(p) = ent
+            && self.all_damage_to_player_prevented(p)
+        {
+            return;
+        }
+        // CR 615 — Mark-of-Asylum-style "prevent all noncombat damage to
+        // creatures you control" (this funnel only carries noncombat damage to
+        // permanents; combat damage is marked elsewhere).
+        if let EntityRef::Permanent(tgt) = ent
+            && self.noncombat_damage_to_creature_prevented(tgt)
+        {
+            return;
+        }
         // CR 614.2 / 614.5 — global damage doubling (Furnace of Rath) then
         // halving (Ghosts of the Innocent), applied before prevention so a
         // shield soaks the already-scaled total (CR 616 lets the affected
         // player order the replacements — double-then-halve is the common
         // pick and keeps the event single-pass here).
         let amount = self.scale_damage_to(source, ent, amount);
+        // CR 614.5 — Solphim, Mayhem Dominus: a noncombat-only doubler scoped
+        // to "a source you control" hitting an opponent / their permanent.
+        // Applied here (not in `scale_damage_to`) so combat damage is exempt.
+        let amount = {
+            let n = self.noncombat_damage_doublers_for(source, ent);
+            amount.saturating_mul(1 << n.min(16))
+        };
         // CR 615.1 — prevention shields. Before applying the damage, let
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the
@@ -268,6 +345,13 @@ impl GameState {
         let source_has_wither =
             source_has_infect || src_kws.contains(&crate::card::Keyword::Wither);
         let source_has_deathtouch = src_kws.contains(&crate::card::Keyword::Deathtouch);
+        // Kumano / Frostwielder: a creature this source damages is exiled
+        // instead of dying for the rest of the turn (source-bound CR 614
+        // replacement). Registered after the damage lands below.
+        let source_exiles_damaged = source
+            .and_then(|s| self.battlefield_find(s))
+            .map(|c| c.definition.damage_exiles_if_dies)
+            .unwrap_or(false);
         match ent {
             EntityRef::Player(p) => {
                 // Bloodthirst (CR 702.54) window: any damage to a player
@@ -361,7 +445,31 @@ impl GameState {
                             new_loyalty: new_loyalty as i32,
                         });
                     }
-                } else if let Some(c) = self.battlefield_find_mut(cid) {
+                } else {
+                    // CR 120.10 — excess damage: amount beyond what's lethal,
+                    // accounting for damage already marked. Deathtouch makes any
+                    // damage past 1 excess (CR 702.2c). Computed before the
+                    // mutable borrow below applies the new damage.
+                    if let Some(cp) = self.computed_permanent(cid)
+                        && cp.card_types.contains(&crate::card::CardType::Creature)
+                    {
+                        let prior = self.battlefield_find(cid).map(|c| c.damage).unwrap_or(0);
+                        let lethal_needed = if source_has_deathtouch {
+                            1
+                        } else {
+                            (cp.toughness.max(0) as u32).saturating_sub(prior)
+                        };
+                        let excess = amount.saturating_sub(lethal_needed);
+                        self.excess_damage_this_resolution =
+                            self.excess_damage_this_resolution.saturating_add(excess);
+                    }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                    if c.definition.is_creature() {
+                        c.dealt_damage_this_turn = true;
+                        if let Some(src) = source {
+                            c.damaged_by_this_turn.push(src);
+                        }
+                    }
                     if source_has_wither && c.definition.is_creature() {
                         c.add_counters(CounterType::MinusOneMinusOne, amount);
                         events.push(GameEvent::CounterAdded {
@@ -380,6 +488,11 @@ impl GameState {
                         to_player: None,
                         to_card: Some(cid),
                     });
+                    let is_creature = c.definition.is_creature();
+                    if source_exiles_damaged && is_creature {
+                        self.dies_to_exile_eot.insert(cid);
+                    }
+                    }
                 }
             }
             EntityRef::Card(_) => {}
@@ -503,8 +616,20 @@ impl GameState {
             // `self.block_map` so the post-move combat state stays
             // consistent for downstream selectors and trigger dispatchers.
             self.remove_from_combat(cid);
+            // CR 603.6 — note a creature leaving for a non-graveyard zone
+            // (bounce / exile / library) *without dying* before it's consumed.
+            let leaver = (card.definition.is_creature() && !matches!(resolved_dest, ZoneDest::Graveyard))
+                .then_some((card.id, card.controller));
+            // EOE Void — any nonland permanent leaving the battlefield (bounce,
+            // sacrifice, exile, …) latches the turn-wide flag.
+            if !card.definition.is_land() {
+                self.nonland_permanent_left_bf_this_turn = true;
+            }
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);
+            if let Some((card_id, controller)) = leaver {
+                events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
+            }
             return;
         }
         // Then graveyards. Emit `CardLeftGraveyard` so Strixhaven
@@ -631,6 +756,14 @@ impl GameState {
             }
             return;
         }
+        // CR 702.140e — a merged (mutated) permanent leaving the battlefield
+        // becomes its individual component cards in that zone.
+        if !card.mutate_stack.is_empty() && intended != crate::card::Zone::Battlefield {
+            for part in std::mem::take(&mut card.mutate_stack) {
+                self.place_card_in_dest(part, default_player, dest, events);
+            }
+            return;
+        }
         let resolved = self.resolve_zone_change(
             card.id,
             crate::card::Zone::Battlefield,
@@ -640,6 +773,13 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             return;
         }
+        // CR 122.2 — counters are not retained when an object changes
+        // zones; they cease to exist. Cleared for every destination (the
+        // battlefield arm additionally re-seeds planeswalker loyalty).
+        // Dies-with-counters triggers read the `died_card_snapshots` /
+        // `leaves_bf_lki` LKI caches, not the new zone's object.
+        card.counters.clear();
+        card.keyword_counters.clear();
         match dest {
             ZoneDest::Hand(who) => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
@@ -721,6 +861,9 @@ impl GameState {
             ZoneDest::Exile => {
                 let cid = card.id;
                 self.exile.push(card);
+                // Record for `Selector::ExiledThisResolution` ("if you exiled
+                // a [type] card this way" — Bonehoard Dracosaur).
+                self.exiled_card_ids_this_resolution.push(cid);
                 // Bump the controller-of-the-exile-effect's per-turn
                 // exile tally for Strixhaven "if one or more cards were
                 // put into exile this turn" payoffs (Ennis the Debate
@@ -759,6 +902,9 @@ impl GameState {
                 if card.definition.is_creature() {
                     self.players[p].creatures_entered_this_turn.push(card.id);
                 }
+                if card.definition.is_artifact() {
+                    self.players[p].artifacts_entered_this_turn += 1;
+                }
                 // A permanent entering the battlefield from another zone is
                 // a brand-new object (rule 400.7) — clear residual damage,
                 // pump bonuses, and attachment.
@@ -768,16 +914,28 @@ impl GameState {
                 card.perm_power_bonus = 0;
                 card.perm_toughness_bonus = 0;
                 card.attached_to = None;
-                // CR 122.2 — counters cease to exist when a permanent leaves
-                // the battlefield; the new object enters with none. Re-seed a
+                // CR 122.2 cleared the counters above; re-seed a
                 // planeswalker's starting loyalty (CR 306.5b) so a reanimated
                 // / blinked planeswalker enters with full base loyalty rather
                 // than its last-known (possibly 0) value.
-                card.counters.clear();
-                card.keyword_counters.clear();
                 if card.definition.is_planeswalker() && card.definition.base_loyalty > 0 {
                     card.counters
                         .insert(CounterType::Loyalty, card.definition.base_loyalty);
+                }
+                // CR 310.7 — a Battle enters with defense counters equal to its
+                // printed defense, and (CR 310.6) its controller chooses an
+                // opponent to protect it. In 2-player there is a single
+                // opponent; multiplayer protector choice is a follow-up.
+                if card.definition.is_battle() {
+                    if card.definition.defense > 0 {
+                        card.counters
+                            .insert(CounterType::Defense, card.definition.defense);
+                    }
+                    if card.protected_by.is_none() {
+                        let ctrl = card.controller;
+                        card.protected_by = (0..self.players.len())
+                            .find(|&p| p != ctrl && self.players[p].is_alive());
+                    }
                 }
                 let cid = card.id;
                 // CR 614.12 — apply "enters with N counters" replacement
@@ -793,6 +951,11 @@ impl GameState {
                 // additional plumbing through `move_card_to` from the
                 // cast-time ctx, tracked separately.
                 let enters_spec = card.definition.enters_with_counters.clone();
+                // CR 614.12 — "enters with N counters if you cast it from your
+                // hand" (Patched Plaything) reads the resolving card's cast
+                // zone via `Predicate::CastFromHand`. Capture it before the
+                // instance is moved onto the battlefield.
+                let entered_from_hand = card.cast_from_hand;
                 let mut card = card;
                 card.controller = self.apply_etb_control_replacement(&card, card.controller);
                 self.battlefield.push(card);
@@ -809,23 +972,19 @@ impl GameState {
                 }
                 if self.counters_locked() { counter_specs.clear(); }
                 for (kind, value) in counter_specs {
-                    let etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
+                    let mut etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
+                    etb_ctx.cast_from_hand = entered_from_hand;
                     let base = self.evaluate_value(&value, &etb_ctx);
                     if base > 0 {
-                        // CR 614.16: counter-doubling statics also apply
+                        // CR 614.16: counter replacement statics also apply
                         // to the "enters with N counters" replacement.
-                        let target_ctrl = self
-                            .battlefield
-                            .iter()
-                            .find(|c| c.id == cid)
-                            .map(|c| c.controller);
-                        let mut n = base as u32;
-                        if let Some(ctrl) = target_ctrl {
-                            let doublers = self.counter_doublers_for(ctrl);
-                            for _ in 0..doublers {
-                                n = n.saturating_mul(2);
-                            }
-                        }
+                        let bf = self.battlefield.iter().find(|c| c.id == cid);
+                        let n = bf
+                            .map(|c| (c.controller, c.definition.is_creature()))
+                            .map(|(ctrl, cre)| {
+                                self.scaled_counter_count(ctrl, kind, base as u32, cre)
+                            })
+                            .unwrap_or(base as u32);
                         if let Some(card_mut) =
                             self.battlefield.iter_mut().find(|c| c.id == cid)
                         {

@@ -190,7 +190,8 @@ pub fn baleful_mastery() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
-        }),
+            offering: None,
+            warp: false,        }),
         ..Default::default()
     }
 }
@@ -238,12 +239,12 @@ pub fn combat_professor() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Bird, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             // Mentor (CR 702.114): counter goes on a target attacking
@@ -639,7 +640,7 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
         cost: cost(&[generic(1), b(), hybrid(Color::Black, Color::Green), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Demon, CreatureType::Horror],
+            creature_types: vec![CreatureType::Demon],
             ..Default::default()
         },
         power: 7,
@@ -802,8 +803,10 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::TriggerSource,
                     extra_creature_types: vec![CreatureType::Spirit],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
+                    legendary: false,
                 },
                 // "When that token leaves the battlefield, return the exiled
                 // card to its owner's graveyard."
@@ -1482,7 +1485,7 @@ pub fn crashing_drawbridge() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Construct],
+            creature_types: vec![CreatureType::Wall],
             ..Default::default()
         },
         toughness: 4,
@@ -1681,12 +1684,12 @@ pub fn codespell_cleric() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![Keyword::Vigilance],
         ..Default::default()
     }
 }
@@ -2065,7 +2068,7 @@ pub fn eccentric_apprentice() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Tiefling, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
@@ -2120,10 +2123,10 @@ pub fn tezzerets_gambit() -> CardDefinition {
 
 // ── Wandering Archaic ───────────────────────────────────────────────────────
 
-/// Wandering Archaic — {5} Creature — Spirit, 4/4.
-/// (Front face only; the printed card is reversible with a back face
-/// "Explore the Vastlands" that's omitted here — reversible-card
-/// pipeline is engine-wide ⏳ similar to the back-face MDFC handling.)
+/// Wandering Archaic // Explore the Vastlands — {5} Creature — Spirit, 4/4.
+/// Modal double-faced; the back face `Explore the Vastlands` ({4} Sorcery —
+/// add six colorless mana, gain 3 life) is now wired via `back_face` and is
+/// castable from hand through `GameAction::CastSpellBack`.
 ///
 /// "Whenever an opponent casts an instant or sorcery spell, that
 /// player may pay {2}. If they don't, you may copy the spell. You may
@@ -2148,7 +2151,7 @@ pub fn wandering_archaic() -> CardDefinition {
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Avatar],
             ..Default::default()
         },
         power: 4,
@@ -2171,6 +2174,24 @@ pub fn wandering_archaic() -> CardDefinition {
                 count: Value::Const(1),
             },
         }],
+        // Back face: Explore the Vastlands — {4} Sorcery. Add {C}{C}{C}{C}{C}{C};
+        // you gain 3 life. Cast from hand via GameAction::CastSpellBack.
+        back_face: Some(Box::new(CardDefinition {
+            name: "Explore the Vastlands",
+            cost: cost(&[generic(4)]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(6)),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+            ]),
+            ..Default::default()
+        })),
         ..Default::default()
     }
 }

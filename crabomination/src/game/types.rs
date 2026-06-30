@@ -32,6 +32,10 @@ pub enum Target {
 pub enum AttackTarget {
     Player(usize),
     Planeswalker(CardId),
+    /// CR 508.4 — a Battle controlled by a player other than its protector.
+    /// In 2-player games this is the active player's own Siege (defended by the
+    /// opponent it chose as protector).
+    Battle(CardId),
 }
 
 /// One attacker's declared assignment.
@@ -147,6 +151,26 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.183 — cast a card's Omen half from hand for its Omen cost. On
+    /// resolution or counter the card is shuffled into its owner's library.
+    CastOmen {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 702.165 — cast a Gift spell, promising the gift to an opponent: the
+    /// spell resolves its enhanced `gifted_effect`.
+    CastGift {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 715 — cast the creature half of a card that's in exile after going
     /// on an adventure (its `on_adventure` flag is set).
     CastAdventureCreature {
@@ -155,6 +179,26 @@ pub enum GameAction {
         #[serde(default)]
         additional_targets: Vec<Target>,
         mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 702.160 — cast a Prototype artifact creature for its prototype
+    /// cost. It enters with the prototype's mana cost, color, and size,
+    /// keeping its abilities and types.
+    CastPrototype {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 702.140 — cast a creature with Mutate for its mutate cost, merging
+    /// it onto `target` (a non-Human creature you own). `on_top` controls
+    /// whether the new card's characteristics sit on top of the merged pile.
+    CastMutate {
+        card_id: CardId,
+        target: CardId,
+        on_top: bool,
         x_value: Option<u32>,
     },
     /// CR 709 — cast the **right** half of a split card from hand, paying the
@@ -278,6 +322,19 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.78 — cast a spell paying its optional Conspire cost: tap two
+    /// untapped, unsummoning-sick-irrelevant creatures you control that each
+    /// share a color with the spell. Doing so copies the spell once (the copy
+    /// may choose new targets).
+    CastSpellConspire {
+        card_id: CardId,
+        conspire_creatures: [CardId; 2],
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.170 — Plot a card from hand: pay its plot cost and exile it
     /// face-up. Special action, main phase + empty stack only.
     Plot { card_id: CardId },
@@ -366,6 +423,10 @@ pub enum GameAction {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        /// Extra chosen targets (slots 1+) for two-target activated abilities
+        /// (Autumn-Tail, Kitsune Sage). Empty for the single-target majority.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         /// X value paid to an `{X}` symbol in the activation's mana cost.
         /// Threaded through to `EffectContext.x_value` so the body can
         /// read `Value::XFromCost`. Used by Pernicious Deed's
@@ -381,9 +442,34 @@ pub enum GameAction {
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target>, #[serde(default)] x_value: Option<u32> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// CR 702.187 — cast a graveyard card with `Keyword::Mayhem` for its
+    /// mayhem cost, legal only if its owner discarded it this turn. Delegates
+    /// to the flashback machinery (exile-after tail included).
+    CastMayhem { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// CR 702.180 — cast a graveyard card with `Keyword::Harmonize` for its
+    /// harmonize cost, optionally tapping one untapped creature you control to
+    /// reduce the total cost by generic mana equal to that creature's power.
+    /// Delegates to the flashback machinery (exile-after tail included).
+    CastHarmonize {
+        card_id: CardId,
+        #[serde(default)]
+        tap_creature: Option<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a graveyard card with `Keyword::Disturb` (CR 702.146) transformed
-    /// — the back face goes on the stack — for its disturb cost.
-    CastDisturb { card_id: CardId },
+    /// — the back face goes on the stack — for its disturb cost. `target` is
+    /// used when the back face is an Aura (it needs an enchant target).
+    CastDisturb {
+        card_id: CardId,
+        #[serde(default)]
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+    },
     /// Cast a graveyard card with `Keyword::Retrace` (CR 702.81) for its
     /// mana cost plus discarding a land card from hand. Unlike Flashback,
     /// the spell returns to the graveyard after resolving (no exile).
@@ -561,6 +647,11 @@ pub enum DelayedKind {
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
     YourNextSpellCastThisTurn,
+    /// "When you cast a spell with the chosen name for the first time this
+    /// turn, …" (CR 603.7e, name-gated). Fires once on the controller's next
+    /// cast whose name matches the source's `named_card`; non-matching casts
+    /// don't consume it. Expires at cleanup. Medomai's Prophecy III.
+    YourNextNamedSpellThisTurn,
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" (Tamiyo, Seasoned Scholar's +2).
     /// Fires per qualifying attacker (the attacker is the trigger source);
@@ -570,6 +661,15 @@ pub enum DelayedKind {
     /// watched card leaves the battlefield, any turn (not turn-scoped).
     /// Hofri Ghostforge's token rider.
     WhenCardLeavesBattlefield(crate::card::CardId),
+    /// CR 702.55 — Haunt. Fires when the haunted creature (the watched id)
+    /// dies, any turn (not turn-scoped, never expires at cleanup). The source
+    /// is the exiled haunting card. Registered by `Effect::HauntCreature`.
+    WhenHauntedCreatureDies(crate::card::CardId),
+    /// "At the beginning of each combat this turn, …" (CR 603.4). Fires at
+    /// the start of every Begin-Combat step on the controller's turn; does
+    /// not fire once, expires at cleanup. Registered by
+    /// `Effect::AtEachCombatThisTurn` (Full Throttle).
+    EachCombatThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
@@ -768,6 +868,10 @@ pub(crate) enum ResumeContext {
         /// The firing event's amount (`Value::TriggerEventAmount`).
         #[serde(default)]
         event_amount: u32,
+        /// Extra targets (slots 1+) for two-target activated abilities,
+        /// preserved across a mid-resolution suspend.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
     },
     Ability {
         source: CardId,
@@ -846,6 +950,8 @@ pub(crate) enum ResumeContext {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         x_value: Option<u32>,
         kind: AbilityCostChoice,
     },
@@ -891,7 +997,11 @@ impl GameAction {
                 | A::CastFaceDown { .. }
                 | A::CastForetold { .. }
                 | A::CastAdventure { .. }
+                | A::CastOmen { .. }
+                | A::CastGift { .. }
                 | A::CastAdventureCreature { .. }
+                | A::CastPrototype { .. }
+                | A::CastMutate { .. }
                 | A::CastSplitRight { .. }
                 | A::CastSplitFused { .. }
                 | A::CastAftermath { .. }
@@ -901,6 +1011,7 @@ impl GameAction {
                 | A::CastSpellSacrificeReduce { .. }
                 | A::CastSpellSquad { .. }
                 | A::CastSpellReplicate { .. }
+                | A::CastSpellConspire { .. }
                 | A::CastPlotted { .. }
                 | A::CastSpellBack { .. }
                 | A::CastPrepareSpell { .. }
@@ -908,6 +1019,8 @@ impl GameAction {
                 | A::CastSpellDelve { .. }
                 | A::CastSpellAlternative { .. }
                 | A::CastFlashback { .. }
+                | A::CastMayhem { .. }
+                | A::CastHarmonize { .. }
                 | A::CastDisturb { .. }
                 | A::CastRetrace { .. }
                 | A::CastEscape { .. }
@@ -915,6 +1028,56 @@ impl GameAction {
                 | A::CastFromZoneWithoutPaying { .. }
                 | A::CastFromCommandZone { .. }
         )
+    }
+
+    /// The `card_id` of the spell a `Cast*` action casts, if it carries one in
+    /// a `card_id` field (every variant except `CastPrepareSpell`, which names a
+    /// battlefield creature rather than the spell). Used by per-turn lock pieces
+    /// that must inspect the cast spell's card types before payment.
+    pub(crate) fn cast_card_id(&self) -> Option<CardId> {
+        use GameAction as A;
+        match self {
+            A::CastSpell { card_id, .. }
+            | A::CastSpellKicked { card_id, .. }
+            | A::CastSpellMultikicked { card_id, .. }
+            | A::CastBestow { card_id, .. }
+            | A::CastSpellBuyback { card_id, .. }
+            | A::CastSpellEntwine { card_id, .. }
+            | A::CastRoomDoor { card_id, .. }
+            | A::CastFaceDown { card_id, .. }
+            | A::CastForetold { card_id, .. }
+            | A::CastAdventure { card_id, .. }
+            | A::CastOmen { card_id, .. }
+            | A::CastGift { card_id, .. }
+            | A::CastAdventureCreature { card_id, .. }
+            | A::CastPrototype { card_id, .. }
+            | A::CastMutate { card_id, .. }
+            | A::CastSplitRight { card_id, .. }
+            | A::CastSplitFused { card_id, .. }
+            | A::CastAftermath { card_id, .. }
+            | A::CastSpellCasualty { card_id, .. }
+            | A::CastSpellBargain { card_id, .. }
+            | A::CastSpellSpliced { card_id, .. }
+            | A::CastSpellSacrificeReduce { card_id, .. }
+            | A::CastSpellSquad { card_id, .. }
+            | A::CastSpellReplicate { card_id, .. }
+            | A::CastSpellConspire { card_id, .. }
+            | A::CastPlotted { card_id, .. }
+            | A::CastSpellBack { card_id, .. }
+            | A::CastSpellConvoke { card_id, .. }
+            | A::CastSpellDelve { card_id, .. }
+            | A::CastSpellAlternative { card_id, .. }
+            | A::CastFlashback { card_id, .. }
+            | A::CastMayhem { card_id, .. }
+            | A::CastHarmonize { card_id, .. }
+            | A::CastDisturb { card_id, .. }
+            | A::CastRetrace { card_id, .. }
+            | A::CastEscape { card_id, .. }
+            | A::CastFlashbackTap { card_id, .. }
+            | A::CastFromZoneWithoutPaying { card_id, .. }
+            | A::CastFromCommandZone { card_id, .. } => Some(*card_id),
+            _ => None,
+        }
     }
 }
 
@@ -978,11 +1141,21 @@ pub enum PendingEffectState {
         /// Company).
         #[serde(default)]
         to_battlefield: bool,
+        /// Picks stay on top of the library (Sage of Days).
+        #[serde(default)]
+        keep_on_top: bool,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the
     /// rest of `revealed` are exiled.
     PayLifeLookPending {
+        player: usize,
+        revealed: Vec<CardId>,
+    },
+    /// Suspended on a `ChooseCards` pick for `Effect::RevealTopTakeOnePerType`
+    /// (Atraxa, Grand Unifier — "up to one card of each card type"). Picks
+    /// are validated one-per-type at apply time; the rest go to the bottom.
+    TakeOnePerTypePending {
         player: usize,
         revealed: Vec<CardId>,
     },
@@ -1005,6 +1178,11 @@ pub enum PendingEffectState {
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.
     DiscardChosenPending { target_player: usize },
+    /// Suspended on a `BottomChosenFromHandAndDraw` decision (Vendilion
+    /// Clique). The caster picks cards from `target_player`'s hand; the apply
+    /// step bottoms each chosen card and has `target_player` draw a
+    /// replacement.
+    BottomChosenFromHandAndDrawPending { target_player: usize },
     /// CR 701.16 — suspended on a `ChooseTarget` decision for a forced
     /// single-permanent sacrifice (Edicts, Annihilator with N=1, "sacrifice a
     /// creature" riders). `player` is the one doing the sacrificing (the
@@ -1041,6 +1219,10 @@ pub enum PendingEffectState {
     /// Needle, Phyrexian Revoker). The chooser names a card and the engine
     /// stamps it onto `target_id.named_card`.
     NameCardPending { target_id: CardId },
+    /// Suspended on a `NameCard` decision for `Effect::NameOpponentCastLock`
+    /// (Academic Probation). The chooser names a card and the engine records
+    /// it in `players[caster].opponents_cant_cast_named`.
+    OpponentNameLockPending { caster: usize },
     /// Suspended on a `ChooseModes` for a resolution-time "choose N" /
     /// Escalate effect. The apply step validates the answer shape, drops
     /// out-of-range indices, and stashes it in
@@ -1129,6 +1311,15 @@ pub struct PreventionShield {
     /// damage event, then expires (Circle of Protection).
     #[serde(default)]
     pub one_event: bool,
+    /// Deflecting Palm — damage this shield prevents is dealt to the
+    /// damage source's controller.
+    #[serde(default)]
+    pub reflect: bool,
+    /// The chosen source's controller, stamped when the reflect shield is
+    /// created — the fallback when the source has left every visible zone
+    /// by damage time (a resolving spell).
+    #[serde(default)]
+    pub source_controller: Option<usize>,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither
@@ -1174,14 +1365,20 @@ pub enum GameEvent {
     Expended { player: usize, total: u32 },
     /// CR 122 — a player got `amount` energy counters ({E}).
     EnergyGained { player: usize, amount: u32 },
+    /// CR 700.13 — `player` committed a crime (cast a spell / activated an
+    /// ability targeting an opponent, something they control or own, or a
+    /// spell/ability they control). Fires once per qualifying spell or ability.
+    CommittedCrime { player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
     /// CR 705.1 — `player` lost a coin flip (Karplusan Minotaur,
     /// Goblin Bomb).
     CoinFlipLost { player: usize },
     /// CR 706.6 — `player` rolled one or more dice (`count` dice). Fires
-    /// once per roll instruction (Barbarian Class, Wand of Wonder).
-    DiceRolled { player: usize, count: u32 },
+    /// once per roll instruction (Barbarian Class, Wand of Wonder). `high` is
+    /// the greatest (modified) result rolled, so result-gated triggers like
+    /// "whenever you roll a 5 or higher" can filter on `event_amount`.
+    DiceRolled { player: usize, count: u32, high: u8 },
     CreatureDied { card_id: CardId },
     /// A creature was sacrificed by `who` (CR 701.16). Fires before the
     /// corresponding `CreatureDied` event so order-sensitive sacrifice
@@ -1198,6 +1395,12 @@ pub enum GameEvent {
     /// land sacrifices alongside creature sacrifices, without
     /// double-firing creature-specific sub-triggers.
     PermanentSacrificed { card_id: CardId, who: usize },
+    /// CR 603.6 — a creature left the battlefield to a zone other than a
+    /// graveyard (bounced / exiled / shuffled away), i.e. left *without
+    /// dying*. `controller` is its last controller on the battlefield, read
+    /// from the leaving card (it's gone by dispatch time). Dour Port-Mage,
+    /// Three Tree Scribe.
+    CreatureLeftWithoutDying { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     /// CR 122.1b — keyword counters are counters; surfaced so the log /
@@ -1206,6 +1409,9 @@ pub enum GameEvent {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// CR 702.171 — a Mount was saddled; `riders` lists the tapped creatures.
+    /// Powers `EventKind::CrewsOrSaddles` (the riders' triggers).
+    MountSaddled { mount: CardId, riders: Vec<CardId> },
     /// CR 702.26 — a permanent phased out (moved to `GameState.phased_out`).
     PermanentPhasedOut { card_id: CardId },
     /// CR 702.26 — a permanent phased in (returned from `phased_out` during its
@@ -1213,12 +1419,23 @@ pub enum GameEvent {
     PermanentPhasedIn { card_id: CardId },
     /// CR 701.40 — a permanent explored. `card_id` is the exploring
     /// permanent; `controller` is its controller (whose library was
-    /// revealed).
-    Explored { card_id: CardId, controller: usize },
+    /// revealed). `explored_land` is true when the revealed top card was a
+    /// land (Nicanzil filters land vs nonland explores; surfaced through
+    /// `event_amount_for` as 1/0).
+    Explored { card_id: CardId, controller: usize, explored_land: bool },
+    /// CR 701.57 — `player` performed a discover for `value` (Curator of
+    /// Sun's Creation's "whenever you discover" payoff reads `value` via
+    /// `Value::TriggerEventAmount`).
+    Discovered { player: usize, value: u32 },
     /// CR 701.31 — a permanent became monstrous.
     BecameMonstrous { card_id: CardId },
     /// CR 712 — a permanent transformed to its other face.
     Transformed { card_id: CardId },
+    /// CR 711 — a flip card flipped to its flipped (bottom) face.
+    Flipped { card_id: CardId },
+    /// CR 702.140 — a creature mutated (a mutate spell merged onto it).
+    /// `card_id` is the resulting merged permanent (the host).
+    Mutated { card_id: CardId },
     /// CR 708.8 — a face-down permanent was turned face up.
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
@@ -1234,16 +1451,31 @@ pub enum GameEvent {
     FirstStrikeDamageResolved,
     TopCardRevealed { player: usize, card_name: &'static str, is_land: bool },
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
+    /// CR 303.4 — an Aura became attached to a permanent (on resolution or via
+    /// a reattach). Drives "whenever an Aura you control becomes attached …"
+    /// triggers (Siona, Captain of the Pyleas).
+    AuraAttached { aura: CardId, attached_to: CardId },
     /// CR 702.122 — a Vehicle was crewed and became an artifact creature
-    /// until end of turn.
-    VehicleCrewed { vehicle: CardId },
+    /// until end of turn. `crew` lists the tapped crew members (their
+    /// `EventKind::CrewsOrSaddles` triggers fire).
+    VehicleCrewed { vehicle: CardId, crew: Vec<CardId> },
+    /// DSK Eerie — `room`'s second door was just unlocked (both doors now
+    /// open). `controller` is the unlocking player. Drives "whenever you fully
+    /// unlock a Room" triggers.
+    RoomFullyUnlocked { room: CardId, controller: usize },
     PoisonAdded { player: usize, amount: u32 },
     /// CR 724 — `player` became the monarch.
     MonarchChanged { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },
-    /// CR 731 — the game became day or night.
-    DayNightChanged { day_night: DayNight },
+    /// CR 701.54 — the Ring tempted `player`; `level` is their new
+    /// temptation count (1–4), `bearer` the creature they chose (if any).
+    RingTempted { player: usize, level: u32, bearer: Option<CardId> },
+    /// CR 731 — the game became day or night. `was_transition` is true only
+    /// when flipping between day and night (CR 502.2 "day becomes night or
+    /// night becomes day"), false when establishing day/night from neither —
+    /// so "whenever day becomes night …" triggers fire on the former only.
+    DayNightChanged { day_night: DayNight, was_transition: bool },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },
@@ -1406,6 +1638,13 @@ pub enum StackItem {
         /// majority).
         #[serde(default)]
         intervening_if: Option<crate::card::Predicate>,
+        /// Extra chosen targets beyond slot 0 (`target`), for two-target
+        /// activated abilities (Autumn-Tail's "Attach target Aura … to
+        /// another creature"). Indexed as slots 1, 2, … in the effect tree.
+        /// Empty for the vast single-target majority. `#[serde(default)]`
+        /// for snapshot back-compat.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
     },
 }
 
@@ -1419,6 +1658,7 @@ pub struct TriggerPush {
     controller: usize,
     effect: Effect,
     target: Option<Target>,
+    additional_targets: Vec<Target>,
     mode: Option<usize>,
     x_value: u32,
     converged_value: u32,
@@ -1435,6 +1675,7 @@ impl TriggerPush {
             controller,
             effect,
             target: None,
+            additional_targets: Vec::new(),
             mode: None,
             x_value: 0,
             converged_value: 0,
@@ -1446,6 +1687,10 @@ impl TriggerPush {
     }
     pub fn target(mut self, t: Option<Target>) -> Self {
         self.target = t;
+        self
+    }
+    pub fn additional_targets(mut self, t: Vec<Target>) -> Self {
+        self.additional_targets = t;
         self
     }
     pub fn mode(mut self, m: Option<usize>) -> Self {
@@ -1489,6 +1734,7 @@ impl TriggerPush {
             mana_spent: self.mana_spent,
             event_amount: self.event_amount,
             intervening_if: self.intervening_if,
+            additional_targets: self.additional_targets,
         }
     }
 }

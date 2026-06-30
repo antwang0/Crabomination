@@ -41,7 +41,7 @@ fn repeat_offender_toggles_suspect_then_grows() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().suspected, "now suspected");
@@ -50,7 +50,7 @@ fn repeat_offender_toggles_suspect_then_grows() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate again");
     drain_stack(&mut g);
     assert_eq!(
@@ -84,6 +84,31 @@ fn reasonable_doubt_suspects_target_creature() {
     }).expect("cast Reasonable Doubt");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).unwrap().suspected, "creature suspected");
+}
+
+/// "Suspect up to one target creature" — the suspect clause is optional, so
+/// Reasonable Doubt still counters with no creature target supplied.
+#[test]
+fn reasonable_doubt_resolves_with_no_creature_target() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    let id = g.add_card_to_hand(0, catalog::reasonable_doubt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reasonable Doubt with no creature target");
+    drain_stack(&mut g);
+    // The countered spell never resolved → not on the battlefield.
+    assert!(g.battlefield_find(spell).is_none(), "spell countered without a creature to suspect");
 }
 
 // ── Collect Evidence (CR 701.59) ─────────────────────────────────────────────
@@ -182,6 +207,17 @@ fn geological_appraiser_discovers_and_casts() {
     }).expect("cast Geological Appraiser");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bears).is_some(), "discovered creature cast for free");
+}
+
+/// "If you cast it" — Geological Appraiser put directly onto the battlefield
+/// (not cast) does not discover (CR 603.x, SourceWasCast gate).
+#[test]
+fn geological_appraiser_no_discover_when_not_cast() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::geological_appraiser());
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == bears), "no discover: library top untouched");
 }
 
 /// Declining the free cast puts the discovered card into hand instead.

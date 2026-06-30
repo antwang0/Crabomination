@@ -160,14 +160,14 @@ fn evaluate_via_catalog(
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
         R::ManaValueAtMost(n) => def.cost.cmc() <= *n,
         R::ManaValueAtLeast(n) => def.cost.cmc() >= *n,
-        // Use the cost's full color set so hybrid ({W/B}), mono-hybrid
-        // ({2/R}) and Phyrexian pips contribute their color(s) — matches
-        // the engine's `ManaCost::colors()` semantics rather than scanning
-        // only pure `Colored` pips.
-        R::HasColor(c) => def.cost.colors().contains(c),
-        R::Multicolored => def.cost.distinct_colors() >= 2,
-        R::Colorless => def.cost.distinct_colors() == 0,
-        R::Monocolored => def.cost.distinct_colors() == 1,
+        // Use the card's full printed color set (mana cost + color indicator
+        // for tokens / DFC backs, and empty under Devoid) so hybrid ({W/B}),
+        // mono-hybrid ({2/R}) and Phyrexian pips and colored tokens all
+        // classify the same way the engine's `printed_colors()` does.
+        R::HasColor(c) => def.printed_colors().contains(c),
+        R::Multicolored => def.printed_colors().len() >= 2,
+        R::Colorless => def.printed_colors().is_empty(),
+        R::Monocolored => def.printed_colors().len() == 1,
         R::HasXInCost => def.cost.has_x(),
         R::IsBasicLand => def.is_land() && def
             .supertypes

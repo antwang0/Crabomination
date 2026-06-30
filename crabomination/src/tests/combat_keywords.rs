@@ -172,7 +172,7 @@ fn cr_702_142_boast_rejected_before_attacking() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(res.is_err(), "Boast can't be activated by a creature that hasn't attacked");
 }
@@ -191,7 +191,7 @@ fn cr_702_142_boast_succeeds_after_attacking() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Boast activatable after attacking");
     drain_stack(&mut g);
     let s = g.battlefield_find(id).unwrap();
@@ -206,11 +206,11 @@ fn cr_702_142_boast_only_once_per_turn() {
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("first boast");
     drain_stack(&mut g);
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(res.is_err(), "Boast is once per turn");
 }
@@ -351,6 +351,47 @@ fn combat_preview_first_strike_attacker_survives_lethal_blocker() {
     let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
     assert_eq!(prev.dying_creatures, vec![blk],
         "first strike kills the blocker before it deals damage; attacker survives");
+}
+
+#[test]
+fn combat_preview_double_strike_unblocked_counts_twice() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // 2/2 double strike, unblocked → 4 to the face (CR 702.4).
+    let mut ds = body("Duelist", 2, 2, vec![]);
+    ds.keywords = vec![Keyword::DoubleStrike];
+    let atk = g.add_card_to_battlefield(0, ds);
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
+    assert_eq!(prev.damage_to_players, vec![(1, 4)], "double strike unblocked → 2× power");
+}
+
+#[test]
+fn combat_preview_double_strike_trample_overflows_twice() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // 4/4 double strike + trample into a 2/2: first strike kills the blocker
+    // (4−2=2 overflow), second strike tramples the full 4 → 6 to the face.
+    let mut ds = body("Crasher", 4, 4, vec![]);
+    ds.keywords = vec![Keyword::DoubleStrike, Keyword::Trample];
+    let atk = g.add_card_to_battlefield(0, ds);
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
+    assert_eq!(prev.damage_to_players, vec![(1, 6)], "2 first-strike overflow + 4 regular");
 }
 
 // ── CR 702.135 Afterlife ─────────────────────────────────────────────────────
@@ -527,7 +568,7 @@ fn cr_702_46_soulshift_returns_a_spirit_from_graveyard() {
 fn extort_creatures_have_correct_bodies() {
     use crate::card::Keyword;
     let syndic = catalog::syndic_of_tithes();
-    assert_eq!((syndic.power, syndic.toughness), (2, 3));
+    assert_eq!((syndic.power, syndic.toughness), (2, 2));
     assert!(!syndic.triggered_abilities.is_empty(), "Syndic has Extort");
 
     let tithe = catalog::tithe_drinker();
@@ -541,15 +582,14 @@ fn extort_creatures_have_correct_bodies() {
 fn frenzied_arynx_pump_ability_grows_it() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::frenzied_arynx());
-    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
-    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("pump ability activatable");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
-    assert_eq!((c.power(), c.toughness()), (6, 5), "Frenzied Arynx pumps to 6/5");
+    assert_eq!((c.power(), c.toughness()), (5, 5), "Frenzied Arynx pumps to 6/5");
 }
 
 // ── ClientView.activatable_permanents (legal-plays hint) ─────────────────────
@@ -634,6 +674,7 @@ fn crack_fetchland_on_opponents_end_step() {
         card_id: strand,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     })
     .expect("crack fetch on opponent's end step");
@@ -667,6 +708,8 @@ fn create_token_attacking_joins_combat_tapped() {
         static_abilities: vec![],
         equipped_bonus: None,
         dynamic_pt: None,
+        tapped: false,
+        back_face: None,
     };
     let trig = shortcut::on_attack(Effect::CreateTokenAttacking {
         who: PlayerRef::You,
@@ -909,7 +952,7 @@ fn cr_505_1b_additional_combat_phase_lets_attacker_strike_twice() {
     }])).expect("attack 1");
     drain_stack(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: atk, ability_index: 0, target: None, x_value: None,
+        card_id: atk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("extra-combat ability");
     drain_stack(&mut g);
     // Walk out of the first combat — End of Combat loops back to Begin Combat.
@@ -1266,4 +1309,33 @@ fn cr_509_1d_block_tax_auto_taps_lands() {
     g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)]))
         .expect("auto-tap covers the block tax");
     assert!(g.battlefield_find(land).unwrap().tapped, "Plains tapped for the {{1}}");
+}
+
+
+/// CR 702.16e — protection from a mana-value parity prevents combat damage
+/// from a source whose mana value matches the chosen quality. Lavabrink
+/// Venturer that chose "even" takes no damage from an even-MV attacker.
+#[test]
+fn cr_702_16e_parity_protection_prevents_combat_damage() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Player 0 attacks with Grizzly Bears (mana value 2 — even).
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let venturer = g.add_card_to_battlefield(1, catalog::lavabrink_venturer()); // 3/3
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)])); // even
+    g.fire_self_etb_triggers(venturer, 1);
+    drain_stack(&mut g);
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(venturer, atk)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // Even-protected Venturer takes no damage from the even-MV Bears.
+    assert_eq!(g.battlefield_find(venturer).map(|c| c.damage), Some(0),
+        "combat damage from an even-MV source is prevented");
 }

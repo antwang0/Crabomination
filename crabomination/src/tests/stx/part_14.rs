@@ -461,14 +461,15 @@ fn velomachus_attack_exiles_is_card_from_top_of_library_and_grants_may_play() {
 
 #[test]
 fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
-    // Mavinda's {0} activation: target IS card in your gy moves to
-    // exile with may_play_until + exile_after stamped. Once-per-turn
-    // gate enforced.
+    // Mavinda's {2} activation: target IS card in your gy moves to exile
+    // with may_play_until + exile_after + pay-own-cost stamped (cost +{2},
+    // not free). Once-per-turn gate enforced.
     let mut g = two_player_game();
     let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
         c.summoning_sick = false; c.tapped = false;
     }
+    g.players[0].mana_pool.add_colorless(2);
     // Seed a Lightning Bolt in P0's graveyard.
     let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
     bolt.controller = 0;
@@ -477,7 +478,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bolt_id)), x_value: None }).expect("Mavinda activation (cost {0})");
+        target: Some(crate::game::types::Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None }).expect("Mavinda activation (cost {2})");
     drain_stack(&mut g);
 
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
@@ -485,15 +486,20 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
     let perm = exiled.may_play_until.expect("may_play stamped");
     assert!(perm.exile_after, "Mavinda's permission has exile_after=true");
     assert_eq!(perm.player, 0, "permission goes to Mavinda's controller");
+    // Pay-own-cost: the may-play cast isn't free — Bolt's own {R} is stamped.
+    assert_eq!(exiled.granted_alt_cast_cost_eot.as_ref().map(|c| c.cmc()), Some(1),
+        "cast-this-way pays the spell's own cost (+{{2}} paid on activation)");
 
-    // Second activation in the same turn → rejected (once-per-turn).
+    // Second activation in the same turn → rejected (once-per-turn), with
+    // mana available so the rejection is specifically the once-per-turn gate.
+    g.players[0].mana_pool.add_colorless(2);
     let mut bolt2 = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
     bolt2.controller = 0;
     let bolt2_id = bolt2.id;
     g.players[0].graveyard.push(bolt2);
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bolt2_id)), x_value: None });
+        target: Some(crate::game::types::Target::Permanent(bolt2_id)), additional_targets: Vec::new(), x_value: None });
     assert!(result.is_err(),
         "Second Mavinda activation in same turn should be rejected (once-per-turn)");
 }
@@ -1655,6 +1661,7 @@ fn witherbloom_harvester_b119_sacrifices_another_creature_to_draw() {
         card_id: h,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -1967,6 +1974,7 @@ fn fractal_hatchling_b119_grows_via_activated_ability() {
         card_id: id,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -2374,6 +2382,7 @@ fn witherbloom_cultivator_b120_sacrifices_another_creature_for_drain() {
         card_id: cult,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -2399,6 +2408,7 @@ fn witherbloom_cultivator_b120_rejects_activation_without_fodder() {
         card_id: cult,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     });
     assert!(result.is_err(), "Activation rejected with no fodder");
@@ -2422,6 +2432,7 @@ fn pest_cultmaster_b121_sacs_creature_to_draw() {
         card_id: cult,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -2441,6 +2452,7 @@ fn witherbloom_sapdrinker_b121_sacs_to_pump_self() {
         card_id: sd,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation (free ability)");
     drain_stack(&mut g);
@@ -2463,6 +2475,7 @@ fn witherbloom_bonechanter_b121_sacs_to_shrink_target() {
         card_id: bone,
         ability_index: 0,
         target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -2486,6 +2499,7 @@ fn pest_ringleader_b121_sacs_to_drain_two() {
         card_id: rl,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -2505,6 +2519,7 @@ fn witherbloom_reaper_b121_sacs_to_gain_indestructible() {
         card_id: reaper,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
@@ -2527,7 +2542,7 @@ fn pest_cultcaller_b122_sacs_creature_to_drain_one() {
     let l0 = g.players[0].life;
     let l1 = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cult, ability_index: 0, target: None, x_value: None,
+        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -2542,7 +2557,7 @@ fn pest_cultcaller_b122_rejects_activation_without_fodder() {
     g.clear_sickness(cult);
     g.players[0].mana_pool.add(Color::Black, 1);
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: cult, ability_index: 0, target: None, x_value: None,
+        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(result.is_err(), "activation rejected without fodder");
 }
@@ -2577,7 +2592,7 @@ fn witherbloom_bloodgrafter_b122_grows_on_sacrifice() {
     g.players[0].mana_pool.add(Color::Black, 1);
     let p_before = g.battlefield_find(bg).unwrap().power();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cult, ability_index: 0, target: None, x_value: None,
+        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Cultcaller activation");
     drain_stack(&mut g);
     let p_after = g.battlefield_find(bg).expect("Bloodgrafter alive").power();
@@ -2596,7 +2611,7 @@ fn witherbloom_composter_b122_sacs_to_draw_and_lose_one() {
     let h_before = g.players[0].hand.len();
     let l_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: comp, ability_index: 0, target: None, x_value: None,
+        card_id: comp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -2744,7 +2759,7 @@ fn pest_brewmaster_b122_gains_life_on_other_pest_death() {
     let l_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: bone, ability_index: 0,
-        target: Some(Target::Permanent(opp)), x_value: None,
+        target: Some(Target::Permanent(opp)), additional_targets: Vec::new(), x_value: None,
     }).expect("Bonechanter activation");
     drain_stack(&mut g);
     // A Pest token died: Brewmaster's payoff (+1 life) + the token's
