@@ -2081,3 +2081,45 @@ fn waterbending_scroll_island_discount() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew after the Island discount");
 }
+
+// ── Batch 16 ────────────────────────────────────────────────────────────────
+
+/// Kyoshi Island Plaza fetches one basic per Shrine onto the battlefield tapped.
+#[test]
+fn kyoshi_island_plaza_fetches_per_shrine() {
+    let mut g = two_player_game();
+    let fetch = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(fetch)),
+    ]));
+    let plaza = g.add_card_to_battlefield(0, catalog::kyoshi_island_plaza());
+    g.fire_self_etb_triggers(plaza, 0);
+    drain_stack(&mut g);
+    let bf = g.battlefield.iter().find(|c| c.id == fetch);
+    assert!(bf.is_some(), "one basic for one Shrine");
+    assert!(bf.unwrap().tapped, "enters tapped");
+}
+
+/// Wan Shi Tong enters with X +1/+1 counters and draws half X.
+#[test]
+fn wan_shi_tong_enters_with_x_counters() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let wan = g.add_card_to_hand(0, catalog::wan_shi_tong_librarian());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(4); // X = 4
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    let lib0 = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: wan, target: None, additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("cast for X=4");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(wan).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        4,
+        "X +1/+1 counters"
+    );
+    assert_eq!(g.players[0].library.len(), lib0 - 2, "drew half of 4 = 2");
+}

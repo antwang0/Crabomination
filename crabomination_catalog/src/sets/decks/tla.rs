@@ -3523,3 +3523,66 @@ pub fn waterbending_scroll() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 16: Shrine cycle finish, X-creature ──────────────────────────────
+
+/// Kyoshi Island Plaza — {3}{G} Legendary Enchantment — Shrine. ETB: search
+/// for up to X basic lands (X = Shrines you control) onto the battlefield
+/// tapped. Another Shrine enters → search a basic onto the battlefield tapped.
+pub fn kyoshi_island_plaza() -> CardDefinition {
+    CardDefinition {
+        name: "Kyoshi Island Plaza",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Shrine],
+            ..Default::default()
+        },
+        triggered_abilities: vec![
+            etb(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: shrines_you_control(),
+            }),
+            on_another_shrine_enters(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wan Shi Tong, Librarian — {X}{U}{U} 1/1 legendary Bird Spirit. Flash. Flying,
+/// vigilance. ETB: put X +1/+1 counters on him, then draw half X (rounded down).
+/// (The "opponent searches → grow + draw" rider is dropped — no search trigger.)
+pub fn wan_shi_tong_librarian() -> CardDefinition {
+    CardDefinition {
+        name: "Wan Shi Tong, Librarian",
+        cost: cost(&[x(), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::HalfDown(Box::new(Value::XFromCost)),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

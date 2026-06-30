@@ -4476,6 +4476,8 @@ static DECKS: &[Factory] = &[
     super::decks::crescent_island_temple,
     super::decks::southern_air_temple,
     super::decks::waterbending_scroll,
+    super::decks::kyoshi_island_plaza,
+    super::decks::wan_shi_tong_librarian,
     super::decks::ty_lee_chi_blocker,
     super::decks::the_boulder_ready_to_rumble,
     super::decks::path_to_redemption,
