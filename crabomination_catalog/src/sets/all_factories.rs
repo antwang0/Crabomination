@@ -4403,6 +4403,8 @@ static DECKS: &[Factory] = &[
     super::decks::lo_and_li_twin_tutors,
     super::decks::fire_navy_trebuchet,
     super::decks::hog_monkey,
+    super::decks::energybending,
+    super::decks::swampsnare_trap,
     super::decks::spider_man_web_slinger,
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,

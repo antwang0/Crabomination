@@ -752,6 +752,30 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
     })
 }
 
+/// Plain-language label for the count-gate filter on
+/// `CantAttackOrBlockUnlessYouControlCount` (Topiary Stomper, Tiger-Dillo,
+/// Lambholt Pacifist). Covers the printed shapes; falls back to a generic
+/// phrase for filters the gate never actually uses.
+fn describe_count_filter(req: &crabomination::card::SelectionRequirement) -> String {
+    use crabomination::card::SelectionRequirement as R;
+    match req {
+        R::Land => "lands".into(),
+        R::Creature => "creatures".into(),
+        R::Artifact => "artifacts".into(),
+        R::HasCreatureType(t) => format!("{t:?}s"),
+        R::PowerAtLeast(n) => format!("creatures with power {n} or greater"),
+        R::And(a, b) => match (&**a, &**b) {
+            // The common "creature with power N or greater" pairing.
+            (R::Creature, R::PowerAtLeast(n)) | (R::PowerAtLeast(n), R::Creature) => {
+                format!("creatures with power {n} or greater")
+            }
+            _ => format!("{} that are {}", describe_count_filter(a), describe_count_filter(b)),
+        },
+        R::Or(a, b) => format!("{} or {}", describe_count_filter(a), describe_count_filter(b)),
+        _ => "matching permanents".into(),
+    }
+}
+
 pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
     use crabomination::card::Keyword as K;
     use crabomination::mana::Color;
@@ -864,7 +888,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Offspring(cost) => format!("Offspring {}", cost.summary()),
         K::CantAttackOrBlockUnlessEvenCounters =>
             "Can't attack or block unless it has an even number of counters".into(),
-        K::CantAttackOrBlockUnlessYouControlCount { min, attack_only, block_only, .. } => {
+        K::CantAttackOrBlockUnlessYouControlCount {
+            filter, min, attack_only, block_only, exclude_self,
+        } => {
             let verb = if *attack_only {
                 "attack"
             } else if *block_only {
@@ -872,7 +898,11 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             } else {
                 "attack or block"
             };
-            format!("Can't {verb} unless you control {min} or more matching permanents")
+            let other = if *exclude_self { "other " } else { "" };
+            format!(
+                "Can't {verb} unless you control {min} or more {other}{}",
+                describe_count_filter(filter),
+            )
         }
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),

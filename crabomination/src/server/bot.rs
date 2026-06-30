@@ -240,16 +240,20 @@ impl Bot for RandomBot {
                                                     filter,
                                                     min,
                                                     block_only,
+                                                    exclude_self,
                                                     ..
                                                 } => {
                                                     // A block-only gate never
-                                                    // restricts attacking.
+                                                    // restricts attacking. `exclude_self`
+                                                    // drops the gated creature from the
+                                                    // count ("another …" — Tiger-Dillo).
                                                     *block_only
                                                         || state
                                                             .battlefield
                                                             .iter()
                                                             .filter(|d| {
                                                                 d.controller == c.controller
+                                                                    && !(*exclude_self && d.id == c.id)
                                                                     && state
                                                                         .evaluate_requirement_on_card(
                                                                             filter,

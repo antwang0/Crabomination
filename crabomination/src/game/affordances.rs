@@ -311,7 +311,7 @@ impl GameState {
                         self.players[seat].city_blessing
                     }
                     Keyword::CantAttackOrBlockUnlessYouControlCount {
-                        filter, min, block_only, ..
+                        filter, min, block_only, exclude_self, ..
                     } => {
                         *block_only
                             || self
@@ -319,6 +319,7 @@ impl GameState {
                                 .iter()
                                 .filter(|p| {
                                     p.controller == seat
+                                        && !(*exclude_self && p.id == c.id)
                                         && self.evaluate_requirement_on_card(filter, p, seat)
                                 })
                                 .count() as u32

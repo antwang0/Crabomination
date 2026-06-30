@@ -3045,6 +3045,11 @@ pub enum Effect {
     },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
+    /// CR 305 — each resolved permanent *gains* all five basic land types for
+    /// `duration` (additive, keeping existing types and abilities). Installs a
+    /// layer-4 `AddLandType` continuous effect per basic type so the lands tap
+    /// for any color (Energybending, Prismatic Omen-style fixers).
+    GainAllBasicLandTypes { what: Selector, duration: Duration },
     /// Target becomes a creature with the given P/T and creature types,
     /// losing all other card types, abilities, and creature subtypes
     /// (CR 613 layers 4/6/7). Oko's "becomes a 3/3 Elk", Turn to Frog's

@@ -4539,6 +4539,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GainAllBasicLandTypes { what, duration } => {
+                // CR 305 — additively grant all five basic land types (layer 4)
+                // to each resolved permanent for `duration`, so the lands can be
+                // tapped for any color (Energybending).
+                use crate::card::LandType;
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
+                };
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                let basics = [
+                    LandType::Plains,
+                    LandType::Island,
+                    LandType::Swamp,
+                    LandType::Mountain,
+                    LandType::Forest,
+                ];
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        for lt in basics {
+                            let ts = self.next_timestamp();
+                            self.add_continuous_effect(ContinuousEffect {
+                                timestamp: ts,
+                                source,
+                                affected: AffectedPermanents::Specific(vec![cid]),
+                                layer: Layer::L4Type,
+                                sublayer: None,
+                                duration: duration_kind.clone(),
+                                modification: Modification::AddLandType(lt),
+                            });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetBasePT { what, power, toughness, duration } => {
                 // Layer-7b SetPT continuous effect — installs a real
                 // `Modification::SetPowerToughness(p, t)` against the

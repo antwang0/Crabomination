@@ -1494,3 +1494,48 @@ pub fn hog_monkey() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Energybending — {2} Instant (Lesson). Lands you control gain all basic land
+/// types until end of turn, then draw a card.
+pub fn energybending() -> CardDefinition {
+    CardDefinition {
+        name: "Energybending",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::GainAllBasicLandTypes {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Swampsnare Trap — {2}{B} Aura. Enchanted creature gets -5/-3. (The cost
+/// reduction vs. fliers is dropped.)
+pub fn swampsnare_trap() -> CardDefinition {
+    CardDefinition {
+        name: "Swampsnare Trap",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: -5,
+            toughness: -3,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

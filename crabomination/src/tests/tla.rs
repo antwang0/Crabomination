@@ -827,3 +827,57 @@ fn hog_monkey_grants_menace_to_counter_creature() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(buff).unwrap().keywords.contains(&Keyword::Menace), "got menace at combat");
 }
+
+/// `legal_attackers` excludes Tiger-Dillo when it's the only power-4 creature
+/// (the "another" gate, exclude_self) — keeps the bot/UI from offering an
+/// illegal swing.
+#[test]
+fn tiger_dillo_not_a_legal_attacker_alone() {
+    let mut g = two_player_game();
+    let td = g.add_card_to_battlefield(0, catalog::tiger_dillo());
+    g.clear_sickness(td);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    assert!(!g.legal_attackers(0).contains(&td), "not legal alone");
+    let helper = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // another power-4
+    g.clear_sickness(helper);
+    assert!(g.legal_attackers(0).contains(&td), "legal once a power-4 ally is present");
+}
+
+/// Energybending grants every basic land type to your lands and draws.
+#[test]
+fn energybending_fixes_lands_and_draws() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let eb = g.add_card_to_hand(0, catalog::energybending());
+    ready0(&mut g);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: eb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let lts = g.computed_permanent(forest).unwrap().subtypes.land_types;
+    for lt in [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest] {
+        assert!(lts.contains(&lt), "Forest gained {lt:?}");
+    }
+    // The spell left hand (−1) and we drew (+1) → net unchanged.
+    assert_eq!(g.players[0].hand.len(), hand, "discard-to-stack then draw");
+}
+
+/// Swampsnare Trap saps -5/-3 from the enchanted creature.
+#[test]
+fn swampsnare_trap_weakens_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    let trap = g.add_card_to_hand(0, catalog::swampsnare_trap());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: trap, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 2), "5/5 → 0/2");
+}

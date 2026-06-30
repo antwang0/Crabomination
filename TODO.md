@@ -408,12 +408,20 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
-- **Avatar (`tla`) card backlog.** ~175 non-waterbend `set:tla` cards remain
+- **Avatar (`tla`) card backlog.** ~160 non-waterbend `set:tla` cards remain
   unimplemented (most ride existing primitives — Ally tribal, Lessons, Raid,
-  Clues). `decks::tla` now has 32 cards. The modal Lessons (Iroh's Demonstration,
-  Azula Always Lies), Tiger-Dillo (`CantAttackOrBlockUnlessYouControlCount.
-  exclude_self`), Raucous Audience (conditional `Effect::If` mana ability), and
-  Great Divide Guide (`GrantActivatedAbility` over lands+Allies) all ship.
+  Clues). `decks::tla` now has 54 cards. Still need small primitives:
+  - **"Spend only to cast Lesson spells"** mana restriction (`SpendRestriction::
+    LessonSpellsOnly` + a `lesson` flag on `SpellKind`) — Hermitic Herbalist's
+    second ability, Lesson-ramp dorks.
+  - **Conditional player-wide cost reduction gated on a graveyard count**
+    ("noncreature spells cost {1} less while 3+ Lessons in your gy" — Gran-Gran).
+  - **Dynamic Firebending N = source's power** (Firebending Student) — Firebending
+    is fixed-N today.
+  - **Bounce-then-draw-if-you-controlled-it** (Boomerang Basics) and the
+    **"second time this resolved this turn → draw"** rider (South Pole Voyager).
+  - **Exhaust** activated-ability keyword (CR 702-adjacent, MH3/TLA) — Hog-Monkey
+    and Wan Shi Tong drop their Exhaust abilities for now.
 - ✅ **Waterbend (CR 701.67).** Shipped — completes the bending family
   (earthbend/airbend/blight). `CardDefinition.waterbend: Option<Waterbend>`
   (`GameAction::CastSpellWaterbend`) for the additional cast cost (mandatory +
@@ -2539,7 +2547,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed. Static keyword-grant scopes now route a `ToughnessGreaterThanPower` leaf through the `CardMatch` dynamic path — read against printed P/T + counters per the `CardMatchPowerGated` approximation — so Tapestry Warden / Ancient Lumberknot grant their keyword only to your T>P creatures.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`). CR 604.3 CDAs: `DynamicPt::LandsControlledPlusLandsInControllerGraveyard` (Multani, Yavimaya's Avatar), `DynamicPt::CardTypesInOpponentsGraveyards` (Nighthawk Scavenger), `DynamicPt::InstantsSorceriesInControllerGraveyard` (Enigma Drake), all live-recomputed by `computed_permanent()`; `tests/recent47.rs`, `tests/recent50.rs`.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). 119.7 rest-of-game lifegain lock ✅ (`Effect::LifeGainLockGame` sets the permanent `Player.cannot_gain_life` flag, distinct from the turn-scoped lock — Screaming Nemesis via `Selector::Target(0)`; test `screaming_nemesis_redirects_damage`). Life-total-threshold statics ✅ (`Predicate::PlayerLifeAtLeast` gates a live self-anthem — Angel of Vitality's +2/+2 at 25+ life; `cr_119_*`, `tests/recent17.rs`). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel — so a can't-gain-life lock on the player who would gain blocks their half of an exchange while the other still loses; test `cr_119_7_exchange_life_totals_respects_cant_gain_life`.)
-- 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
+- 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Draw-count board gates ✅ via `SelectionRequirement::ControllerDrewAtLeastThisTurn(n)` (reads `Player.cards_drawn_this_turn`), wired as a `SelfHasKeywordWhile` condition (Foggy Swamp Hunters lifelink/menace, June unblockable). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1 / 702.26) ✅: `do_phasing`
   runs as a turn-based action at the top of the untap step, moving the active
   player's phasing permanents (and their attachments) to `GameState.phased_out`
@@ -2658,7 +2666,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail. `LandType::Cave`
   added (CR 305.6 land subtypes), unblocking the LCI Cave lands + Caves-matter
   payoffs (Forgotten Monument grant, Compass Gnome tutor, Gargantuan Leech
-  affinity, Spelunking).
+  affinity, Spelunking). One-shot additive basic-land-type grant ✅
+  (`Effect::GainAllBasicLandTypes` — layer-4 `AddLandType` ×5 per resolved land,
+  CR 305; Energybending, `energybending_fixes_lands_and_draws`).
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.
