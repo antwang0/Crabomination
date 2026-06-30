@@ -2959,3 +2959,263 @@ pub fn beifongs_bounty_hunters() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 12: vehicles, equipment, Ally lords, combat payoffs ───────────────
+
+/// Tundra Tank — {2}{B} Vehicle 4/4. Firebending 1. ETB: target creature you
+/// control gains indestructible until end of turn. Crew 1.
+pub fn tundra_tank() -> CardDefinition {
+    CardDefinition {
+        name: "Tundra Tank",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Firebending(1), Keyword::Crew(1)],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Indestructible,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Twin Blades — {2}{R} Equipment. Flash. ETB: attach to target creature you
+/// control; it gains double strike until end of turn. Equipped +1/+1. Equip {2}.
+pub fn twin_blades() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Twin Blades",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Vengeful Villagers — {3}{W} 3/3 Human Citizen. On attack: tap target creature
+/// an opponent controls, then you may sacrifice an artifact or creature; if you
+/// do, put a stun counter on it.
+pub fn vengeful_villagers() -> CardDefinition {
+    CardDefinition {
+        name: "Vengeful Villagers",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent)) },
+            Effect::MaySacrifice {
+                description: "Sacrifice an artifact or creature to stun the tapped creature?".into(),
+                filter: (SelectionRequirement::Artifact.or(SelectionRequirement::Creature))
+                    .and(SelectionRequirement::ControlledByYou),
+                count: Value::ONE,
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::ONE,
+                }),
+                else_: None,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Invasion Tactics — {4}{G} Enchantment. ETB: creatures you control get +2/+2
+/// until end of turn. Whenever one or more Allies you control deal combat
+/// damage to a player, draw a card.
+pub fn invasion_tactics() -> CardDefinition {
+    CardDefinition {
+        name: "Invasion Tactics",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+                    })
+                    .once_per_turn(),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jet, Freedom Fighter — {2}{R/W}{R/W}{R/W} 3/1 legendary Human Rebel Ally.
+/// ETB: deal damage equal to the number of creatures you control to target
+/// creature an opponent controls. Dies: +1/+1 counter on each of up to two
+/// target creatures.
+pub fn jet_freedom_fighter() -> CardDefinition {
+    let rw = || hybrid(Color::Red, Color::White);
+    CardDefinition {
+        name: "Jet, Freedom Fighter",
+        cost: cost(&[generic(2), rw(), rw(), rw()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::CreatureCountControlledBy(PlayerRef::You),
+            }),
+            on_dies(Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sold Out — {3}{B} Instant. Exile target creature. If it was dealt damage
+/// this turn, create a Clue.
+pub fn sold_out() -> CardDefinition {
+    CardDefinition {
+        name: "Sold Out",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::DealtDamageThisTurn,
+                },
+                then: Box::new(investigate(1)),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sokka, Tenacious Tactician — {1}{U}{R}{W} 3/3 legendary Human Warrior Ally.
+/// Menace, prowess. Other Allies you control have menace and prowess. Whenever
+/// you cast a noncreature spell, create a 1/1 white Ally.
+pub fn sokka_tenacious_tactician() -> CardDefinition {
+    let other_allies = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Ally)
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )
+    };
+    CardDefinition {
+        name: "Sokka, Tenacious Tactician",
+        cost: cost(&[generic(1), u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace, Keyword::Prowess],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Allies you control have menace.",
+                effect: StaticEffect::GrantKeyword { applies_to: other_allies(), keyword: Keyword::Menace },
+            },
+            StaticAbility {
+                description: "Other Allies you control have prowess.",
+                effect: StaticEffect::GrantKeyword { applies_to: other_allies(), keyword: Keyword::Prowess },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                },
+            ),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: ally_token() },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Team Avatar — {2}{W} Enchantment. Whenever a creature you control attacks
+/// alone, it gets +X/+X where X is the number of creatures you control.
+/// {2}{W}, Discard this card: deal damage equal to creatures you control to
+/// target creature.
+pub fn team_avatar() -> CardDefinition {
+    CardDefinition {
+        name: "Team Avatar",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::AttackingAlone),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::CreatureCountControlledBy(PlayerRef::You),
+                toughness: Value::CreatureCountControlledBy(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            discard_self_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::CreatureCountControlledBy(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -1800,3 +1800,96 @@ fn beifongs_bounty_hunters_earthbends_for_power() {
         "earthbend 3 (Cat-Gator's power)"
     );
 }
+
+// ── Batch 12 ────────────────────────────────────────────────────────────────
+
+/// Tundra Tank grants indestructible to a creature you control on ETB.
+#[test]
+fn tundra_tank_grants_indestructible() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tank = g.add_card_to_battlefield(0, catalog::tundra_tank());
+    g.fire_self_etb_triggers(tank, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Twin Blades attaches on ETB, granting +1/+1 and double strike.
+#[test]
+fn twin_blades_attaches_and_grants_double_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blades = g.add_card_to_battlefield(0, catalog::twin_blades());
+    g.fire_self_etb_triggers(blades, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "equipped +1/+1");
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "gains double strike");
+}
+
+/// Vengeful Villagers taps an opponent's creature when it attacks.
+#[test]
+fn vengeful_villagers_taps_on_attack() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let vv = g.add_card_to_battlefield(0, catalog::vengeful_villagers());
+    attack_with(&mut g, vv);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent creature tapped");
+}
+
+/// Invasion Tactics pumps your team +2/+2 on ETB.
+#[test]
+fn invasion_tactics_pumps_team() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let it = g.add_card_to_battlefield(0, catalog::invasion_tactics());
+    g.fire_self_etb_triggers(it, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "team +2/+2");
+}
+
+/// Jet, Freedom Fighter pings for the number of creatures you control on ETB.
+#[test]
+fn jet_freedom_fighter_etb_pings() {
+    let mut g = two_player_game();
+    let jet = g.add_card_to_battlefield(0, catalog::jet_freedom_fighter());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // count = 2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(jet, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "2 damage killed the 2/2");
+}
+
+/// Sold Out exiles a creature and clues only if it was dealt damage.
+#[test]
+fn sold_out_clues_on_damaged() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::cat_gator()); // 3/2
+    let mut events = vec![];
+    g.deal_damage_to_from(crate::game::effects::EntityRef::Permanent(foe), 1, None, &mut events);
+    let ctx = crate::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(foe)), 0, 0);
+    g.resolve_effect(&catalog::sold_out().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == foe), "creature exiled");
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "made a Clue (was damaged)");
+}
+
+/// Sokka, Tenacious Tactician gives other Allies menace.
+#[test]
+fn sokka_tenacious_lords_allies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sokka_tenacious_tactician());
+    let ally = g.add_card_to_battlefield(0, catalog::compassionate_healer()); // Ally
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Menace),
+        "other Ally gains menace");
+}
+
+/// Team Avatar pumps a lone attacker by the number of creatures you control.
+#[test]
+fn team_avatar_pumps_lone_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::team_avatar());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    attack_with(&mut g, bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 (one creature)");
+}
