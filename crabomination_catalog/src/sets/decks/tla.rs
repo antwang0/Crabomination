@@ -3894,6 +3894,39 @@ pub fn the_last_agni_kai() -> CardDefinition {
     }
 }
 
+/// Honest Work — {U} Aura. Enchant a creature an opponent controls. ETB: tap it
+/// and remove all its counters. It loses all abilities and becomes a 1/1
+/// Citizen. (The granted "{T}: Add {C}" / rename rider is omitted.)
+pub fn honest_work() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Honest Work",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            set_creature_types: Some(vec![CreatureType::Citizen]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            Effect::RemoveAllCounters { what: Selector::AttachedTo(Box::new(Selector::This)) },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Allies at Last — {2}{G} Instant. Affinity for Allies. Up to two target
 /// creatures you control (slots 0/1) each deal damage equal to their power to
 /// target creature an opponent controls (slot 2).

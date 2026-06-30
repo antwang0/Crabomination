@@ -2955,3 +2955,26 @@ fn allies_at_last_affinity_and_double_strike_damage() {
     // 3 + 1 = 4 damage to the 4/4 → it dies.
     assert!(g.battlefield_find(foe).is_none(), "4 total damage kills the 4/4");
 }
+
+/// Honest Work shrinks an opponent's creature to a 1/1 Citizen, taps it, and
+/// strips its counters on ETB.
+#[test]
+fn honest_work_shrinks_and_taps() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer
+    g.battlefield_find_mut(foe).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 2);
+    let aura = g.add_card_to_hand(0, catalog::honest_work());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Honest Work");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "becomes 1/1");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying (abilities stripped)");
+    assert!(g.battlefield_find(foe).unwrap().tapped, "tapped on ETB");
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 0,
+        "counters removed");
+}
