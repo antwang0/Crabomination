@@ -20727,6 +20727,148 @@ pub fn pyrite_spellbomb() -> CardDefinition {
     }
 }
 
+/// Sunbeam Spellbomb — {1} Artifact. {W}, Sac: gain 5 life. {1}, Sac: draw.
+pub fn sunbeam_spellbomb() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Sunbeam Spellbomb",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                sac_cost: true,
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Necrogen Spellbomb — {1} Artifact. {B}, Sac: target player discards a card.
+/// {1}, Sac: draw.
+pub fn necrogen_spellbomb() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Necrogen Spellbomb",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                sac_cost: true,
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Elixir of Immortality — {1} Artifact. {2},{T}: gain 5 life, shuffle Elixir
+/// and your graveyard into your library.
+pub fn elixir_of_immortality() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Elixir of Immortality",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOfMoved,
+                        pos: crate::effect::LibraryPosition::Shuffled,
+                    },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Build a "return target creature unless its controller pays {1}" tapper:
+/// `Crystal Shard` and `Erratic Portal` share this bounce body.
+fn bounce_unless_pay_one() -> Effect {
+    use crate::card::WardCost;
+    use crate::effect::shortcut::target_filtered;
+    Effect::UnlessPlayerPays {
+        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+        cost: WardCost::generic(1),
+        then: Box::new(Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        }),
+    }
+}
+
+/// Crystal Shard — {3} Artifact. {3},{T} or {U},{T}: return target creature to
+/// its owner's hand unless its controller pays {1}.
+pub fn crystal_shard() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Crystal Shard",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: bounce_unless_pay_one(),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                tap_cost: true,
+                effect: bounce_unless_pay_one(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Erratic Portal — {4} Artifact. {1},{T}: return target creature to its
+/// owner's hand unless its controller pays {1}.
+pub fn erratic_portal() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Erratic Portal",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: bounce_unless_pay_one(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Seal of Removal — {U} Enchantment. "Sacrifice Seal of Removal: Return
 /// target creature to its owner's hand."
 pub fn seal_of_removal() -> CardDefinition {

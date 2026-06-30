@@ -34928,6 +34928,76 @@ fn krark_returns_your_spell_on_lost_flip() {
         "the spell is returned to its owner's hand");
 }
 
+// ── Utility artifacts ───────────────────────────────────────────────────────
+
+#[test]
+fn sunbeam_spellbomb_gains_five_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sunbeam_spellbomb());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("gain-life mode");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 25, "{{W}}, Sac: gain 5 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "Sunbeam Spellbomb is sacrificed");
+}
+
+#[test]
+fn necrogen_spellbomb_makes_target_discard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::necrogen_spellbomb());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let before = g.players[1].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None })
+        .expect("discard mode");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 1, "target player discards a card");
+}
+
+#[test]
+fn elixir_of_immortality_recycles_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::elixir_of_immortality());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("recycle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 25, "gain 5 life");
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled into library");
+    assert!(g.players[0].library.iter().any(|c| c.id == id), "Elixir shuffled into library");
+}
+
+#[test]
+fn crystal_shard_bounces_unpaid_creature() {
+    let mut g = two_player_game();
+    let shard = g.add_card_to_battlefield(0, catalog::crystal_shard());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1); // {U},{T} mode (index 1)
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shard, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("bounce mode");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear),
+        "unpaid creature returns to its owner's hand");
+}
+
+#[test]
+fn erratic_portal_bounces_unpaid_creature() {
+    let mut g = two_player_game();
+    let portal = g.add_card_to_battlefield(0, catalog::erratic_portal());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: portal, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("bounce");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear),
+        "unpaid creature returns to its owner's hand");
+}
+
 // CR 706.6 — "Whenever you roll one or more dice" fires once per roll
 // instruction (not once per die). The synthetic listener gains 1 life.
 #[test]
