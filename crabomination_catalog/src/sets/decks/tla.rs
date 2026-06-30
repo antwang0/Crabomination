@@ -3586,3 +3586,71 @@ pub fn wan_shi_tong_librarian() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 17: artifacts / vehicles ──────────────────────────────────────────
+
+/// Bender's Waterskin — {3} Artifact. Untap it during each other player's untap
+/// step. {T}: Add one mana of any color.
+pub fn benders_waterskin() -> CardDefinition {
+    CardDefinition {
+        name: "Bender's Waterskin",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Untap this artifact during each other player's untap step.",
+            effect: StaticEffect::UntapSelfEachUntapStep,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Fire Nation Drill — {2}{B}{B} Legendary Artifact — Vehicle 6/3. Trample.
+/// ETB: you may tap it; if you do, destroy target creature with power 4 or less.
+/// {1}: permanents your opponents control lose hexproof and indestructible
+/// until end of turn. Crew 2.
+pub fn the_fire_nation_drill() -> CardDefinition {
+    let opp_permanents =
+        || Selector::ControlledBy { who: PlayerRef::EachOpponent, filter: SelectionRequirement::Any };
+    CardDefinition {
+        name: "The Fire Nation Drill",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 3,
+        keywords: vec![Keyword::Trample, Keyword::Crew(2)],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Tap The Fire Nation Drill to destroy a creature with power 4 or less?"
+                .to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::This },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(4)),
+                    ),
+                },
+            ])),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::LoseKeywordThisTurn { what: opp_permanents(), keyword: Keyword::Hexproof },
+                Effect::LoseKeywordThisTurn {
+                    what: opp_permanents(),
+                    keyword: Keyword::Indestructible,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

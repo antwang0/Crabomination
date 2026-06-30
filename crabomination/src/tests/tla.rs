@@ -2123,3 +2123,37 @@ fn wan_shi_tong_enters_with_x_counters() {
     );
     assert_eq!(g.players[0].library.len(), lib0 - 2, "drew half of 4 = 2");
 }
+
+// ── Batch 17 ────────────────────────────────────────────────────────────────
+
+/// Bender's Waterskin taps for one mana of any color.
+#[test]
+fn benders_waterskin_taps_for_any_color() {
+    let mut g = two_player_game();
+    let skin = g.add_card_to_battlefield(0, catalog::benders_waterskin());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(crate::mana::Color::Blue),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skin, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert!(g.players[0].mana_pool.amount(crate::mana::Color::Blue) >= 1, "added blue");
+}
+
+/// The Fire Nation Drill's ETB may tap to destroy a small creature.
+#[test]
+fn fire_nation_drill_etb_destroys_small_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, power ≤ 4
+    let drill = g.add_card_to_battlefield(0, catalog::the_fire_nation_drill());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(foe)),
+    ]));
+    g.fire_self_etb_triggers(drill, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "small creature destroyed");
+    assert!(g.battlefield_find(drill).unwrap().tapped, "Drill tapped itself");
+}
