@@ -1268,6 +1268,10 @@ pub enum SelectionRequirement {
     /// or was cast from one — this turn (Prized Amalgam's intervening-if).
     /// Reads `GameState.entered_from_graveyard_this_turn`.
     EnteredFromGraveyardThisTurn,
+    /// True when the candidate entered the battlefield directly from exile
+    /// this turn (not via a cast). Reads `GameState.entered_from_exile_this_turn`
+    /// (Fire Lord Zuko's "whenever a permanent you control enters from exile").
+    EnteredFromExileThisTurn,
     /// True when the candidate permanent has an Aura attached to it (CR 303
     /// "enchanted permanent"). Battlefield-only: scans for any enchantment
     /// whose `attached_to` points at the candidate. Powers Kestia's

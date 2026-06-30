@@ -1629,6 +1629,9 @@ impl GameState {
                     R::EnteredFromGraveyardThisTurn => {
                         self.entered_from_graveyard_this_turn.contains(cid)
                     }
+                    R::EnteredFromExileThisTurn => {
+                        self.entered_from_exile_this_turn.contains(cid)
+                    }
                     // CR 303 — "enchanted" = an Aura is attached. Equipment also
                     // sets `attached_to`, so require the attachment be an
                     // enchantment to exclude it.
@@ -1938,6 +1941,9 @@ impl GameState {
             R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
             R::EnteredFromGraveyardThisTurn => {
                 self.entered_from_graveyard_this_turn.contains(&card.id)
+            }
+            R::EnteredFromExileThisTurn => {
+                self.entered_from_exile_this_turn.contains(&card.id)
             }
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),

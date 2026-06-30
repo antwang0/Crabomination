@@ -597,6 +597,12 @@ pub struct GameState {
     /// Amalgam's gate). Cleared at each turn's untap step.
     #[serde(default)]
     pub(crate) entered_from_graveyard_this_turn: std::collections::HashSet<CardId>,
+    /// Permanents that entered the battlefield directly from exile (not via a
+    /// cast) this turn. Set in the exile→battlefield move path; read by
+    /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent
+    /// you control enters from exile"). Cleared at each turn's untap step.
+    #[serde(default)]
+    pub(crate) entered_from_exile_this_turn: std::collections::HashSet<CardId>,
     /// Delayed triggered abilities registered by resolved spells/abilities
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
@@ -1264,6 +1270,7 @@ impl Clone for GameState {
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             entered_from_graveyard_this_turn: self.entered_from_graveyard_this_turn.clone(),
+            entered_from_exile_this_turn: self.entered_from_exile_this_turn.clone(),
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
@@ -1402,6 +1409,7 @@ impl GameState {
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
             entered_from_graveyard_this_turn: std::collections::HashSet::new(),
+            entered_from_exile_this_turn: std::collections::HashSet::new(),
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,

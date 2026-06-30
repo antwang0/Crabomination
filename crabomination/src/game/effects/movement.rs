@@ -653,6 +653,12 @@ impl GameState {
         if let Some(pos) = self.exile.iter().position(|c| c.id == cid) {
             let card = self.exile.remove(pos);
             let owner = card.owner;
+            // Fire Lord Zuko's gate — record exile→battlefield entries so a
+            // "whenever a permanent you control enters from exile" trigger can
+            // distinguish them from cast / reanimate-from-graveyard entries.
+            if matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
+                self.entered_from_exile_this_turn.insert(cid);
+            }
             self.place_card_in_dest(card, owner, &resolved_dest, events);
             return;
         }

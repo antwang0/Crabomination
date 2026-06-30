@@ -2782,3 +2782,27 @@ fn katara_ignores_non_ally_triggers() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, before - 1, "non-Ally ETB fires once (1 Swamp)");
 }
+
+/// Fire Lord Zuko counters the team when a permanent enters from exile.
+#[test]
+fn fire_lord_zuko_counters_on_enter_from_exile() {
+    use crate::effect::{PlayerRef, ZoneDest};
+    let mut g = two_player_game();
+    let zuko = g.add_card_to_battlefield(0, catalog::fire_lord_zuko());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let exiled = g.add_card_to_exile(0, catalog::grizzly_bears());
+    // Return the exiled creature to the battlefield (enters from exile).
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let mut events = Vec::new();
+    g.move_card_to(
+        exiled,
+        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        &ctx,
+        &mut events,
+    );
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let pp = crate::card::CounterType::PlusOnePlusOne;
+    assert_eq!(g.battlefield_find(zuko).unwrap().counter_count(pp), 1, "Zuko gets a counter");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(pp), 1, "bear gets a counter");
+}

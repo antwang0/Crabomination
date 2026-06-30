@@ -4438,6 +4438,48 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Fire Lord Zuko — {R}{W}{B} 2/4 Legendary Human Noble Ally. Firebending X
+/// (= his power). Whenever you cast a spell from exile or a permanent you
+/// control enters from exile, put a +1/+1 counter on each creature you control.
+pub fn fire_lord_zuko() -> CardDefinition {
+    let counter_team = || Effect::AddCounter {
+        what: Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    CardDefinition {
+        name: "Fire Lord Zuko",
+        cost: cost(&[r(), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::FirebendingPower],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellFromExile),
+                effect: counter_team(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::EnteredFromExileThisTurn,
+                    }),
+                effect: counter_team(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Katara, the Fearless — {G}{W}{U} 3/3 Legendary Human Warrior Ally. If a
 /// triggered ability of an Ally you control triggers, it triggers an additional
 /// time (Panharmonicon for Allies).
