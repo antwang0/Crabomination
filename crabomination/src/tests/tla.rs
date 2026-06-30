@@ -1526,3 +1526,58 @@ fn sokka_draws_with_a_friend() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "draws attacking with a friend");
 }
+
+/// The Mechanist makes a Clue whenever you cast a noncreature spell.
+#[test]
+fn the_mechanist_magecraft_clue() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_mechanist_aerial_artisan());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a noncreature spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "noncreature cast → Clue");
+}
+
+/// Iroh, Tea Master makes a Food on ETB.
+#[test]
+fn iroh_tea_master_makes_food() {
+    let mut g = two_player_game();
+    let iroh = g.add_card_to_battlefield(0, catalog::iroh_tea_master());
+    g.fire_self_etb_triggers(iroh, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "ETB → Food");
+}
+
+/// Ty Lee, Chi Blocker taps a creature and stops its next untap.
+#[test]
+fn ty_lee_taps_and_locks() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ty = g.add_card_to_battlefield(0, catalog::ty_lee_chi_blocker());
+    g.fire_self_etb_triggers(ty, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
+    assert!(g.battlefield_find(foe).unwrap().skip_next_untap, "untap lock set");
+    // It stays tapped through its controller's untap step.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(foe).unwrap().tapped, "skips its next untap");
+}
+
+/// The Boulder earthbends X = your power-4+ creatures when it attacks.
+#[test]
+fn the_boulder_attack_earthbends_for_big_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest()); // earthbend target
+    let boulder = g.add_card_to_battlefield(0, catalog::the_boulder_ready_to_rumble()); // 4/4
+    attack_with(&mut g, boulder);
+    // Only The Boulder (power 4) qualifies → X = 1 counter placed across lands.
+    let counters: u32 = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 1, "earthbend 1 (one power-4+ creature)");
+}

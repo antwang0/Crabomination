@@ -2473,3 +2473,93 @@ pub fn sokka_lateral_strategist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 7: magecraft Clue / ETB Food / Flash tapper / attack earthbend X ──
+
+/// The Mechanist, Aerial Artisan — {2}{U} 1/3 legendary Human Artificer Ally.
+/// Whenever you cast a noncreature spell, create a Clue. (The {T} token-animate
+/// ability is dropped.)
+pub fn the_mechanist_aerial_artisan() -> CardDefinition {
+    CardDefinition {
+        name: "The Mechanist, Aerial Artisan",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Artificer, CreatureType::Ally]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(investigate(1))],
+        ..Default::default()
+    }
+}
+
+/// Iroh, Tea Master — {1}{R}{W} 2/2 legendary Human Citizen Ally. When it
+/// enters, create a Food token. (The combat donate ability is dropped.)
+pub fn iroh_tea_master() -> CardDefinition {
+    CardDefinition {
+        name: "Iroh, Tea Master",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Citizen, CreatureType::Ally]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: food_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ty Lee, Chi Blocker — {2}{U} 2/1 legendary Human Monk Ally. Flash. Prowess.
+/// When it enters, tap up to one target creature; it doesn't untap during its
+/// controller's next untap step.
+pub fn ty_lee_chi_blocker() -> CardDefinition {
+    CardDefinition {
+        name: "Ty Lee, Chi Blocker",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Monk, CreatureType::Ally]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Prowess],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// The Boulder, Ready to Rumble — {3}{G} 4/4 legendary Human Warrior. Whenever
+/// it attacks, earthbend X, where X is the number of creatures you control with
+/// power 4 or greater.
+pub fn the_boulder_ready_to_rumble() -> CardDefinition {
+    CardDefinition {
+        name: "The Boulder, Ready to Rumble",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::Earthbend {
+            n: Value::count(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::PowerAtLeast(4)),
+            )),
+        })],
+        ..Default::default()
+    }
+}
