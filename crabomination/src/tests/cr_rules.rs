@@ -5662,3 +5662,33 @@ fn cr_601_2c_multitarget_spell_and_land_slots() {
     assert!(g.battlefield_find(spell).is_none(), "spell slot countered");
     assert!(!g.battlefield_find(land).unwrap().tapped, "land slot untapped");
 }
+
+
+// ── CR 701.66 — Earthbend ──────────────────────────────────────────────────
+
+/// CR 701.66a — earthbending a land you control turns it into a 0/0 land
+/// creature with haste, puts N +1/+1 counters on it, and (CR 701.66a) returns
+/// it tapped when it dies. Exercised through Earth Kingdom General (earthbend
+/// 2 on ETB).
+#[test]
+fn cr_701_66a_earthbend_lifecycle_and_return_on_death() {
+    use crate::card::{CardType, Keyword};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ekg = g.add_card_to_battlefield(0, catalog::earth_kingdom_general());
+    g.fire_self_etb_triggers(ekg, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature), "land became a creature");
+    assert!(cp.card_types.contains(&CardType::Land), "stays a land");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gains haste");
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "earthbend 2 counters");
+    // Kill it → returns to the battlefield tapped.
+    g.battlefield_find_mut(land).unwrap().damage = 2; // 0/0 + 2 counters = 2/2
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(land).expect("returned to battlefield");
+    assert!(back.tapped, "returns tapped (CR 701.66a)");
+}

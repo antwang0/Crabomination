@@ -2338,15 +2338,19 @@ impl GameState {
             .battlefield
             .iter()
             .filter(|c| {
-                if !c.definition.is_creature() {
+                // CR 704.5g/CR 305.7 — use the *computed* type so an animated
+                // land (earthbend, creature-lands granted Creature via layers)
+                // dies to lethal damage / toughness ≤ 0 like any creature, not
+                // just cards printed as creatures.
+                let cp = computed.iter().find(|cp| cp.id == c.id);
+                let is_creature = cp
+                    .map(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                    .unwrap_or_else(|| c.definition.is_creature());
+                if !is_creature {
                     return false;
                 }
                 // Indestructible stops destruction by damage but NOT by toughness ≤ 0.
-                let computed_toughness = computed
-                    .iter()
-                    .find(|cp| cp.id == c.id)
-                    .map(|cp| cp.toughness)
-                    .unwrap_or(c.toughness());
+                let computed_toughness = cp.map(|cp| cp.toughness).unwrap_or(c.toughness());
                 // Toughness ≤ 0 kills even indestructible creatures.
                 if computed_toughness <= 0 {
                     return true;
