@@ -408,9 +408,10 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
-- **Avatar (`tla`) card backlog.** ~160 non-waterbend `set:tla` cards remain
+- **Avatar (`tla`) card backlog.** ~120 non-waterbend `set:tla` cards remain
   unimplemented (most ride existing primitives — Ally tribal, Lessons, Raid,
-  Clues). `decks::tla` now has 54 cards. Still need small primitives:
+  Clues). `decks::tla` now has 64 cards incl. the ten two-color "refuge"
+  sac-lands (`tla_sac_land`). Still need small primitives:
   - **"Spend only to cast Lesson spells"** mana restriction (`SpendRestriction::
     LessonSpellsOnly` + a `lesson` flag on `SpellKind`) — Hermitic Herbalist's
     second ability, Lesson-ramp dorks.

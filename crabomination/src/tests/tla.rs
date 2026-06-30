@@ -941,3 +941,28 @@ fn foggy_swamp_spirit_keeper_makes_spirit_on_second_draw() {
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Spirit"), 1, "Spirit on second draw");
 }
+
+/// The TLA sac-lands tap for either color and can be cracked for a card.
+#[test]
+fn tla_sac_land_taps_and_cracks() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::north_pole_gates());
+    g.add_card_to_library(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Mana ability 0 → white.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for W");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+    // Untap, then crack it: {4}, {T}, Sacrifice → draw.
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(4);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    }).expect("crack for a card");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}

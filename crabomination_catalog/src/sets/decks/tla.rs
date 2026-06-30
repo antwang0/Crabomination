@@ -1651,3 +1651,39 @@ pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TLA "refuge" dual lands (enters tapped; {T}: Add A or B; {4},{T},Sac: draw) ─
+
+/// One TLA two-color sac-land: enters tapped, taps for either color, and can be
+/// sacrificed for a card. Untyped (no basic land subtypes).
+fn tla_sac_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
+    use super::super::{etb_tap, tap_add};
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add(color_a),
+            tap_add(color_b),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![etb_tap()],
+        ..Default::default()
+    }
+}
+
+pub fn north_pole_gates() -> CardDefinition { tla_sac_land("North Pole Gates", Color::White, Color::Blue) }
+pub fn serpents_pass() -> CardDefinition { tla_sac_land("Serpent's Pass", Color::Blue, Color::Black) }
+pub fn boiling_rock_prison() -> CardDefinition { tla_sac_land("Boiling Rock Prison", Color::Black, Color::Red) }
+pub fn omashu_city() -> CardDefinition { tla_sac_land("Omashu City", Color::Red, Color::Green) }
+pub fn kyoshi_village() -> CardDefinition { tla_sac_land("Kyoshi Village", Color::Green, Color::White) }
+pub fn misty_palms_oasis() -> CardDefinition { tla_sac_land("Misty Palms Oasis", Color::White, Color::Black) }
+pub fn airship_engine_room() -> CardDefinition { tla_sac_land("Airship Engine Room", Color::Blue, Color::Red) }
+pub fn foggy_bottom_swamp() -> CardDefinition { tla_sac_land("Foggy Bottom Swamp", Color::Black, Color::Green) }
+pub fn sun_blessed_peak() -> CardDefinition { tla_sac_land("Sun-Blessed Peak", Color::Red, Color::White) }
+pub fn meditation_pools() -> CardDefinition { tla_sac_land("Meditation Pools", Color::Green, Color::Blue) }
