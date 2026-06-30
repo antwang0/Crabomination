@@ -412,8 +412,12 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   cleared at the end of `dispatch_triggers_for_events` — before the observer's
   trigger resolves on the stack. Fix: stash `leaves_bf_lki` for every dying
   creature an observer trigger might read, keyed/cleaned by trigger_source.
-  (Held back Buzzard-Wasp Colony's counter-inheritance and Host of the
-  Hereafter's other-dies branch.)
+  The same gap affects `AnotherOfYours`/`PermanentLeavesBattlefield` observer
+  triggers (a *non-death* exile/bounce of another permanent): the subject's
+  controller lookup fails once it's gone, so the trigger doesn't fire. (Held
+  back Buzzard-Wasp Colony's counter-inheritance, Host of the Hereafter's
+  other-dies branch, and Suki, Courageous Rescuer's "another permanent leaves
+  → Ally token" rider.)
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 

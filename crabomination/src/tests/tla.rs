@@ -1581,3 +1581,48 @@ fn the_boulder_attack_earthbends_for_big_creatures() {
         .sum();
     assert_eq!(counters, 1, "earthbend 1 (one power-4+ creature)");
 }
+
+/// The Earth King makes a 4/4 Bear on ETB.
+#[test]
+fn the_earth_king_makes_a_bear() {
+    let mut g = two_player_game();
+    let ek = g.add_card_to_battlefield(0, catalog::the_earth_king());
+    g.fire_self_etb_triggers(ek, 0);
+    drain_stack(&mut g);
+    let bear = g.battlefield.iter().find(|c| c.definition.name == "Bear").map(|c| c.id);
+    assert!(bear.is_some(), "made a Bear");
+    let cp = g.computed_permanent(bear.unwrap()).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// The Lion-Turtle gains 3 life on ETB and taps for any color.
+#[test]
+fn the_lion_turtle_gains_and_ramps() {
+    let mut g = two_player_game();
+    let lt = g.add_card_to_battlefield(0, catalog::the_lion_turtle());
+    let life0 = g.players[0].life;
+    g.fire_self_etb_triggers(lt, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3, "ETB gains 3 life");
+    g.clear_sickness(lt);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(crate::mana::Color::Blue),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert!(g.players[0].mana_pool.amount(crate::mana::Color::Blue) >= 1, "added a blue");
+}
+
+/// Suki anthems your other creatures and replaces a leaving permanent with an
+/// Suki anthems your other creatures (+1/+0) but not herself.
+#[test]
+fn suki_anthems_other_creatures() {
+    let mut g = two_player_game();
+    let suki = g.add_card_to_battlefield(0, catalog::suki_courageous_rescuer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "other creature gets +1/+0");
+    assert_eq!(g.computed_permanent(suki).unwrap().power, 2, "Suki doesn't pump herself");
+}

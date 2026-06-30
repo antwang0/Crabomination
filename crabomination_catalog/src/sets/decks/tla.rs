@@ -2563,3 +2563,92 @@ pub fn the_boulder_ready_to_rumble() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 8: token-maker / lifegain manadork / anthem + token ──────────────
+
+/// The Earth King — {3}{G} 2/2 legendary Human Noble Ally. When it enters,
+/// create a 4/4 green Bear. (The attack-with-power-4+ land tutor is dropped.)
+pub fn the_earth_king() -> CardDefinition {
+    let bear = TokenDefinition {
+        name: "Bear".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Earth King",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Noble, CreatureType::Ally]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: bear,
+        })],
+        ..Default::default()
+    }
+}
+
+/// The Lion-Turtle — {1}{G}{U} 3/6 legendary Cat Turtle. Vigilance, reach. When
+/// it enters, gain 3 life. {T}: Add one mana of any color. (The Lesson-gated
+/// attack/block restriction is dropped.)
+pub fn the_lion_turtle() -> CardDefinition {
+    CardDefinition {
+        name: "The Lion-Turtle",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Turtle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Suki, Courageous Rescuer — {1}{W}{W} 2/4 legendary Human Warrior Ally. Other
+/// creatures you control get +1/+0. Whenever another permanent you control
+/// leaves the battlefield during your turn, create a 1/1 white Ally (once each
+/// turn).
+pub fn suki_courageous_rescuer() -> CardDefinition {
+    CardDefinition {
+        name: "Suki, Courageous Rescuer",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Warrior, CreatureType::Ally]),
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        // The "another permanent you control leaves during your turn → Ally
+        // token (once/turn)" rider is dropped — observer leaves-battlefield
+        // triggers can't read the departed permanent's LKI yet (TODO.md).
+        ..Default::default()
+    }
+}
