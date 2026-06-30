@@ -833,6 +833,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FlipCoinsUntilLoseOrStop { tiers } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let me = ctx.controller;
+                let src = ctx.source.unwrap_or(crate::card::CardId(0));
+                let mut wins = 0u32;
+                // CR 705 — flip until a loss or a voluntary stop. The "flip
+                // again?" yes/no is the controller's (synchronous, like
+                // FlipCoin). Loop-capped so a degenerate decider can't spin.
+                for _ in 0..1000 {
+                    if self.flip_one_coin(me) {
+                        events.push(GameEvent::CoinFlipWon { player: me });
+                        wins += 1;
+                        let again = matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Flip again?".into(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        );
+                        if !again {
+                            break;
+                        }
+                    } else {
+                        events.push(GameEvent::CoinFlipLost { player: me });
+                        wins = 0; // a lost flip cancels everything
+                        break;
+                    }
+                }
+                for (threshold, eff) in tiers {
+                    if wins >= *threshold {
+                        self.run_effect(eff, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ManaClash { opponent } => {
                 // CR 705.2 — both players flip each round; whoever is tails
                 // takes 1 damage; repeat until both heads on the same flip.

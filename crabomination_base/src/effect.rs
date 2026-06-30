@@ -1405,6 +1405,12 @@ pub enum Effect {
         on_heads: Box<Effect>,
         on_tails: Box<Effect>,
     },
+    /// CR 705 — flip a coin repeatedly until the controller loses a flip or
+    /// chooses to stop. Losing a flip cancels everything (zero wins). Then,
+    /// in order, every `(threshold, effect)` whose threshold is at most the
+    /// number of wins runs. Fiery Gambit (1+ → 3 dmg, 2+ → draw 3, 3+ →
+    /// each opponent loses 5).
+    FlipCoinsUntilLoseOrStop { tiers: Vec<(u32, Box<Effect>)> },
     /// CR 705.2 — Mana Clash: the controller and `opponent` each flip a coin;
     /// each player whose coin is tails takes 1 damage from `source`. Repeat
     /// until both come up heads on the same flip. `opponent` resolves to the

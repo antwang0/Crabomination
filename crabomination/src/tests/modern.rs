@@ -34928,6 +34928,46 @@ fn krark_returns_your_spell_on_lost_flip() {
         "the spell is returned to its owner's hand");
 }
 
+#[test]
+fn fiery_gambit_three_wins_fires_all_tiers() {
+    let mut g = two_player_game();
+    let gambit = g.add_card_to_hand(0, catalog::fiery_gambit());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    // win, again, win, again, win, stop → 3 wins.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(false),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: gambit, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None }).expect("Fiery Gambit castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "1+ wins: 3 damage kills the 2/2");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3, "2+ wins: draw three (minus the cast Gambit)");
+    assert_eq!(g.players[1].life, 15, "3+ wins: each opponent loses 5");
+}
+
+#[test]
+fn fiery_gambit_lost_flip_does_nothing() {
+    let mut g = two_player_game();
+    let gambit = g.add_card_to_hand(0, catalog::fiery_gambit());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // lose first flip
+    g.perform_action(GameAction::CastSpell {
+        card_id: gambit, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "losing the first flip cancels everything");
+    assert_eq!(g.players[1].life, 20, "no life loss on a lost gambit");
+}
+
 // ── Utility artifacts ───────────────────────────────────────────────────────
 
 #[test]

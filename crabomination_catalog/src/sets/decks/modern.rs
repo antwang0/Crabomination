@@ -21978,6 +21978,30 @@ pub fn krark_the_thumbless() -> CardDefinition {
     }
 }
 
+/// Fiery Gambit — {2}{R} Sorcery. Flip until you lose or stop. 1+ wins → deal
+/// 3 to target creature; 2+ → draw three; 3+ → each opponent loses 5 life.
+pub fn fiery_gambit() -> CardDefinition {
+    CardDefinition {
+        name: "Fiery Gambit",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::FlipCoinsUntilLoseOrStop {
+            tiers: vec![
+                (1, Box::new(Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(3),
+                })),
+                (2, Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) })),
+                (3, Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(5),
+                })),
+            ],
+        },
+        ..Default::default()
+    }
+}
+
 /// Leonin Skyhunter — {W}{W} 2/2 Cat Knight, Flying.
 pub fn leonin_skyhunter() -> CardDefinition {
     CardDefinition {

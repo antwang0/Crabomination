@@ -216,6 +216,9 @@ impl Effect {
                     || on_tails.requires_target()
             }
             Effect::ManaClash { opponent } => sel_has_target(opponent),
+            Effect::FlipCoinsUntilLoseOrStop { tiers } => {
+                tiers.iter().any(|(_, e)| e.requires_target())
+            }
             Effect::RollDie { count, results, .. } => {
                 value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
             }
@@ -749,6 +752,9 @@ impl Effect {
             // auto-target picker walks the result-table arm that fires
             // for the rolled face; we surface the first arm for the
             // cast prompt.
+            Effect::FlipCoinsUntilLoseOrStop { tiers } => {
+                tiers.iter().find_map(|(_, e)| e.primary_target_filter())
+            }
             Effect::RollDie { results, .. } => results
                 .iter()
                 .find_map(|(_, _, e)| e.primary_target_filter()),
@@ -1171,6 +1177,9 @@ impl Effect {
             Effect::FlipCoin { on_heads, on_tails, .. } => {
                 on_heads.accepts_player_target() || on_tails.accepts_player_target()
             }
+            Effect::FlipCoinsUntilLoseOrStop { tiers } => {
+                tiers.iter().any(|(_, e)| e.accepts_player_target())
+            }
             Effect::RollDie { results, .. } => {
                 results.iter().any(|(_, _, e)| e.accepts_player_target())
             }
@@ -1326,6 +1335,9 @@ impl Effect {
                 Effect::FlipCoin { on_heads, on_tails, .. } => {
                     eff_find(on_heads, slot, mode, kicked).or_else(|| eff_find(on_tails, slot, mode, kicked))
                 }
+                Effect::FlipCoinsUntilLoseOrStop { tiers } => tiers
+                    .iter()
+                    .find_map(|(_, e)| eff_find(e, slot, mode, kicked)),
                 Effect::RollDie { results, .. } => results
                     .iter()
                     .find_map(|(_, _, e)| eff_find(e, slot, mode, kicked)),
