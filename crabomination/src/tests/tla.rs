@@ -209,3 +209,169 @@ fn united_front_makes_allies_and_counters() {
     // The pre-existing bear got a +1/+1 counter (3/3).
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "team counter");
 }
+
+// ── Second wave ─────────────────────────────────────────────────────────────
+
+use crate::mana::Color;
+
+#[test]
+fn water_tribe_captain_pumps_team() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::water_tribe_captain());
+    g.clear_sickness(cap);
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(5);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cap, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate {5}");
+    drain_stack(&mut g);
+    let v = g.compute_battlefield();
+    assert_eq!(v.iter().find(|c| c.id == ally).map(|c| (c.power, c.toughness)), Some((3, 3)));
+}
+
+#[test]
+fn earth_kingdom_protectors_grants_indestructible() {
+    let mut g = two_player_game();
+    let prot = g.add_card_to_battlefield(0, catalog::earth_kingdom_protectors());
+    g.clear_sickness(prot);
+    let ally = g.add_card_to_battlefield(0, catalog::kyoshi_warriors());
+    g.clear_sickness(ally);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prot, ability_index: 0, target: Some(Target::Permanent(ally)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sacrifice to grant indestructible");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == prot), "Protectors sacrificed");
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+#[test]
+fn yip_yip_grants_flying_only_to_allies() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::kyoshi_warriors()); // is an Ally
+    let yip = g.add_card_to_hand(0, catalog::yip_yip());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: yip, target: Some(Target::Permanent(ally)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Yip Yip!");
+    drain_stack(&mut g);
+    let v = g.compute_battlefield();
+    let a = v.iter().find(|c| c.id == ally).unwrap();
+    assert_eq!((a.power, a.toughness), (5, 5), "+2/+2");
+    assert!(a.keywords.contains(&Keyword::Flying), "Ally also gains flying");
+}
+
+#[test]
+fn earth_kingdom_jailer_exiles_then_returns() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // MV 6 ≥ 3
+    let jailer = g.add_card_to_hand(0, catalog::earth_kingdom_jailer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: jailer, target: Some(Target::Permanent(victim)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Jailer");
+    drain_stack(&mut g);
+    let jid = g.battlefield.iter().find(|c| c.definition.name == "Earth Kingdom Jailer").unwrap().id;
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "victim exiled");
+    g.battlefield_find_mut(jid).unwrap().damage = 3; // lethal to the 3/3 Jailer
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "victim returns when Jailer leaves");
+}
+
+#[test]
+fn first_time_flyer_grows_with_a_lesson_in_graveyard() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_battlefield(0, catalog::first_time_flyer());
+    // No Lesson yet → base 1/2.
+    let v = g.compute_battlefield();
+    assert_eq!(v.iter().find(|c| c.id == f).map(|c| (c.power, c.toughness)), Some((1, 2)));
+    g.add_card_to_graveyard(0, catalog::yip_yip()); // a Lesson
+    let v = g.compute_battlefield();
+    assert_eq!(v.iter().find(|c| c.id == f).map(|c| (c.power, c.toughness)), Some((2, 3)));
+}
+
+#[test]
+fn fire_nation_raider_clue_only_after_attacking() {
+    let mut g = two_player_game();
+    g.players[0].attacked_this_turn = true;
+    let raider = g.add_card_to_battlefield(0, catalog::fire_nation_raider());
+    g.fire_self_etb_triggers(raider, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "Raid → Clue");
+}
+
+#[test]
+fn wartime_protestors_buffs_incoming_allies() {
+    let mut g = two_player_game();
+    let prot = g.add_card_to_battlefield(0, catalog::wartime_protestors());
+    g.clear_sickness(prot);
+    // Cast an Ally so the "another Ally enters" watcher fires.
+    let ally = g.add_card_to_hand(0, catalog::kyoshi_warriors());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ally, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kyoshi Warriors");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counters.get(&crate::card::CounterType::PlusOnePlusOne)
+            .copied().unwrap_or(0),
+        1,
+        "incoming Ally gets a +1/+1 counter",
+    );
+}
+
+#[test]
+fn walltop_sentries_lifegain_needs_a_lesson() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    let w = g.add_card_to_battlefield(0, catalog::walltop_sentries());
+    g.add_card_to_graveyard(0, catalog::octopus_form()); // a Lesson
+    g.battlefield_find_mut(w).unwrap().damage = 3; // lethal to the 2/3
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2, "dies with a Lesson in gy → gain 2");
+}
+
+#[test]
+fn saber_tooth_is_a_french_vanilla_reach() {
+    let def = catalog::saber_tooth_moose_lion();
+    assert_eq!((def.power, def.toughness), (7, 7));
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, _))));
+}
+
+#[test]
+fn cunning_maneuver_pumps_and_clues() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cm = g.add_card_to_hand(0, catalog::cunning_maneuver());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cm, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Cunning Maneuver");
+    drain_stack(&mut g);
+    let v = g.compute_battlefield();
+    assert_eq!(v.iter().find(|c| c.id == bear).map(|c| (c.power, c.toughness)), Some((5, 3)));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "made a Clue");
+}
