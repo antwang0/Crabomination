@@ -405,6 +405,15 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   creature is already gone. The other-creature half works. Wire the dying
   card's own YourControl death triggers via death-LKI (held back Warbeast of
   Gorgoroth, which would otherwise amass on its own death).
+- **Observer death-trigger LKI counters.** An `AnotherOfYours`/`CreatureDied`
+  trigger that reads the *dead* creature's counters (`MoveAllCounters` from
+  `Selector::TriggerSource`) gets nothing: `leaves_bf_lki` is only stashed for a
+  dying creature that has its *own* die-triggers, and `died_card_snapshots` is
+  cleared at the end of `dispatch_triggers_for_events` — before the observer's
+  trigger resolves on the stack. Fix: stash `leaves_bf_lki` for every dying
+  creature an observer trigger might read, keyed/cleaned by trigger_source.
+  (Held back Buzzard-Wasp Colony's counter-inheritance and Host of the
+  Hereafter's other-dies branch.)
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 

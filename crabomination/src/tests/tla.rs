@@ -1225,3 +1225,90 @@ fn seismic_sense_digs_for_a_land() {
         "creature pulled to hand");
     assert_eq!(g.players[0].hand.len(), hand0, "net hand unchanged (spell out, card in)");
 }
+
+/// Earth Kingdom General earthbends a land you control on ETB.
+#[test]
+fn earth_kingdom_general_earthbends() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ekg = g.add_card_to_battlefield(0, catalog::earth_kingdom_general());
+    g.fire_self_etb_triggers(ekg, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(land).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "land became a creature");
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2,
+        "earthbend 2 counters");
+}
+
+/// Cruel Administrator mints a firebending Soldier when it attacks.
+#[test]
+fn cruel_administrator_attack_makes_soldier() {
+    let mut g = two_player_game();
+    let ca = g.add_card_to_battlefield(0, catalog::cruel_administrator());
+    attack_with(&mut g, ca);
+    assert_eq!(count_named(&g, 0, "Soldier"), 1, "made a Soldier token");
+}
+
+/// Sparring Dummy mills and pulls a land milled this way to hand.
+#[test]
+fn sparring_dummy_mills_for_land() {
+    let mut g = two_player_game();
+    let sd = g.add_card_to_battlefield(0, catalog::sparring_dummy());
+    g.clear_sickness(sd);
+    g.add_card_to_library(0, catalog::forest()); // top → milled, taken to hand
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "land to hand");
+}
+
+/// Buzzard-Wasp Colony's ETB sacrifices a creature to draw a card.
+#[test]
+fn buzzard_wasp_sacrifices_to_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bw = g.add_card_to_battlefield(0, catalog::buzzard_wasp_colony());
+    let hand0 = g.players[0].hand.len();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_self_etb_triggers(bw, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
+/// Jet's Brainwashing only steals the creature when kicked.
+#[test]
+fn jets_brainwashing_kicked_steals() {
+    // Unkicked: just can't-block, no control change.
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jb = g.add_card_to_hand(0, catalog::jets_brainwashing());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: jb, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().controller, 1, "still opponent's");
+
+    // Kicked: steal it.
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jb = g.add_card_to_hand(0, catalog::jets_brainwashing());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: jb, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().controller, 0, "stolen");
+}

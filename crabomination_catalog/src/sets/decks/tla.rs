@@ -9,7 +9,7 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crabomination_base::tokens::food_token;
-use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, target_any, target_filtered};
+use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, raid_etb, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost, ManaSymbol, SpendRestriction};
@@ -2023,6 +2023,160 @@ pub fn boomerang_basics() -> CardDefinition {
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Batch 2: earthbend / Raid / mill / kicker control ──────────────────────
+
+/// A 2/2 red Soldier token with firebending 1 (Cruel Administrator).
+fn firebending_soldier_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Soldier".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        keywords: vec![Keyword::Firebending(1)],
+        ..Default::default()
+    }
+}
+
+/// Earth Kingdom General — {3}{G} 2/2 Human Soldier Ally. When it enters,
+/// earthbend 2.
+pub fn earth_kingdom_general() -> CardDefinition {
+    CardDefinition {
+        name: "Earth Kingdom General",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Soldier, CreatureType::Ally]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Cruel Administrator — {3}{B}{R} 5/4 Human Soldier. Raid — enters with a
+/// +1/+1 counter if you attacked this turn. Whenever it attacks, create a 2/2
+/// red Soldier with firebending 1.
+pub fn cruel_administrator() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Administrator",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![
+            raid_etb(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+            on_attack(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: firebending_soldier_token(),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sparring Dummy — {1}{G} 1/3 Artifact Creature — Scarecrow. Defender. {T}:
+/// Mill a card; you may put a land milled this way into your hand. (The "gain 2
+/// life if a Lesson is milled" rider is dropped.)
+pub fn sparring_dummy() -> CardDefinition {
+    CardDefinition {
+        name: "Sparring Dummy",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scarecrow],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::MillThenToHand {
+                amount: Value::ONE,
+                filter: SelectionRequirement::Land,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Buzzard-Wasp Colony — {3}{B} 2/2 Bird Insect. Flying. When it enters, you
+/// may sacrifice an artifact or creature; if you do, draw a card. (The
+/// "another creature you control dies → move its counters onto this" rider is
+/// dropped — observer death-triggers can't read the dead creature's LKI
+/// counters yet; tracked in TODO.md.)
+pub fn buzzard_wasp_colony() -> CardDefinition {
+    CardDefinition {
+        name: "Buzzard-Wasp Colony",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice an artifact or creature?".into(),
+            filter: SelectionRequirement::HasCardType(CardType::Artifact)
+                .or(SelectionRequirement::Creature),
+            count: Value::ONE,
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jet's Brainwashing — {R} Sorcery. Kicker {3}. Target creature can't block
+/// this turn; if kicked, also gain control of it until end of turn, untap it,
+/// and it gains haste.
+pub fn jets_brainwashing() -> CardDefinition {
+    CardDefinition {
+        name: "Jet's Brainwashing",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GainControl {
+                        what: Selector::Target(0),
+                        to: Some(PlayerRef::You),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()
