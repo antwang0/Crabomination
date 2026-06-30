@@ -4502,6 +4502,7 @@ static DECKS: &[Factory] = &[
     super::decks::diligent_zookeeper,
     super::decks::katara_the_fearless,
     super::decks::fire_lord_zuko,
+    super::decks::raven_eagle,
     super::decks::teo_spirited_glider,
     super::decks::bitter_work,
     super::decks::suki_kyoshi_warrior,

@@ -22,20 +22,15 @@ Swarm, Earthen Ally — new `DynamicPt` variants), Cycle of Renewal, Zuko's Exil
 Zuko's Conviction, Barrels of Blasting Jelly, Accumulate Wisdom, the mono-land
 cycle (Abandoned Air Temple / Agna Qel'a / Ba Sing Se / Fire Nation Palace /
 Realm of Koh), Price of Freedom, Leaves from the Vine (Saga), Rumble Arena,
-Hakoda, Momo. Still-missing TLA cards needing a primitive: **Teo, Spirited
-Glider** + **Bitter Work** (a "you attacked with a flying / power-4+ creature"
-trigger condition); **Sandbender Scavengers** (dies → reanimate a gy creature
-with MV ≤ this's last-known power — needs an MV-≤-source-power target filter);
-**Obsessive Pursuit** ("put X +1/+1 counters on target attacking creature, X =
-permanents sacrificed this turn" — a Value-scaled on-attack targeted counter);
-**Combustion Man** (Browbeat-style "destroy unless its controller takes N");
-**Katara, the Fearless** (Panharmonicon-for-Ally-triggers static); **Diligent
-Zookeeper** (per-creature +1/+1-per-its-types anthem). Deferred for want of a
-primitive:
-- **Fire Lord Zuko** — Firebending X (= power, `FirebendingPower` ✅) ships,
-  but the "whenever a permanent you control enters from exile" half needs an
-  entered-from-exile flag (prior zone isn't threaded into `place_card_in_dest`;
-  the cast-from-exile half already has `Predicate::CastSpellFromExile`).
+Hakoda, Momo. Cleared this sweep (each shipped with a reusable primitive):
+**Teo, Spirited Glider** + **Bitter Work** (`Predicate::AttackedWithCreatureMatching`),
+**Sandbender Scavengers** (`SelectionRequirement::ManaValueAtMostSourcePower` +
+`source_power_lki`), **Obsessive Pursuit** (existing `PermanentsSacrificedThisTurn`),
+**Combustion Man** (`UnlessPlayerPays` + `WardCost::LifeSourcePower`),
+**Katara, the Fearless** (`StaticEffect::DoubleControllerAllyTriggers`),
+**Diligent Zookeeper** (`StaticEffect::PumpPTPerOwnCreatureType`), **Fire Lord
+Zuko** (`SelectionRequirement::EnteredFromExileThisTurn`). Deferred for want of
+a primitive:
 - **Bumi, King of Three Trials** — "choose up to X" modal where X is a live
   count; `Effect::ChooseN.picks` is a fixed index list.
 - **Raven Eagle / Sold Out-style** — "exile a gy card; if it was a creature,

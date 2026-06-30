@@ -4438,6 +4438,58 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Raven Eagle — {2}{B} 2/3 Bird Assassin. Flying. On enter or attack, exile up
+/// to one target card from a graveyard; if a creature was exiled, investigate.
+/// Whenever you draw your second card each turn, drain 1.
+pub fn raven_eagle() -> CardDefinition {
+    let exile_and_maybe_clue = || Effect::Seq(vec![
+        Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            to: ZoneDest::Exile,
+        },
+        Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CountOf(Box::new(Selector::ExiledThisResolution {
+                    filter: SelectionRequirement::Creature,
+                })),
+                Value::Const(1),
+            ),
+            then: Box::new(investigate(1)),
+            else_: Box::new(Effect::Noop),
+        },
+    ]);
+    CardDefinition {
+        name: "Raven Eagle",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(exile_and_maybe_clue()),
+            on_attack(exile_and_maybe_clue()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                    .with_filter(Predicate::ValueEquals(
+                        Value::CardsDrawnThisTurn(PlayerRef::You),
+                        Value::Const(2),
+                    ))
+                    .once_per_turn(),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fire Lord Zuko — {R}{W}{B} 2/4 Legendary Human Noble Ally. Firebending X
 /// (= his power). Whenever you cast a spell from exile or a permanent you
 /// control enters from exile, put a +1/+1 counter on each creature you control.

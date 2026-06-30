@@ -2806,3 +2806,34 @@ fn fire_lord_zuko_counters_on_enter_from_exile() {
     assert_eq!(g.battlefield_find(zuko).unwrap().counter_count(pp), 1, "Zuko gets a counter");
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(pp), 1, "bear gets a counter");
 }
+
+/// Raven Eagle exiles a graveyard creature on ETB and investigates for it.
+#[test]
+fn raven_eagle_etb_exiles_and_clues() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let re = g.add_card_to_battlefield(0, catalog::raven_eagle());
+    g.fire_self_etb_triggers(re, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "graveyard creature exiled");
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "creature exile → a Clue");
+}
+
+/// Raven Eagle drains 1 when you draw your second card in a turn.
+#[test]
+fn raven_eagle_second_draw_drains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::raven_eagle());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let div = g.add_card_to_hand(0, catalog::divination()); // draw 2 → second-draw fires
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp = g.players[1].life;
+    let you = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Divination");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, you + 1, "you gained 1");
+}
