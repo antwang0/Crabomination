@@ -128,7 +128,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Eldrazi annihilator — a combat threat worth surfacing on the board.
         Annihilator(_) => "Ann",
         // Firebending — attack-triggered red mana worth flagging on the board.
-        Firebending(_) | FirebendingPower => "FB",
+        Firebending(_) | FirebendingPower | FirebendingCreaturesYouControl => "FB",
         // "Assigns combat damage equal to its toughness" (Doran) — changes how
         // its combat math reads at a glance.
         AssignsCombatDamageByToughness => "T-dmg",

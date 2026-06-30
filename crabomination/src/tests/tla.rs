@@ -2236,3 +2236,15 @@ fn hei_bai_sacrifices_then_moves_counters_on_leave() {
     assert_eq!(g.battlefield_find(keeper).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "Hei Bai's counters moved to the survivor");
 }
+
+/// Sun Warriors' firebending X = the number of creatures you control.
+#[test]
+fn sun_warriors_firebends_per_creature() {
+    let mut g = two_player_game();
+    let sw = g.add_card_to_battlefield(0, catalog::sun_warriors());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(sw);
+    attack_with(&mut g, sw);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "3 creatures → three {{R}}");
+}

@@ -15,9 +15,13 @@ Shipped: multi-kind permanent+player target slots (`Selector::ControlledBy
 Saddle HUD tag, `Value::ExcessDamageDealtThisResolution` (Razor Rings gains
 life = excess; The Last Agni Kai adds {R} = excess — fight half faithful, the
 "don't lose unspent red" rider dropped), Hei Bai (the move-all-counters LTB
-uses the existing `Effect::MoveAllCounters`). Deferred for want of a primitive:
-- **Sun Warriors / Fire Lord Zuko** — *firebending X* (a `Value`-scaled
-  firebending); `Keyword::Firebending` only carries a fixed `u32`.
+uses the existing `Effect::MoveAllCounters`), Sun Warriors
+(`Keyword::FirebendingCreaturesYouControl` — firebending X = creatures you
+control). Deferred for want of a primitive:
+- **Fire Lord Zuko** — Firebending X (= power, `FirebendingPower` ✅) ships,
+  but the "whenever a permanent you control enters from exile" half needs an
+  entered-from-exile flag (prior zone isn't threaded into `place_card_in_dest`;
+  the cast-from-exile half already has `Predicate::CastSpellFromExile`).
 - **Bumi, King of Three Trials** — "choose up to X" modal where X is a live
   count; `Effect::ChooseN.picks` is a fixed index list.
 - **Raven Eagle / Sold Out-style** — "exile a gy card; if it was a creature,

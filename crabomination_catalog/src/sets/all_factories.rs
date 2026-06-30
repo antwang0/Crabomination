@@ -4481,6 +4481,7 @@ static DECKS: &[Factory] = &[
     super::decks::benders_waterskin,
     super::decks::the_fire_nation_drill,
     super::decks::iroh_grand_lotus,
+    super::decks::sun_warriors,
     super::decks::razor_rings,
     super::decks::the_last_agni_kai,
     super::decks::hei_bai_spirit_of_balance,

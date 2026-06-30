@@ -3680,6 +3680,33 @@ pub fn iroh_grand_lotus() -> CardDefinition {
     }
 }
 
+/// Sun Warriors — {2}{R}{W} 3/5 Human Warrior Ally. Firebending X (X = the
+/// number of creatures you control); {5}: create a 1/1 white Ally token.
+pub fn sun_warriors() -> CardDefinition {
+    CardDefinition {
+        name: "Sun Warriors",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::FirebendingCreaturesYouControl],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: ally_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Razor Rings — {1}{W} Instant. Deals 4 damage to target attacking or
 /// blocking creature; you gain life equal to the excess damage dealt this way.
 pub fn razor_rings() -> CardDefinition {

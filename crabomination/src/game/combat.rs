@@ -514,6 +514,12 @@ impl GameState {
                         .map(|c| c.power.max(0) as u32)
                         .unwrap_or(0),
                 ),
+                Keyword::FirebendingCreaturesYouControl => Some(
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .count() as u32,
+                ),
                 _ => None,
             });
             if let Some(n) = firebend_n
