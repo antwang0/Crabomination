@@ -1626,3 +1626,40 @@ fn suki_anthems_other_creatures() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "other creature gets +1/+0");
     assert_eq!(g.computed_permanent(suki).unwrap().power, 2, "Suki doesn't pump herself");
 }
+
+/// Guru Pathik digs five deep and pulls a Lesson to hand.
+#[test]
+fn guru_pathik_digs_for_a_lesson() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::boomerang_basics()); // a Lesson on top
+    for _ in 0..4 { g.add_card_to_library(0, catalog::mountain()); }
+    let gp = g.add_card_to_battlefield(0, catalog::guru_pathik());
+    g.fire_self_etb_triggers(gp, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Boomerang Basics"),
+        "pulled a Lesson to hand");
+}
+
+/// Ty Lee, Artful Acrobat can pay {1} on attack to stop a blocker.
+#[test]
+fn ty_lee_artful_pays_to_unblock() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ty = g.add_card_to_battlefield(0, catalog::ty_lee_artful_acrobat());
+    g.clear_sickness(ty);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.players[0].mana_pool.add_colorless(1); // available when the trigger resolves
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ty, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock),
+        "paid {{1}} → target can't block");
+}

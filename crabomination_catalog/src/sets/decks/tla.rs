@@ -2652,3 +2652,63 @@ pub fn suki_courageous_rescuer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 9: dig-for-Lesson / Prowess attack tempo ─────────────────────────
+
+/// Guru Pathik — {2}{G/U}{G/U} 2/4 legendary Human Monk Ally. When it enters,
+/// look at the top five cards; you may put a Lesson, Saga, or Shrine from among
+/// them into your hand, the rest to the bottom.
+pub fn guru_pathik() -> CardDefinition {
+    CardDefinition {
+        name: "Guru Pathik",
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Monk, CreatureType::Ally]),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)
+                    .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+                    .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine)),
+            ),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ty Lee, Artful Acrobat — {2}{R} 3/2 legendary Human Monk. Prowess. Whenever
+/// she attacks, you may pay {1}; if you do, target creature can't block this
+/// turn.
+pub fn ty_lee_artful_acrobat() -> CardDefinition {
+    CardDefinition {
+        name: "Ty Lee, Artful Acrobat",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "Pay {1} to make a creature unable to block?".into(),
+            mana_cost: cost(&[generic(1)]),
+            body: Box::new(Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}

@@ -4447,6 +4447,8 @@ static DECKS: &[Factory] = &[
     super::decks::the_earth_king,
     super::decks::the_lion_turtle,
     super::decks::suki_courageous_rescuer,
+    super::decks::guru_pathik,
+    super::decks::ty_lee_artful_acrobat,
     super::decks::ty_lee_chi_blocker,
     super::decks::the_boulder_ready_to_rumble,
     super::decks::path_to_redemption,
