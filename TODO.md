@@ -17,7 +17,21 @@ life = excess; The Last Agni Kai adds {R} = excess — fight half faithful, the
 "don't lose unspent red" rider dropped), Hei Bai (the move-all-counters LTB
 uses the existing `Effect::MoveAllCounters`), Sun Warriors
 (`Keyword::FirebendingCreaturesYouControl` — firebending X = creatures you
-control). Deferred for want of a primitive:
+control), plus the `*`-power CDA cycle (Suki, Toph the Blind Bandit, Dragonfly
+Swarm, Earthen Ally — new `DynamicPt` variants), Cycle of Renewal, Zuko's Exile,
+Zuko's Conviction, Barrels of Blasting Jelly, Accumulate Wisdom, the mono-land
+cycle (Abandoned Air Temple / Agna Qel'a / Ba Sing Se / Fire Nation Palace /
+Realm of Koh), Price of Freedom, Leaves from the Vine (Saga), Rumble Arena,
+Hakoda, Momo. Still-missing TLA cards needing a primitive: **Teo, Spirited
+Glider** + **Bitter Work** (a "you attacked with a flying / power-4+ creature"
+trigger condition); **Sandbender Scavengers** (dies → reanimate a gy creature
+with MV ≤ this's last-known power — needs an MV-≤-source-power target filter);
+**Obsessive Pursuit** ("put X +1/+1 counters on target attacking creature, X =
+permanents sacrificed this turn" — a Value-scaled on-attack targeted counter);
+**Combustion Man** (Browbeat-style "destroy unless its controller takes N");
+**Katara, the Fearless** (Panharmonicon-for-Ally-triggers static); **Diligent
+Zookeeper** (per-creature +1/+1-per-its-types anthem). Deferred for want of a
+primitive:
 - **Fire Lord Zuko** — Firebending X (= power, `FirebendingPower` ✅) ships,
   but the "whenever a permanent you control enters from exile" half needs an
   entered-from-exile flag (prior zone isn't threaded into `place_card_in_dest`;
