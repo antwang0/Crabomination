@@ -83,24 +83,6 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::keyword_strip;
-    use crabomination::card::Keyword;
-
-    #[test]
-    fn strip_surfaces_combat_keywords_dedup_in_order() {
-        let s = keyword_strip(&[
-            Keyword::Flying,
-            Keyword::Persist,
-            Keyword::Flying, // dup → elided
-            Keyword::Bushido(2),
-            Keyword::Flashback(Default::default()), // casting-only → hidden
-        ]);
-        assert_eq!(s, "Fly Per Bsd");
-    }
-}
-
 /// Build the displayed strip for a permanent's keyword list: each displayable
 /// keyword's tag, first-occurrence order, de-duplicated, space-joined. Empty
 /// string when nothing is worth showing.
@@ -220,5 +202,23 @@ pub fn sync_keyword_labels(
             GlobalZIndex(KW_Z),
             InGameRoot,
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keyword_strip;
+    use crabomination::card::Keyword;
+
+    #[test]
+    fn strip_surfaces_combat_keywords_dedup_in_order() {
+        let s = keyword_strip(&[
+            Keyword::Flying,
+            Keyword::Persist,
+            Keyword::Flying, // dup → elided
+            Keyword::Bushido(2),
+            Keyword::Flashback(Default::default()), // casting-only → hidden
+        ]);
+        assert_eq!(s, "Fly Per Bsd");
     }
 }

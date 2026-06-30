@@ -803,6 +803,26 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     lifts at the detainer's next turn; a granted-static "permanents your
     opponents control enter detained" variant (Lavinia of the Tenth) is ⏳.
 
+- ⏳ **Discovered this run (coin-flip / artifact batch — deferred cards):**
+  - **Goblin Welder** (CR 701.16) — needs a simultaneous "sacrifice target
+    artifact a player controls + return target artifact card from that
+    player's graveyard to the battlefield" swap (two linked targets on an
+    activated ability; the gy card enters under that player's control even
+    when it's an opponent's). No clean reanimate-opponent's-gy primitive yet.
+  - **Squee, the Immortal** — needs a static "you may cast this from your
+    graveyard or from exile" permission (a real cast onto the stack, unlike
+    Gravecrawler's `from_graveyard` Move approximation).
+  - **Karplusan Minotaur** — cumulative upkeep whose cost is a coin flip
+    (CR 702.24 + 705) + the win/lose-flip "deal 1 to any target" pair.
+  - **Goblin Recruiter** — "search for any number of Goblins, put them on
+    top in any order" (multi-pick search-to-top ordering).
+  - **Cursed Scroll** — name-a-card + reveal-at-random-from-hand + conditional
+    damage if the random card matches.
+  - **Price of Progress / Pyromancer Ascension / Tibalt's Trickery /
+    Daretti, Scrap Savant** — per-player-scaled damage, quest-counter spell
+    copying, counter-and-cascade-from-exile, and a planeswalker, respectively.
+  - **Grafted Wargear** — equip {0} with "when unattached, sacrifice the
+    creature" (no on-unequip sacrifice hook yet).
 - ⏳ **Discovered (modern_decks landfall/exile batch):**
   - ✅ **`Effect::NthResolutionThisTurn { branches }`** — runs `branches[n]`
     where `n` = times an escalating ability the controller owns has resolved
@@ -1802,7 +1822,7 @@ picking an item up.
   validation ⏳). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Sequential "flip until you lose or stop" ✅ via `Effect::FlipCoinsUntilLoseOrStop { tiers }` (a lost flip cancels everything; win-count tiers fire in order — Fiery Gambit). Per-flip `RemoveFromCombat`/`PhaseOut` payoffs ship Mijae Djinn, Ydwen Efreet, Frenetic Efreet; copy-or-bounce-your-spell on flip ships Krark, the Thumbless. Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). (AutoDecider now flips a real random coin; scripted tests stay deterministic.)
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅. Counter-removal as an activation gate ✅ — `CounterType::Fuse` + an `ActivatedAbility.condition` on `Value::CountersOn` ≥ N (Goblin Bomb's "remove five fuse counters: deal 20").
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
   surfaced via `LibraryView.known_top` + a HUD chip; Courser, Oracle of Mul
@@ -1811,7 +1831,7 @@ picking an item up.
   same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
-- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
+- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). Remove-from-combat (506.4) ✅ via `Effect::RemoveFromCombat { what }` + `GameState::remove_permanent_from_combat` (drops the permanent as attacker/blocker; a blocked attacker stays blocked per 509.1b) — Mijae Djinn / Ydwen Efreet's lost-flip clause. `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
 - ✅ **CR 508.1g — Attack tax** — `StaticEffect::AttackTaxToController { amount }`
   taxes attackers hitting the source's controller (Ghostly Prison, Propaganda).
   `declare_attackers` sums the tax across the batch and pays it from the
