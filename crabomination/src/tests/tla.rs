@@ -2566,3 +2566,50 @@ fn rumble_arena_scries_and_taps() {
     }).expect("tap for C");
     assert!(g.players[0].mana_pool.colorless_amount() >= 1, "added colorless");
 }
+
+/// Hakoda's sacrifice gives your creatures +0/+5 and indestructible.
+#[test]
+fn hakoda_sacrifice_buffs_team() {
+    let mut g = two_player_game();
+    let hakoda = g.add_card_to_battlefield(0, catalog::hakoda_selfless_commander());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hakoda, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sacrifice Hakoda");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.toughness, 7, "grizzly 2/2 +0/+5 = 2/7");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible");
+    assert!(g.battlefield_find(hakoda).is_none(), "Hakoda was sacrificed");
+}
+
+/// Momo grows when another flyer you control enters.
+#[test]
+fn momo_grows_on_flyer_entering() {
+    let mut g = two_player_game();
+    let momo = g.add_card_to_battlefield(0, catalog::momo_friendly_flier());
+    assert_eq!(g.computed_permanent(momo).unwrap().power, 1, "base 1/1");
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Cast a flyer so Momo's "another flyer enters" watcher fires.
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: angel, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Serra Angel");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(momo).unwrap().power, 2, "Momo grew +1/+1");
+    // A non-flyer entering doesn't pump Momo.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bears");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(momo).unwrap().power, 2, "ground creature doesn't trigger");
+}

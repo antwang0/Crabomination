@@ -4494,6 +4494,8 @@ static DECKS: &[Factory] = &[
     super::decks::earthen_ally,
     super::decks::leaves_from_the_vine,
     super::decks::rumble_arena,
+    super::decks::hakoda_selfless_commander,
+    super::decks::momo_friendly_flier,
     super::decks::suki_kyoshi_warrior,
     super::decks::toph_the_blind_bandit,
     super::decks::cycle_of_renewal,

@@ -4337,3 +4337,92 @@ pub fn rumble_arena() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hakoda, Selfless Commander — {3}{W} 3/5 Human Warrior Ally. Vigilance; play
+/// with the top card revealed and cast Ally spells from it; Sacrifice Hakoda:
+/// creatures you control get +0/+5 and gain indestructible until end of turn.
+pub fn hakoda_selfless_commander() -> CardDefinition {
+    let team = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Hakoda, Selfless Commander",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast Ally spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: team(),
+                    power: Value::Const(0),
+                    toughness: Value::Const(5),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: team(),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Momo, Friendly Flier — {W} 1/1 Legendary Lemur Bat Ally. Flying; whenever
+/// another creature you control with flying enters, Momo gets +1/+1 until end
+/// of turn. (The "first flyer each turn costs {1} less" rider is omitted —
+/// no first-spell-of-type cost reduction yet.)
+pub fn momo_friendly_flier() -> CardDefinition {
+    CardDefinition {
+        name: "Momo, Friendly Flier",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lemur, CreatureType::Bat, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
