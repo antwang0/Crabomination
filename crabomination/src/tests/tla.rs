@@ -1477,3 +1477,52 @@ fn earth_rumble_wrestlers_conditional_pump() {
     assert_eq!(cp.power, 4, "+1/+0 after a land this turn");
     assert!(cp.keywords.contains(&Keyword::Trample), "and trample");
 }
+
+/// Abandon Attachments loots: discard one, draw two.
+#[test]
+fn abandon_attachments_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::forest()); // discard fodder
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let aa = g.add_card_to_hand(0, catalog::abandon_attachments());
+    ready0(&mut g);
+    let hand0 = g.players[0].hand.len(); // aa + forest
+    g.perform_action(GameAction::CastSpell {
+        card_id: aa, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -aa (cast), -forest (discard), +2 draw = net hand0 - 1.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1, "discarded one, drew two");
+}
+
+/// Sokka draws when he attacks alongside another creature, but not alone.
+#[test]
+fn sokka_draws_with_a_friend() {
+    // Solo attack → no draw.
+    let mut g = two_player_game();
+    let sokka = g.add_card_to_battlefield(0, catalog::sokka_lateral_strategist());
+    g.add_card_to_library(0, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    attack_with(&mut g, sokka);
+    assert_eq!(g.players[0].hand.len(), hand0, "no draw attacking alone");
+
+    // Two attackers → draw.
+    let mut g = two_player_game();
+    let sokka = g.add_card_to_battlefield(0, catalog::sokka_lateral_strategist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.clear_sickness(sokka);
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: sokka, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "draws attacking with a friend");
+}

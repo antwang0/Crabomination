@@ -4440,6 +4440,8 @@ static DECKS: &[Factory] = &[
     super::decks::bumi_bash,
     super::decks::rebellious_captives,
     super::decks::rough_rhino_cavalry,
+    super::decks::abandon_attachments,
+    super::decks::sokka_lateral_strategist,
     super::decks::path_to_redemption,
     super::decks::dai_li_agents,
     super::decks::fire_nation_warship,

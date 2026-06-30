@@ -2427,3 +2427,49 @@ pub fn earth_rumble_wrestlers() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 6: loot Lesson + attack-with-others draw ─────────────────────────
+
+/// Abandon Attachments — {1}{U/R} Instant — Lesson. You may discard a card; if
+/// you do, draw two.
+pub fn abandon_attachments() -> CardDefinition {
+    CardDefinition {
+        name: "Abandon Attachments",
+        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Red)]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::MayDo {
+            description: "Discard a card to draw two?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sokka, Lateral Strategist — {1}{W/U}{W/U} 2/4 legendary Human Warrior Ally.
+/// Vigilance. Whenever Sokka and at least one other creature attack, draw a card.
+pub fn sokka_lateral_strategist() -> CardDefinition {
+    CardDefinition {
+        name: "Sokka, Lateral Strategist",
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Warrior, CreatureType::Ally]),
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::ValueAtLeast(
+                    Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
+                    Value::Const(2),
+                ),
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
