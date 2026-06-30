@@ -168,6 +168,15 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Like `CostReduction`, but applies only while `condition` holds for the
+    /// controller (Gran-Gran — "Noncreature spells you cast cost {1} less as
+    /// long as there are three or more Lesson cards in your graveyard"). The
+    /// predicate is evaluated from the controller's perspective. Generic-only.
+    CostReductionWhile {
+        filter: SelectionRequirement,
+        amount: u32,
+        condition: crate::effect::Predicate,
+    },
     /// Generic cost reduction for spells the controller casts *from their
     /// graveyard* (Gravebreaker Lamia — "Spells you cast from your graveyard
     /// cost {1} less"). Applied only on the graveyard-cast paths (flashback /

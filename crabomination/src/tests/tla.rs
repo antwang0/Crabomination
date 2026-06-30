@@ -967,6 +967,27 @@ fn tla_sac_land_taps_and_cracks() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
+/// Gran-Gran reduces noncreature spells by {1} only with 3+ Lessons in the
+/// graveyard, and never reduces a creature spell.
+#[test]
+fn gran_gran_lesson_gated_cost_reduction() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gran_gran());
+    let noncreature = crate::card::CardInstance::new(g.next_id(), catalog::boomerang_basics(), 0);
+    let creature = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+
+    // Two Lessons → no reduction yet.
+    g.add_card_to_graveyard(0, catalog::boomerang_basics());
+    g.add_card_to_graveyard(0, catalog::yip_yip());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &noncreature, None), 0, "2 Lessons → no discount");
+
+    // Third Lesson → {1} off the noncreature spell, still nothing off a creature.
+    g.add_card_to_graveyard(0, catalog::fancy_footwork());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &noncreature, None), 1, "3 Lessons → {{1}} off");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &creature, None), 0, "never reduces creatures");
+}
+
 /// South Pole Voyager gains 1 life per Ally ETB and draws only on the second
 /// resolution this turn.
 #[test]

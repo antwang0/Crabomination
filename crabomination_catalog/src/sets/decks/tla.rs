@@ -1688,6 +1688,44 @@ pub fn foggy_bottom_swamp() -> CardDefinition { tla_sac_land("Foggy Bottom Swamp
 pub fn sun_blessed_peak() -> CardDefinition { tla_sac_land("Sun-Blessed Peak", Color::Red, Color::White) }
 pub fn meditation_pools() -> CardDefinition { tla_sac_land("Meditation Pools", Color::Green, Color::Blue) }
 
+/// Gran-Gran — {U} 1/2 legendary Human Peasant Ally. When it becomes tapped,
+/// draw then discard. Noncreature spells you cast cost {1} less while 3+ Lesson
+/// cards are in your graveyard (`StaticEffect::CostReductionWhile`).
+pub fn gran_gran() -> CardDefinition {
+    CardDefinition {
+        name: "Gran-Gran",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Peasant, CreatureType::Ally]),
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Noncreature spells you cast cost {1} less as long as there are three or more Lesson cards in your graveyard.",
+            effect: StaticEffect::CostReductionWhile {
+                filter: SelectionRequirement::Noncreature,
+                amount: 1,
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                    },
+                    n: Value::Const(3),
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// South Pole Voyager — {1}{W} 2/2 Human Scout Ally. Whenever this or another
 /// Ally you control enters, gain 1 life; if it's the second time this ability
 /// resolved this turn, draw a card. The "only the 2nd" is modeled with an

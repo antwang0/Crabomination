@@ -10644,6 +10644,7 @@ fn static_effect_to_effects(
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
+            | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
             | StaticEffect::CostReductionNthSpell { .. }

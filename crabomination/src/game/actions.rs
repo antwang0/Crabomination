@@ -320,6 +320,18 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 {
                     reduction += amount;
                 }
+                StaticEffect::CostReductionWhile { filter, amount, condition }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    let ctx = crate::game::effects::EffectContext {
+                        source: Some(src.id),
+                        ..crate::game::effects::EffectContext::for_spell(caster, None, 0, 0)
+                    };
+                    if state.evaluate_predicate(condition, &ctx) {
+                        reduction += amount;
+                    }
+                }
                 StaticEffect::CostReductionDuringOpponentsTurn { filter, amount }
                     if src.controller == caster
                         && state.active_player_idx != caster
