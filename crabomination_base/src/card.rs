@@ -701,6 +701,10 @@ pub enum Keyword {
     /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
     /// you don't lose this mana as steps and phases end (until end of combat)."
     Firebending(u32),
+    /// Firebending X, where X is this creature's power (CR 702.189 variant —
+    /// Firebending Student). Resolves the same attack-triggered red mana, but N
+    /// is the attacker's power at the time it attacks.
+    FirebendingPower,
     /// CR 702.190 — Sneak [cost]. A spell-static alt cast: during your declare
     /// blockers step you may cast this by paying [cost] and returning an
     /// unblocked creature you control to its owner's hand. Carried for display;
@@ -2744,6 +2748,7 @@ impl CardDefinition {
             creature_ability: false,
             casting_nonartifact_spell: !self.is_artifact(),
             activating_ability: false,
+            lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
         }
     }
 

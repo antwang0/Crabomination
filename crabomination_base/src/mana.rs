@@ -406,6 +406,8 @@ pub enum SpendRestriction {
     /// "Spend this mana only to activate abilities." (Omen Hawker.) Funds
     /// any ability activation regardless of the source's card type.
     AbilitiesOnly,
+    /// "Spend this mana only to cast Lesson spells." (Hermitic Herbalist.)
+    LessonSpellsOnly,
 }
 
 impl SpendRestriction {
@@ -425,6 +427,7 @@ impl SpendRestriction {
                 kind.creature || kind.creature_ability
             }
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
+            SpendRestriction::LessonSpellsOnly => kind.lesson,
         }
     }
 }
@@ -455,6 +458,8 @@ pub struct SpellKind {
     pub casting_nonartifact_spell: bool,
     /// Activating an ability of any source (Omen Hawker's abilities-only mana).
     pub activating_ability: bool,
+    /// Casting a Lesson spell (Hermitic Herbalist's Lesson-only mana).
+    pub lesson: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

@@ -12,7 +12,7 @@ use crabomination_base::tokens::food_token;
 use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost, ManaSymbol};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost, ManaSymbol, SpendRestriction};
 
 /// A Lesson-subtyped spell shell (instant/sorcery).
 fn lesson() -> Subtypes {
@@ -1687,3 +1687,88 @@ pub fn airship_engine_room() -> CardDefinition { tla_sac_land("Airship Engine Ro
 pub fn foggy_bottom_swamp() -> CardDefinition { tla_sac_land("Foggy Bottom Swamp", Color::Black, Color::Green) }
 pub fn sun_blessed_peak() -> CardDefinition { tla_sac_land("Sun-Blessed Peak", Color::Red, Color::White) }
 pub fn meditation_pools() -> CardDefinition { tla_sac_land("Meditation Pools", Color::Green, Color::Blue) }
+
+/// Hermitic Herbalist — {G}{U} 2/3 Human Druid Ally. `{T}: Add one mana of any
+/// color.` and `{T}: Add two mana in any combination of colors. Spend this mana
+/// only to cast Lesson spells.`
+pub fn hermitic_herbalist() -> CardDefinition {
+    CardDefinition {
+        name: "Hermitic Herbalist",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyColors(Value::Const(2))),
+                        SpendRestriction::LessonSpellsOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Firebending X / Lesson bounce ──────────────────────────────────────────
+
+/// Firebending Student — {1}{R} 1/2 Human Monk. Prowess; firebending X, where X
+/// is this creature's power (`Keyword::FirebendingPower`).
+pub fn firebending_student() -> CardDefinition {
+    CardDefinition {
+        name: "Firebending Student",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess, Keyword::FirebendingPower],
+        ..Default::default()
+    }
+}
+
+/// Boomerang Basics — {U} Sorcery — Lesson. Return target nonland permanent to
+/// its owner's hand; if you controlled it, draw a card. The controller check
+/// runs before the bounce so it reads the still-on-battlefield permanent.
+pub fn boomerang_basics() -> CardDefinition {
+    CardDefinition {
+        name: "Boomerang Basics",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::ControlledByYou,
+                },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        ..Default::default()
+    }
+}

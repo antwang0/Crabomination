@@ -966,3 +966,89 @@ fn tla_sac_land_taps_and_cracks() {
     assert!(g.battlefield_find(land).is_none(), "land sacrificed");
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
+
+/// Hermitic Herbalist's Lesson-only mana funds a Lesson spell but not a
+/// non-Lesson spell of the same cost.
+#[test]
+fn hermitic_herbalist_lesson_only_mana() {
+    use crate::mana::SpendRestriction;
+    // Lesson-only blue mana pays for Boomerang Basics (a Lesson).
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let bb = g.add_card_to_hand(0, catalog::boomerang_basics());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_restricted(Color::Blue, 1, SpendRestriction::LessonSpellsOnly);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lesson-only mana pays for a Lesson");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "bounced");
+
+    // The same mana cannot pay for Unsummon (not a Lesson).
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let uns = g.add_card_to_hand(0, catalog::unsummon());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_restricted(Color::Blue, 1, SpendRestriction::LessonSpellsOnly);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: uns, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Lesson-only mana can't fund a non-Lesson spell");
+}
+
+/// Firebending Student's firebending X scales with its power: base 1/2 adds one
+/// {R}; a +1/+1 counter (power 2) adds two.
+#[test]
+fn firebending_student_scales_with_power() {
+    let mut g = two_player_game();
+    let fs = g.add_card_to_battlefield(0, catalog::firebending_student());
+    g.clear_sickness(fs);
+    attack_with(&mut g, fs);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "power 1 → one {{R}}");
+
+    let mut g = two_player_game();
+    let fs = g.add_card_to_battlefield(0, catalog::firebending_student());
+    g.battlefield_find_mut(fs).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(fs);
+    attack_with(&mut g, fs);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "power 2 → two {{R}}");
+}
+
+/// Boomerang Basics bounces a nonland permanent; it draws only when you
+/// controlled the bounced permanent.
+#[test]
+fn boomerang_basics_draws_on_own_permanent() {
+    // Bouncing your own creature draws.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let bb = g.add_card_to_hand(0, catalog::boomerang_basics());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "own creature bounced");
+    // -1 cast from hand, +1 bounced creature, +1 draw = net +1.
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew from controlling it");
+
+    // Bouncing an opponent's creature does not draw.
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bb = g.add_card_to_hand(0, catalog::boomerang_basics());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent creature bounced");
+    assert_eq!(g.players[0].hand.len(), hand - 1, "no draw; only spent the spell");
+}

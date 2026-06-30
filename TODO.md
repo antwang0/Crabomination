@@ -410,19 +410,22 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 - **Avatar (`tla`) card backlog.** ~120 non-waterbend `set:tla` cards remain
   unimplemented (most ride existing primitives — Ally tribal, Lessons, Raid,
-  Clues). `decks::tla` now has 64 cards incl. the ten two-color "refuge"
-  sac-lands (`tla_sac_land`). Still need small primitives:
-  - **"Spend only to cast Lesson spells"** mana restriction (`SpendRestriction::
-    LessonSpellsOnly` + a `lesson` flag on `SpellKind`) — Hermitic Herbalist's
-    second ability, Lesson-ramp dorks.
+  Clues). `decks::tla` now has 67 cards incl. the ten two-color "refuge"
+  sac-lands (`tla_sac_land`), Hermitic Herbalist (Lesson-only mana),
+  Firebending Student, and Boomerang Basics. Still need small primitives:
   - **Conditional player-wide cost reduction gated on a graveyard count**
     ("noncreature spells cost {1} less while 3+ Lessons in your gy" — Gran-Gran).
-  - **Dynamic Firebending N = source's power** (Firebending Student) — Firebending
-    is fixed-N today.
-  - **Bounce-then-draw-if-you-controlled-it** (Boomerang Basics) and the
-    **"second time this resolved this turn → draw"** rider (South Pole Voyager).
+  - **"second time this resolved this turn → draw"** rider (South Pole Voyager) —
+    needs a per-turn ability-resolution counter.
   - **Exhaust** activated-ability keyword (CR 702-adjacent, MH3/TLA) — Hog-Monkey
     and Wan Shi Tong drop their Exhaust abilities for now.
+  - ✅ **"Spend only to cast Lesson spells"** mana restriction
+    (`SpendRestriction::LessonSpellsOnly` + a `lesson` flag on `SpellKind`) —
+    Hermitic Herbalist.
+  - ✅ **Dynamic Firebending X = source's power** (`Keyword::FirebendingPower`) —
+    Firebending Student.
+  - ✅ **Bounce-then-draw-if-you-controlled-it** (Boomerang Basics) — an
+    `If(EntityMatches{target, ControlledByYou})` ahead of the bounce.
 - ✅ **Waterbend (CR 701.67).** Shipped — completes the bending family
   (earthbend/airbend/blight). `CardDefinition.waterbend: Option<Waterbend>`
   (`GameAction::CastSpellWaterbend`) for the additional cast cost (mandatory +

@@ -506,10 +506,19 @@ impl GameState {
             // Firebending N — CR 702.189a: a triggered mana ability (resolves
             // without the stack, CR 605.3b). Add N {R} now; the mana survives
             // step/phase emptying until end of combat (`firebending_kept_red`).
-            if let Some(n) = computed_kw(id).iter().find_map(|kw| match kw {
+            let firebend_n = computed_kw(id).iter().find_map(|kw| match kw {
                 Keyword::Firebending(n) => Some(*n),
+                // Firebending X = this creature's power (clamped at 0).
+                Keyword::FirebendingPower => Some(
+                    self.computed_permanent(id)
+                        .map(|c| c.power.max(0) as u32)
+                        .unwrap_or(0),
+                ),
                 _ => None,
-            }) {
+            });
+            if let Some(n) = firebend_n
+                && n > 0
+            {
                 self.players[p].mana_pool.add(crate::mana::Color::Red, n);
                 self.players[p].firebending_kept_red =
                     self.players[p].firebending_kept_red.saturating_add(n);
