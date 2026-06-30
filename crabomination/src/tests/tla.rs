@@ -967,6 +967,33 @@ fn tla_sac_land_taps_and_cracks() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
+/// South Pole Voyager gains 1 life per Ally ETB and draws only on the second
+/// resolution this turn.
+#[test]
+fn south_pole_voyager_draws_on_second_ally() {
+    let mut g = two_player_game();
+    let spv = g.add_card_to_battlefield(0, catalog::south_pole_voyager());
+    g.clear_sickness(spv);
+    g.add_card_to_library(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life0 = g.players[0].life;
+
+    // One Kyoshi Warriors → it enters (Ally) and mints an Ally token: two ETBs.
+    let ally = g.add_card_to_hand(0, catalog::kyoshi_warriors());
+    let hand0 = g.players[0].hand.len(); // counts the Ally still in hand
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ally, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ally");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life0 + 2, "1 life per Ally ETB (creature + token)");
+    // Net hand: -1 cast Ally, +1 draw on the 2nd resolution = unchanged.
+    assert_eq!(g.players[0].hand.len(), hand0, "drew only on the 2nd ETB");
+}
+
 /// Hermitic Herbalist's Lesson-only mana funds a Lesson spell but not a
 /// non-Lesson spell of the same cost.
 #[test]

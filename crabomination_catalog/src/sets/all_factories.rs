@@ -4421,6 +4421,7 @@ static DECKS: &[Factory] = &[
     super::decks::firebending_student,
     super::decks::boomerang_basics,
     super::decks::hermitic_herbalist,
+    super::decks::south_pole_voyager,
     super::decks::spider_man_web_slinger,
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,

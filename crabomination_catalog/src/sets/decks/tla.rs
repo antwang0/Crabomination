@@ -1688,6 +1688,39 @@ pub fn foggy_bottom_swamp() -> CardDefinition { tla_sac_land("Foggy Bottom Swamp
 pub fn sun_blessed_peak() -> CardDefinition { tla_sac_land("Sun-Blessed Peak", Color::Red, Color::White) }
 pub fn meditation_pools() -> CardDefinition { tla_sac_land("Meditation Pools", Color::Green, Color::Blue) }
 
+/// South Pole Voyager — {1}{W} 2/2 Human Scout Ally. Whenever this or another
+/// Ally you control enters, gain 1 life; if it's the second time this ability
+/// resolved this turn, draw a card. The "only the 2nd" is modeled with an
+/// `EscalatingThisTurn` whose 1st/3rd+ branches are no-ops.
+pub fn south_pole_voyager() -> CardDefinition {
+    CardDefinition {
+        name: "South Pole Voyager",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Scout, CreatureType::Ally]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+                }),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::EscalatingThisTurn {
+                    modes: vec![
+                        Effect::Noop,
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Noop,
+                    ],
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hermitic Herbalist — {G}{U} 2/3 Human Druid Ally. `{T}: Add one mana of any
 /// color.` and `{T}: Add two mana in any combination of colors. Spend this mana
 /// only to cast Lesson spells.`
