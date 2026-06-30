@@ -881,3 +881,63 @@ fn swampsnare_trap_weakens_creature() {
     let cp = g.computed_permanent(foe).unwrap();
     assert_eq!((cp.power, cp.toughness), (0, 2), "5/5 → 0/2");
 }
+
+/// Flopsie counters your team on ETB and shields your big creatures from gang
+/// blocks.
+#[test]
+fn flopsie_counters_and_shields_big_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/3
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5 power-4+
+    let fl = g.add_card_to_battlefield(0, catalog::flopsie_bumis_buddy());
+    g.fire_self_etb_triggers(fl, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 counter");
+    assert!(
+        g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne),
+        "power-4+ creature can't be gang-blocked"
+    );
+    assert!(
+        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne),
+        "the 3/3 (counter'd from 2/2) is power 3 — not shielded"
+    );
+}
+
+/// Professor Zei returns an instant or sorcery from the graveyard, sacrificing
+/// himself.
+#[test]
+fn professor_zei_returns_instant_from_graveyard() {
+    let mut g = two_player_game();
+    let zei = g.add_card_to_battlefield(0, catalog::professor_zei_anthropologist());
+    g.clear_sickness(zei);
+    let bolt = g.add_card_to_graveyard(0, catalog::pillar_launch()); // an instant
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zei, ability_index: 1, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], x_value: None,
+    }).expect("return I/S");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "instant back in hand");
+    assert!(g.battlefield_find(zei).is_none(), "Zei sacrificed");
+}
+
+/// Foggy Swamp Spirit Keeper makes a Spirit on your second draw each turn.
+#[test]
+fn foggy_swamp_spirit_keeper_makes_spirit_on_second_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::foggy_swamp_spirit_keeper());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Spirit"), 0, "none after one draw");
+    let mut ev2 = vec![];
+    g.draw_one(0, &mut ev2);
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Spirit"), 1, "Spirit on second draw");
+}

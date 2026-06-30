@@ -1539,3 +1539,115 @@ pub fn swampsnare_trap() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flopsie, Bumi's Buddy — {4}{G}{G} 4/4 legendary Ape Goat. ETB: +1/+1 counter
+/// on each creature you control. Your power-4+ creatures can't be blocked by
+/// more than one creature.
+pub fn flopsie_bumis_buddy() -> CardDefinition {
+    CardDefinition {
+        name: "Flopsie, Bumi's Buddy",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape, CreatureType::Goat],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Your power-4+ creatures can't be blocked by more than one creature.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+                keyword: Keyword::CantBeBlockedByMoreThanOne,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Professor Zei, Anthropologist — {U/R}{U/R} 0/3 legendary Human Advisor Ally.
+/// {T}, Discard a card: Draw a card. {1}, {T}, Sacrifice him: return an instant
+/// or sorcery from your graveyard to hand (sorcery speed).
+pub fn professor_zei_anthropologist() -> CardDefinition {
+    CardDefinition {
+        name: "Professor Zei, Anthropologist",
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Advisor]),
+        power: 0,
+        toughness: 3,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Foggy Swamp Spirit Keeper — {1}{U}{B} 2/4 Human Druid Ally. Lifelink. On
+/// your second draw each turn, make a 1/1 Spirit token. (The token's
+/// Spirit-only block restriction is approximated as a vanilla 1/1.)
+pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
+    CardDefinition {
+        name: "Foggy Swamp Spirit Keeper",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Druid]),
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                .once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Spirit".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Spirit],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
