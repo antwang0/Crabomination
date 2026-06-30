@@ -77,6 +77,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
         Poisonous(_) => "Psn",
+        // Prowess — a noncreature spell can swing this creature's combat math,
+        // so an opponent should weigh the controller's open cards before blocking.
+        Prowess => "Prw",
         // Combat-relevant statuses worth a glance on the board.
         CantBlock => "NoBlk",
         // "Can't attack" (Pacifism / Cage of Hands) and the conditional
@@ -289,6 +292,8 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Undying]), "Und");
         assert_eq!(keyword_strip(&[Keyword::Annihilator(2)]), "Ann");
         assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
+        assert_eq!(keyword_strip(&[Keyword::Prowess]), "Prw");
+        assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
     }
 
     #[test]

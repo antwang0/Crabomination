@@ -2103,7 +2103,49 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Sink leftover mana into a repeatable "{cost}: +1/+1 counter on this"
+    // ability to grow the board (Fire Sages, Water Tribe Captain). Last resort,
+    // so it never pre-empts a spell or land. Dry-run-gated.
+    if let Some(action) = pick_self_pump_counter(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Activate a repeatable "{cost}: put a +1/+1 counter on this creature" ability
+/// as a last-resort mana sink — grows the board when the bot has nothing better
+/// to do. Skips sacrifice-cost and once-per-game (Exhaust) abilities so it never
+/// throws away a permanent or a one-shot. Dry-run-gated through `would_accept`.
+fn pick_self_pump_counter(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::CounterType;
+    use crate::effect::Selector;
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.sac_cost || ab.exhaust {
+                continue;
+            }
+            let Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                ..
+            } = &ab.effect
+            else {
+                continue;
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Crew an uncrewed Vehicle the bot controls, paying with the smallest
@@ -6048,5 +6090,30 @@ mod stack_response_tests {
         assert!(matches!(pick_crack_lander(&g, 0),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == lander),
             "with a basic in library and spare mana, the bot ramps");
+    }
+
+    /// With spare mana and no better play, the bot sinks it into a repeatable
+    /// self-+1/+1 ability (Fire Sages) — but never burns a once-per-game Exhaust.
+    #[test]
+    fn bot_sinks_spare_mana_into_self_pump() {
+        let mut g = two_player_game();
+        let sages = g.add_card_to_battlefield(0, catalog::fire_sages());
+        g.clear_sickness(sages);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        assert!(matches!(pick_self_pump_counter(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sages),
+            "bot grows Fire Sages with leftover mana");
+
+        // An Exhaust pump (Mai) is left alone even with mana to spare.
+        let mut g = two_player_game();
+        let mai = g.add_card_to_battlefield(0, catalog::mai_jaded_edge());
+        g.clear_sickness(mai);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(3);
+        assert!(pick_self_pump_counter(&g, 0).is_none(), "won't spend a once-per-game Exhaust as a mana sink");
     }
 }
