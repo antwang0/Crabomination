@@ -148,6 +148,26 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
     }
 }
 
+/// Total Afflict N across a card's triggered abilities (CR 702.131) — a
+/// self-source "becomes blocked" trigger that drains the defending player.
+/// Returns 0 for cards without Afflict. Used by the combat preview so the
+/// HUD reflects the on-block life loss.
+fn afflict_amount(def: &crate::card::CardDefinition) -> i32 {
+    use crate::card::{EventKind, EventScope};
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    def.triggered_abilities
+        .iter()
+        .filter(|ta| {
+            ta.event.kind == EventKind::BecomesBlocked
+                && matches!(ta.event.scope, EventScope::SelfSource)
+        })
+        .filter_map(|ta| match &ta.effect {
+            Effect::LoseLife { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(n) } => Some(*n),
+            _ => None,
+        })
+        .sum()
+}
+
 /// Compute a [`CombatPreview`] from the current attacker/blocker
 /// assignment. Returns `None` when no attackers are declared. See the
 /// struct doc for the modeling caveats.
@@ -281,6 +301,17 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                         }
                         AttackTarget::Battle(_) => {}
                     }
+                }
+            }
+            // CR 702.131 — Afflict: a blocked attacker drains the defending
+            // player (life loss, surfaced as predicted player-life change).
+            if let AttackTarget::Player(p) = atk.target {
+                let afflict = state
+                    .battlefield_find(atk.attacker)
+                    .map(|c| afflict_amount(&c.definition))
+                    .unwrap_or(0);
+                if afflict > 0 {
+                    *dmg.entry(p).or_insert(0) += afflict;
                 }
             }
             if lifelink {

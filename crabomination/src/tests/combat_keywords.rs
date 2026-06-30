@@ -1339,3 +1339,24 @@ fn cr_702_16e_parity_protection_prevents_combat_damage() {
     assert_eq!(g.battlefield_find(venturer).map(|c| c.damage), Some(0),
         "combat damage from an even-MV source is prevented");
 }
+
+/// The combat preview surfaces Afflict life loss on a blocked attacker
+/// (CR 702.131 — server-side combat math).
+#[test]
+fn combat_preview_reflects_afflict_on_block() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Raptor", 3, 3, vec![shortcut::afflict(2)]));
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    let view = crate::server::view::project(&g, 0);
+    let prev = view.combat_preview.expect("preview during combat");
+    // Blocked 3/3 deals no face damage, but Afflict 2 still drains P1.
+    assert_eq!(prev.damage_to_players, vec![(1, 2)], "Afflict 2 shown as 2 to P1");
+}
