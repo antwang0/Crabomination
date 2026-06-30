@@ -29,12 +29,12 @@ Hakoda, Momo. Cleared this sweep (each shipped with a reusable primitive):
 **Combustion Man** (`UnlessPlayerPays` + `WardCost::LifeSourcePower`),
 **Katara, the Fearless** (`StaticEffect::DoubleControllerAllyTriggers`),
 **Diligent Zookeeper** (`StaticEffect::PumpPTPerOwnCreatureType`), **Fire Lord
-Zuko** (`SelectionRequirement::EnteredFromExileThisTurn`). Deferred for want of
-a primitive:
+Zuko** (`SelectionRequirement::EnteredFromExileThisTurn`), **Raven Eagle**
+(reused `Selector::ExiledThisResolution`), **Fatal Fissure** (`Effect::Earthbend`
+auto-picks a controlled land in delayed bodies). Deferred for want of a
+primitive:
 - **Bumi, King of Three Trials** — "choose up to X" modal where X is a live
   count; `Effect::ChooseN.picks` is a fixed index list.
-- **Raven Eagle / Sold Out-style** — "exile a gy card; if it was a creature,
-  …" needs a what-was-exiled type gate (Sold Out's damaged-gate ships).
 - **Serpent of the Pass** — conditional flash ("you may cast as though it had
   flash if 3+ Lessons in gy") + cost-reduced-per-noncreature-in-gy.
 - **Joo Dee, One of Many** — card defn drafted (Surveil 1 + `CreateTokenCopyOf`
@@ -43,11 +43,6 @@ a primitive:
   `Decision::ChooseCards` consume scripted answers in an order that's awkward to
   pin (auto-decider sacrifices the just-minted token). Re-add with a decider
   that scripts ScryOrder + Cards together, or an empty-library variant.
-- **Fatal Fissure** — "when that creature dies this turn, you earthbend 4"
-  needs the delayed-trigger body to *re-target* a fresh land; `Effect::Earthbend`
-  reads slot 0 (the watched creature, not a land) so the body no-ops. Either a
-  re-targeting delayed body or an `Effect::Earthbend` auto-pick fallback when
-  slot 0 isn't a controlled land.
 
 ## Discovered follow-ups — Duskmourn/Foundations sweep (`decks::recent52`)
 
