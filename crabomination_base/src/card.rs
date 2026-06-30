@@ -209,6 +209,9 @@ pub enum CounterType {
     MinusOneMinusZero,
     Loyalty,
     Charge,
+    /// Fuse counter — Goblin Bomb's upkeep coin-flip tally; remove five to
+    /// deal 20. Distinct from `Charge` so the two don't share a pool.
+    Fuse,
     Time,
     Poison,
     Lore,

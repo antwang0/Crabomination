@@ -34929,6 +34929,41 @@ fn krark_returns_your_spell_on_lost_flip() {
 }
 
 #[test]
+fn goblin_bomb_upkeep_flip_adds_fuse_on_win() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::goblin_bomb());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), // MayDo: yes, flip
+        DecisionAnswer::Bool(true), // coin: heads → win
+    ]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let n = g.battlefield_find(id).unwrap()
+        .counters.get(&CounterType::Fuse).copied().unwrap_or(0);
+    assert_eq!(n, 1, "winning the upkeep flip adds a fuse counter");
+}
+
+#[test]
+fn goblin_bomb_detonates_at_five_fuse() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::goblin_bomb());
+    // Under five counters, the payoff can't be activated.
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Fuse, 4);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None }).is_err(),
+        "four fuse counters is not enough to detonate");
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Fuse, 1); // → 5
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None })
+        .expect("detonates at five fuse counters");
+    drain_stack(&mut g);
+    assert!(g.players[1].life <= 0, "Goblin Bomb deals 20 to the target player");
+}
+
+#[test]
 fn fiery_gambit_three_wins_fires_all_tiers() {
     let mut g = two_player_game();
     let gambit = g.add_card_to_hand(0, catalog::fiery_gambit());

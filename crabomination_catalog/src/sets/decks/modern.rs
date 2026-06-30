@@ -21978,6 +21978,49 @@ pub fn krark_the_thumbless() -> CardDefinition {
     }
 }
 
+/// Goblin Bomb — {1}{R} Enchantment. Upkeep: you may flip a coin — win adds a
+/// fuse counter, lose removes one. Remove five fuse counters: deal 20 to any
+/// target.
+pub fn goblin_bomb() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::shortcut::target_any;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Goblin Bomb",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Flip a coin for Goblin Bomb (win adds a fuse counter, lose removes one).".into(),
+                body: Box::new(Effect::FlipCoin {
+                    count: Value::Const(1),
+                    on_heads: Box::new(Effect::AddCounter {
+                        what: Selector::This, kind: CounterType::Fuse, amount: Value::Const(1),
+                    }),
+                    on_tails: Box::new(Effect::RemoveCounter {
+                        what: Selector::This, kind: CounterType::Fuse, amount: Value::Const(1),
+                    }),
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Fuse },
+                Value::Const(5),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This, kind: CounterType::Fuse, amount: Value::Const(5),
+                },
+                Effect::DealDamage { to: target_any(), amount: Value::Const(20) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Fiery Gambit — {2}{R} Sorcery. Flip until you lose or stop. 1+ wins → deal
 /// 3 to target creature; 2+ → draw three; 3+ → each opponent loses 5 life.
 pub fn fiery_gambit() -> CardDefinition {
