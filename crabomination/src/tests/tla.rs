@@ -734,3 +734,96 @@ fn rabaroo_troop_landfall_flies() {
     assert!(g.computed_permanent(rt).unwrap().keywords.contains(&Keyword::Flying), "gained flying");
     assert_eq!(g.players[0].life, life + 1, "gained 1 life");
 }
+
+/// Day of Black Sun (X=2) strips and destroys creatures with MV ≤ 2 only.
+#[test]
+fn day_of_black_sun_destroys_small_creatures() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let big = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // MV 6
+    let dbs = g.add_card_to_hand(0, catalog::day_of_black_sun());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dbs, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast with X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "MV-2 destroyed");
+    assert!(g.battlefield_find(big).is_some(), "MV-6 survives");
+}
+
+/// Master Piandao digs an Ally from the top four into hand on attack.
+#[test]
+fn master_piandao_digs_an_ally() {
+    let mut g = two_player_game();
+    let mp = g.add_card_to_battlefield(0, catalog::master_piandao());
+    // Top of library: an Ally, then non-matches.
+    let ally = g.add_card_to_library(0, catalog::kyoshi_warriors());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    attack_with(&mut g, mp);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ally), "Ally pulled to hand");
+}
+
+/// Beetle-Headed Merchants sacrifices on attack to draw and grow.
+#[test]
+fn beetle_headed_merchants_sacrifices_to_draw_and_grow() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let beetle = g.add_card_to_battlefield(0, catalog::beetle_headed_merchants());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack_with(&mut g, beetle);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.computed_permanent(beetle).unwrap().power, 6, "grew to 6 power");
+}
+
+/// Lo and Li grant lifelink to your Nobles and fetch a Lesson/Noble.
+#[test]
+fn lo_and_li_anthem_and_tutor() {
+    let mut g = two_player_game();
+    // A Noble already on board picks up lifelink.
+    let noble = g.add_card_to_battlefield(0, catalog::azula_on_the_hunt()); // Human Noble
+    let lesson = g.add_card_to_library(0, catalog::combustion_technique()); // a Lesson
+    let ll = g.add_card_to_battlefield(0, catalog::lo_and_li_twin_tutors());
+    assert!(g.computed_permanent(noble).unwrap().keywords.contains(&Keyword::Lifelink), "Noble lifelink");
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(lesson)),
+    ]));
+    g.fire_self_etb_triggers(ll, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == lesson), "tutored the Lesson to hand");
+}
+
+/// Fire Navy Trebuchet mints a tapped, attacking Ballistic Boulder when you
+/// attack.
+#[test]
+fn fire_navy_trebuchet_makes_attacking_boulder() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fire_navy_trebuchet());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    attack_with(&mut g, bear); // attacking with the bear fires "whenever you attack"
+    let boulder = g.battlefield.iter().find(|c| c.definition.name == "Ballistic Boulder");
+    assert!(boulder.is_some(), "Ballistic Boulder minted");
+    let b = boulder.unwrap();
+    assert!(b.tapped, "enters tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == b.id), "and attacking");
+}
+
+/// Hog-Monkey gives menace to a counter-bearing creature at combat.
+#[test]
+fn hog_monkey_grants_menace_to_counter_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hog_monkey());
+    let buff = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(buff).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(buff);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(buff).unwrap().keywords.contains(&Keyword::Menace), "got menace at combat");
+}

@@ -3,10 +3,10 @@
 //! `crabomination/src/tests/tla.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EnchantmentSubtype,
-    EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, LandType, Predicate,
-    SelectionRequirement, Selector, SpellSubtype, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, Value, Zone,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, LandType,
+    Predicate, SelectionRequirement, Selector, SpellSubtype, StaticAbility, StaticEffect, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crabomination_base::tokens::food_token;
 use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, target_any, target_filtered};
@@ -1310,6 +1310,187 @@ pub fn airbenders_reversal() -> CardDefinition {
                 },
             ],
         },
+        ..Default::default()
+    }
+}
+
+/// Day of Black Sun — {X}{B}{B} Sorcery. Each creature with mana value X or
+/// less loses all abilities until end of turn, then is destroyed.
+pub fn day_of_black_sun() -> CardDefinition {
+    let small = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ManaValueAtMostXFromCost),
+        )
+    };
+    CardDefinition {
+        name: "Day of Black Sun",
+        cost: cost(&[x(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseAllAbilities { what: small(), duration: Duration::EndOfTurn },
+            Effect::Destroy { what: small() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Master Piandao — {4}{W} 4/4 legendary Human Warrior Ally. First strike. On
+/// attack, look at the top four and may put an Ally/Equipment/Lesson into hand.
+pub fn master_piandao() -> CardDefinition {
+    CardDefinition {
+        name: "Master Piandao",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Warrior, CreatureType::Ally]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![on_attack(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::HasCreatureType(CreatureType::Ally)
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                    .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)),
+            ),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Beetle-Headed Merchants — {4}{B} 5/4 Human Citizen. On attack, you may
+/// sacrifice another creature or artifact to draw a card and grow this.
+pub fn beetle_headed_merchants() -> CardDefinition {
+    CardDefinition {
+        name: "Beetle-Headed Merchants",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+            description: "Sacrifice another creature or artifact?".into(),
+            filter: (SelectionRequirement::Creature.or(SelectionRequirement::Artifact))
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ])),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Lo and Li, Twin Tutors — {4}{B} 2/2 legendary Human Advisor. ETB: search for
+/// a Lesson or Noble card to hand. Your Noble creatures have lifelink.
+pub fn lo_and_li_twin_tutors() -> CardDefinition {
+    CardDefinition {
+        name: "Lo and Li, Twin Tutors",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Noble)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Noble creatures you control have lifelink.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Noble)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Lifelink,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fire Navy Trebuchet — {2}{B} 0/4 artifact Wall. Defender, reach. Whenever
+/// you attack, make a tapped-and-attacking 2/1 flying Construct (Ballistic
+/// Boulder).
+pub fn fire_navy_trebuchet() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Navy Trebuchet",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Ballistic Boulder".into(),
+                    power: 2,
+                    toughness: 1,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Construct],
+                        ..Default::default()
+                    },
+                    keywords: vec![Keyword::Flying],
+                    ..Default::default()
+                },
+                cleanup: Default::default(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hog-Monkey — {2}{B} 3/2 Boar Monkey. At the beginning of combat on your
+/// turn, a target creature you control with a +1/+1 counter gains menace.
+pub fn hog_monkey() -> CardDefinition {
+    CardDefinition {
+        name: "Hog-Monkey",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar, CreatureType::Monkey],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithAnyCounter),
+                ),
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+        }],
         ..Default::default()
     }
 }
