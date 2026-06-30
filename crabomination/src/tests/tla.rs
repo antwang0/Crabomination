@@ -1691,3 +1691,112 @@ fn vindictive_warden_pings_opponents() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, before - 1, "1 damage to the opponent");
 }
+
+// ── Batch 11 ────────────────────────────────────────────────────────────────
+
+/// Air Nomad Legacy makes a Clue and anthems your flyers.
+#[test]
+fn air_nomad_legacy_clue_and_flyer_anthem() {
+    let mut g = two_player_game();
+    let owl = g.add_card_to_battlefield(0, catalog::cat_owl()); // 3/3 flyer
+    let leg = g.add_card_to_battlefield(0, catalog::air_nomad_legacy());
+    g.fire_self_etb_triggers(leg, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "made a Clue");
+    assert_eq!(g.computed_permanent(owl).unwrap().power, 4, "flyer gets +1/+1");
+}
+
+/// True Ancestry returns a permanent card from the graveyard and makes a Clue.
+#[test]
+fn true_ancestry_returns_and_clues() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&catalog::true_ancestry().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "card returned to hand");
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "made a Clue");
+}
+
+/// Tolls of War makes a Clue on ETB and an Ally when you sacrifice on your turn.
+#[test]
+fn tolls_of_war_etb_clue_and_sac_ally() {
+    let mut g = two_player_game();
+    let tolls = g.add_card_to_battlefield(0, catalog::tolls_of_war());
+    g.fire_self_etb_triggers(tolls, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "ETB Clue");
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.sacrifice_one(fodder, 0, &mut vec![]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentSacrificed { card_id: fodder, who: 0 }]);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Ally"), 1, "sacrifice made an Ally");
+}
+
+/// Long Feng counters a creature you control when another one dies.
+#[test]
+fn long_feng_grows_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::long_feng_grand_secretariat());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // counter target
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut events = g.remove_to_graveyard_with_triggers(fodder);
+    events.push(GameEvent::CreatureDied { card_id: fodder });
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let counters: u32 = g.battlefield.iter()
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 1, "one +1/+1 counter placed");
+}
+
+/// Zhao pumps your team when you sacrifice another permanent.
+#[test]
+fn zhao_ruthless_admiral_pumps_on_sac() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zhao_ruthless_admiral());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.sacrifice_one(fodder, 0, &mut vec![]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentSacrificed { card_id: fodder, who: 0 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "team +1/+0");
+}
+
+/// Zuko, Exiled Prince exiles the top card to play this turn.
+#[test]
+fn zuko_exiled_prince_impulses() {
+    let mut g = two_player_game();
+    let zuko = g.add_card_to_battlefield(0, catalog::zuko_exiled_prince());
+    g.clear_sickness(zuko);
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let lib0 = g.players[0].library.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zuko, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib0 - 1, "top card left the library");
+    assert_eq!(g.exile.len(), 1, "exiled the top card");
+}
+
+/// Beifong's Bounty Hunters earthbends for a dying creature's power.
+#[test]
+fn beifongs_bounty_hunters_earthbends_for_power() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::beifongs_bounty_hunters());
+    let fodder = g.add_card_to_battlefield(0, catalog::cat_gator()); // 3/2
+    let mut events = g.remove_to_graveyard_with_triggers(fodder);
+    events.push(GameEvent::CreatureDied { card_id: fodder });
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        3,
+        "earthbend 3 (Cat-Gator's power)"
+    );
+}

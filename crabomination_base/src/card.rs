@@ -83,6 +83,8 @@ pub enum CreatureType {
     // modern_decks batch 103 cube expansion (Lonis Genetics Expert,
     // Loot the Pathfinder).
     Otter, Detective,
+    // The Last Airbender hybrid beasts.
+    Platypus,
     // Cube expansion (Collector Ouphe).
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).

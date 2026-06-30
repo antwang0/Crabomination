@@ -2763,3 +2763,199 @@ pub fn vindictive_warden() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 11: enchantment value, sacrifice/death payoffs, firebending ───────
+
+/// Air Nomad Legacy — {W}{U} Enchantment. ETB: create a Clue. Creatures you
+/// control with flying get +1/+1.
+pub fn air_nomad_legacy() -> CardDefinition {
+    CardDefinition {
+        name: "Air Nomad Legacy",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(investigate(1))],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with flying get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasKeyword(Keyword::Flying)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// True Ancestry — {1}{G} Sorcery (Lesson). Return up to one target permanent
+/// card from your graveyard to your hand. Create a Clue.
+pub fn true_ancestry() -> CardDefinition {
+    CardDefinition {
+        name: "True Ancestry",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Permanent),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            investigate(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tolls of War — {W}{B} Enchantment. ETB: create a Clue. Whenever you
+/// sacrifice a permanent during your turn, create a 1/1 white Ally (once/turn).
+pub fn tolls_of_war() -> CardDefinition {
+    CardDefinition {
+        name: "Tolls of War",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(investigate(1)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::IsTurnOf(PlayerRef::You))
+                    .once_per_turn(),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: ally_token(),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Long Feng, Grand Secretariat — {1}{B/G}{B/G} 2/3 legendary Human Advisor.
+/// Whenever another creature you control dies, put a +1/+1 counter on target
+/// creature you control. (The "or a land" clause is approximated to creatures.)
+pub fn long_feng_grand_secretariat() -> CardDefinition {
+    CardDefinition {
+        name: "Long Feng, Grand Secretariat",
+        cost: cost(&[
+            generic(1),
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+        ]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zhao, Ruthless Admiral — {2}{B/R}{B/R} 3/4 legendary Human Soldier.
+/// Firebending 2. Whenever you sacrifice another permanent, creatures you
+/// control get +1/+0 until end of turn.
+pub fn zhao_ruthless_admiral() -> CardDefinition {
+    CardDefinition {
+        name: "Zhao, Ruthless Admiral",
+        cost: cost(&[
+            generic(2),
+            hybrid(Color::Black, Color::Red),
+            hybrid(Color::Black, Color::Red),
+        ]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Firebending(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::OtherThanSource,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zuko, Exiled Prince — {3}{R} 4/3 legendary Human Noble. Firebending 3.
+/// {3}: exile the top card of your library; you may play it this turn.
+pub fn zuko_exiled_prince() -> CardDefinition {
+    CardDefinition {
+        name: "Zuko, Exiled Prince",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Firebending(3)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Beifong's Bounty Hunters — {2}{B}{G} 4/4 Human Mercenary. Whenever a nonland
+/// creature you control dies, earthbend X, where X is that creature's power.
+pub fn beifongs_bounty_hunters() -> CardDefinition {
+    CardDefinition {
+        name: "Beifong's Bounty Hunters",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Nonland,
+                },
+            ),
+            effect: Effect::Earthbend { n: Value::PowerOf(Box::new(Selector::TriggerSource)) },
+        }],
+        ..Default::default()
+    }
+}
