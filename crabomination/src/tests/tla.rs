@@ -1962,3 +1962,74 @@ fn fire_nation_attacks_makes_two_soldiers() {
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Soldier"), 2, "two Soldier tokens");
 }
+
+// ── Batch 14 ────────────────────────────────────────────────────────────────
+
+/// How to Start a Riot grants menace and pumps the target player's creatures.
+#[test]
+fn how_to_start_a_riot_menace_and_pump() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let riot = g.add_card_to_hand(0, catalog::how_to_start_a_riot());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: riot,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).expect("cast riot");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Menace), "menace");
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 4, "target player's creatures +2/+0");
+}
+
+/// Lost Days tucks a creature into its owner's library and makes a Clue.
+#[test]
+fn lost_days_tucks_and_clues() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(foe)), 0, 0);
+    g.resolve_effect(&catalog::lost_days().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature left the battlefield");
+    assert!(g.players[1].library.iter().any(|c| c.id == foe), "tucked into owner's library");
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "made a Clue");
+}
+
+/// Sokka's Haiku counters a spell and untaps a land.
+#[test]
+fn sokkas_haiku_counters_and_untaps() {
+    let mut g = two_player_game();
+    // Opponent casts a creature spell.
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts");
+    // Seat 0 responds with Sokka's Haiku, untapping a tapped land.
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    let haiku = g.add_card_to_hand(0, catalog::sokkas_haiku());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: haiku,
+        target: Some(Target::Permanent(spell)),
+        additional_targets: vec![Target::Permanent(land)],
+        mode: None,
+        x_value: None,
+    }).expect("cast haiku");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_none(), "the creature spell was countered");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
+}

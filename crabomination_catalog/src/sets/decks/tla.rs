@@ -3325,3 +3325,84 @@ pub fn fire_nation_attacks() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 14: multi-target Lessons, player-scoped pump ──────────────────────
+
+/// How to Start a Riot — {2}{R} Instant (Lesson). Target creature gains menace
+/// until end of turn. Creatures target player controls get +2/+0 until EOT.
+pub fn how_to_start_a_riot() -> CardDefinition {
+    CardDefinition {
+        name: "How to Start a Riot",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(1),
+                    filter: SelectionRequirement::Creature,
+                },
+                power: Value::Const(2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lost Days — {4}{U} Instant (Lesson). The owner of target creature or
+/// enchantment puts it into their library second from the top. Create a Clue.
+/// (The printed "or on the bottom" owner's-choice rider is fixed to 2nd-from-top.)
+pub fn lost_days() -> CardDefinition {
+    CardDefinition {
+        name: "Lost Days",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                ),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: crate::effect::LibraryPosition::FromTop(1),
+                },
+            },
+            investigate(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sokka's Haiku — {3}{U}{U} Instant (Lesson). Counter target spell. Draw a
+/// card, then mill three. Untap target land.
+pub fn sokkas_haiku() -> CardDefinition {
+    CardDefinition {
+        name: "Sokka's Haiku",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Any },
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Untap {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::HasCardType(CardType::Land),
+                },
+                up_to: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}

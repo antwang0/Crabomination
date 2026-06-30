@@ -1481,8 +1481,16 @@ impl Effect {
         kicked: bool,
     ) -> Option<&SelectionRequirement> {
         fn sel_find(s: &Selector, slot: u8) -> Option<&SelectionRequirement> {
+            // A `ControlledBy { who: Target(n) }` selector declares slot `n`
+            // as a *player* target (How to Start a Riot's "creatures target
+            // player controls get +2/+0"). Surface a Player filter so the
+            // cast/auto-target walk prompts for that slot.
+            const PLAYER: SelectionRequirement = SelectionRequirement::Player;
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
+                Selector::ControlledBy { who: PlayerRef::Target(s2), .. } if *s2 == slot => {
+                    Some(&PLAYER)
+                }
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::SharingNameWith(i) => sel_find(i, slot),
