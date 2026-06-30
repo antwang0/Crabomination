@@ -149,6 +149,16 @@ pub enum StaticEffect {
         power: i32,
         toughness: i32,
     },
+    /// Each creature `applies_to` matches gets +`per_power`/+`per_toughness`
+    /// for each of *its own* creature types, capped at `max` types (CR 613.7c
+    /// layer-7 per-target dynamic pump). Diligent Zookeeper's "+1/+1 for each
+    /// of its creature types, to a maximum of 10."
+    PumpPTPerOwnCreatureType {
+        applies_to: Selector,
+        per_power: i32,
+        per_toughness: i32,
+        max: u32,
+    },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

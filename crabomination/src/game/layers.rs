@@ -121,6 +121,10 @@ pub enum Modification {
     ModifyPower(i32),              // 7c
     ModifyToughness(i32),          // 7c
     ModifyPowerToughness(i32, i32),// 7c
+    /// 7c — +per_power/+per_toughness for each of the affected creature's own
+    /// creature types, capped at `max` types (Diligent Zookeeper). Reads the
+    /// layer-4 computed creature types of the same card.
+    ModifyPtPerOwnCreatureType(i32, i32, u32),
     SwitchPowerToughness,          // 7d
 }
 
@@ -501,6 +505,13 @@ fn compute_permanent_pass(
             Modification::ModifyPowerToughness(p, t) => {
                 mod_power += p;
                 mod_toughness += t;
+            }
+            Modification::ModifyPtPerOwnCreatureType(pp, pt, max) => {
+                // Creature types are finalized at layer 4, processed before
+                // this layer-7 modification (effects arrive layer-sorted).
+                let n = (subtypes.creature_types.len() as u32).min(*max) as i32;
+                mod_power += pp * n;
+                mod_toughness += pt * n;
             }
             Modification::SwitchPowerToughness => switched = !switched,
         }

@@ -2735,3 +2735,17 @@ fn sandbender_reanimates_on_death() {
     assert!(g.battlefield_find(bears).is_some(), "MV-2 creature reanimated");
     assert!(g.exile.iter().any(|c| c.id == sb), "Sandbender exiled itself");
 }
+
+/// Diligent Zookeeper buffs non-Humans by their creature-type count; Humans get
+/// nothing.
+#[test]
+fn diligent_zookeeper_per_type_anthem() {
+    let mut g = two_player_game();
+    let zoo = g.add_card_to_battlefield(0, catalog::diligent_zookeeper());
+    // Momo is Lemur Bat Ally (3 types, non-Human): +3/+3 → 4/4.
+    let momo = g.add_card_to_battlefield(0, catalog::momo_friendly_flier());
+    assert_eq!(g.computed_permanent(momo).unwrap().power, 4, "1/1 +3/+3 = 4 power");
+    assert_eq!(g.computed_permanent(momo).unwrap().toughness, 4, "1/1 +3/+3 = 4 toughness");
+    // The Zookeeper itself is Human — unaffected.
+    assert_eq!(g.computed_permanent(zoo).unwrap().power, 4, "Human gets no bonus");
+}

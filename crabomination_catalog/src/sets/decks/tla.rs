@@ -4438,6 +4438,35 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Diligent Zookeeper — {3}{G} 4/4 Human Citizen Ally. Each non-Human creature
+/// you control gets +1/+1 for each of its creature types, to a maximum of 10.
+pub fn diligent_zookeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Diligent Zookeeper",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Citizen]),
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Each non-Human creature you control gets +1/+1 for each of its creature types, to a maximum of 10.",
+            effect: StaticEffect::PumpPTPerOwnCreatureType {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasCreatureType(CreatureType::Human),
+                        ))),
+                ),
+                per_power: 1,
+                per_toughness: 1,
+                max: 10,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sandbender Scavengers — {W}{B} 1/1 Human Rogue. Whenever you sacrifice
 /// another permanent, grow it. When it dies, you may exile it; if you do,
 /// reanimate a creature card with mana value ≤ its (last-known) power.

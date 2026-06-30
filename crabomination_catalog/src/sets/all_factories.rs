@@ -4499,6 +4499,7 @@ static DECKS: &[Factory] = &[
     super::decks::obsessive_pursuit,
     super::decks::combustion_man,
     super::decks::sandbender_scavengers,
+    super::decks::diligent_zookeeper,
     super::decks::teo_spirited_glider,
     super::decks::bitter_work,
     super::decks::suki_kyoshi_warrior,
