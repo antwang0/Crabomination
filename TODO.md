@@ -408,13 +408,21 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
-- **Waterbend (CR 701.67).** Not implemented. "Waterbend [cost]" is a generic-
-  mana sub-cost where each generic may be paid by tapping an untapped artifact
-  or creature — Convoke restricted to the generic portion of a *sub*-cost, and
-  taking artifacts as well as creatures. Appears as an additional cast cost
-  (Crashing Wave: "waterbend {X}") and as an activated-ability cost (Flexible
-  Waterbender: "Waterbend {3}: …"). Needs a cost-path extension; the
-  `cast_spell_with_convoke` plumbing is the closest primitive to generalize.
+- ✅ **Waterbend (CR 701.67).** Shipped — completes the bending family
+  (earthbend/airbend/blight). `CardDefinition.waterbend: Option<Waterbend>`
+  (`GameAction::CastSpellWaterbend`) for the additional cast cost (mandatory +
+  optional "you may waterbend"; `waterbend {X}` reads the chosen X via
+  `Value::XFromCost`; provenance `cast_via_waterbend` →
+  `Predicate::SpellWasWaterbend`), and `ActivatedAbility.waterbend: bool`
+  (`GameAction::ActivateAbilityWaterbend`) for the ability cost. Helpers ride the
+  `convoke_creatures` slot generalized to artifacts+creatures, clamped to the
+  amount. `decks::avatar_water` (20 cards) + tests in `tests/avatar_water.rs`.
+  `KnownCard.{has_waterbend,waterbend_amount}` surface it to the client.
+  Follow-ups: bot helper-use heuristic (bot can already cast via mana); the
+  client right-click "Cast (waterbend)" affordance + helper picker; `Ward—
+  Waterbend` (The Unagi — approximated as Ward {N}); `Exhaust—Waterbend`
+  (Invasion Submersible); Secret of Bloodbending's "control a player"; Foggy
+  Swamp Visions' exile-gy-creatures-as-token-copies.
 - **Blight as an activated/additional cost.** `Effect::Blight` is a resolution
   effect; cards that put it in a *cost* ("{T}, Blight 1: …" — Gristle Glutton,
   Dawnhand Dissident; "As an additional cost, blight 1" — Cinder Strike) need

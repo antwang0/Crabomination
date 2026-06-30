@@ -1032,6 +1032,11 @@ pub enum Predicate {
     /// `CardInstance.cast_via_mayhem`. Gates "if this spell's mayhem cost was
     /// paid, …" riders (Sandman's Quicksand).
     SpellWasMayhem,
+    /// CR 701.67 — true iff this spell's optional "you may waterbend {N}"
+    /// additional cost was paid. Reads `EffectContext.cast_via_waterbend`,
+    /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional
+    /// cost was paid, …" riders (Katara, Seeking Revenge; Secret of Bloodbending).
+    SpellWasWaterbend,
     /// True if any opponent of `ctx.controller` controls more lands
     /// than `ctx.controller` does. Backed by walking the battlefield
     /// and counting `Land` permanents per seat. Used by catch-up ramp

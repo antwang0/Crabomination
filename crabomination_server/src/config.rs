@@ -188,9 +188,17 @@ pub(crate) const DEFAULT_MAX_CONNS_PER_IP: usize = 5;
 
 /// Parse a non-negative integer env var (e.g. connection caps). Falls back
 /// to `default` for missing, empty, or non-numeric values. `0` is preserved
-/// (callers treat 0 as "unlimited").
+/// (callers treat 0 as "unlimited"). Surrounding whitespace is trimmed, matching
+/// `Format::parse` — so `CRAB_MAX_CONNS=" 50 "` reads as `50`, not the default.
 pub(crate) fn usize_from_env(key: &str, default: usize) -> usize {
-    match env::var(key).ok().as_deref() {
+    parse_usize_or(env::var(key).ok().as_deref(), key, default)
+}
+
+/// Pure core of [`usize_from_env`] — trims, then parses `raw`, falling back to
+/// `default` for `None`/empty/non-numeric input. Split out so the parsing and
+/// trimming behavior is unit-testable without touching the process environment.
+pub(crate) fn parse_usize_or(raw: Option<&str>, key: &str, default: usize) -> usize {
+    match raw.map(str::trim) {
         None | Some("") => default,
         Some(s) => match s.parse::<usize>() {
             Ok(n) => n,
@@ -245,7 +253,19 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
 
 #[cfg(test)]
 mod tests {
-    use super::Format;
+    use super::{parse_usize_or, Format};
+
+    #[test]
+    fn parse_usize_trims_and_falls_back() {
+        assert_eq!(parse_usize_or(Some("50"), "K", 9), 50);
+        assert_eq!(parse_usize_or(Some("  50 "), "K", 9), 50, "surrounding spaces trimmed");
+        assert_eq!(parse_usize_or(Some("0"), "K", 9), 0, "0 preserved (unlimited)");
+        assert_eq!(parse_usize_or(None, "K", 9), 9);
+        assert_eq!(parse_usize_or(Some(""), "K", 9), 9);
+        assert_eq!(parse_usize_or(Some("   "), "K", 9), 9, "blank → default");
+        assert_eq!(parse_usize_or(Some("-3"), "K", 9), 9, "negative → default");
+        assert_eq!(parse_usize_or(Some("ten"), "K", 9), 9, "non-numeric → default");
+    }
 
     #[test]
     fn format_parse_is_case_and_whitespace_insensitive() {

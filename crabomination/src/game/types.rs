@@ -392,6 +392,21 @@ pub enum GameAction {
         x_value: Option<u32>,
         convoke_creatures: Vec<CardId>,
     },
+    /// CR 701.67 — cast a spell paying its "waterbend {N}" additional cost,
+    /// tapping each artifact/creature in `helpers` for {1} of the waterbend
+    /// generic (clamped to N; the rest comes from real mana). For an optional
+    /// "you may waterbend {N}" rider this is the *pay* branch (the plain
+    /// `CastSpell` is the decline branch). For `waterbend {X}`, `x_value`
+    /// is the chosen X (= the waterbend amount).
+    CastSpellWaterbend {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        helpers: Vec<CardId>,
+    },
     /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
     /// `delve_cards` from the caster's graveyard to pay {1} of the spell's
     /// generic cost. Each must currently be in the caster's graveyard. The
@@ -435,6 +450,20 @@ pub enum GameAction {
         /// other X-cost activated abilities.
         #[serde(default)]
         x_value: Option<u32>,
+    },
+    /// CR 701.67 — activate an ability whose cost includes "Waterbend {N}",
+    /// tapping each artifact/creature in `helpers` for {1} of the generic
+    /// (clamped to N; the rest from mana). The ability must be flagged
+    /// `ActivatedAbility.waterbend`.
+    ActivateAbilityWaterbend {
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        #[serde(default)]
+        x_value: Option<u32>,
+        helpers: Vec<CardId>,
     },
     /// Declare attackers: each attacker picks a defending player or a
     /// planeswalker controlled by a non-active player.
@@ -1016,6 +1045,7 @@ impl GameAction {
                 | A::CastSpellBack { .. }
                 | A::CastPrepareSpell { .. }
                 | A::CastSpellConvoke { .. }
+                | A::CastSpellWaterbend { .. }
                 | A::CastSpellDelve { .. }
                 | A::CastSpellAlternative { .. }
                 | A::CastFlashback { .. }
@@ -1065,6 +1095,7 @@ impl GameAction {
             | A::CastPlotted { card_id, .. }
             | A::CastSpellBack { card_id, .. }
             | A::CastSpellConvoke { card_id, .. }
+            | A::CastSpellWaterbend { card_id, .. }
             | A::CastSpellDelve { card_id, .. }
             | A::CastSpellAlternative { card_id, .. }
             | A::CastFlashback { card_id, .. }

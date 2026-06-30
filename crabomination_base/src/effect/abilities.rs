@@ -1341,6 +1341,13 @@ pub struct ActivatedAbility {
     /// board pieces stay put. Defaults to None.
     #[serde(default)]
     pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
+    /// CR 701.67 — Waterbend N as part of this ability's cost ("Waterbend {N}:
+    /// …"). The N generic lives in `mana_cost`; this flag marks the ability so
+    /// activation accepts waterbend helpers (tap an untapped artifact/creature
+    /// you control to pay {1} of the generic, clamped to the generic total).
+    /// Defaults to false.
+    #[serde(default)]
+    pub waterbend: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

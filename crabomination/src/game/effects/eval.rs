@@ -1170,6 +1170,10 @@ impl GameState {
                 // for its Mayhem cost.
                 ctx.cast_via_mayhem
             }
+            Predicate::SpellWasWaterbend => {
+                // CR 701.67 — true iff this spell's optional waterbend cost was paid.
+                ctx.cast_via_waterbend
+            }
             Predicate::CastSpellTargetsSource => {
                 // CR 702.85 — Heroic. The just-cast spell (trigger source,
                 // a card on the stack) targets this trigger's own source.

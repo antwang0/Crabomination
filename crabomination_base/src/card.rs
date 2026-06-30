@@ -1978,6 +1978,13 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub mutate: Option<crate::mana::ManaCost>,
+    /// CR 701.67 — Waterbend. `Some` adds an "as an additional cost to cast
+    /// this spell, waterbend {N}" rider (`GameAction::CastSpellWaterbend`).
+    /// Each generic of the waterbend cost may be paid by tapping an untapped
+    /// artifact or creature you control (Convoke restricted to the sub-cost,
+    /// over artifacts as well as creatures), or with mana. Defaults to `None`.
+    #[serde(default)]
+    pub waterbend: Option<Waterbend>,
     /// CR 702.139 — Companion deck restriction. `Some` for the ten companion
     /// legends; `format::companion_restriction_met` checks a deck against it.
     #[serde(default)]
@@ -2106,6 +2113,24 @@ pub struct Gift {
     #[serde(with = "crate::static_str_serde")]
     pub label: crate::static_str_serde::StaticStr,
     pub gifted_effect: crate::effect::Effect,
+}
+
+/// CR 701.67 — Waterbend. The "waterbend {N}" additional cast cost. `amount`
+/// is the generic to pay (a [`Value`] so `waterbend {X}` reads the chosen X);
+/// `optional` marks "you may waterbend {N}" riders, where paying enables an
+/// "if its additional cost was paid" clause (`Predicate::SpellWasWaterbend`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct Waterbend {
+    pub amount: Value,
+    #[serde(default)]
+    pub optional: bool,
+}
+
+impl Default for Waterbend {
+    fn default() -> Self {
+        Waterbend { amount: Value::ZERO, optional: false }
+    }
 }
 
 /// CR 702.160 — the Prototype alternative cast of a Brothers' War artifact
@@ -3168,6 +3193,10 @@ pub struct CardInstance {
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
     pub cast_via_mayhem: bool,
+    /// CR 701.67 — true if this spell's optional "you may waterbend {N}"
+    /// additional cost was paid. Read by `Predicate::SpellWasWaterbend` for
+    /// "if its additional cost was paid" riders. Cleared off the stack.
+    pub cast_via_waterbend: bool,
     /// True if this card was cast from exile on its current trip through the
     /// stack (suspend/foretell/plot/impulse free or alt-cost casts). Powers
     /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
@@ -3481,6 +3510,7 @@ impl CardInstance {
             cast_target_was_battlefield: false,
             cast_via_flashback: false,
             cast_via_mayhem: false,
+            cast_via_waterbend: false,
             cast_from_exile: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
@@ -3961,6 +3991,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_via_mayhem: bool,
     #[serde(default)]
+    cast_via_waterbend: bool,
+    #[serde(default)]
     cast_from_exile: bool,
     #[serde(default)]
     may_cast_back_from_graveyard: bool,
@@ -4146,6 +4178,7 @@ impl serde::Serialize for CardInstance {
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             cast_via_mayhem: self.cast_via_mayhem,
+            cast_via_waterbend: self.cast_via_waterbend,
             cast_from_exile: self.cast_from_exile,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
@@ -4264,6 +4297,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
         c.cast_via_mayhem = wire.cast_via_mayhem;
+        c.cast_via_waterbend = wire.cast_via_waterbend;
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;

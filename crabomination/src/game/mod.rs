@@ -190,6 +190,9 @@ mod tests_recent51;
 #[path = "../tests/recent52.rs"]
 mod tests_recent52;
 #[cfg(test)]
+#[path = "../tests/avatar_water.rs"]
+mod tests_avatar_water;
+#[cfg(test)]
 #[path = "../tests/catalog_registration.rs"]
 mod tests_catalog_registration;
 #[cfg(test)]
@@ -6072,6 +6075,14 @@ impl GameState {
                 x_value,
                 convoke_creatures,
             } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], crate::game::actions::CastFlags::default()),
+            GameAction::CastSpellWaterbend {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+                helpers,
+            } => self.cast_spell_waterbend(card_id, target, additional_targets, mode, x_value, &helpers),
             GameAction::CastSpellDelve {
                 card_id,
                 target,
@@ -6186,6 +6197,16 @@ impl GameState {
                 additional_targets,
                 x_value,
             } => self.activate_ability(card_id, ability_index, target, additional_targets, x_value),
+            GameAction::ActivateAbilityWaterbend {
+                card_id,
+                ability_index,
+                target,
+                additional_targets,
+                x_value,
+                helpers,
+            } => self.activate_ability_waterbend(
+                card_id, ability_index, target, additional_targets, x_value, &helpers,
+            ),
             GameAction::ActivateLoyaltyAbility {
                 card_id,
                 ability_index,
@@ -7534,6 +7555,7 @@ impl GameState {
                                 kicked: false,
                                 bargained: false,
                                 cast_via_mayhem: false,
+                                cast_via_waterbend: false,
                                 entwined: false,
                             };
                             if !self.evaluate_predicate(filter, &ctx) {
@@ -7922,6 +7944,7 @@ impl GameState {
                     kicked: false,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_waterbend: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -9813,6 +9836,7 @@ impl GameState {
         ctx.kicked = card.kicked;
         ctx.bargained = card.bargained;
         ctx.cast_via_mayhem = card.cast_via_mayhem;
+        ctx.cast_via_waterbend = card.cast_via_waterbend;
         ctx.entwined = card.entwined;
         // Stamp the resolving spell's identity so source-aware damage
         // replacements (Torbran) can read its controller/colors while the

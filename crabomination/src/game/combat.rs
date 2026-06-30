@@ -574,6 +574,7 @@ impl GameState {
                     kicked: false,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_waterbend: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&predicate, &ctx) {

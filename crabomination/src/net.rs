@@ -861,6 +861,15 @@ pub struct KnownCard {
     /// client knows to arm the targeting cursor before submitting `CastGift`.
     #[serde(default)]
     pub gift_needs_target: bool,
+    /// CR 701.67 — true if this card has a "waterbend {N}" additional cast cost.
+    /// Drives the client's right-click "Cast (waterbend)" affordance, which
+    /// submits `GameAction::CastSpellWaterbend` with the chosen helpers.
+    #[serde(default)]
+    pub has_waterbend: bool,
+    /// The waterbend amount ({N}); `None` for `waterbend {X}` (the amount is the
+    /// chosen X). Lets the client clamp the helper count. Empty when no waterbend.
+    #[serde(default)]
+    pub waterbend_amount: Option<u32>,
     /// CR 702.183 — true if this card has an Omen half. Drives the client's
     /// right-click "Cast the Omen" affordance (`GameAction::CastOmen`).
     #[serde(default)]

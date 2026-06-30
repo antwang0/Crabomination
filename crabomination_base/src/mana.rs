@@ -304,6 +304,18 @@ impl ManaCost {
     /// reducing a colored or X pip. Returns the actually-applied
     /// reduction (so callers can short-circuit when the cost is already
     /// floored). If multiple Generic pips exist, drain them in order.
+    /// Total generic mana ({1}, {2}, …) in this cost — the portion that
+    /// Convoke/Improvise/Waterbend helpers may pay (CR 702.52/701.67).
+    pub fn generic_total(&self) -> u32 {
+        self.symbols
+            .iter()
+            .map(|s| match s {
+                ManaSymbol::Generic(n) => *n,
+                _ => 0,
+            })
+            .sum()
+    }
+
     pub fn reduce_generic(&mut self, amount: u32) -> u32 {
         let mut remaining = amount;
         let mut applied = 0u32;

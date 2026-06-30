@@ -107,6 +107,25 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
     count
 }
 
+/// CR 701.67 — resolve a card's printed waterbend amount given the chosen X.
+/// Returns `(amount, optional)`, or `None` if the card has no waterbend.
+/// Supports `Value::Const(n)` and the chosen-X form (`Value::XFromCost`);
+/// other expressions resolve to 0.
+pub(crate) fn waterbend_amount(
+    def: &crate::card::CardDefinition,
+    x_value: Option<u32>,
+) -> Option<(u32, bool)> {
+    use crate::effect::Value;
+    def.waterbend.as_ref().map(|wb| {
+        let amt = match wb.amount {
+            Value::Const(n) => n.max(0) as u32,
+            Value::XFromCost => x_value.unwrap_or(0),
+            _ => 0,
+        };
+        (amt, wb.optional)
+    })
+}
+
 /// Walk the battlefield's static abilities + per-player tax charges to
 /// compute the total extra generic mana the caster owes for casting `card`.
 ///
@@ -3397,6 +3416,39 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, CastFlags::default())
     }
 
+    /// CR 701.67 — cast a spell paying its "waterbend {N}" additional cost.
+    /// `helpers` are untapped artifacts/creatures the caster controls (count
+    /// clamped to N); each taps for {1} of the waterbend generic, the rest
+    /// comes from real mana. For an optional "you may waterbend {N}" rider this
+    /// is the pay branch and stamps `cast_via_waterbend`.
+    pub(crate) fn cast_spell_waterbend(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        helpers: &[CardId],
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) else {
+            return Err(GameError::CardNotInHand(card_id));
+        };
+        let Some((amt, _optional)) = waterbend_amount(&card.definition, x_value) else {
+            return Err(GameError::SorcerySpeedOnly); // reuse: card has no waterbend
+        };
+        self.cast_spell_with_convoke(
+            card_id,
+            target,
+            additional_targets,
+            mode,
+            x_value,
+            helpers,
+            &[],
+            CastFlags { waterbend: Some(amt), ..Default::default() },
+        )
+    }
+
     /// Internal cast-spell helper with optional convoke creatures and delve
     /// cards. Each convoke creature must be untapped + controlled by the
     /// caster + the spell must have `Keyword::Convoke`; each tap adds {1}
@@ -3415,7 +3467,7 @@ impl GameState {
         delve_cards: &[CardId],
         flags: CastFlags,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let CastFlags { kicked, buyback, bestow, entwine, room_door, gift } = flags;
+        let CastFlags { kicked, buyback, bestow, entwine, room_door, gift, mut waterbend } = flags;
         let p = self.priority.player_with_priority;
 
         if !self.players[p].has_in_hand(card_id) {
@@ -3580,6 +3632,15 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.cast_from_exile = false;
+        // CR 701.67 — a mandatory "waterbend {N}" rider is paid even on the
+        // plain cast path; only the optional "you may waterbend" form is
+        // skippable. When no explicit amount arrived via CastSpellWaterbend,
+        // derive it for mandatory cards (helpers stay empty — paid from mana).
+        if waterbend.is_none()
+            && let Some((amt, false)) = waterbend_amount(&card.definition, x_value)
+        {
+            waterbend = Some(amt);
+        }
         // CR 702.32 — opt-in Kicker. Only stamp `kicked` if the card
         // actually has a kicker cost; the cost itself is folded into the
         // spell's mana cost below.
@@ -3646,9 +3707,19 @@ impl GameState {
         // taps untapped artifacts (CR 702.126); each pays {1}.
         let has_convoke = card.definition.keywords.contains(&crate::card::Keyword::Convoke);
         let has_improvise = card.definition.keywords.contains(&crate::card::Keyword::Improvise);
-        if !convoke_creatures.is_empty() && !has_convoke && !has_improvise {
+        // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
+        // any untapped artifact or creature you control may tap to pay {1} of
+        // the waterbend sub-cost. Count is clamped to the waterbend amount below.
+        let has_waterbend = waterbend.is_some();
+        if !convoke_creatures.is_empty() && !has_convoke && !has_improvise && !has_waterbend {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: spell can't tap helpers
+        }
+        if let Some(amt) = waterbend
+            && convoke_creatures.len() > amt as usize
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SorcerySpeedOnly); // reuse: too many waterbend helpers
         }
         for cid in convoke_creatures {
             let bad = !self.battlefield.iter().any(|c| {
@@ -3656,7 +3727,9 @@ impl GameState {
                     && c.controller == p
                     && !c.tapped
                     && ((has_convoke && c.definition.is_creature())
-                        || (has_improvise && c.definition.is_artifact()))
+                        || (has_improvise && c.definition.is_artifact())
+                        || (has_waterbend
+                            && (c.definition.is_creature() || c.definition.is_artifact())))
             });
             if bad {
                 self.players[p].hand.push(card);
@@ -3950,6 +4023,13 @@ impl GameState {
                 cost.symbols.push(*s);
             }
         }
+        // CR 701.67 — fold the waterbend additional cost ({N} generic) into the
+        // total. Helpers tap to pay it below; leftover comes from real mana.
+        if let Some(amt) = waterbend
+            && amt > 0
+        {
+            cost.symbols.push(crate::mana::ManaSymbol::Generic(amt));
+        }
         let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
@@ -4091,6 +4171,11 @@ impl GameState {
         let events = auto_events;
         let final_x = x_value.unwrap_or(0).max(sac_x.unwrap_or(0));
 
+        // CR 701.67 — record that the waterbend additional cost was paid, so
+        // "if its additional cost was paid" riders can branch on resolution.
+        if waterbend.is_some_and(|a| a > 0) {
+            card.cast_via_waterbend = true;
+        }
         self.finalize_cast(
             p,
             card,
@@ -4931,6 +5016,7 @@ impl GameState {
                     kicked: false,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_waterbend: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
@@ -6055,6 +6141,7 @@ impl GameState {
                 kicked: false,
                 bargained: false,
                 cast_via_mayhem: false,
+                cast_via_waterbend: false,
                     entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -6898,6 +6985,7 @@ impl GameState {
                     kicked: false,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_waterbend: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -7858,6 +7946,75 @@ impl GameState {
         out
     }
 
+    /// CR 701.67 — activate an ability whose cost includes "Waterbend {N}"
+    /// (`ActivatedAbility.waterbend`). Each `helper` (an untapped artifact or
+    /// creature the activator controls) taps for {1} of the generic, clamped to
+    /// the ability's generic pip total; the rest is paid from mana. Floats the
+    /// helper mana, then defers to `activate_ability` for the full payment.
+    pub(crate) fn activate_ability_waterbend(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+        helpers: &[CardId],
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        // The ability must exist on a battlefield source and be flagged waterbend.
+        let generic_total = {
+            let Some(c) = self.battlefield.iter().find(|c| c.id == card_id) else {
+                return Err(GameError::CardNotOnBattlefield(card_id));
+            };
+            let Some(ab) = c.definition.activated_abilities.get(ability_index) else {
+                return Err(GameError::AbilityIndexOutOfBounds);
+            };
+            if !ab.waterbend {
+                return Err(GameError::AbilityIndexOutOfBounds); // reuse: not a waterbend ability
+            }
+            // For a "Waterbend {X}" ability the generic is the chosen X; otherwise
+            // it's the printed generic pip total.
+            if ab.mana_cost.has_x() {
+                ab.mana_cost.with_x_value(x_value.unwrap_or(0)).generic_total()
+            } else {
+                ab.mana_cost.generic_total()
+            }
+        };
+        if helpers.len() > generic_total as usize {
+            return Err(GameError::SelectionRequirementViolated); // too many helpers
+        }
+        // Validate helpers up front: untapped artifacts/creatures the activator
+        // controls (the source itself is eligible if it isn't tapped by the cost).
+        for cid in helpers {
+            let ok = self.battlefield.iter().any(|c| {
+                c.id == *cid
+                    && c.controller == p
+                    && !c.tapped
+                    && (c.definition.is_creature() || c.definition.is_artifact())
+            });
+            if !ok {
+                return Err(GameError::CardNotOnBattlefield(*cid));
+            }
+        }
+        // Float the helper mana (tap each for {1} colorless), then let
+        // activate_ability pay the now-reduced remainder. Skip the float-spend
+        // prompt — the colorless was tapped expressly to pay this cost.
+        let snapshot = self.snapshot_payment_state(p);
+        for cid in helpers {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
+                c.tapped = true;
+            }
+            self.players[p].mana_pool.add_colorless(1);
+        }
+        self.pending_cast_spend_float = Some(true);
+        let r = self.activate_ability(card_id, ability_index, target, additional_targets, x_value);
+        if r.is_err() {
+            self.pending_cast_spend_float = None;
+            self.restore_payment_state(p, snapshot);
+        }
+        r
+    }
+
     pub(crate) fn activate_ability(
         &mut self,
         card_id: CardId,
@@ -8223,6 +8380,7 @@ impl GameState {
                 kicked: false,
                 bargained: false,
                 cast_via_mayhem: false,
+                cast_via_waterbend: false,
                     entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -9294,4 +9452,9 @@ pub(crate) struct CastFlags {
     pub room_door: Option<u8>,
     /// CR 702.165 — the spell's Gift was promised to an opponent.
     pub gift: bool,
+    /// CR 701.67 — Waterbend: `Some(n)` adds {n} generic as an additional cost,
+    /// and the `convoke_creatures` slot holds the waterbend helpers (untapped
+    /// artifacts/creatures, clamped to `n`, each tapping for {1}). Stamps
+    /// `cast_via_waterbend` so optional-cost riders can branch.
+    pub waterbend: Option<u32>,
 }

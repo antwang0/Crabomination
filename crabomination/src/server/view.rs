@@ -744,6 +744,11 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .gift
             .as_ref()
             .is_some_and(|g| g.gifted_effect.requires_target()),
+        has_waterbend: card.definition.waterbend.is_some(),
+        waterbend_amount: card.definition.waterbend.as_ref().and_then(|wb| match wb.amount {
+            crate::effect::Value::Const(n) => Some(n.max(0) as u32),
+            _ => None, // waterbend {X}: amount is the chosen X
+        }),
         has_omen: card.definition.omen.is_some(),
         omen_label: card
             .definition

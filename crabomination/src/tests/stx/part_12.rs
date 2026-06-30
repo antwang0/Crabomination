@@ -1153,6 +1153,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         kicked: false,
         bargained: false,
         cast_via_mayhem: false,
+        cast_via_waterbend: false,
         entwined: false,
     };
     // Use SetBasePT with Duration::EndOfCombat so the layer-system

@@ -5484,3 +5484,55 @@ fn cr_509_1b_cant_block_grant_rejects_the_blocker() {
     let err = g.perform_action(GameAction::DeclareBlockers(vec![(wall, attacker)]));
     assert!(err.is_err(), "a can't-block creature is an illegal blocker");
 }
+
+/// CR 701.67 — a noncreature artifact you control is a legal waterbend helper
+/// (Convoke only takes creatures; waterbend takes artifacts too).
+#[test]
+fn cr_701_67_waterbend_accepts_an_artifact_helper() {
+    let mut g = two_player_game();
+    // Four creature helpers + one artifact helper cover the {5}.
+    let mut helpers = Vec::new();
+    for _ in 0..4 {
+        let h = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(h);
+        helpers.push(h);
+    }
+    let lyre = g.add_card_to_battlefield(0, catalog::entrancing_lyre());
+    g.clear_sickness(lyre);
+    helpers.push(lyre);
+    let spirit = g.add_card_to_hand(0, catalog::benevolent_river_spirit());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpellWaterbend {
+        card_id: spirit, target: None, additional_targets: vec![], mode: None, x_value: None,
+        helpers,
+    }).expect("artifact + creatures pay the waterbend {5}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == spirit));
+    assert!(g.battlefield_find(lyre).unwrap().tapped, "the artifact helper tapped");
+}
+
+/// CR 701.67 — paying an optional "you may waterbend {N}" cost sets the
+/// provenance flag that `Predicate::SpellWasWaterbend` reads.
+#[test]
+fn cr_701_67_optional_waterbend_records_provenance() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let h1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let h2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(h1); g.clear_sickness(h2);
+    let lesson = g.add_card_to_hand(0, catalog::waterbending_lesson()); // discard unless waterbent
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellWaterbend {
+        card_id: lesson, target: None, additional_targets: vec![], mode: None, x_value: None,
+        helpers: vec![h1, h2],
+    }).expect("pay the optional waterbend");
+    drain_stack(&mut g);
+    // Provenance honored: drew 3, no discard (net +3 minus the lesson leaving hand).
+    assert_eq!(g.players[0].hand.len(), before - 1 + 3, "SpellWasWaterbend → discard skipped");
+}
