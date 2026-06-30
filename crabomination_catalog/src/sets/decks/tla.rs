@@ -4438,6 +4438,29 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Katara, the Fearless — {G}{W}{U} 3/3 Legendary Human Warrior Ally. If a
+/// triggered ability of an Ally you control triggers, it triggers an additional
+/// time (Panharmonicon for Allies).
+pub fn katara_the_fearless() -> CardDefinition {
+    CardDefinition {
+        name: "Katara, the Fearless",
+        cost: cost(&[g(), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "If a triggered ability of an Ally you control triggers, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerAllyTriggers,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Diligent Zookeeper — {3}{G} 4/4 Human Citizen Ally. Each non-Human creature
 /// you control gets +1/+1 for each of its creature types, to a maximum of 10.
 pub fn diligent_zookeeper() -> CardDefinition {

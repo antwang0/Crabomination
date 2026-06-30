@@ -830,6 +830,37 @@ pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -
     })
 }
 
+/// CR 603-style "triggers an additional time" — extra fires a triggered
+/// ability gets because its `source` is an Ally controlled by a player who
+/// controls `DoubleControllerAllyTriggers` (Katara, the Fearless). 0 unless
+/// the source is currently an Ally controlled by `controller`.
+pub(crate) fn ally_trigger_extra_fires(
+    state: &crate::game::GameState,
+    controller: usize,
+    source: crate::card::CardId,
+) -> usize {
+    use crate::effect::StaticEffect;
+    let source_is_your_ally = state
+        .computed_permanent(source)
+        .is_some_and(|cp| cp.subtypes.creature_types.contains(&crate::card::CreatureType::Ally))
+        && state.battlefield_find(source).is_some_and(|c| c.controller == controller);
+    if !source_is_your_ally {
+        return 0;
+    }
+    state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == controller)
+        .map(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .filter(|sa| matches!(sa.effect, StaticEffect::DoubleControllerAllyTriggers))
+                .count()
+        })
+        .sum()
+}
+
 /// True when any battlefield permanent carries a
 /// `SuppressCreatureEtbTriggers { also_dies: true }` static (Hushbringer).
 /// Suppresses creature-death triggers globally (CR 614).
@@ -1600,8 +1631,14 @@ impl GameState {
             })
             .unwrap_or_default();
         // Elesh Norn replacement: zero or more copies depending on which
-        // side controls a Mother of Machines.
-        let multiplier = etb_trigger_multiplier(self, controller, Some(card_id));
+        // side controls a Mother of Machines. Katara, the Fearless adds an
+        // extra fire for a self-source Ally ETB trigger (unless suppressed).
+        let etb_mult = etb_trigger_multiplier(self, controller, Some(card_id));
+        let multiplier = if etb_mult == 0 {
+            0
+        } else {
+            etb_mult + ally_trigger_extra_fires(self, controller, card_id)
+        };
         for effect in etb_triggers {
             // Strict Proctor's CR 614 replacement: pay {2} or sacrifice
             // the source. Applied once per fire of the trigger.

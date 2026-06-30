@@ -588,6 +588,12 @@ pub enum StaticEffect {
     /// ETB triggers — it never suppresses opponents'. Read at ETB-trigger
     /// dispatch via `etb_trigger_multiplier`.
     DoubleControllerEtbTriggers,
+    /// "If a triggered ability of an Ally you control triggers, that ability
+    /// triggers an additional time." Katara, the Fearless. Read at trigger
+    /// dispatch via `ally_trigger_extra_fires`; adds one fire per copy for
+    /// any non-ETB or ETB trigger whose source is an Ally the controller
+    /// controls.
+    DoubleControllerAllyTriggers,
     /// CR 614.x — "Creatures entering the battlefield don't cause triggered
     /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
     /// permanent with this static is in play, an entering **creature**

@@ -7995,11 +7995,18 @@ impl GameState {
                 // Spotlight, 1 normally, 2+ with a doubler). Self-source ETB
                 // triggers go through the hardcoded path in `actions.rs`
                 // (also multiplied), so they aren't double-counted here.
-                let mult = crate::game::actions::etb_trigger_multiplier(
+                let etb_mult = crate::game::actions::etb_trigger_multiplier(
                     self,
                     controller,
                     subject.as_ref().and_then(|s| s.as_permanent_id()),
                 );
+                // Katara, the Fearless: an Ally's triggered ability triggers an
+                // additional time. Suppressed (etb_mult == 0) stays suppressed.
+                let mult = if etb_mult == 0 {
+                    0
+                } else {
+                    etb_mult + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                };
                 for _ in 0..mult {
                     // Strict Proctor's CR 614 tax applies once per fire; a
                     // declined / unpayable tax sacrifices the source and
@@ -8018,15 +8025,20 @@ impl GameState {
                     });
                 }
             } else {
-                queue.push(PendingTriggerPush {
-                    source,
-                    controller,
-                    effect,
-                    subject,
-                    event_amount,
-                    mode,
-                    intervening_if: None,
-                });
+                // Katara, the Fearless: a non-ETB Ally trigger fires an
+                // additional time per Katara the controller controls.
+                let fires = 1 + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
+                for _ in 0..fires {
+                    queue.push(PendingTriggerPush {
+                        source,
+                        controller,
+                        effect: effect.clone(),
+                        subject,
+                        event_amount,
+                        mode,
+                        intervening_if: None,
+                    });
+                }
             }
         }
         self.drain_trigger_queue(queue);
@@ -10739,6 +10751,8 @@ fn static_effect_to_effects(
             // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
             | StaticEffect::DoubleControllerEtbTriggers
+            // Katara — read at trigger dispatch via `ally_trigger_extra_fires`.
+            | StaticEffect::DoubleControllerAllyTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).

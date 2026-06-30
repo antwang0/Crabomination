@@ -2749,3 +2749,36 @@ fn diligent_zookeeper_per_type_anthem() {
     // The Zookeeper itself is Human — unaffected.
     assert_eq!(g.computed_permanent(zoo).unwrap().power, 4, "Human gets no bonus");
 }
+
+/// Katara, the Fearless makes an Ally's triggered ability fire an extra time.
+#[test]
+fn katara_doubles_ally_etb_trigger() {
+    // Baseline: Kyoshi Warriors' ETB makes one Ally token.
+    let mut g = two_player_game();
+    let kw = g.add_card_to_battlefield(0, catalog::kyoshi_warriors());
+    g.fire_self_etb_triggers(kw, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Ally"), 1, "no Katara → one token");
+
+    // With Katara out, the Ally ETB triggers twice → two tokens.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::katara_the_fearless());
+    let kw = g.add_card_to_battlefield(0, catalog::kyoshi_warriors());
+    g.fire_self_etb_triggers(kw, 0);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Ally"), 2, "Katara → ETB fires twice");
+}
+
+/// Katara only boosts Ally triggers, not a non-Ally creature's trigger.
+#[test]
+fn katara_ignores_non_ally_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::katara_the_fearless());
+    // Cat-Gator is a non-Ally (Crocodile) whose ETB pings for Swamps.
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let cg = g.add_card_to_battlefield(0, catalog::cat_gator());
+    let before = g.players[1].life;
+    g.fire_self_etb_triggers(cg, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "non-Ally ETB fires once (1 Swamp)");
+}
