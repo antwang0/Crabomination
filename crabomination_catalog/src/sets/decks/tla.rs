@@ -3894,6 +3894,37 @@ pub fn the_last_agni_kai() -> CardDefinition {
     }
 }
 
+/// Bumi, King of Three Trials — {5}{G} 4/4 Legendary Human Noble Ally. ETB:
+/// choose up to X (X = Lessons in your graveyard) of — three +1/+1 counters on
+/// Bumi / scry 3 / earthbend 3. (The scry's "target player" is modeled as you.)
+pub fn bumi_king_of_three_trials() -> CardDefinition {
+    CardDefinition {
+        name: "Bumi, King of Three Trials",
+        cost: cost(&[generic(5), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Noble]),
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ChooseUpToN {
+            max: Box::new(Value::CardsInGraveyardMatching {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+            }),
+            modes: vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(3),
+                },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+                Effect::Earthbend { n: Value::Const(3) },
+            ],
+        })],
+        ..Default::default()
+    }
+}
+
 /// Honest Work — {U} Aura. Enchant a creature an opponent controls. ETB: tap it
 /// and remove all its counters. It loses all abilities and becomes a 1/1
 /// Citizen. (The granted "{T}: Add {C}" / rename rider is omitted.)

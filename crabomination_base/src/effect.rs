@@ -1782,6 +1782,13 @@ pub enum Effect {
     /// different subset still supplies targets in the default-picks slot
     /// order. Full cast-time mode selection is tracked in TODO.md.
     ChooseN { picks: Vec<u8>, modes: Vec<Effect> },
+    /// CR 700.2 — "Choose up to N, where N is [a live count]." Evaluates `max`
+    /// at resolution, caps it at `modes.len()`, and lets the controller pick up
+    /// to that many *distinct* modes (AutoDecider takes the first `count`). The
+    /// modes must be self-targeting (no chosen target slots) — Bumi, King of
+    /// Three Trials (X = Lessons in your graveyard; modes pump self / scry /
+    /// earthbend).
+    ChooseUpToN { max: Box<Value>, modes: Vec<Effect> },
     /// CR 702.119 — Escalate. "Choose one or more. You pay the escalate cost
     /// for each mode chosen beyond the first." The cast-time `mode` is the
     /// base (always-chosen) mode; a `Decision::ChooseModes` answer escalates

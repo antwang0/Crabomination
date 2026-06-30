@@ -271,6 +271,8 @@ impl Effect {
             }
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
+            // ChooseUpToN's modes are self-targeting (chosen at resolution).
+            Effect::ChooseUpToN { .. } => false,
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),

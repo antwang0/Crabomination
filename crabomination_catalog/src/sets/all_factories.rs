@@ -4518,6 +4518,7 @@ static DECKS: &[Factory] = &[
     super::decks::earth_rumble,
     super::decks::allies_at_last,
     super::decks::honest_work,
+    super::decks::bumi_king_of_three_trials,
     super::decks::hei_bai_spirit_of_balance,
     super::decks::ty_lee_chi_blocker,
     super::decks::the_boulder_ready_to_rumble,

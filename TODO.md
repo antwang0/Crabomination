@@ -35,10 +35,9 @@ auto-picks a controlled land in delayed bodies), **Serpent of the Pass**
 (`StaticEffect::SelfCostReducedPerGraveyardCardMatching` + `SelfFlashIf`),
 **Earth Rumble** (multi-slot earthbend+fight), **Allies at Last**
 (`StaticEffect::SelfCostReducedPerPermanentMatching` — Affinity-for-type),
-**Honest Work** (shrink-to-1/1 aura). Deferred for want of a primitive:
-- **Bumi, King of Three Trials** — "choose up to X" modal where X is a live
-  count; `Effect::ChooseN.picks` is a fixed index list. Needs a
-  `ChooseUpToN { max: Value, modes }` with per-mode target slots.
+**Honest Work** (shrink-to-1/1 aura), **Bumi, King of Three Trials**
+(`Effect::ChooseUpToN { max: Value, modes }` — choose up to a live count of
+self-targeting modes). Deferred for want of a primitive:
 - **Joo Dee, One of Many** — card defn drafted (Surveil 1 + `CreateTokenCopyOf`
   self + sacrifice an artifact/creature) but pulled: the deterministic test was
   flaky because the surveil's `Decision::Scry` and the sacrifice's

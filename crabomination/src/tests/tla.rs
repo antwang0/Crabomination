@@ -2978,3 +2978,32 @@ fn honest_work_shrinks_and_taps() {
     assert_eq!(g.battlefield_find(foe).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 0,
         "counters removed");
 }
+
+/// Bumi runs up to X modes (X = Lessons in graveyard). With 2 Lessons and the
+/// default pick order, modes 0 (3 counters) and 1 (scry) run; mode 2 doesn't.
+#[test]
+fn bumi_choose_up_to_lessons() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest()); // an earthbend target if mode 2 fires
+    // Two Lessons in graveyard → choose up to 2.
+    g.add_card_to_graveyard(0, catalog::combustion_technique());
+    g.add_card_to_graveyard(0, catalog::combustion_technique());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); } // scry needs a library
+    let bumi = g.add_card_to_battlefield(0, catalog::bumi_king_of_three_trials());
+    g.fire_self_etb_triggers(bumi, 0);
+    drain_stack(&mut g);
+    // Mode 0 ran → 3 counters on Bumi.
+    assert_eq!(g.battlefield_find(bumi).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 3,
+        "first mode put 3 counters on Bumi");
+}
+
+/// With zero Lessons, Bumi's ETB chooses nothing.
+#[test]
+fn bumi_no_lessons_chooses_nothing() {
+    let mut g = two_player_game();
+    let bumi = g.add_card_to_battlefield(0, catalog::bumi_king_of_three_trials());
+    g.fire_self_etb_triggers(bumi, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bumi).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 0,
+        "no Lessons → no modes run");
+}

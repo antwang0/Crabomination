@@ -1230,6 +1230,56 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseUpToN { max, modes } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                let count = (self.evaluate_value(max, ctx).max(0) as usize).min(modes.len());
+                if count == 0 {
+                    return Ok(());
+                }
+                let default: Vec<u8> = (0..count as u8).collect();
+                let decision = Decision::ChooseModes {
+                    source,
+                    num_modes: modes.len(),
+                    count,
+                    default: default.clone(),
+                    mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                // Sanitise: distinct, in-range, capped at `count` (CR 700.2 —
+                // "up to N", so fewer is legal). Empty falls back to the default.
+                let run: Vec<u8> = match answer {
+                    DecisionAnswer::Modes(v) => {
+                        let mut seen: Vec<u8> = Vec::new();
+                        for &i in &v {
+                            if (i as usize) < modes.len() && !seen.contains(&i) && seen.len() < count {
+                                seen.push(i);
+                            }
+                        }
+                        if seen.is_empty() { default } else { seen }
+                    }
+                    _ => default,
+                };
+                // Modes are self-targeting (no chosen slots) — run with full ctx.
+                for &i in &run {
+                    if let Some(m) = modes.get(i as usize) {
+                        self.run_effect(m, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Escalate { modes, cost } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
