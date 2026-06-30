@@ -6,7 +6,7 @@ use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     DynamicPt, Effect, EnchantmentSubtype, EventKind, EventScope, EventSpec, ExileReturnZone,
     Keyword, LandType, Predicate, SelectionRequirement, Selector, SpellSubtype, StaticAbility,
-    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
+    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crabomination_base::tokens::{clue_token, food_token};
 use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, raid_etb, target_any, target_filtered};
@@ -3991,6 +3991,187 @@ pub fn barrels_of_blasting_jelly() -> CardDefinition {
                 effect: Effect::DealDamage {
                     to: target_filtered(SelectionRequirement::Creature),
                     amount: Value::Const(5),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Accumulate Wisdom — {1}{U} Instant — Lesson. Look at the top three; put one
+/// into your hand (rest to bottom), or all three if you have 3+ Lessons in gy.
+pub fn accumulate_wisdom() -> CardDefinition {
+    let dig = |take: Value| Effect::LookPickToHand {
+        who: PlayerRef::You,
+        count: Value::Const(3),
+        rest_to_graveyard: false,
+        pick_filter: None,
+        take: Some(take),
+        to_battlefield: false,
+    };
+    CardDefinition {
+        name: "Accumulate Wisdom",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                },
+                Value::Const(3),
+            ),
+            then: Box::new(dig(Value::Const(3))),
+            else_: Box::new(dig(Value::ONE)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Dragonfly Swarm — {1}{U}{R} */3 Dragon Insect. Flying, ward {1}. Power =
+/// noncreature, nonland cards in your graveyard. Dies → draw if a Lesson is
+/// in your graveyard.
+pub fn dragonfly_swarm() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonfly Swarm",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        dynamic_pt: Some(DynamicPt::NoncreatureNonlandCardsInControllerGraveyard { base_t: 3 }),
+        triggered_abilities: vec![on_dies(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                },
+                Value::ONE,
+            ),
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Enters tapped unless you control a basic land (the TLA mono-land cycle).
+fn tapped_unless_basic() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::IsBasicLand.and(SelectionRequirement::ControlledByYou),
+            )),
+            then: Box::new(Effect::Noop),
+            else_: Box::new(Effect::Tap { what: Selector::This }),
+        },
+    }
+}
+
+fn tap_for(color: Color) -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![color]) },
+        ..Default::default()
+    }
+}
+
+/// Abandoned Air Temple — Land. Enters tapped unless you control a basic land.
+/// {T}: Add {W}. {3}{W}, {T}: Put a +1/+1 counter on each creature you control.
+pub fn abandoned_air_temple() -> CardDefinition {
+    CardDefinition {
+        name: "Abandoned Air Temple",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![tapped_unless_basic()],
+        activated_abilities: vec![
+            tap_for(Color::White),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3), w()]),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Agna Qel'a — Land. Enters tapped unless you control a basic land.
+/// {T}: Add {U}. {2}{U}, {T}: Draw a card, then discard a card.
+pub fn agna_qela() -> CardDefinition {
+    CardDefinition {
+        name: "Agna Qel'a",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![tapped_unless_basic()],
+        activated_abilities: vec![
+            tap_for(Color::Blue),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), u()]),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ba Sing Se — Land. Enters tapped unless you control a basic land.
+/// {T}: Add {G}. {2}{G}, {T}: Earthbend 2. Activate only as a sorcery.
+pub fn ba_sing_se() -> CardDefinition {
+    CardDefinition {
+        name: "Ba Sing Se",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![tapped_unless_basic()],
+        activated_abilities: vec![
+            tap_for(Color::Green),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), g()]),
+                sorcery_speed: true,
+                effect: Effect::Earthbend { n: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fire Nation Palace — Land. Enters tapped unless you control a basic land.
+/// {T}: Add {R}. {1}{R}, {T}: Target creature you control gains firebending 4
+/// until end of turn.
+pub fn fire_nation_palace() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Nation Palace",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![tapped_unless_basic()],
+        activated_abilities: vec![
+            tap_for(Color::Red),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), r()]),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Firebending(4),
+                    duration: Duration::EndOfTurn,
                 },
                 ..Default::default()
             },

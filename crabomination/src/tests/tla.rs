@@ -2370,3 +2370,89 @@ fn barrels_of_blasting_jelly_burns() {
     assert!(g.battlefield_find(foe).is_none(), "5 damage kills the 4/4");
     assert!(g.battlefield_find(barrels).is_none(), "Barrels sacrificed");
 }
+
+/// Accumulate Wisdom digs three and takes all three with 3+ Lessons in gy.
+#[test]
+fn accumulate_wisdom_takes_all_with_lessons() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::combustion_technique()); } // Lessons
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let aw = g.add_card_to_hand(0, catalog::accumulate_wisdom());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: aw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3, "took all three (cast 1, drew 3)");
+}
+
+/// Dragonfly Swarm's power tracks noncreature, nonland cards in your graveyard.
+#[test]
+fn dragonfly_swarm_power_tracks_graveyard() {
+    let mut g = two_player_game();
+    let swarm = g.add_card_to_battlefield(0, catalog::dragonfly_swarm());
+    assert_eq!(g.computed_permanent(swarm).unwrap().power, 0, "empty gy → 0 power");
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::combustion_technique());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // creature: not counted
+    assert_eq!(g.computed_permanent(swarm).unwrap().power, 2, "two noncreature/nonland cards");
+}
+
+/// Abandoned Air Temple enters tapped without a basic, untapped with one.
+#[test]
+fn abandoned_air_temple_conditional_tap() {
+    let mut g = two_player_game();
+    let t1 = g.move_card_to_battlefield_for_test(0, catalog::abandoned_air_temple());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(t1).unwrap().tapped, "no basic → enters tapped");
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest()); // a basic land
+    let t2 = g.move_card_to_battlefield_for_test(0, catalog::abandoned_air_temple());
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(t2).unwrap().tapped, "basic present → enters untapped");
+}
+
+/// Fire Nation Palace grants firebending 4 to a creature until end of turn.
+#[test]
+fn fire_nation_palace_grants_firebending() {
+    let mut g = two_player_game();
+    let pal = g.add_card_to_battlefield(0, catalog::fire_nation_palace());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pal, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("grant firebending");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Firebending(4)),
+        "creature gained firebending 4");
+}
+
+/// Ba Sing Se's activated ability earthbends a target land.
+#[test]
+fn ba_sing_se_earthbends_a_land() {
+    let mut g = two_player_game();
+    let bss = g.add_card_to_battlefield(0, catalog::ba_sing_se());
+    let target_land = g.add_card_to_battlefield(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bss, ability_index: 1, target: Some(Target::Permanent(target_land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("earthbend ability");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target_land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2,
+        "earthbend 2 placed two counters on the land");
+}

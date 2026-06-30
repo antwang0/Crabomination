@@ -2525,6 +2525,9 @@ pub enum DynamicPt {
     /// Power = number of instant and sorcery cards in the controller's
     /// graveyard (only); toughness = `base_t`. Enigma Drake (*/4).
     InstantsSorceriesInControllerGraveyard { base_t: i32 },
+    /// Power = number of noncreature, nonland cards in the controller's
+    /// graveyard; toughness = `base_t`. Dragonfly Swarm (*/3).
+    NoncreatureNonlandCardsInControllerGraveyard { base_t: i32 },
     /// Imprint CDA (CR 604.3): P/T of the creature card exiled with this
     /// permanent; printed base when nothing is exiled. Duplicant.
     ExiledWithSourcePt { base_p: i32, base_t: i32 },

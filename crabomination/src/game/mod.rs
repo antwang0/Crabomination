@@ -4850,6 +4850,12 @@ impl GameState {
                         .count() as i32;
                     (n, base_t)
                 }
+                crate::card::DynamicPt::NoncreatureNonlandCardsInControllerGraveyard { base_t } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| !c.definition.is_creature() && !c.definition.is_land())
+                        .count() as i32;
+                    (n, base_t)
+                }
                 crate::card::DynamicPt::ExiledWithSourcePt { base_p, base_t } => self
                     .exile
                     .iter()
