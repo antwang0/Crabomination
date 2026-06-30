@@ -1826,6 +1826,13 @@ impl GameState {
             c.dealt_deathtouch_damage = false;
         }
         // Remove from combat: drop it as a declared attacker and as a blocker.
+        self.remove_permanent_from_combat(id);
+    }
+
+    /// CR 506.4 — remove a permanent from combat: it stops being a declared
+    /// attacker and stops blocking anything. An attacker it was blocking
+    /// remains blocked (CR 509.1b); the permanent stays on the battlefield.
+    pub(crate) fn remove_permanent_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|atk| atk.attacker != id);
         self.block_map.remove(&id);
         self.block_map.retain(|_, atk| *atk != id);

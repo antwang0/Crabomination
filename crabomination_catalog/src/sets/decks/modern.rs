@@ -21716,6 +21716,126 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+// ── Coin-flip cycle (CR 705) ────────────────────────────────────────────────
+
+/// Mijae Djinn — {R}{R}{R} 6/3 Djinn. On attack, flip a coin; lose the flip
+/// and it's removed from combat and tapped (CR 506.4 `RemoveFromCombat`).
+pub fn mijae_djinn() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Mijae Djinn",
+        cost: cost(&[r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Djinn], ..Default::default() },
+        power: 6,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::FlipCoin {
+            count: Value::Const(1),
+            on_heads: Box::new(Effect::Noop),
+            on_tails: Box::new(Effect::Seq(vec![
+                Effect::RemoveFromCombat { what: Selector::This },
+                Effect::Tap { what: Selector::This },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ydwen Efreet — {R}{R}{R} 3/6 Efreet. On block, flip a coin; lose the flip
+/// and it's removed from combat (CR 506.4).
+pub fn ydwen_efreet() -> CardDefinition {
+    use crate::effect::shortcut::blocks;
+    CardDefinition {
+        name: "Ydwen Efreet",
+        cost: cost(&[r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Efreet], ..Default::default() },
+        power: 3,
+        toughness: 6,
+        triggered_abilities: vec![blocks(Effect::FlipCoin {
+            count: Value::Const(1),
+            on_heads: Box::new(Effect::Noop),
+            on_tails: Box::new(Effect::RemoveFromCombat { what: Selector::This }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Squee, Goblin Nabob — {2}{R} 1/1 legendary Goblin. At the beginning of your
+/// upkeep, you may return it from your graveyard to your hand.
+pub fn squee_goblin_nabob() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Squee, Goblin Nabob",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::FromYourGraveyard),
+            effect: Effect::MayDo {
+                description: "Return Squee, Goblin Nabob from your graveyard to your hand.".into(),
+                body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stitch in Time — {1}{U}{R} Sorcery. Flip a coin; win → take an extra turn.
+pub fn stitch_in_time() -> CardDefinition {
+    CardDefinition {
+        name: "Stitch in Time",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::FlipCoin {
+            count: Value::Const(1),
+            on_heads: Box::new(Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(1) }),
+            on_tails: Box::new(Effect::Noop),
+        },
+        ..Default::default()
+    }
+}
+
+/// Krark, the Thumbless — {1}{R} 2/2 legendary Goblin Wizard. Whenever you cast
+/// an instant or sorcery, flip a coin; lose → return that spell to its owner's
+/// hand, win → copy it (you may choose new targets).
+pub fn krark_the_thumbless() -> CardDefinition {
+    let is_or_sorcery = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Krark, the Thumbless",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: is_or_sorcery },
+            ),
+            effect: Effect::FlipCoin {
+                count: Value::Const(1),
+                on_heads: Box::new(Effect::CopySpellMayChooseTargets {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                }),
+                on_tails: Box::new(Effect::CounterSpellToZone {
+                    what: Selector::TriggerSource,
+                    zone: crate::effect::CounteredSpellZone::OwnerHand,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Leonin Skyhunter — {W}{W} 2/2 Cat Knight, Flying.
 pub fn leonin_skyhunter() -> CardDefinition {
     CardDefinition {

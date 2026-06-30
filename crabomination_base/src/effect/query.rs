@@ -537,6 +537,7 @@ impl Effect {
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
+            Effect::RemoveFromCombat { what } => sel_has_target(what),
         }
     }
 

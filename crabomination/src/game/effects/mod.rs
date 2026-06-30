@@ -3320,6 +3320,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveFromCombat { what } => {
+                // CR 506.4 — the picked permanents stop attacking/blocking.
+                let ids: Vec<crate::card::CardId> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    self.remove_permanent_from_combat(id);
+                }
+                Ok(())
+            }
+
             Effect::PhaseOut { what } => {
                 // CR 702.26 — collect the targeted permanents (and anything
                 // attached to them) and move them to the phased-out zone.

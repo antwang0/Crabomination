@@ -34817,6 +34817,117 @@ fn lost_coin_flip_fires_lose_trigger() {
     assert_eq!(n, 1, "losing the flip fired the lose-flip trigger");
 }
 
+// ── Coin-flip cycle (CR 705) + CR 506.4 RemoveFromCombat ────────────────────
+
+#[test]
+fn mijae_djinn_lost_flip_removed_from_combat() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::mijae_djinn());
+    g.clear_sickness(id);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // tails → lose
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.attacking.iter().any(|a| a.attacker == id),
+        "losing the flip removes Mijae Djinn from combat");
+}
+
+#[test]
+fn mijae_djinn_won_flip_stays_attacking() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::mijae_djinn());
+    g.clear_sickness(id);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // heads → win
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.attacking.iter().any(|a| a.attacker == id),
+        "winning the flip keeps Mijae Djinn attacking");
+}
+
+#[test]
+fn ydwen_efreet_lost_block_removed_from_combat() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::blade_of_the_sixth_pride()); // 3/1 vanilla
+    let blk = g.add_card_to_battlefield(0, catalog::ydwen_efreet());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }]).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // tails → lose
+    let events = g.declare_blockers(vec![(blk, atk)]).expect("block");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(!g.block_map.contains_key(&blk),
+        "losing the flip removes Ydwen Efreet from combat as a blocker");
+}
+
+#[test]
+fn squee_returns_from_graveyard_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::squee_goblin_nabob());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // MayDo yes
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Squee, Goblin Nabob"),
+        "Squee returns from the graveyard to hand at upkeep");
+}
+
+#[test]
+fn stitch_in_time_banks_extra_turn_on_win() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::stitch_in_time());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // heads
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stitch in Time castable for {1}{U}{R}");
+    drain_stack(&mut g);
+    assert!(g.players[0].extra_turns >= 1, "winning the flip banks an extra turn");
+}
+
+#[test]
+fn krark_copies_your_spell_on_won_flip() {
+    let mut g = two_player_game();
+    let _k = g.add_card_to_battlefield(0, catalog::krark_the_thumbless());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // heads → copy
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Lightning Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "Bolt + its Krark copy each deal 3");
+}
+
+#[test]
+fn krark_returns_your_spell_on_lost_flip() {
+    let mut g = two_player_game();
+    let _k = g.add_card_to_battlefield(0, catalog::krark_the_thumbless());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // tails → return
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Lightning Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "losing the flip returns the Bolt before it resolves");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "the spell is returned to its owner's hand");
+}
+
 // CR 706.6 — "Whenever you roll one or more dice" fires once per roll
 // instruction (not once per die). The synthetic listener gains 1 life.
 #[test]
