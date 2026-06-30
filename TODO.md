@@ -31,12 +31,14 @@ Hakoda, Momo. Cleared this sweep (each shipped with a reusable primitive):
 **Diligent Zookeeper** (`StaticEffect::PumpPTPerOwnCreatureType`), **Fire Lord
 Zuko** (`SelectionRequirement::EnteredFromExileThisTurn`), **Raven Eagle**
 (reused `Selector::ExiledThisResolution`), **Fatal Fissure** (`Effect::Earthbend`
-auto-picks a controlled land in delayed bodies). Deferred for want of a
-primitive:
+auto-picks a controlled land in delayed bodies), **Serpent of the Pass**
+(`StaticEffect::SelfCostReducedPerGraveyardCardMatching` + `SelfFlashIf`),
+**Earth Rumble** (multi-slot earthbend+fight), **Allies at Last**
+(`StaticEffect::SelfCostReducedPerPermanentMatching` — Affinity-for-type),
+**Honest Work** (shrink-to-1/1 aura). Deferred for want of a primitive:
 - **Bumi, King of Three Trials** — "choose up to X" modal where X is a live
-  count; `Effect::ChooseN.picks` is a fixed index list.
-- **Serpent of the Pass** — conditional flash ("you may cast as though it had
-  flash if 3+ Lessons in gy") + cost-reduced-per-noncreature-in-gy.
+  count; `Effect::ChooseN.picks` is a fixed index list. Needs a
+  `ChooseUpToN { max: Value, modes }` with per-mode target slots.
 - **Joo Dee, One of Many** — card defn drafted (Surveil 1 + `CreateTokenCopyOf`
   self + sacrifice an artifact/creature) but pulled: the deterministic test was
   flaky because the surveil's `Decision::Scry` and the sacrifice's
@@ -457,14 +459,16 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
-- **Avatar (`tla`) card backlog.** ~120 non-waterbend `set:tla` cards remain
-  unimplemented (most ride existing primitives — Ally tribal, Lessons, Raid,
-  Clues). `decks::tla` now has 80+ cards incl. the ten two-color "refuge"
-  sac-lands, Hermitic Herbalist, Firebending Student, Boomerang Basics, South
-  Pole Voyager, Gran-Gran, the Lesson/kicker/equipment/Exhaust batches, etc.
-  No remaining small-primitive blockers; remaining TLA cards are graveyard-card-
-  targeting (Raven Eagle, Boiling Rock Rioter), the Avatar planeswalker MDFCs,
-  and complex CDA anthems (Diligent Zookeeper, Earthen Ally).
+- **Avatar (`tla`) card backlog.** ~44 `set:tla` non-land cards remain (verified
+  against the *whole* catalog, not just `tla.rs`). The simple commons are all
+  implemented now — the remainder each need a non-trivial primitive: the Avatar
+  planeswalker / DFC bombs (Aang, Ozai, Koh), the quest-counter "Ascension"
+  enchantment engine (Firebender/Waterbender/Airbender Ascension), Vehicles with
+  counter-gated animation (War Balloon, Phoenix Fleet Airship), Sagas (The Cave
+  of Two Lovers), and **Bumi, King of Three Trials** (variable "choose up to X"
+  modal). Avatar Destiny needs a graveyard-scaling aura pump (extend `EquipScale`
+  with a controller-graveyard count). White Lotus Tile needs a
+  `Value::GreatestCreaturesSharingAType` for its any-color mana ability.
   - ✅ **Exhaust** activated-ability keyword (CR 702.177) — already supported via
     `ActivatedAbility.exhaust`; now used by Rebellious Captives, Rough Rhino
     Cavalry, Mai Jaded Edge.
