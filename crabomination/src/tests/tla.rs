@@ -1414,3 +1414,66 @@ fn rough_rhino_exhaust_pumps_and_tramples() {
     assert_eq!((cp.power, cp.toughness), (7, 7), "5/5 + two counters");
     assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
 }
+
+/// Path to Redemption locks down a creature, then exiles it for an Ally.
+#[test]
+fn path_to_redemption_locks_then_exiles() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::path_to_redemption());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantAttack),
+        "enchanted creature can't attack");
+    // Sacrifice the Aura to exile the creature and make an Ally.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature exiled");
+    assert_eq!(count_named(&g, 0, "Ally"), 1, "made an Ally");
+}
+
+/// Dai Li Agents earthbends twice on ETB.
+#[test]
+fn dai_li_agents_double_earthbend() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::forest());
+    let l2 = g.add_card_to_battlefield(0, catalog::forest());
+    let dla = g.add_card_to_battlefield(0, catalog::dai_li_agents());
+    g.fire_self_etb_triggers(dla, 0);
+    drain_stack(&mut g);
+    let counters: i32 = [l1, l2].iter()
+        .map(|&l| g.battlefield_find(l).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne) as i32)
+        .sum();
+    assert_eq!(counters, 2, "two earthbend counters placed");
+}
+
+/// Fire Nation Warship investigates when it dies.
+#[test]
+fn fire_nation_warship_dies_to_clue() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::fire_nation_warship());
+    let ctx = crate::game::effects::EffectContext::for_ability(ship, 0, Some(Target::Permanent(ship)));
+    g.resolve_effect(&crate::effect::Effect::Destroy { what: crate::effect::Selector::Target(0) }, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "dies → Clue");
+}
+
+/// Earth Rumble Wrestlers pumps while you control a land creature.
+#[test]
+fn earth_rumble_wrestlers_conditional_pump() {
+    let mut g = two_player_game();
+    let erw = g.add_card_to_battlefield(0, catalog::earth_rumble_wrestlers());
+    let base = g.computed_permanent(erw).unwrap();
+    assert_eq!(base.power, 3, "base 3 power");
+    assert!(!base.keywords.contains(&Keyword::Trample), "no trample at rest");
+    // A land entering under your control this turn satisfies the landfall branch.
+    g.players[0].lands_played_this_turn += 1;
+    let cp = g.computed_permanent(erw).unwrap();
+    assert_eq!(cp.power, 4, "+1/+0 after a land this turn");
+    assert!(cp.keywords.contains(&Keyword::Trample), "and trample");
+}

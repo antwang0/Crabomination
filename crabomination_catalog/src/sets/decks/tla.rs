@@ -2305,3 +2305,125 @@ pub fn rough_rhino_cavalry() -> CardDefinition {
 }
 
 // Mai, Jaded Edge already ships in `sets::eoe` (mis-filed there); reuse it.
+
+// ── Batch 5: Aura / earthbend / Vehicle / conditional anthem ───────────────
+
+/// Path to Redemption — {1}{W} Aura. Enchanted creature can't attack or block.
+/// {5}, Sacrifice this Aura: exile the enchanted creature, create a 1/1 white
+/// Ally. (Activate only as a sorcery.)
+pub fn path_to_redemption() -> CardDefinition {
+    CardDefinition {
+        name: "Path to Redemption",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+            ..Default::default()
+        }),
+        // "{5}, Sacrifice this Aura: exile enchanted creature, create an Ally."
+        // Modeled as exile-the-host first (the now-hostless Aura is put into the
+        // graveyard by the illegally-attached SBA, CR 704.5n) so the host is
+        // still readable when the effect resolves.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: Selector::AttachedTo(Box::new(Selector::This)) },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: ally_token() },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dai Li Agents — {3}{B}{G} 3/4 Human Soldier. When it enters, earthbend 1
+/// twice.
+pub fn dai_li_agents() -> CardDefinition {
+    CardDefinition {
+        name: "Dai Li Agents",
+        cost: cost(&[generic(3), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Earthbend { n: Value::ONE },
+            Effect::Earthbend { n: Value::ONE },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Fire Nation Warship — {3} Artifact Vehicle 4/4. Reach. When it dies, create
+/// a Clue. Crew 2.
+pub fn fire_nation_warship() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Nation Warship",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::Crew(2)],
+        // A Vehicle "dies" → leaves the battlefield for the graveyard (fires
+        // whether or not it was crewed when destroyed).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: investigate(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Earth Rumble Wrestlers — {3}{R/G} 3/4 Human Warrior Performer. Reach. Gets
+/// +1/+0 and trample while you control a land creature or a land entered this
+/// turn (the latter approximated by a land *played* this turn).
+pub fn earth_rumble_wrestlers() -> CardDefinition {
+    CardDefinition {
+        name: "Earth Rumble Wrestlers",
+        cost: cost(&[generic(3), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "+1/+0 and trample while you control a land creature or a land entered this turn.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::Any(vec![
+                    Predicate::SelectorExists(Selector::EachPermanent(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                    Predicate::ValueAtLeast(
+                        Value::LandsPlayedThisTurn(PlayerRef::You),
+                        Value::ONE,
+                    ),
+                ]),
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..Default::default()
+    }
+}
