@@ -10969,6 +10969,12 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByTotalPower
             // SelfCostReducedPerCreatureInGraveyard (Ghoultree) — same.
             | StaticEffect::SelfCostReducedPerCreatureInGraveyard
+            // SelfCostReducedPerGraveyardCardMatching (Serpent of the Pass) —
+            // read in `cost_reduction_for_spell`; no layer effect.
+            | StaticEffect::SelfCostReducedPerGraveyardCardMatching { .. }
+            // SelfFlashIf (Serpent of the Pass) — consulted at the cast-timing
+            // gate; no continuous-layer effect.
+            | StaticEffect::SelfFlashIf { .. }
             // SelfCostReducedIfCreatureDiedThisTurn (Bone Picker) — same.
             | StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { .. }
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.

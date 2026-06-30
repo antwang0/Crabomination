@@ -485,6 +485,18 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .count() as u32;
         reduction = reduction.saturating_add(n);
     }
+    // Card-intrinsic "costs {per} less for each [filter] card in your
+    // graveyard" (Serpent of the Pass). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerGraveyardCardMatching { filter, per } = &sa.effect {
+            let n = state.players[caster]
+                .graveyard
+                .iter()
+                .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
+                .count() as u32;
+            reduction = reduction.saturating_add(n.saturating_mul(*per));
+        }
+    }
     // Card-intrinsic "costs {amount} less if a creature died this turn" (Bone
     // Picker). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {
@@ -3812,8 +3824,19 @@ impl GameState {
         // Teferi's static (`OpponentsSorceryTimingOnly`) flips the rule for
         // opponents: even instants must wait until their main phase.
         // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment).
-        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+        // matching spells (Auras + Equipment). Serpent of the Pass — a
+        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        let flash_granted = self_flash
+            || (!self.player_locked_to_sorcery_timing(p)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -3821,7 +3844,7 @@ impl GameState {
                             crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
                                 if self.evaluate_requirement_on_card(filter, &card, p))
                     })
-            });
+            }));
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -5220,8 +5243,19 @@ impl GameState {
         // Timing: instants can be cast at instant speed, others at sorcery
         // speed. Honor Teferi-style opponent restriction.
         // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment).
-        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+        // matching spells (Auras + Equipment). Serpent of the Pass — a
+        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        let flash_granted = self_flash
+            || (!self.player_locked_to_sorcery_timing(p)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -5229,7 +5263,7 @@ impl GameState {
                             crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
                                 if self.evaluate_requirement_on_card(filter, &card, p))
                     })
-            });
+            }));
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -5517,8 +5551,19 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
         // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment).
-        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+        // matching spells (Auras + Equipment). Serpent of the Pass — a
+        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        let flash_granted = self_flash
+            || (!self.player_locked_to_sorcery_timing(p)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -5526,7 +5571,7 @@ impl GameState {
                             crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
                                 if self.evaluate_requirement_on_card(filter, &card, p))
                     })
-            });
+            }));
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -5604,8 +5649,19 @@ impl GameState {
             .effective_escape(&card, p)
             .ok_or(GameError::SorcerySpeedOnly)?;
         // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment).
-        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+        // matching spells (Auras + Equipment). Serpent of the Pass — a
+        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        let flash_granted = self_flash
+            || (!self.player_locked_to_sorcery_timing(p)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -5613,7 +5669,7 @@ impl GameState {
                             crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
                                 if self.evaluate_requirement_on_card(filter, &card, p))
                     })
-            });
+            }));
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -5715,8 +5771,19 @@ impl GameState {
             .has_flashback_tap()
             .ok_or(GameError::FlashbackTapInvalid)?;
         // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment).
-        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+        // matching spells (Auras + Equipment). Serpent of the Pass — a
+        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        let flash_granted = self_flash
+            || (!self.player_locked_to_sorcery_timing(p)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -5724,7 +5791,7 @@ impl GameState {
                             crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
                                 if self.evaluate_requirement_on_card(filter, &card, p))
                     })
-            });
+            }));
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -6029,8 +6096,19 @@ impl GameState {
         // which are sorcery-speed unless flash). We rebuild the same
         // gate `cast_spell` uses so timing matches.
         // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment).
-        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+        // matching spells (Auras + Equipment). Serpent of the Pass — a
+        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        let flash_granted = self_flash
+            || (!self.player_locked_to_sorcery_timing(p)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -6038,7 +6116,7 @@ impl GameState {
                             crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
                                 if self.evaluate_requirement_on_card(filter, &card, p))
                     })
-            });
+            }));
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed

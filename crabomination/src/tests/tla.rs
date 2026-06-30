@@ -2863,3 +2863,50 @@ fn fatal_fissure_earthbends_on_target_death() {
     assert!(g.computed_permanent(land).unwrap().card_types.contains(&crate::card::CardType::Creature),
         "land became a creature");
 }
+
+/// Serpent of the Pass costs {1} less per noncreature, nonland gy card.
+#[test]
+fn serpent_of_the_pass_cost_reduction() {
+    let mut g = two_player_game();
+    // Three noncreature, nonland cards in graveyard → {3} off {5}{U}{U}.
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::lightning_bolt()); }
+    let serp = g.add_card_to_hand(0, catalog::serpent_of_the_pass());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2); // {2}{U}{U} = reduced cost
+    g.perform_action(GameAction::CastSpell {
+        card_id: serp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at reduced cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(serp).is_some(), "Serpent resolved with the discount");
+}
+
+/// Serpent of the Pass gains flash with 3+ Lessons in the graveyard.
+#[test]
+fn serpent_of_the_pass_conditional_flash() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1; // opponent's turn → no sorcery-speed window for P0
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::combustion_technique()); } // Lessons
+    let serp = g.add_card_to_hand(0, catalog::serpent_of_the_pass());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 5);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: serp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash-cast off 3 Lessons");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(serp).is_some(), "flash let it resolve off-turn");
+}
+
+/// Without 3 Lessons, Serpent of the Pass can't be cast at instant speed.
+#[test]
+fn serpent_of_the_pass_no_flash_without_lessons() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let serp = g.add_card_to_hand(0, catalog::serpent_of_the_pass());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 5);
+    g.players[0].mana_pool.add_colorless(5);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: serp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "sorcery-speed only without the Lesson gate");
+}

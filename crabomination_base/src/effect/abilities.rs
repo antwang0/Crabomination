@@ -246,6 +246,14 @@ pub enum StaticEffect {
     /// in your graveyard" (Ghoultree). Read by `cost_reduction_for_spell` off
     /// the *spell being cast*. Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedPerCreatureInGraveyard,
+    /// Card-intrinsic "This spell costs {`per`} less to cast for each card in
+    /// your graveyard matching `filter`" — the generalized sibling of
+    /// `SelfCostReducedPerCreatureInGraveyard`. Serpent of the Pass ({1} less
+    /// per noncreature, nonland card). Generic-only; clamped by the caller.
+    SelfCostReducedPerGraveyardCardMatching {
+        filter: SelectionRequirement,
+        per: u32,
+    },
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
@@ -486,6 +494,12 @@ pub enum StaticEffect {
     /// "You may cast [filter] spells as though they had flash." Sigarda's
     /// Aid (Auras + Equipment). Consulted at the cast-timing gate.
     ControllerSpellsHaveFlash { filter: SelectionRequirement },
+    /// Card-intrinsic "You may cast this spell as though it had flash if
+    /// `condition` holds" — consulted at the cast-timing gate against the
+    /// card being cast (not a battlefield permanent). Serpent of the Pass's
+    /// "if 3+ Lessons in your graveyard". `condition` is evaluated from the
+    /// caster's perspective.
+    SelfFlashIf { condition: crate::effect::Predicate },
     /// "Each instant and sorcery card in your graveyard has flashback. The
     /// flashback cost is equal to that card's mana cost." Lier, Disciple of
     /// the Drowned. Consulted by the flashback-cast path and surfaced in the

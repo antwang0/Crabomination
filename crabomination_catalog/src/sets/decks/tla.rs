@@ -4438,6 +4438,44 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Serpent of the Pass — {5}{U}{U} 6/5 Serpent. Costs {1} less per noncreature,
+/// nonland card in your graveyard; you may cast it as though it had flash if
+/// there are 3+ Lesson cards in your graveyard.
+pub fn serpent_of_the_pass() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Serpent of the Pass",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        static_abilities: vec![
+            StaticAbility {
+                description: "This spell costs {1} less to cast for each noncreature, nonland card in your graveyard.",
+                effect: StaticEffect::SelfCostReducedPerGraveyardCardMatching {
+                    filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land))),
+                    per: 1,
+                },
+            },
+            StaticAbility {
+                description: "You may cast this spell as though it had flash if there are 3+ Lesson cards in your graveyard.",
+                effect: StaticEffect::SelfFlashIf {
+                    condition: Predicate::ValueAtLeast(
+                        Value::CardsInGraveyardMatching {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                        },
+                        Value::Const(3),
+                    ),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fatal Fissure — {1}{B} Instant. Choose target creature; when it dies this
 /// turn, you earthbend 4 (the delayed body auto-picks a land you control).
 pub fn fatal_fissure() -> CardDefinition {
