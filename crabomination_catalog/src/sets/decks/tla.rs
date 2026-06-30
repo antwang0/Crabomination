@@ -4392,6 +4392,150 @@ pub fn hakoda_selfless_commander() -> CardDefinition {
     }
 }
 
+/// Obsessive Pursuit — {1}{B} Enchantment. ETB and at each upkeep: lose 1 life,
+/// make a Clue. Whenever you attack, put X +1/+1 counters on target attacking
+/// creature (X = permanents you've sacrificed this turn); at X≥3 it gains
+/// lifelink.
+pub fn obsessive_pursuit() -> CardDefinition {
+    let drain_clue = || Effect::Seq(vec![
+        Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+        investigate(1),
+    ]);
+    CardDefinition {
+        name: "Obsessive Pursuit",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(drain_clue()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: drain_clue(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::IsAttacking),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::PermanentsSacrificedThisTurn(PlayerRef::You),
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::PermanentsSacrificedThisTurn(PlayerRef::You),
+                            Value::Const(3),
+                        ),
+                        then: Box::new(Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Lifelink,
+                            duration: Duration::EndOfTurn,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Combustion Man — {3}{R}{R} 4/6 Legendary Human Assassin. Whenever he
+/// attacks, destroy target permanent unless its controller takes damage equal
+/// to his power. (Punisher cost modeled as life loss = his power.)
+pub fn combustion_man() -> CardDefinition {
+    CardDefinition {
+        name: "Combustion Man",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 6,
+        triggered_abilities: vec![on_attack(Effect::UnlessPlayerPays {
+            who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+            cost: crate::card::WardCost::LifeSourcePower,
+            then: Box::new(Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Permanent),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Teo, Spirited Glider — {3}{U} 1/4 Legendary Human Pilot Ally. Flying.
+/// Whenever one or more creatures you control with flying attack, loot 1; if a
+/// nonland card was discarded that way, put a +1/+1 counter on target creature
+/// you control.
+pub fn teo_spirited_glider() -> CardDefinition {
+    CardDefinition {
+        name: "Teo, Spirited Glider",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
+                Predicate::AttackedWithCreatureMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::If {
+                    cond: Predicate::DiscardedNonlandThisEffect { who: PlayerRef::You },
+                    then: Box::new(Effect::AddCounter {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bitter Work — {1}{R}{G} Enchantment. Whenever you attack with one or more
+/// creatures of power 4+, draw a card. Exhaust — {4}: Earthbend 4 (your turn).
+pub fn bitter_work() -> CardDefinition {
+    CardDefinition {
+        name: "Bitter Work",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
+                Predicate::AttackedWithCreatureMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::PowerAtLeast(4),
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            exhaust: true,
+            sorcery_speed: true,
+            effect: Effect::Earthbend { n: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Momo, Friendly Flier — {W} 1/1 Legendary Lemur Bat Ally. Flying; whenever
 /// another creature you control with flying enters, Momo gets +1/+1 until end
 /// of turn. (The "first flyer each turn costs {1} less" rider is omitted —

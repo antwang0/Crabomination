@@ -1087,6 +1087,11 @@ pub enum Predicate {
     /// attackers. Battle Cry Goblin's "if you attacked with creatures with
     /// total power 6 or greater this combat".
     AttackedWithTotalPowerAtLeast { who: PlayerRef, at_least: u32 },
+    /// `who` declared one or more attackers this combat matching `filter`.
+    /// Reads `GameState.attacking`; `false` outside a combat with declared
+    /// attackers. Gates "Whenever you attack with one or more creatures with
+    /// flying / power 4+" triggers (Teo, Spirited Glider; Bitter Work).
+    AttackedWithCreatureMatching { who: PlayerRef, filter: SelectionRequirement },
     /// CR 700.13 — `who` has committed a crime this turn. Backed by
     /// `Player.committed_crime_this_turn`. Powers "as long as / if you've
     /// committed a crime this turn" riders (Nimble Brigand's evasion).

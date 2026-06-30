@@ -2613,3 +2613,84 @@ fn momo_grows_on_flyer_entering() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(momo).unwrap().power, 2, "ground creature doesn't trigger");
 }
+
+/// Obsessive Pursuit drains 1 and makes a Clue on ETB.
+#[test]
+fn obsessive_pursuit_etb_drain_clue() {
+    let mut g = two_player_game();
+    let op = g.add_card_to_battlefield(0, catalog::obsessive_pursuit());
+    let life = g.players[0].life;
+    g.fire_self_etb_triggers(op, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "made a Clue");
+}
+
+/// Obsessive Pursuit puts X counters (X = permanents sacrificed) on an
+/// attacker, with lifelink at X≥3.
+#[test]
+fn obsessive_pursuit_attack_counters_and_lifelink() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::obsessive_pursuit());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].permanents_sacrificed_this_turn = 3;
+    attack_with(&mut g, bear);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 3,
+        "3 counters = 3 permanents sacrificed");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink),
+        "X≥3 grants lifelink");
+}
+
+/// Combustion Man destroys the target unless its controller pays life = his
+/// power; the AutoDecider declines, so the permanent dies.
+#[test]
+fn combustion_man_destroys_when_unpaid() {
+    let mut g = two_player_game();
+    let cm = g.add_card_to_battlefield(0, catalog::combustion_man());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    attack_with(&mut g, cm);
+    assert!(g.battlefield_find(victim).is_none(), "target destroyed (life unpaid)");
+}
+
+/// Teo loots when a flyer attacks and adds a counter when a nonland is pitched.
+#[test]
+fn teo_loots_and_counters_on_nonland_discard() {
+    let mut g = two_player_game();
+    let teo = g.add_card_to_battlefield(0, catalog::teo_spirited_glider());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // nonland to draw then pitch
+    attack_with(&mut g, teo); // Teo has flying
+    assert_eq!(g.battlefield_find(teo).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
+        "nonland discard adds a counter");
+}
+
+/// Bitter Work draws when you attack with a power-4+ creature.
+#[test]
+fn bitter_work_draws_on_big_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bitter_work());
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 flyer
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::forest());
+    attack_with(&mut g, big);
+    assert_eq!(g.players[0].hand.len(), 1, "drew a card off the power-4 attacker");
+}
+
+/// Bitter Work's Exhaust earthbends 4 onto a land, once per game.
+#[test]
+fn bitter_work_exhaust_earthbends() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bw = g.add_card_to_battlefield(0, catalog::bitter_work());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bw, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(land)),
+        additional_targets: vec![], x_value: None,
+    }).expect("earthbend");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 4,
+        "earthbend 4 counters");
+}
