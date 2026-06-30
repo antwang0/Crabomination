@@ -2251,3 +2251,84 @@ pub fn bumi_bash() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 4: Exhaust (CR 702.177) ──────────────────────────────────────────
+
+/// Rebellious Captives — {1}{G} 2/2 Human Peasant Ally. Exhaust — {6}: put two
+/// +1/+1 counters on this creature, then earthbend 2.
+pub fn rebellious_captives() -> CardDefinition {
+    CardDefinition {
+        name: "Rebellious Captives",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Peasant, CreatureType::Ally]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                Effect::Earthbend { n: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rough Rhino Cavalry — {4}{R} 5/5 Human Mercenary. Firebending 2. Exhaust —
+/// {8}: put two +1/+1 counters on this creature; it gains trample.
+pub fn rough_rhino_cavalry() -> CardDefinition {
+    CardDefinition {
+        name: "Rough Rhino Cavalry",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Firebending(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mai, Jaded Edge — {1}{R} 1/3 legendary Human Noble. Prowess. Exhaust — {3}:
+/// put a double strike counter on Mai.
+pub fn mai_jaded_edge() -> CardDefinition {
+    CardDefinition {
+        name: "Mai, Jaded Edge",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Prowess],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            exhaust: true,
+            effect: Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::DoubleStrike,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

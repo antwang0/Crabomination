@@ -1354,3 +1354,63 @@ fn bumi_bash_burns_for_lands() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(foe).unwrap().damage, 3, "3 lands → 3 damage");
 }
+
+/// Exhaust (CR 702.177): Rebellious Captives' Exhaust ability buffs and
+/// earthbends once, then can't be used again.
+#[test]
+fn rebellious_captives_exhaust_once() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest()); // earthbend target
+    let rc = g.add_card_to_battlefield(0, catalog::rebellious_captives());
+    g.clear_sickness(rc);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("first activation");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rc).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2,
+        "two +1/+1 counters");
+    // Second activation is illegal — Exhaust is once per game.
+    g.players[0].mana_pool.add_colorless(6);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: rc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "Exhaust can't fire twice");
+}
+
+/// Mai, Jaded Edge's Exhaust grants a double strike counter (CR 122 keyword
+/// counter + 702.4).
+#[test]
+fn mai_exhaust_grants_double_strike() {
+    let mut g = two_player_game();
+    let mai = g.add_card_to_battlefield(0, catalog::mai_jaded_edge());
+    g.clear_sickness(mai);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mai, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(mai).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "double strike counter grants the keyword");
+}
+
+/// Rough Rhino Cavalry's Exhaust pumps it and grants trample.
+#[test]
+fn rough_rhino_exhaust_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let rr = g.add_card_to_battlefield(0, catalog::rough_rhino_cavalry());
+    g.clear_sickness(rr);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(rr).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "5/5 + two counters");
+    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+}

@@ -419,12 +419,15 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 - **Avatar (`tla`) card backlog.** ~120 non-waterbend `set:tla` cards remain
   unimplemented (most ride existing primitives — Ally tribal, Lessons, Raid,
-  Clues). `decks::tla` now has 69 cards incl. the ten two-color "refuge"
-  sac-lands (`tla_sac_land`), Hermitic Herbalist (Lesson-only mana),
-  Firebending Student, Boomerang Basics, South Pole Voyager, and Gran-Gran.
-  Still need small primitives:
-  - **Exhaust** activated-ability keyword (CR 702-adjacent, MH3/TLA) — Hog-Monkey
-    and Wan Shi Tong drop their Exhaust abilities for now.
+  Clues). `decks::tla` now has 80+ cards incl. the ten two-color "refuge"
+  sac-lands, Hermitic Herbalist, Firebending Student, Boomerang Basics, South
+  Pole Voyager, Gran-Gran, the Lesson/kicker/equipment/Exhaust batches, etc.
+  No remaining small-primitive blockers; remaining TLA cards are graveyard-card-
+  targeting (Raven Eagle, Boiling Rock Rioter), the Avatar planeswalker MDFCs,
+  and complex CDA anthems (Diligent Zookeeper, Earthen Ally).
+  - ✅ **Exhaust** activated-ability keyword (CR 702.177) — already supported via
+    `ActivatedAbility.exhaust`; now used by Rebellious Captives, Rough Rhino
+    Cavalry, Mai Jaded Edge.
   - ✅ **"second time this resolved this turn → draw"** rider (South Pole Voyager)
     — `EscalatingThisTurn { modes: [Noop, Draw, Noop] }` (per-source, 2nd only).
   - ✅ **Conditional player-wide cost reduction gated on a graveyard count**
