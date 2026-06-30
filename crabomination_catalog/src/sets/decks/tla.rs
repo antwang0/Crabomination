@@ -3,11 +3,12 @@
 //! `crabomination/src/tests/tla.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, ExileReturnZone, Keyword, LandType, Predicate, SelectionRequirement,
-    Selector, SpellSubtype, StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility,
-    Value, Zone,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EnchantmentSubtype,
+    EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, LandType, Predicate,
+    SelectionRequirement, Selector, SpellSubtype, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value, Zone,
 };
+use crabomination_base::tokens::food_token;
 use crate::effect::shortcut::{etb, investigate, on_attack, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
@@ -848,6 +849,467 @@ pub fn great_divide_guide() -> CardDefinition {
                 ability: super::super::tap_add_any_color(),
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── Avatar (TLA) wave — Allies, Shrines, Firebending, draw-matters ──────────
+
+/// Gather the White Lotus — {4}{W} Sorcery. Make a 1/1 white Ally for each
+/// Plains you control, then scry 2.
+pub fn gather_the_white_lotus() -> CardDefinition {
+    CardDefinition {
+        name: "Gather the White Lotus",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                    filter: SelectionRequirement::HasLandType(LandType::Plains),
+                },
+                definition: ally_token(),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Momo, Playful Pet — {W} 1/1 legendary Lemur Bat Ally. Flying, vigilance.
+/// When it leaves the battlefield, choose one — make a Food, or put a +1/+1
+/// counter on target creature.
+pub fn momo_playful_pet() -> CardDefinition {
+    CardDefinition {
+        name: "Momo, Playful Pet",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: ally(&[CreatureType::Lemur, CreatureType::Bat, CreatureType::Ally]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseN {
+                picks: vec![0],
+                modes: vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: food_token(),
+                    },
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rabaroo Troop — {3}{W}{W} 3/5 Rabbit Kangaroo. Landfall: gains flying until
+/// end of turn and you gain 1 life. Plainscycling {2}.
+pub fn rabaroo_troop() -> CardDefinition {
+    CardDefinition {
+        name: "Rabaroo Troop",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Kangaroo],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Landcycling(
+            ManaCost::new(vec![ManaSymbol::Generic(2)]),
+            LandType::Plains,
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tiger-Seal — {U} 3/3 Cat Seal. Vigilance. Taps itself each upkeep; untaps
+/// when you draw your second card each turn.
+pub fn tiger_seal() -> CardDefinition {
+    CardDefinition {
+        name: "Tiger-Seal",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Seal],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::Tap { what: Selector::This },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                    .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                    .once_per_turn(),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Spirit Oasis — {2}{U} legendary Shrine. ETB: draw a card per Shrine you
+/// control. Whenever another Shrine you control enters, draw a card.
+pub fn the_spirit_oasis() -> CardDefinition {
+    CardDefinition {
+        name: "The Spirit Oasis",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Shrine],
+            ..Default::default()
+        },
+        triggered_abilities: vec![
+            etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                    filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
+                },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasEnchantmentSubtype(
+                            EnchantmentSubtype::Shrine,
+                        ),
+                    }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Northern Air Temple — {B} legendary Shrine. ETB: each opponent loses X and
+/// you gain X, X = Shrines you control. Whenever another Shrine enters, drain 1.
+pub fn northern_air_temple() -> CardDefinition {
+    let shrines = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
+    };
+    CardDefinition {
+        name: "Northern Air Temple",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Shrine],
+            ..Default::default()
+        },
+        triggered_abilities: vec![
+            etb(Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: shrines(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasEnchantmentSubtype(
+                            EnchantmentSubtype::Shrine,
+                        ),
+                    }),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Epic Downfall — {1}{B} Sorcery. Exile target creature with mana value 3 or
+/// greater.
+pub fn epic_downfall() -> CardDefinition {
+    CardDefinition {
+        name: "Epic Downfall",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtLeast(3)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Callous Inspector — {B} 1/1 Human Soldier. Menace. When it dies, it deals 1
+/// damage to you and you investigate.
+pub fn callous_inspector() -> CardDefinition {
+    CardDefinition {
+        name: "Callous Inspector",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![on_dies(Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::You, amount: Value::ONE },
+            investigate(1),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Canyon Crawler — {4}{B}{B} 6/6 Spider Beast. Deathtouch. ETB: make a Food.
+/// Swampcycling {2}.
+pub fn canyon_crawler() -> CardDefinition {
+    CardDefinition {
+        name: "Canyon Crawler",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Deathtouch,
+            Keyword::Landcycling(ManaCost::new(vec![ManaSymbol::Generic(2)]), LandType::Swamp),
+        ],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: food_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Foggy Swamp Hunters — {3}{B} 3/4 Human Ranger Ally. Has lifelink and menace
+/// as long as you've drawn two or more cards this turn.
+pub fn foggy_swamp_hunters() -> CardDefinition {
+    let while_drew2 = |kw: Keyword| StaticAbility {
+        description: "Lifelink and menace while you've drawn two or more cards this turn.",
+        effect: StaticEffect::SelfHasKeywordWhile {
+            keyword: kw,
+            condition: SelectionRequirement::ControllerDrewAtLeastThisTurn(2),
+        },
+    };
+    CardDefinition {
+        name: "Foggy Swamp Hunters",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Ranger]),
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![while_drew2(Keyword::Lifelink), while_drew2(Keyword::Menace)],
+        ..Default::default()
+    }
+}
+
+/// June, Bounty Hunter — {1}{B} 2/2 legendary Human Mercenary. Can't be blocked
+/// while you've drawn two or more cards this turn. {1}, Sacrifice another
+/// creature: investigate. (Activate as a sorcery — approximates "during your
+/// turn.")
+pub fn june_bounty_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "June, Bounty Hunter",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Can't be blocked while you've drawn two or more cards this turn.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Unblockable,
+                condition: SelectionRequirement::ControllerDrewAtLeastThisTurn(2),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sorcery_speed: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: investigate(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fire Sages — {1}{R} 2/2 Human Cleric. Firebending 1. {1}{R}{R}: put a +1/+1
+/// counter on this creature.
+pub fn fire_sages() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Sages",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Firebending(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r(), r()]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Azula, On the Hunt — {3}{B} 4/3 legendary Human Noble. Firebending 2. When
+/// it attacks, you lose 1 life and investigate.
+pub fn azula_on_the_hunt() -> CardDefinition {
+    CardDefinition {
+        name: "Azula, On the Hunt",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Firebending(2)],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            investigate(1),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Earth King's Lieutenant — {G}{W} 1/1 Human Soldier Ally. Trample. ETB: put a
+/// +1/+1 counter on each other Ally you control. Whenever another Ally enters,
+/// put a +1/+1 counter on this creature.
+pub fn earth_kings_lieutenant() -> CardDefinition {
+    let other_ally = || {
+        SelectionRequirement::HasCreatureType(CreatureType::Ally)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource)
+    };
+    CardDefinition {
+        name: "Earth King's Lieutenant",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: ally(&[CreatureType::Human, CreatureType::Soldier]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: Selector::EachPermanent(other_ally()),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: other_ally(),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sandbenders' Storm — {3}{W} Instant. Choose one — destroy target creature
+/// with power 4 or greater; or earthbend 3.
+pub fn sandbenders_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Sandbenders' Storm",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                },
+                Effect::Earthbend { n: Value::Const(3) },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Airbender's Reversal — {1}{W} Instant (Lesson). Choose one — destroy target
+/// attacking creature; or airbend target creature you control.
+pub fn airbenders_reversal() -> CardDefinition {
+    CardDefinition {
+        name: "Airbender's Reversal",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                    ),
+                },
+                Effect::Airbend {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
+            ],
+        },
         ..Default::default()
     }
 }

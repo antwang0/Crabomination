@@ -1435,6 +1435,15 @@ impl GameState {
                     .count();
                 count >= *n as usize
             }
+            R::ControllerDrewAtLeastThisTurn(n) => {
+                let owner = match target {
+                    Target::Permanent(cid) => {
+                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                    }
+                    Target::Player(p) => *p,
+                };
+                self.players[owner].cards_drawn_this_turn >= *n
+            }
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Look on the battlefield first; fall through to graveyards,
@@ -1839,6 +1848,9 @@ impl GameState {
                     .filter(|c| c.definition.is_permanent())
                     .count()
                     >= *n as usize
+            }
+            R::ControllerDrewAtLeastThisTurn(n) => {
+                self.players[controller].cards_drawn_this_turn >= *n
             }
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),

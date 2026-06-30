@@ -533,3 +533,204 @@ fn great_divide_guide_grants_mana_ability() {
     assert!(!g.granted_abilities_for(ally).is_empty(), "Ally granted a mana ability");
     assert!(g.granted_abilities_for(nonally).is_empty(), "non-Ally creature unchanged");
 }
+
+/// Gather the White Lotus mints one Ally per Plains.
+#[test]
+fn gather_white_lotus_scales_with_plains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::plains());
+    let gw = g.add_card_to_hand(0, catalog::gather_the_white_lotus());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Ally"), 3, "three Plains → three Allies");
+}
+
+/// Momo's leave-the-battlefield trigger (default mode) makes a Food.
+#[test]
+fn momo_playful_pet_ltb_makes_food() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::momo_playful_pet());
+    // Sacrifice/destroy it to trigger the LTB.
+    g.remove_to_graveyard_with_triggers(m);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "Food minted on LTB");
+}
+
+/// Tiger-Seal untaps when you draw your second card each turn.
+#[test]
+fn tiger_seal_untaps_on_second_draw() {
+    let mut g = two_player_game();
+    let ts = g.add_card_to_battlefield(0, catalog::tiger_seal());
+    g.battlefield_find_mut(ts).unwrap().tapped = true;
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev); // first
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ts).unwrap().tapped, "still tapped after one draw");
+    let mut ev2 = vec![];
+    g.draw_one(0, &mut ev2); // second
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(ts).unwrap().tapped, "untapped on second draw");
+}
+
+/// The Spirit Oasis draws one card per Shrine you control.
+#[test]
+fn spirit_oasis_draws_per_shrine() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::northern_air_temple()); // another Shrine
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let hand = g.players[0].hand.len();
+    let so = g.add_card_to_battlefield(0, catalog::the_spirit_oasis());
+    g.fire_self_etb_triggers(so, 0);
+    drain_stack(&mut g);
+    // Two Shrines on the battlefield → draw 2.
+    assert_eq!(g.players[0].hand.len(), hand + 2, "draws per Shrine");
+}
+
+/// Northern Air Temple drains X = number of Shrines on ETB.
+#[test]
+fn northern_air_temple_drains_per_shrine() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_spirit_oasis()); // another Shrine
+    let life = g.players[1].life;
+    let nat = g.add_card_to_battlefield(0, catalog::northern_air_temple());
+    g.fire_self_etb_triggers(nat, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "two Shrines → drain 2");
+}
+
+/// Epic Downfall exiles a creature with mana value 3 or greater.
+#[test]
+fn epic_downfall_exiles_big_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // MV 6
+    let ed = g.add_card_to_hand(0, catalog::epic_downfall());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ed, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "exiled");
+    assert!(g.exile.iter().any(|c| c.id == foe), "in exile, not graveyard");
+}
+
+/// Callous Inspector pings its controller and investigates on death.
+#[test]
+fn callous_inspector_dies_pings_and_clues() {
+    let mut g = two_player_game();
+    let ci = g.add_card_to_battlefield(0, catalog::callous_inspector());
+    let life = g.players[0].life;
+    g.remove_to_graveyard_with_triggers(ci);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "1 damage to you");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "made a Clue");
+}
+
+/// Canyon Crawler makes a Food on ETB.
+#[test]
+fn canyon_crawler_makes_food() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::canyon_crawler());
+    g.fire_self_etb_triggers(cc, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"));
+}
+
+/// Foggy Swamp Hunters gains lifelink and menace once you've drawn two cards.
+#[test]
+fn foggy_swamp_hunters_keywords_after_two_draws() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_battlefield(0, catalog::foggy_swamp_hunters());
+    g.players[0].cards_drawn_this_turn = 1;
+    let kws = g.computed_permanent(f).unwrap().keywords;
+    assert!(!kws.contains(&Keyword::Lifelink) && !kws.contains(&Keyword::Menace), "off at 1 draw");
+    g.players[0].cards_drawn_this_turn = 2;
+    let kws = g.computed_permanent(f).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Lifelink) && kws.contains(&Keyword::Menace), "on at 2 draws");
+}
+
+/// June is unblockable once you've drawn two cards this turn.
+#[test]
+fn june_unblockable_after_two_draws() {
+    let mut g = two_player_game();
+    let j = g.add_card_to_battlefield(0, catalog::june_bounty_hunter());
+    g.players[0].cards_drawn_this_turn = 2;
+    assert!(g.computed_permanent(j).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+/// Fire Sages grows with its +1/+1 counter ability.
+#[test]
+fn fire_sages_grows_with_counter() {
+    let mut g = two_player_game();
+    let fs = g.add_card_to_battlefield(0, catalog::fire_sages());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fs, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(fs).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + counter = 3/3");
+}
+
+/// Earth King's Lieutenant counters every other Ally on ETB.
+#[test]
+fn earth_kings_lieutenant_counters_allies() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::kyoshi_warriors()); // an Ally, 3/3
+    let ekl = g.add_card_to_battlefield(0, catalog::earth_kings_lieutenant());
+    g.fire_self_etb_triggers(ekl, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 4, "+1/+1 on the other Ally");
+}
+
+/// Sandbenders' Storm's default mode destroys a power-4 creature.
+#[test]
+fn sandbenders_storm_destroys_big_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    let ss = g.add_card_to_hand(0, catalog::sandbenders_storm());
+    ready0(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ss, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "destroyed");
+}
+
+/// Azula, On the Hunt loses 1 life and investigates on attack.
+#[test]
+fn azula_on_the_hunt_attack_drains_and_clues() {
+    let mut g = two_player_game();
+    let az = g.add_card_to_battlefield(0, catalog::azula_on_the_hunt());
+    let life = g.players[0].life;
+    attack_with(&mut g, az);
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "made a Clue");
+}
+
+/// Rabaroo Troop gains flying and a life on landfall.
+#[test]
+fn rabaroo_troop_landfall_flies() {
+    let mut g = two_player_game();
+    let rt = g.add_card_to_battlefield(0, catalog::rabaroo_troop());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    ready0(&mut g);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(rt).unwrap().keywords.contains(&Keyword::Flying), "gained flying");
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life");
+}

@@ -109,6 +109,8 @@ pub enum CreatureType {
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
     Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum,
+    // The Last Airbender (2026).
+    Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).
     Capybara,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
@@ -1427,6 +1429,11 @@ pub enum SelectionRequirement {
     /// long as there are eight or more permanent cards in your graveyard"
     /// (Watertight Gondola), and as a generic gate for Descend payoffs.
     ControllerDescend(u32),
+    /// True when the candidate's controller has drawn N or more cards this turn
+    /// (CR 121 — `Player.cards_drawn_this_turn`). Used as the `condition` of a
+    /// `SelfHasKeywordWhile` for "as long as you've drawn two or more cards this
+    /// turn" grants (Foggy Swamp Hunters' lifelink/menace, June's unblockable).
+    ControllerDrewAtLeastThisTurn(u32),
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
