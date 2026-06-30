@@ -1382,6 +1382,16 @@ impl GameState {
 
     // ── Requirement evaluation (unchanged API) ──────────────────────────────
 
+    /// Last-known-information-aware power of `src`: its live battlefield power
+    /// if present, else the `leaves_bf_lki` snapshot of a just-died source.
+    /// Powers source-power-relative filters that resolve in a death trigger.
+    pub(crate) fn source_power_lki(&self, src: CardId) -> Option<i32> {
+        if let Some(c) = self.battlefield_find(src) {
+            return Some(c.power());
+        }
+        self.leaves_bf_lki.get(&src).map(|snap| snap.power())
+    }
+
     pub(crate) fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
@@ -1739,6 +1749,9 @@ impl GameState {
                     R::ManaValueAtMostCastManaSpent => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
+                    R::ManaValueAtMostSourcePower => source
+                        .and_then(|s| self.source_power_lki(s))
+                        .is_some_and(|pw| card.definition.cost.cmc() as i32 <= pw),
                     R::InGraveyard => self
                         .players
                         .iter()
@@ -1947,7 +1960,7 @@ impl GameState {
             }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
             // `CastManaSpent` is source-relative; no source here, so vacuous.
-            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent => false,
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,

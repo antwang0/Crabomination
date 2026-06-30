@@ -1327,6 +1327,11 @@ pub enum SelectionRequirement {
     /// Astelli Reclaimer's "with mana value X or less, where X is the amount of
     /// mana spent to cast this".
     ManaValueAtMostCastManaSpent,
+    /// Mana value ≤ the source permanent's power, read last-known-information
+    /// aware (battlefield power first, then the `leaves_bf_lki` snapshot of a
+    /// dying source). Sandbender Scavengers' "return a creature with mana value
+    /// ≤ this creature's power" reflexive death reanimation.
+    ManaValueAtMostSourcePower,
     /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.

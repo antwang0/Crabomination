@@ -4438,6 +4438,48 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Sandbender Scavengers — {W}{B} 1/1 Human Rogue. Whenever you sacrifice
+/// another permanent, grow it. When it dies, you may exile it; if you do,
+/// reanimate a creature card with mana value ≤ its (last-known) power.
+pub fn sandbender_scavengers() -> CardDefinition {
+    CardDefinition {
+        name: "Sandbender Scavengers",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::AnotherOfYours),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            on_dies(Effect::MayDo {
+                description: "Exile Sandbender Scavengers, then return a creature card with mana value ≤ its power.".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::InYourGraveyard)
+                                .and(SelectionRequirement::ManaValueAtMostSourcePower),
+                        ),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ])),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Combustion Man — {3}{R}{R} 4/6 Legendary Human Assassin. Whenever he
 /// attacks, destroy target permanent unless its controller takes damage equal
 /// to his power. (Punisher cost modeled as life loss = his power.)

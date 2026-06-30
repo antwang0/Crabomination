@@ -2694,3 +2694,44 @@ fn bitter_work_exhaust_earthbends() {
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 4,
         "earthbend 4 counters");
 }
+
+/// Sandbender Scavengers grows when you sacrifice another permanent.
+#[test]
+fn sandbender_grows_on_sacrifice() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let sb = g.add_card_to_battlefield(0, catalog::sandbender_scavengers());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(sb, 0, None);
+    let evs = g.resolve_effect(
+        &Effect::Sacrifice {
+            who: Selector::You,
+            count: Value::Const(1),
+            filter: crate::card::SelectionRequirement::Creature
+                .and(crate::card::SelectionRequirement::OtherThanSource),
+        },
+        &ctx,
+    ).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sb).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
+        "grew from the sacrifice");
+}
+
+/// Sandbender Scavengers reanimates a creature with MV ≤ its last-known power.
+#[test]
+fn sandbender_reanimates_on_death() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let sb = g.add_card_to_battlefield(0, catalog::sandbender_scavengers());
+    g.battlefield_find_mut(sb).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 2); // power 3
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2 ≤ 3
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),               // yes, exile + reanimate
+        DecisionAnswer::Target(crate::game::types::Target::Permanent(bears)),
+    ]));
+    g.remove_to_graveyard_with_triggers(sb);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "MV-2 creature reanimated");
+    assert!(g.exile.iter().any(|c| c.id == sb), "Sandbender exiled itself");
+}
