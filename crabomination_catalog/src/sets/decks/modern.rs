@@ -20727,31 +20727,108 @@ pub fn pyrite_spellbomb() -> CardDefinition {
     }
 }
 
-/// Build a "Diamond" mana rock: {2} Artifact, enters tapped, {T}: add `color`.
-fn diamond(name: &'static str, color: Color) -> CardDefinition {
+/// Meteorite — {5} Artifact. ETB: deal 2 to any target. {T}: add one mana of
+/// any color.
+pub fn meteorite() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_any};
     CardDefinition {
-        name,
-        cost: cost(&[generic(2)]),
+        name: "Meteorite",
+        cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
-        static_abilities: vec![StaticAbility {
-            description: "Enters the battlefield tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
-        }],
-        activated_abilities: vec![crate::catalog::sets::tap_add(color)],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_any(), amount: Value::Const(2),
+        })],
+        activated_abilities: vec![crate::catalog::sets::tap_add_any_color()],
         ..Default::default()
     }
 }
 
-/// Marble Diamond — {2} Artifact, enters tapped. {T}: Add {W}.
-pub fn marble_diamond() -> CardDefinition { diamond("Marble Diamond", Color::White) }
-/// Sky Diamond — {2} Artifact, enters tapped. {T}: Add {U}.
-pub fn sky_diamond() -> CardDefinition { diamond("Sky Diamond", Color::Blue) }
-/// Charcoal Diamond — {2} Artifact, enters tapped. {T}: Add {B}.
-pub fn charcoal_diamond() -> CardDefinition { diamond("Charcoal Diamond", Color::Black) }
-/// Fire Diamond — {2} Artifact, enters tapped. {T}: Add {R}.
-pub fn fire_diamond() -> CardDefinition { diamond("Fire Diamond", Color::Red) }
-/// Moss Diamond — {2} Artifact, enters tapped. {T}: Add {G}.
-pub fn moss_diamond() -> CardDefinition { diamond("Moss Diamond", Color::Green) }
+/// Basilisk Collar — {1} Equipment. Equipped creature has deathtouch and
+/// lifelink. Equip {2}.
+pub fn basilisk_collar() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Basilisk Collar",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Hammer of Bogardan — {1}{R}{R} Sorcery. Deals 3 to any target. {2}{R}{R}{R},
+/// during your upkeep only: return it from your graveyard to your hand.
+pub fn hammer_of_bogardan() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_any;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Hammer of Bogardan",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r(), r(), r()]),
+            from_graveyard: true,
+            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stalking Stones — Land. {T}: add {C}. {6}: becomes a 3/3 Elemental artifact
+/// creature that's still a land (indefinitely).
+pub fn stalking_stones() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Stalking Stones",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(6)]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![],
+                    duration: Duration::Permanent,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mind's Eye — {5} Artifact. Whenever an opponent draws a card, you may pay
+/// {1}. If you do, draw a card.
+pub fn minds_eye() -> CardDefinition {
+    CardDefinition {
+        name: "Mind's Eye",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::MayPay {
+                description: "Pay {1} to draw a card (Mind's Eye).".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
 
 /// Pristine Talisman — {3} Artifact. {T}: Add {C}. You gain 1 life.
 pub fn pristine_talisman() -> CardDefinition {

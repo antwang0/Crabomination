@@ -35041,6 +35041,81 @@ fn fiery_gambit_lost_flip_does_nothing() {
 // ── Utility artifacts ───────────────────────────────────────────────────────
 
 #[test]
+fn meteorite_etb_pings_and_taps_for_any_color() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let id = g.add_card_to_battlefield(0, catalog::meteorite());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "ETB deals 2 to any target");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "{{T}}: add one mana of any color");
+}
+
+#[test]
+fn basilisk_collar_grants_deathtouch_and_lifelink() {
+    let mut g = two_player_game();
+    let collar = g.add_card_to_battlefield(0, catalog::basilisk_collar());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: collar, target: bear }).expect("equip {2}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::Deathtouch), "deathtouch granted");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Lifelink), "lifelink granted");
+}
+
+#[test]
+fn hammer_of_bogardan_recurs_from_graveyard_at_upkeep() {
+    let mut g = two_player_game();
+    let hammer = g.add_card_to_graveyard(0, catalog::hammer_of_bogardan());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Outside your upkeep the recur ability is illegal.
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 { g.players[0].mana_pool.add(Color::Red, 1); }
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: hammer, ability_index: 0, target: None, x_value: None }).is_err(),
+        "recur is upkeep-only");
+    g.step = TurnStep::Upkeep;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hammer, ability_index: 0, target: None, x_value: None }).expect("recur at upkeep");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == hammer), "Hammer returns to hand");
+}
+
+#[test]
+fn stalking_stones_animates_into_a_3_3() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::stalking_stones());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None }).expect("animate for {6}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature), "becomes a creature");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "a 3/3 Elemental");
+}
+
+#[test]
+fn minds_eye_draws_when_opponent_draws_and_you_pay() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::minds_eye());
+    for _ in 0..2 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    for _ in 0..2 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // MayPay: yes
+    let my_hand = g.players[0].hand.len();
+    let mut ev = vec![];
+    g.draw_one(1, &mut ev); // opponent draws
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), my_hand + 1, "paying {{1}} draws you a card");
+}
+
+#[test]
 fn fire_diamond_enters_tapped_then_taps_for_red() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::fire_diamond());
