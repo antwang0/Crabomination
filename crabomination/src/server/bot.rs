@@ -2110,7 +2110,46 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Sink leftover mana into a "{cost}: create a token" ability to grow the
+    // board (Sun Warriors' {5}: 1/1 Ally, Realm of Koh's Spirit, Jasmine Dragon).
+    // Last resort, dry-run-gated.
+    if let Some(action) = pick_token_maker(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Activate a non-sacrifice "{cost}: create a token" ability as a last-resort
+/// mana sink — grows the board when the bot has nothing better to do. Skips
+/// sacrifice-cost and once-per-game (Exhaust) abilities. Dry-run-gated through
+/// `would_accept`, so cost/timing legality bottoms out there.
+fn pick_token_maker(state: &GameState, seat: usize) -> Option<GameAction> {
+    fn makes_token(e: &Effect) -> bool {
+        match e {
+            Effect::CreateToken { .. } | Effect::CreateTokenAttacking { .. } => true,
+            Effect::Seq(steps) => steps.iter().any(makes_token),
+            _ => false,
+        }
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.sac_cost || ab.exhaust || !makes_token(&ab.effect) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Activate a repeatable "{cost}: put a +1/+1 counter on this creature" ability
@@ -6115,5 +6154,21 @@ mod stack_response_tests {
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add_colorless(3);
         assert!(pick_self_pump_counter(&g, 0).is_none(), "won't spend a once-per-game Exhaust as a mana sink");
+    }
+
+    /// With spare mana and nothing better, the bot sinks it into a
+    /// "{cost}: create a token" ability (Sun Warriors' {5}: 1/1 Ally).
+    #[test]
+    fn bot_sinks_spare_mana_into_token_maker() {
+        let mut g = two_player_game();
+        let sw = g.add_card_to_battlefield(0, catalog::sun_warriors());
+        g.clear_sickness(sw);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert!(pick_token_maker(&g, 0).is_none(), "no mana → no token");
+        g.players[0].mana_pool.add_colorless(5);
+        assert!(matches!(pick_token_maker(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sw),
+            "bot makes an Ally token with leftover mana");
     }
 }

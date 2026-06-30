@@ -4976,6 +4976,25 @@ fn cr_120_10_excess_damage_tracked_per_resolution() {
     assert_eq!(g.excess_damage_this_resolution, 0, "6 to a 9/9 → no excess");
 }
 
+/// CR 120.10 — `Value::ExcessDamageDealtThisResolution` reads the running
+/// excess so "gain life equal to the excess damage dealt this way" works
+/// within one resolution (Razor Rings).
+#[test]
+fn cr_120_10_excess_damage_value_reads_running_total() {
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(small)));
+    g.resolve_effect(&Effect::Seq(vec![
+        Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) }, // 3 excess
+        Effect::GainLife { who: Selector::You, amount: Value::ExcessDamageDealtThisResolution },
+    ]), &ctx).unwrap();
+    assert_eq!(g.players[0].life, life + 3, "gained life equal to the 3 excess damage");
+}
+
 // ── CR 207.2c / 700.11 — Descend (LCI ability word) ──────────────────────────
 
 /// "Descend 8" reads "eight or more permanent cards in your graveyard"

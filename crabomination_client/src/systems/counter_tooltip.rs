@@ -1480,6 +1480,15 @@ mod tests {
         }
     }
 
+    /// The creatures-you-control Firebending variant surfaces in the reminder
+    /// panel and ability label like the fixed/power variants (Sun Warriors).
+    #[test]
+    fn firebending_creatures_variant_has_ui_text() {
+        use crabomination::card::Keyword;
+        assert!(keyword_reminder(&Keyword::FirebendingCreaturesYouControl).is_some());
+        assert_eq!(keyword_label(&Keyword::FirebendingCreaturesYouControl), "Firebending X");
+    }
+
     #[test]
     fn combat_and_cost_keywords_carry_reminder_text() {
         use crabomination::card::Keyword;
