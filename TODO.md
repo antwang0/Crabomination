@@ -408,6 +408,14 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
+- **Avatar (`tla`) card backlog.** ~180 non-waterbend `set:tla` cards remain
+  unimplemented (most ride existing primitives — Ally tribal, Lessons, Raid,
+  Clues). `decks::tla` now has 27 cards; the modal Avatar Lessons (Iroh's
+  Demonstration, Azula Always Lies — "choose one" via `Effect::ChooseN`) were
+  deferred only because they need mode-decision test plumbing, not engine work.
+  Other gaps need small primitives: a "control another creature with power ≥ N"
+  combat gate (Tiger-Dillo), conditional mana amount (Raucous Audience),
+  grant-mana-ability-to-lands-and-Allies (Great Divide Guide).
 - ✅ **Waterbend (CR 701.67).** Shipped — completes the bending family
   (earthbend/airbend/blight). `CardDefinition.waterbend: Option<Waterbend>`
   (`GameAction::CastSpellWaterbend`) for the additional cast cost (mandatory +
