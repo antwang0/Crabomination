@@ -31,7 +31,10 @@
 //! and Cascade granted to other spells (CR 702.85 — The First Sliver),
 //! abilities-only mana spend restrictions (CR 605.1c — Omen Hawker),
 //! controller-graveyard characteristic-defining P/T (CR 604.3 — Nethergoyf),
-//! and "can't block" as an illegal-blocker restriction (CR 509.1b).
+//! "can't block" as an illegal-blocker restriction (CR 509.1b), the Earthbend
+//! lifecycle (CR 701.66a — becomes a 0/0 haste land creature, returns tapped on
+//! death), and lethal-damage / 0-toughness SBAs measured against the *computed*
+//! type so animated lands die like creatures (CR 704.5f/g).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -5691,4 +5694,38 @@ fn cr_701_66a_earthbend_lifecycle_and_return_on_death() {
     drain_stack(&mut g);
     let back = g.battlefield_find(land).expect("returned to battlefield");
     assert!(back.tapped, "returns tapped (CR 701.66a)");
+}
+
+/// CR 704.5f — an animated land reduced to 0 toughness (its earthbend counters
+/// removed) is put into its owner's graveyard as a state-based action, even
+/// though its printed card is a land.
+#[test]
+fn cr_704_5f_zero_toughness_animated_land_dies() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ekg = g.add_card_to_battlefield(0, catalog::earth_kingdom_general());
+    g.fire_self_etb_triggers(ekg, 0); // earthbend 2 → 2/2 land creature
+    drain_stack(&mut g);
+    // Strip the +1/+1 counters → 0/0 computed creature.
+    g.battlefield_find_mut(land).unwrap().remove_counters(CounterType::PlusOnePlusOne, 2);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    // The earthbend return brings it back tapped (it "died"), so it's a land
+    // again — the key assertion is that the 0/0 creature didn't linger.
+    assert!(!g.computed_permanent(land)
+        .map(|c| c.card_types.contains(&crate::card::CardType::Creature) && c.toughness == 0)
+        .unwrap_or(false), "no 0/0 creature lingers on the battlefield");
+}
+
+/// Guard: the computed-type SBA death check doesn't kill a plain (non-animated)
+/// land, whose computed toughness is 0 but which isn't a creature.
+#[test]
+fn cr_704_5f_plain_land_is_not_a_creature_and_survives() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "a plain land never dies to SBA");
 }
