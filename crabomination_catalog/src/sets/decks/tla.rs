@@ -3894,6 +3894,28 @@ pub fn the_last_agni_kai() -> CardDefinition {
     }
 }
 
+/// White Lotus Tile — {4} Legendary Artifact. Enters tapped. {T}: Add X mana of
+/// any one color, X = the greatest number of creatures you control sharing a
+/// creature type.
+pub fn white_lotus_tile() -> CardDefinition {
+    CardDefinition {
+        name: "White Lotus Tile",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Tap { what: Selector::This })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::GreatestSharedCreatureTypeCount),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Joo Dee, One of Many — {1}{B} 2/2 Human Advisor. {B}, {T}, sorcery-speed:
 /// surveil 1, create a token copy of her, then sacrifice an artifact or creature.
 pub fn joo_dee_one_of_many() -> CardDefinition {

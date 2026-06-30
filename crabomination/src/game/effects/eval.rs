@@ -598,6 +598,30 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::GreatestSharedCreatureTypeCount => {
+                // Tally each creature type across the controller's creatures
+                // (changelings count for every type) and take the largest.
+                use crate::card::CreatureType;
+                let mut tally: std::collections::HashMap<CreatureType, i32> =
+                    std::collections::HashMap::new();
+                let mut changelings = 0i32;
+                for cp in self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller)
+                    .filter_map(|c| self.computed_permanent(c.id))
+                    .filter(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                {
+                    if cp.keywords.contains(&crate::card::Keyword::Changeling) {
+                        changelings += 1;
+                        continue;
+                    }
+                    for t in &cp.subtypes.creature_types {
+                        *tally.entry(*t).or_insert(0) += 1;
+                    }
+                }
+                tally.values().copied().max().unwrap_or(0) + changelings
+            }
             Value::TimesDescendedThisTurn => self
                 .players
                 .get(ctx.controller)

@@ -3031,3 +3031,27 @@ fn joo_dee_copies_then_sacrifices() {
     assert_eq!(count_named(&g, 0, "Joo Dee, One of Many"), 1, "token minted, then sacrificed");
     assert!(g.battlefield_find(fodder).is_some(), "ornithopter survived (the token was the sac)");
 }
+
+/// White Lotus Tile taps X mana = the largest shared-creature-type tribe.
+#[test]
+fn white_lotus_tile_mana_scales_with_tribe() {
+    let mut g = two_player_game();
+    let tile = g.add_card_to_battlefield(0, catalog::white_lotus_tile());
+    g.battlefield_find_mut(tile).unwrap().tapped = false;
+    g.clear_sickness(tile);
+    // Three Allies + one non-Ally → largest shared type = 3 (Ally).
+    g.add_card_to_battlefield(0, catalog::kyoshi_warriors());  // Human Warrior Ally
+    g.add_card_to_battlefield(0, catalog::momo_friendly_flier()); // Lemur Bat Ally
+    g.add_card_to_battlefield(0, catalog::hakoda_selfless_commander()); // Human Warrior Ally
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // Bear (non-Ally)
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(crate::mana::Color::Green),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tile, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 3,
+        "X = 3 (the Ally tribe; Human also 2, Warrior 2)");
+}

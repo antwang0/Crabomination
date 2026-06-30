@@ -559,6 +559,12 @@ pub enum Value {
     /// Biorhythm's "each player's life total becomes the number of
     /// creatures they control" inside a `ForEach` over each player.
     CreatureCountControlledBy(PlayerRef),
+    /// The size of the largest group of creatures the controller controls that
+    /// share a creature type (CR — "the greatest number of creatures you
+    /// control that have a creature type in common"). Changelings count toward
+    /// every type. 0 if you control no creatures. White Lotus Tile's mana
+    /// ability.
+    GreatestSharedCreatureTypeCount,
     /// Number of nonbasic lands controlled by the resolved player. Read
     /// per-recipient inside a `ForEach` over each player so a single effect
     /// scales independently for each player — Sunspine Lynx's "deals damage
