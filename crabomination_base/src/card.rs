@@ -2528,6 +2528,9 @@ pub enum DynamicPt {
     /// Power = number of noncreature, nonland cards in the controller's
     /// graveyard; toughness = `base_t`. Dragonfly Swarm (*/3).
     NoncreatureNonlandCardsInControllerGraveyard { base_t: i32 },
+    /// Power = `base_p` + the number of distinct colors among Ally creatures
+    /// the controller controls; toughness = `base_t`. Earthen Ally (`*`/2).
+    ColorsAmongAlliesControlledPower { base_p: i32, base_t: i32 },
     /// Imprint CDA (CR 604.3): P/T of the creature card exiled with this
     /// permanent; printed base when nothing is exiled. Duplicant.
     ExiledWithSourcePt { base_p: i32, base_t: i32 },

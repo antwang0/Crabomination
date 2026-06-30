@@ -28,6 +28,12 @@ control). Deferred for want of a primitive:
   …" needs a what-was-exiled type gate (Sold Out's damaged-gate ships).
 - **Serpent of the Pass** — conditional flash ("you may cast as though it had
   flash if 3+ Lessons in gy") + cost-reduced-per-noncreature-in-gy.
+- **Joo Dee, One of Many** — card defn drafted (Surveil 1 + `CreateTokenCopyOf`
+  self + sacrifice an artifact/creature) but pulled: the deterministic test was
+  flaky because the surveil's `Decision::Scry` and the sacrifice's
+  `Decision::ChooseCards` consume scripted answers in an order that's awkward to
+  pin (auto-decider sacrifices the just-minted token). Re-add with a decider
+  that scripts ScryOrder + Cards together, or an empty-library variant.
 - **Fatal Fissure** — "when that creature dies this turn, you earthbend 4"
   needs the delayed-trigger body to *re-target* a fresh land; `Effect::Earthbend`
   reads slot 0 (the watched creature, not a land) so the body no-ops. Either a

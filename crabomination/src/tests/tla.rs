@@ -2456,3 +2456,71 @@ fn ba_sing_se_earthbends_a_land() {
     assert_eq!(g.battlefield_find(target_land).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2,
         "earthbend 2 placed two counters on the land");
 }
+
+/// Price of Freedom destroys an opponent's artifact/land and draws a card.
+#[test]
+fn price_of_freedom_destroys_and_draws() {
+    let mut g = two_player_game();
+    let foe_land = g.add_card_to_battlefield(1, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let pf = g.add_card_to_hand(0, catalog::price_of_freedom());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: pf, target: Some(Target::Permanent(foe_land)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Price of Freedom");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe_land).is_none(), "opponent's land destroyed");
+    assert_eq!(g.players[0].hand.len(), hand, "cast 1, drew 1 (net unchanged)");
+}
+
+/// Realm of Koh mints a Spirit token that only Spirits can block.
+#[test]
+fn realm_of_koh_makes_spirit() {
+    let mut g = two_player_game();
+    let realm = g.add_card_to_battlefield(0, catalog::realm_of_koh());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: realm, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("make Spirit");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Spirit"), 1, "minted a Spirit");
+}
+
+
+/// Earthen Ally's power tracks the distinct colors among Allies you control.
+#[test]
+fn earthen_ally_power_tracks_ally_colors() {
+    let mut g = two_player_game();
+    let ea = g.add_card_to_battlefield(0, catalog::earthen_ally()); // green Ally
+    assert_eq!(g.computed_permanent(ea).unwrap().power, 1, "self is a green Ally → 1 color");
+    g.add_card_to_battlefield(0, catalog::sun_warriors()); // red/white Ally → +R +W
+    assert_eq!(g.computed_permanent(ea).unwrap().power, 3, "green + red + white = 3 colors");
+}
+
+/// Agna Qel'a loots (draw then discard) via its utility ability.
+#[test]
+fn agna_qela_loots() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::agna_qela());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("loot");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "drew 1, discarded 1 (net unchanged)");
+}

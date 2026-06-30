@@ -4179,3 +4179,99 @@ pub fn fire_nation_palace() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Price of Freedom — {1}{R} Sorcery — Lesson. Destroy target artifact or land
+/// an opponent controls; its controller may fetch a basic land tapped. Draw.
+pub fn price_of_freedom() -> CardDefinition {
+    CardDefinition {
+        name: "Price of Freedom",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            // Search the target's controller's library first, while the target
+            // (and thus its controller) is still on the battlefield.
+            Effect::SearchUpToN {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    tapped: true,
+                },
+                count: Value::ONE,
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: (SelectionRequirement::Artifact.or(SelectionRequirement::Land))
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+fn realm_of_koh_spirit() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        // "Can't be blocked by non-Spirit creatures"; the symmetric "can't block
+        // non-Spirit creatures" half is dropped (no can-block-only filter yet).
+        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(
+            SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+        ))],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Realm of Koh — Land. Enters tapped unless you control a basic land.
+/// {T}: Add {B}. {3}{B}, {T}: Create a 1/1 colorless Spirit token.
+pub fn realm_of_koh() -> CardDefinition {
+    CardDefinition {
+        name: "Realm of Koh",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![tapped_unless_basic()],
+        activated_abilities: vec![
+            tap_for(Color::Black),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3), b()]),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: realm_of_koh_spirit(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Earthen Ally — {G} */2 Human Soldier Ally. Gets +1/+0 for each color among
+/// Allies you control. {W}{U}{B}{R}{G}: Earthbend 5.
+pub fn earthen_ally() -> CardDefinition {
+    CardDefinition {
+        name: "Earthen Ally",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        dynamic_pt: Some(DynamicPt::ColorsAmongAlliesControlledPower { base_p: 0, base_t: 2 }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            effect: Effect::Earthbend { n: Value::Const(5) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

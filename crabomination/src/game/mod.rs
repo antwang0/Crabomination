@@ -4856,6 +4856,19 @@ impl GameState {
                         .count() as i32;
                     (n, base_t)
                 }
+                crate::card::DynamicPt::ColorsAmongAlliesControlledPower { base_p, base_t } => {
+                    let mut colors: std::collections::HashSet<crate::mana::Color> =
+                        std::collections::HashSet::new();
+                    for c in self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.is_creature()
+                            && (c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Ally)
+                                || c.has_keyword(&crate::card::Keyword::Changeling))
+                    }) {
+                        for col in c.definition.printed_colors() { colors.insert(col); }
+                    }
+                    (base_p + colors.len() as i32, base_t)
+                }
                 crate::card::DynamicPt::ExiledWithSourcePt { base_p, base_t } => self
                     .exile
                     .iter()
