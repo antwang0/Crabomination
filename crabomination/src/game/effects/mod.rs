@@ -5297,11 +5297,32 @@ impl GameState {
 
             Effect::Earthbend { n } => {
                 let amt = self.evaluate_value(n, ctx).max(0);
-                // CR 701.66a — target land you control (slot 0). No land → no-op.
-                let Some(Target::Permanent(land)) = ctx.targets.first().cloned() else {
-                    return Ok(());
+                // CR 701.66a — target land you control (slot 0). If slot 0 isn't
+                // a land the controller controls (e.g. a delayed "when that
+                // creature dies, earthbend N" body whose slot 0 is the dead
+                // creature — Fatal Fissure), auto-pick any controlled land. No
+                // controlled land → no-op.
+                let is_controlled_land = |g: &Self, id: CardId| {
+                    g.battlefield_find(id)
+                        .is_some_and(|c| c.controller == ctx.controller && c.definition.is_land())
                 };
-                if self.battlefield_find(land).is_none() { return Ok(()); }
+                let slot0 = match ctx.targets.first() {
+                    Some(Target::Permanent(id)) if is_controlled_land(self, *id) => Some(*id),
+                    _ => None,
+                };
+                let land = match slot0.or_else(|| {
+                    self.battlefield
+                        .iter()
+                        .find(|c| c.controller == ctx.controller && c.definition.is_land())
+                        .map(|c| c.id)
+                }) {
+                    Some(id) => id,
+                    None => return Ok(()),
+                };
+                // Run the inner effects against `land` explicitly (slot 0 may be
+                // the watched creature in a delayed body).
+                let mut land_ctx = ctx.clone();
+                land_ctx.targets = vec![Target::Permanent(land)];
                 // Becomes a 0/0 land creature with haste (in addition to its
                 // other types), indefinitely.
                 self.run_effect(
@@ -5313,7 +5334,7 @@ impl GameState {
                         keywords: vec![Keyword::Haste],
                         duration: Duration::Permanent,
                     },
-                    ctx,
+                    &land_ctx,
                     events,
                 )?;
                 if amt > 0 {
@@ -5323,7 +5344,7 @@ impl GameState {
                             kind: CounterType::PlusOnePlusOne,
                             amount: crate::effect::Value::Const(amt),
                         },
-                        ctx,
+                        &land_ctx,
                         events,
                     )?;
                 }

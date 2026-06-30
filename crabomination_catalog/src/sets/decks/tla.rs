@@ -4438,6 +4438,21 @@ pub fn obsessive_pursuit() -> CardDefinition {
     }
 }
 
+/// Fatal Fissure — {1}{B} Instant. Choose target creature; when it dies this
+/// turn, you earthbend 4 (the delayed body auto-picks a land you control).
+pub fn fatal_fissure() -> CardDefinition {
+    CardDefinition {
+        name: "Fatal Fissure",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::WhenTargetDiesThisTurn {
+            body: Box::new(Effect::Earthbend { n: Value::Const(4) }),
+            slot: 0,
+        },
+        ..Default::default()
+    }
+}
+
 /// Raven Eagle — {2}{B} 2/3 Bird Assassin. Flying. On enter or attack, exile up
 /// to one target card from a graveyard; if a creature was exiled, investigate.
 /// Whenever you draw your second card each turn, drain 1.

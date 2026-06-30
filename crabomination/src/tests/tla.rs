@@ -2837,3 +2837,29 @@ fn raven_eagle_second_draw_drains() {
     assert_eq!(g.players[1].life, opp - 1, "opponent lost 1");
     assert_eq!(g.players[0].life, you + 1, "you gained 1");
 }
+
+/// Fatal Fissure earthbends a land you control when the chosen creature dies.
+#[test]
+fn fatal_fissure_earthbends_on_target_death() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ff = g.add_card_to_hand(0, catalog::fatal_fissure());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ff, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fatal Fissure");
+    drain_stack(&mut g);
+    // Kill the watched creature via SBA → delayed earthbend fires on our land.
+    g.battlefield_find_mut(victim).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let pp = crate::card::CounterType::PlusOnePlusOne;
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(pp), 4, "earthbend 4 on the land");
+    assert!(g.computed_permanent(land).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "land became a creature");
+}
