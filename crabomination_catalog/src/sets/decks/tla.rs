@@ -3654,3 +3654,28 @@ pub fn the_fire_nation_drill() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Iroh, Grand Lotus — {3}{G}{U}{R} 5/5 legendary Human Noble Ally. Firebending
+/// 2. Each instant/sorcery card in your graveyard has flashback for its mana
+/// cost. (The "during your turn" gate and the cheaper Lesson flashback {1} are
+/// approximated to Lier's always-on grant.)
+pub fn iroh_grand_lotus() -> CardDefinition {
+    CardDefinition {
+        name: "Iroh, Grand Lotus",
+        cost: cost(&[generic(3), g(), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Firebending(2)],
+        static_abilities: vec![StaticAbility {
+            description: "Each instant and sorcery card in your graveyard has flashback equal to its mana cost.",
+            effect: StaticEffect::GraveyardInstantsSorceriesHaveFlashback,
+        }],
+        ..Default::default()
+    }
+}

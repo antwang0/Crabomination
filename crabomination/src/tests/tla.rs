@@ -2157,3 +2157,21 @@ fn fire_nation_drill_etb_destroys_small_creature() {
     assert!(g.battlefield_find(foe).is_none(), "small creature destroyed");
     assert!(g.battlefield_find(drill).unwrap().tapped, "Drill tapped itself");
 }
+
+/// Iroh, Grand Lotus grants flashback to instants/sorceries in your graveyard.
+#[test]
+fn iroh_grand_lotus_flashbacks_graveyard_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::iroh_grand_lotus());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Iroh grants flashback");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "flashed-back Bolt dealt 3");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "flashback exiles the spell");
+}

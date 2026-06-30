@@ -4480,6 +4480,7 @@ static DECKS: &[Factory] = &[
     super::decks::wan_shi_tong_librarian,
     super::decks::benders_waterskin,
     super::decks::the_fire_nation_drill,
+    super::decks::iroh_grand_lotus,
     super::decks::ty_lee_chi_blocker,
     super::decks::the_boulder_ready_to_rumble,
     super::decks::path_to_redemption,
