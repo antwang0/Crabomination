@@ -1100,3 +1100,128 @@ fn boomerang_basics_draws_on_own_permanent() {
     assert!(g.battlefield_find(theirs).is_none(), "opponent creature bounced");
     assert_eq!(g.players[0].hand.len(), hand - 1, "no draw; only spent the spell");
 }
+
+/// Fire Nation Cadets gains firebending 2 only while a Lesson sits in the gy.
+#[test]
+fn fire_nation_cadets_conditional_firebending() {
+    let mut g = two_player_game();
+    let fc = g.add_card_to_battlefield(0, catalog::fire_nation_cadets());
+    assert!(!g.computed_permanent(fc).unwrap().keywords.contains(&Keyword::Firebending(2)),
+        "no Lesson → no firebending");
+    g.add_card_to_graveyard(0, catalog::yip_yip()); // a Lesson
+    assert!(g.computed_permanent(fc).unwrap().keywords.contains(&Keyword::Firebending(2)),
+        "Lesson in gy → firebending 2");
+}
+
+/// Firebending Lesson deals 2 normally and 5 when kicked.
+#[test]
+fn firebending_lesson_kicker_scales_damage() {
+    for (kicked, dealt) in [(false, 2), (true, 5)] {
+        let mut g = two_player_game();
+        let foe = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6
+        let fl = g.add_card_to_hand(0, catalog::firebending_lesson());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        if kicked { g.players[0].mana_pool.add_colorless(4); }
+        let act = if kicked {
+            GameAction::CastSpellKicked { card_id: fl, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }
+        } else {
+            GameAction::CastSpell { card_id: fl, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }
+        };
+        g.perform_action(act).expect("cast");
+        drain_stack(&mut g);
+        let t = g.computed_permanent(foe).unwrap().toughness;
+        let dmg = g.battlefield_find(foe).unwrap().damage;
+        assert_eq!(dmg, dealt, "kicked={kicked}: {dealt} marked (toughness {t})");
+    }
+}
+
+/// Mongoose Lizard pings any target for 1 on ETB.
+#[test]
+fn mongoose_lizard_etb_pings() {
+    let mut g = two_player_game();
+    let ml = g.add_card_to_battlefield(0, catalog::mongoose_lizard());
+    let before = g.players[1].life;
+    g.fire_self_etb_triggers(ml, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "ETB deals 1");
+}
+
+/// Origin of Metalbending mode 0 destroys an artifact.
+#[test]
+fn origin_of_metalbending_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let om = g.add_card_to_hand(0, catalog::origin_of_metalbending());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: om, target: Some(Target::Permanent(art)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Deadly Precision destroys a creature, paying the {4} when no creature/artifact
+/// is available to sacrifice.
+#[test]
+fn deadly_precision_destroys_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dp = g.add_card_to_hand(0, catalog::deadly_precision());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4); // pays the {4} alternative
+    g.perform_action(GameAction::CastSpell {
+        card_id: dp, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature destroyed");
+}
+
+/// Enter the Avatar State grants the four keywords to a creature you control.
+#[test]
+fn enter_the_avatar_state_grants_keywords() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eas = g.add_card_to_hand(0, catalog::enter_the_avatar_state());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eas, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let kws = g.computed_permanent(mine).unwrap().keywords;
+    for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink, Keyword::Hexproof] {
+        assert!(kws.contains(&kw), "granted {kw:?}");
+    }
+}
+
+/// Seismic Sense looks at (lands you control) cards and pulls a creature/land
+/// to hand.
+#[test]
+fn seismic_sense_digs_for_a_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest()); // 2 lands → look at 2
+    g.add_card_to_library(0, catalog::grizzly_bears()); // a creature on top
+    g.add_card_to_library(0, catalog::lightning_bolt()); // a non-match below
+    let ss = g.add_card_to_hand(0, catalog::seismic_sense());
+    let hand0 = g.players[0].hand.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ss, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Spell leaves hand (-1), the revealed creature is taken to hand (+1).
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "creature pulled to hand");
+    assert_eq!(g.players[0].hand.len(), hand0, "net hand unchanged (spell out, card in)");
+}

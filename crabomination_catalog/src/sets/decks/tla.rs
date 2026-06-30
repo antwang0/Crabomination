@@ -1688,6 +1688,191 @@ pub fn foggy_bottom_swamp() -> CardDefinition { tla_sac_land("Foggy Bottom Swamp
 pub fn sun_blessed_peak() -> CardDefinition { tla_sac_land("Sun-Blessed Peak", Color::Red, Color::White) }
 pub fn meditation_pools() -> CardDefinition { tla_sac_land("Meditation Pools", Color::Green, Color::Blue) }
 
+/// Fire Nation Cadets — {R} 1/2 Human Soldier. Has firebending 2 while a Lesson
+/// is in your graveyard; {2}: +1/+0 until end of turn.
+pub fn fire_nation_cadets() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Nation Cadets",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Has firebending 2 while a Lesson card is in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: lesson_in_graveyard(),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Firebending(2)],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Firebending Lesson — {R} Instant — Lesson. Kicker {4}. Deals 2 damage to
+/// target creature, or 5 if it was kicked.
+pub fn firebending_lesson() -> CardDefinition {
+    CardDefinition {
+        name: "Firebending Lesson",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        keywords: vec![Keyword::Kicker(cost(&[generic(4)]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(5),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Mongoose Lizard — {4}{R}{R} 5/6 Menace. ETB deals 1 damage to any target.
+/// Mountaincycling {2}.
+pub fn mongoose_lizard() -> CardDefinition {
+    CardDefinition {
+        name: "Mongoose Lizard",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mongoose, CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain),
+        ],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_any(),
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Seismic Sense — {G} Sorcery — Lesson. Look at the top X cards (X = lands you
+/// control); you may reveal a creature or land from among them to your hand,
+/// the rest to the bottom.
+pub fn seismic_sense() -> CardDefinition {
+    CardDefinition {
+        name: "Seismic Sense",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: lesson(),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::count(Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            )),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::Creature.or(SelectionRequirement::Land),
+            ),
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Origin of Metalbending — {1}{G} Instant — Lesson. Choose one — destroy target
+/// artifact or enchantment; or put a +1/+1 counter on target creature you
+/// control and it gains indestructible until end of turn.
+pub fn origin_of_metalbending() -> CardDefinition {
+    CardDefinition {
+        name: "Origin of Metalbending",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Artifact)
+                        .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                ),
+            },
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Deadly Precision — {B} Sorcery. Additional cost: pay {4} or sacrifice an
+/// artifact or creature. Destroy target creature.
+pub fn deadly_precision() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Deadly Precision",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
+            filter: SelectionRequirement::HasCardType(CardType::Artifact)
+                .or(SelectionRequirement::Creature),
+            pay: 4,
+        }],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Enter the Avatar State — {W} Instant — Lesson. Until end of turn, target
+/// creature you control gains flying, first strike, lifelink, and hexproof.
+/// (The "becomes an Avatar" type-add is dropped — no additive type primitive.)
+pub fn enter_the_avatar_state() -> CardDefinition {
+    let tgt = || target_filtered(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Enter the Avatar State",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword { what: tgt(), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Gran-Gran — {U} 1/2 legendary Human Peasant Ally. When it becomes tapped,
 /// draw then discard. Noncreature spells you cast cost {1} less while 3+ Lesson
 /// cards are in your graveyard (`StaticEffect::CostReductionWhile`).
