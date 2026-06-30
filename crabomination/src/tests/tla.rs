@@ -2175,3 +2175,64 @@ fn iroh_grand_lotus_flashbacks_graveyard_spells() {
     assert_eq!(g.players[1].life, 17, "flashed-back Bolt dealt 3");
     assert!(g.exile.iter().any(|c| c.id == bolt), "flashback exiles the spell");
 }
+/// Razor Rings deals 4 to an attacking creature and gains life = excess damage.
+#[test]
+fn razor_rings_burns_attacker_for_excess_life() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    attack_with(&mut g, bears);
+    let rings = g.add_card_to_hand(0, catalog::razor_rings());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rings, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Razor Rings");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "4 damage kills the 2/2");
+    assert_eq!(g.players[0].life, life + 2, "gain life = excess (4 - 2)");
+}
+
+/// The Last Agni Kai fights and adds {R} equal to the excess damage dealt.
+#[test]
+fn last_agni_kai_fights_and_adds_red_for_excess() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let kai = g.add_card_to_hand(0, catalog::the_last_agni_kai());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kai, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast The Last Agni Kai");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "4-power kills the 2/2");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 2, "excess 2 → {{R}}{{R}}");
+}
+
+/// Hei Bai sacrifices for two +1/+1 counters, then moves them on leaving.
+#[test]
+fn hei_bai_sacrifices_then_moves_counters_on_leave() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let hei_bai = g.add_card_to_battlefield(0, catalog::hei_bai_spirit_of_balance());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(hei_bai, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.computed_permanent(hei_bai).unwrap().power, 5, "3/3 + two counters = 5/5");
+    // LTB moves the two counters to the only other creature.
+    let keeper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_to_graveyard_with_triggers(hei_bai);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(keeper).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "Hei Bai's counters moved to the survivor");
+}

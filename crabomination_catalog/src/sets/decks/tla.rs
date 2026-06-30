@@ -3679,3 +3679,109 @@ pub fn iroh_grand_lotus() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Razor Rings — {1}{W} Instant. Deals 4 damage to target attacking or
+/// blocking creature; you gain life equal to the excess damage dealt this way.
+pub fn razor_rings() -> CardDefinition {
+    CardDefinition {
+        name: "Razor Rings",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking)),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ExcessDamageDealtThisResolution,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Last Agni Kai — {1}{R} Instant. Target creature you control fights
+/// target creature an opponent controls; add {R} equal to the excess damage
+/// dealt this way. (The "don't lose unspent red mana" rider is omitted.)
+pub fn the_last_agni_kai() -> CardDefinition {
+    CardDefinition {
+        name: "The Last Agni Kai",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Red, Value::ExcessDamageDealtThisResolution),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hei Bai, Spirit of Balance — {2}{W/B}{W/B} 3/3 Legendary Bear Spirit.
+/// Enters or attacks: may sacrifice another creature/artifact for two +1/+1
+/// counters. On leaving the battlefield, moves its counters to target creature
+/// you control.
+pub fn hei_bai_spirit_of_balance() -> CardDefinition {
+    let sac_for_counters = || {
+        Effect::MaySacrifice {
+            description: "Sacrifice another creature or artifact: two +1/+1 counters on Hei Bai"
+                .into(),
+            filter: (SelectionRequirement::Creature.or(SelectionRequirement::Artifact))
+                .and(SelectionRequirement::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+            else_: None,
+        }
+    };
+    CardDefinition {
+        name: "Hei Bai, Spirit of Balance",
+        cost: cost(&[generic(2), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(sac_for_counters()),
+            on_attack(sac_for_counters()),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::MoveAllCounters {
+                    from: Selector::This,
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

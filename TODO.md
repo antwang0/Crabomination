@@ -12,17 +12,16 @@ state-corrupting in ordinary play.
 
 Shipped: multi-kind permanent+player target slots (`Selector::ControlledBy
 { who: Target(n) }` — How to Start a Riot), `peak_per_ip` server telemetry,
-Saddle HUD tag. Deferred for want of a primitive:
+Saddle HUD tag, `Value::ExcessDamageDealtThisResolution` (Razor Rings gains
+life = excess; The Last Agni Kai adds {R} = excess — fight half faithful, the
+"don't lose unspent red" rider dropped), Hei Bai (the move-all-counters LTB
+uses the existing `Effect::MoveAllCounters`). Deferred for want of a primitive:
 - **Sun Warriors / Fire Lord Zuko** — *firebending X* (a `Value`-scaled
   firebending); `Keyword::Firebending` only carries a fixed `u32`.
 - **Bumi, King of Three Trials** — "choose up to X" modal where X is a live
   count; `Effect::ChooseN.picks` is a fixed index list.
-- **Hei Bai, Spirit of Balance** — LTB "move its counters to target creature"
-  needs a move-all-counters-from-source-to-target effect.
 - **Raven Eagle / Sold Out-style** — "exile a gy card; if it was a creature,
   …" needs a what-was-exiled type gate (Sold Out's damaged-gate ships).
-- **Razor Rings / The Last Agni Kai** — gain life / add mana equal to *excess*
-  damage needs a `Value::ExcessDamageDealtThisResolution`.
 - **Serpent of the Pass** — conditional flash ("you may cast as though it had
   flash if 3+ Lessons in gy") + cost-reduced-per-noncreature-in-gy.
 

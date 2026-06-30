@@ -392,6 +392,11 @@ pub enum Value {
     /// All counters (every kind) on `what` — "for each counter on it"
     /// (Twitching Doll). Sums every counter the permanent carries.
     TotalCountersOn { what: Box<Selector> },
+    /// CR 120.10 — the amount of excess damage dealt during the current
+    /// resolution ("gain life / add mana equal to the excess damage" — The
+    /// Last Agni Kai, Razor Rings). Backed by
+    /// `GameState.excess_damage_this_resolution`.
+    ExcessDamageDealtThisResolution,
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),

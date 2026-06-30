@@ -307,6 +307,7 @@ impl GameState {
                         .map(|inst| inst.counters.values().sum::<u32>() as i32)
                 })
                 .sum(),
+            Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
             Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),
