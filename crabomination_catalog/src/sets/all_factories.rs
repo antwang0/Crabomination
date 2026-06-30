@@ -981,6 +981,8 @@ static DECKS: &[Factory] = &[
     super::decks::krark_the_thumbless,
     super::decks::fiery_gambit,
     super::decks::goblin_bomb,
+    super::decks::boggart_shenanigans,
+    super::decks::mudbrawler_cohort,
     super::decks::leonin_skyhunter,
     super::decks::blade_of_the_sixth_pride,
     super::decks::serra_avenger,

@@ -34929,6 +34929,41 @@ fn krark_returns_your_spell_on_lost_flip() {
 }
 
 #[test]
+fn boggart_shenanigans_pings_when_a_goblin_dies() {
+    use crate::decision::DecisionAnswer::Target as T;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::boggart_shenanigans());
+    let gob = g.add_card_to_battlefield(0, catalog::mogg_fanatic());
+    let foe_life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),   // MayDo: yes
+        T(Target::Player(1)),         // ability target
+    ]));
+    // Kill the Goblin with a Bolt so SBA dispatches CreatureDied.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(gob)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt goblin");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "a dying Goblin pings the chosen player for 1");
+}
+
+#[test]
+fn mudbrawler_cohort_grows_with_another_red_creature() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::mudbrawler_cohort());
+    let b = g.add_card_to_battlefield(0, catalog::mudbrawler_cohort());
+    let pt = |g: &GameState, id| g.compute_battlefield().iter()
+        .find(|c| c.id == id).map(|c| (c.power, c.toughness));
+    assert_eq!(pt(&g, a), Some((2, 2)), "each Cohort sees the other red creature");
+    g.remove_to_graveyard_with_triggers(b);
+    assert_eq!(pt(&g, a), Some((1, 1)), "back to 1/1 with no other red creature");
+}
+
+#[test]
 fn goblin_bomb_upkeep_flip_adds_fuse_on_win() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::goblin_bomb());

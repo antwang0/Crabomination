@@ -21978,6 +21978,71 @@ pub fn krark_the_thumbless() -> CardDefinition {
     }
 }
 
+/// Boggart Shenanigans — {2}{R} Kindred Enchantment — Goblin. Whenever another
+/// Goblin you control dies, you may have it deal 1 damage to target player or
+/// planeswalker.
+pub fn boggart_shenanigans() -> CardDefinition {
+    CardDefinition {
+        name: "Boggart Shenanigans",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Have Boggart Shenanigans deal 1 damage to target player or planeswalker.".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mudbrawler Cohort — {1}{R} 1/1 Goblin Warrior. Haste; +1/+1 as long as you
+/// control another red creature.
+pub fn mudbrawler_cohort() -> CardDefinition {
+    CardDefinition {
+        name: "Mudbrawler Cohort",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +1/+1 as long as you control another red creature.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasColor(Color::Red))
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Goblin Bomb — {1}{R} Enchantment. Upkeep: you may flip a coin — win adds a
 /// fuse counter, lose removes one. Remove five fuse counters: deal 20 to any
 /// target.
