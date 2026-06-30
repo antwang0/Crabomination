@@ -20727,6 +20727,54 @@ pub fn pyrite_spellbomb() -> CardDefinition {
     }
 }
 
+/// Build a "Diamond" mana rock: {2} Artifact, enters tapped, {T}: add `color`.
+fn diamond(name: &'static str, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Enters the battlefield tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![crate::catalog::sets::tap_add(color)],
+        ..Default::default()
+    }
+}
+
+/// Marble Diamond — {2} Artifact, enters tapped. {T}: Add {W}.
+pub fn marble_diamond() -> CardDefinition { diamond("Marble Diamond", Color::White) }
+/// Sky Diamond — {2} Artifact, enters tapped. {T}: Add {U}.
+pub fn sky_diamond() -> CardDefinition { diamond("Sky Diamond", Color::Blue) }
+/// Charcoal Diamond — {2} Artifact, enters tapped. {T}: Add {B}.
+pub fn charcoal_diamond() -> CardDefinition { diamond("Charcoal Diamond", Color::Black) }
+/// Fire Diamond — {2} Artifact, enters tapped. {T}: Add {R}.
+pub fn fire_diamond() -> CardDefinition { diamond("Fire Diamond", Color::Red) }
+/// Moss Diamond — {2} Artifact, enters tapped. {T}: Add {G}.
+pub fn moss_diamond() -> CardDefinition { diamond("Moss Diamond", Color::Green) }
+
+/// Pristine Talisman — {3} Artifact. {T}: Add {C}. You gain 1 life.
+pub fn pristine_talisman() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Pristine Talisman",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sunbeam Spellbomb — {1} Artifact. {W}, Sac: gain 5 life. {1}, Sac: draw.
 pub fn sunbeam_spellbomb() -> CardDefinition {
     use crate::card::ActivatedAbility;

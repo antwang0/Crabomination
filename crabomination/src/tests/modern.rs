@@ -35041,6 +35041,34 @@ fn fiery_gambit_lost_flip_does_nothing() {
 // ── Utility artifacts ───────────────────────────────────────────────────────
 
 #[test]
+fn fire_diamond_enters_tapped_then_taps_for_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fire_diamond());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Fire Diamond castable for {2}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "Diamond enters tapped");
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap for red");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "{{T}}: add {{R}}");
+}
+
+#[test]
+fn pristine_talisman_taps_for_colorless_and_gains_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pristine_talisman());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "adds one colorless mana");
+    assert_eq!(g.players[0].life, 21, "and you gain 1 life");
+}
+
+#[test]
 fn sunbeam_spellbomb_gains_five_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::sunbeam_spellbomb());
