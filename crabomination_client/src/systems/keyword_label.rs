@@ -127,6 +127,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Undying => "Und",
         // Eldrazi annihilator — a combat threat worth surfacing on the board.
         Annihilator(_) => "Ann",
+        // Absorb N (CR 702.64) — prevents N damage from each source per event,
+        // so an opponent should weigh whether an attacker punches through.
+        Absorb(_) => "Abs",
         // Firebending — attack-triggered red mana worth flagging on the board.
         Firebending(_) | FirebendingPower | FirebendingCreaturesYouControl => "FB",
         // "Assigns combat damage equal to its toughness" (Doran) — changes how
@@ -337,6 +340,7 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Bushido(2)]), "Bsd");
         assert_eq!(keyword_strip(&[Keyword::Rampage(1)]), "Rmp");
         assert_eq!(keyword_strip(&[Keyword::Banding]), "Bnd");
+        assert_eq!(keyword_strip(&[Keyword::Absorb(1)]), "Abs");
     }
 
     #[test]
