@@ -120,7 +120,7 @@ pub fn marchesas_decree() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                    who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::ONE,
                 },
             },
@@ -211,6 +211,81 @@ pub fn skyline_despot() -> CardDefinition {
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Keeper of Keys — {3}{U}{U} 4/4 Human Rogue Mutant. ETB become the monarch;
+/// at your upkeep, if you're the monarch, creatures you control can't be
+/// blocked this turn.
+pub fn keeper_of_keys() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        name: "Keeper of Keys",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    then: Box::new(Effect::GrantKeyword {
+                        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        keyword: Keyword::Unblockable,
+                        duration: Duration::EndOfTurn,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Judith, the Scourge Diva — {1}{B}{R} 2/2 Human Shaman. Other creatures you
+/// control get +1/+0; whenever a nontoken creature you control dies, deal 1
+/// damage to any target.
+pub fn judith_the_scourge_diva() -> CardDefinition {
+    use crate::mana::b;
+    CardDefinition {
+        name: "Judith, the Scourge Diva",
+        cost: cost(&[generic(1), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken.and(R::OtherThanSource),
+                }),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::ONE,
+            },
+        }],
         ..Default::default()
     }
 }

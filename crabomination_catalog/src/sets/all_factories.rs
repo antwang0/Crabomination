@@ -4145,6 +4145,8 @@ static DECKS: &[Factory] = &[
     super::decks::thorn_of_the_black_rose,
     super::decks::throne_warden,
     super::decks::skyline_despot,
+    super::decks::keeper_of_keys,
+    super::decks::judith_the_scourge_diva,
     super::decks::giada_font_of_hope,
     super::decks::hopeful_initiate,
     super::decks::sanctum_prelate,

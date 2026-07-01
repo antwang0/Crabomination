@@ -4,8 +4,15 @@
 use crate::card::Keyword;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
+use crate::game::types::{Attack, AttackTarget};
 use crate::game::*;
 use crate::mana::Color;
+
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
 
 #[test]
 fn by_force_destroys_x_artifacts() {
@@ -198,6 +205,61 @@ fn skyline_despot_makes_a_dragon_while_monarch() {
         g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Dragon"),
         "monarch upkeep minted a Dragon",
     );
+}
+
+#[test]
+fn keeper_of_keys_unblockable_while_monarch() {
+    let mut g = two_player_game();
+    let keeper = g.add_card_to_battlefield(0, catalog::keeper_of_keys());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(keeper, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    assert!(
+        cp.iter().find(|c| c.id == ally).unwrap().keywords.contains(&Keyword::Unblockable),
+        "your creatures gained unblockable while you're the monarch",
+    );
+}
+
+#[test]
+fn judith_pings_on_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::judith_the_scourge_diva());
+    let doomed = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bolt our own bear so the SBA dispatches CreatureDied to Judith; her
+    // trigger then pings the opponent (scripted target).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(doomed)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "Judith dealt 1 on a nontoken death");
+}
+
+#[test]
+fn marchesas_decree_bleeds_attackers() {
+    let mut g = two_player_game();
+    // Player 1 controls the enchantment (is monarch); player 0 attacks them.
+    let decree = g.add_card_to_battlefield(1, catalog::marchesas_decree());
+    g.fire_self_etb_triggers(decree, 1);
+    drain_stack(&mut g);
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let before = g.players[0].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("declare attack on the monarch");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before - 1, "the attacker's controller lost 1 life");
 }
 
 #[test]
