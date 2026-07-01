@@ -263,6 +263,64 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn tuktuk_returns_bigger() {
+    let mut g = two_player_game();
+    let tuk = g.add_card_to_battlefield(0, catalog::tuktuk_the_explorer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(tuk)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt Tuktuk");
+    drain_stack(&mut g);
+    let ret = g.battlefield.iter().find(|c| c.definition.name == "Tuktuk the Returned").expect("token made");
+    assert_eq!((ret.definition.power, ret.definition.toughness), (5, 5));
+}
+
+#[test]
+fn tine_shrike_has_infect() {
+    assert!(catalog::tine_shrike().keywords.contains(&Keyword::Infect));
+}
+
+#[test]
+fn balustrade_spy_mills_to_a_land() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    // Stack player 1's library: two nonlands on top of a land.
+    for def in [catalog::grizzly_bears(), catalog::lightning_bolt()] {
+        let id = g.next_id();
+        g.players[1].add_to_library_top(id, def);
+    }
+    let land = g.next_id();
+    g.players[1].library.push(crate::card::CardInstance::new(land, catalog::forest(), 1));
+    let spy = g.add_card_to_battlefield(0, catalog::balustrade_spy());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.fire_self_etb_triggers(spy, 0);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Forest"), "milled through to a land");
+    assert!(g.players[1].graveyard.len() >= 3, "the nonlands + the land were milled");
+}
+
+#[test]
+fn ravos_anthems_and_recurs() {
+    let mut g = two_player_game();
+    let ravos = g.add_card_to_battlefield(0, catalog::ravos_soultender());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Anthem: other creature 2/2 → 3/3.
+    let cp = g.compute_battlefield();
+    let a = cp.iter().find(|c| c.id == ally).unwrap();
+    assert_eq!((a.power, a.toughness), (3, 3), "+1/+1 to others");
+    // Upkeep return of a graveyard creature (script "yes"; auto-pick the target).
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let _ = ravos;
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the creature to hand");
+}
+
+#[test]
 fn adriana_grants_melee_to_the_team() {
     let mut g = two_player_game();
     let adriana = g.add_card_to_battlefield(0, catalog::adriana_captain_of_the_guard());

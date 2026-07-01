@@ -424,6 +424,124 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// Tuktuk the Explorer — {2}{R} 1/1 Goblin. Haste; when it dies, create Tuktuk
+/// the Returned, a legendary 5/5 colorless Goblin Golem artifact token.
+pub fn tuktuk_the_explorer() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::on_dies;
+    let returned = TokenDefinition {
+        name: "Tuktuk the Returned".into(),
+        power: 5,
+        toughness: 5,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        colors: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Golem],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Tuktuk the Explorer",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: returned,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tine Shrike — {3}{W} 2/1 Phyrexian Bird. Flying, infect.
+pub fn tine_shrike() -> CardDefinition {
+    CardDefinition {
+        name: "Tine Shrike",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Infect],
+        ..Default::default()
+    }
+}
+
+/// Balustrade Spy — {3}{B} 2/3 Vampire Rogue. Flying; ETB target player mills
+/// until they reveal a land card.
+pub fn balustrade_spy() -> CardDefinition {
+    use crate::mana::b;
+    CardDefinition {
+        name: "Balustrade Spy",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MillUntilLands {
+            who: Selector::Player(PlayerRef::Target(0)),
+            lands: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ravos, Soultender — {3}{W}{B} 2/2 Human Cleric. Flying; other creatures you
+/// control get +1/+1; at your upkeep you may return a creature card from your
+/// graveyard to your hand.
+pub fn ravos_soultender() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    use crate::mana::b;
+    CardDefinition {
+        name: "Ravos, Soultender",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "return a creature card from your graveyard to your hand".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Adriana, Captain of the Guard — {3}{R}{W} 4/4 Legendary Human Knight. Melee;
 /// other creatures you control have melee. (Melee is the engine's flat +1/+1
 /// on-attack approximation.)
