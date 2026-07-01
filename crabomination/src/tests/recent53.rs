@@ -94,6 +94,22 @@ fn giada_scales_entering_angels() {
 }
 
 #[test]
+fn sanctum_prelate_locks_chosen_mana_value() {
+    let mut g = two_player_game();
+    let prelate = g.add_card_to_battlefield(0, catalog::sanctum_prelate());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    g.fire_self_etb_triggers(prelate, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(prelate).unwrap().chosen_number, Some(1));
+
+    // A MV-1 noncreature spell (Lightning Bolt) is locked; a MV-1 creature and a
+    // MV-2 noncreature are fine.
+    assert!(g.noncreature_spell_cast_locked(&catalog::lightning_bolt()), "MV-1 noncreature locked");
+    assert!(!g.noncreature_spell_cast_locked(&catalog::grizzly_bears()), "creature never locked");
+    assert!(!g.noncreature_spell_cast_locked(&catalog::mind_stone()), "MV-2 noncreature unaffected");
+}
+
+#[test]
 fn old_rutstein_mills_and_branches_by_type() {
     let mut g = two_player_game();
     let rutstein = g.add_card_to_battlefield(0, catalog::old_rutstein());

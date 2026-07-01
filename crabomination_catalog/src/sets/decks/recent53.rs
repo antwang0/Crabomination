@@ -165,6 +165,28 @@ pub fn giada_font_of_hope() -> CardDefinition {
     }
 }
 
+/// Sanctum Prelate — {1}{W}{W} 2/2 Human Cleric. As it enters, choose a number.
+/// Noncreature spells with mana value equal to the chosen number can't be cast.
+pub fn sanctum_prelate() -> CardDefinition {
+    CardDefinition {
+        name: "Sanctum Prelate",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseNumberForSource { max: 16 })],
+        static_abilities: vec![StaticAbility {
+            description: "Noncreature spells with mana value equal to the chosen number can't be cast.",
+            effect: StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Old Rutstein — {1}{B}{G} 1/4 Legendary Human Peasant. When it enters and at
 /// the beginning of your upkeep, mill a card: land → Treasure, creature → 1/1
 /// green Insect, else → Blood.

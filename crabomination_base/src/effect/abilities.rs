@@ -421,6 +421,10 @@ pub enum StaticEffect {
     /// costs can't be cast." Global — locks every player while any permanent
     /// has it (Gaddock Teeg). Checked at the main cast gate in `cast_spell`.
     NoncreatureSpellsCantBeCastIf { min_mana_value: u32, or_has_x: bool },
+    /// "Noncreature spells with mana value equal to the source's chosen number
+    /// can't be cast" (Sanctum Prelate). Reads the source permanent's
+    /// `chosen_number`; inactive until the ETB choice resolves.
+    NoncreatureSpellsWithChosenManaValueCantBeCast,
     /// CR 615.12 — while active, damage can't be prevented (global). A
     /// permanent-static sibling of `Effect::DamageCantBePreventedThisTurn`;
     /// `apply_prevention_shields` bypasses all shields while any source on the

@@ -3986,6 +3986,11 @@ pub enum Effect {
     /// (typically `Selector::This`).
     NameCard { what: Selector },
 
+    /// "As [this] enters, choose a number." Stores the chosen number on the
+    /// source permanent's `chosen_number` field (Sanctum Prelate — read by the
+    /// chosen-MV noncreature lock). `max` bounds the choice.
+    ChooseNumberForSource { max: u32 },
+
     /// CR 201.3 — "Choose a nonland card name. Opponents can't cast spells
     /// with the chosen name until your next turn" (Academic Probation). Asks
     /// the resolving controller via the `NameCard` decision and records the

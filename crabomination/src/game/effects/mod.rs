@@ -10984,6 +10984,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseNumberForSource { max } => {
+                // Sanctum Prelate — "as this enters, choose a number." Bots /
+                // AutoDecider pick via the ChooseAmount decision (0 by default);
+                // full UI selection is a follow-up (TODO.md).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let decision = Decision::ChooseAmount {
+                    source,
+                    prompt: "Choose a number".to_string(),
+                    max: *max,
+                };
+                let n = match self.decider.decide(&decision) {
+                    DecisionAnswer::Amount(n) => n.min(*max),
+                    _ => 0,
+                };
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_number = Some(n);
+                }
+                Ok(())
+            }
+
             Effect::NameOpponentCastLock => {
                 // Academic Probation mode 0 — the controller names a nonland
                 // card; their opponents can't cast spells with that name until

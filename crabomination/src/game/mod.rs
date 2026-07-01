@@ -11104,6 +11104,7 @@ fn static_effect_to_effects(
             | StaticEffect::RedirectDamageToSelf
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
+            | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
             | StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { .. }
             | StaticEffect::SelfCostReducedPerOpponent { .. }

@@ -155,6 +155,8 @@ impl Effect {
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,
+            // "As this enters, choose a number" — no cast-time target.
+            Effect::ChooseNumberForSource { .. } => false,
             // CR 603.7 — a reflexive payoff is opaque to cast-time target
             // validation; its body's targets are chosen when it resolves.
             Effect::Reflexive { .. } => false,

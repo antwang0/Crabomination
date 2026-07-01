@@ -6824,10 +6824,15 @@ impl GameState {
         let mv = card.cost.cmc();
         let has_x = card.cost.has_x();
         self.battlefield.iter().any(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect,
-                    StaticEffect::NoncreatureSpellsCantBeCastIf { min_mana_value, or_has_x }
-                    if mv >= min_mana_value || (or_has_x && has_x))
+            c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::NoncreatureSpellsCantBeCastIf { min_mana_value, or_has_x } => {
+                    mv >= min_mana_value || (or_has_x && has_x)
+                }
+                // Sanctum Prelate — locked only at the exact chosen mana value.
+                StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast => {
+                    c.chosen_number == Some(mv)
+                }
+                _ => false,
             })
         })
     }

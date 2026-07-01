@@ -3287,6 +3287,9 @@ pub struct CardInstance {
     /// "unrestricted" (legacy behaviour, used by tests that hand-craft a
     /// Cavern via `add_card_to_battlefield` without firing its ETB).
     pub chosen_creature_type: Option<CreatureType>,
+    /// A number chosen as this permanent entered (Sanctum Prelate — "choose a
+    /// number"). Read by `noncreature_spell_cast_locked` for the chosen-MV lock.
+    pub chosen_number: Option<u32>,
     /// Indices of activated abilities flagged `once_per_turn` that have
     /// already been used this turn. Cleared at the start of each turn by
     /// `clean_per_turn_state`. Empty for the common case (most abilities
@@ -3585,6 +3588,7 @@ impl CardInstance {
             cast_from_exile: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
+            chosen_number: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
@@ -4069,6 +4073,8 @@ struct CardInstanceWire {
     may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
+    chosen_number: Option<u32>,
+    #[serde(default)]
     once_per_turn_used: Vec<usize>,
     #[serde(default)]
     exhausted_abilities: Vec<usize>,
@@ -4253,6 +4259,7 @@ impl serde::Serialize for CardInstance {
             cast_from_exile: self.cast_from_exile,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
+            chosen_number: self.chosen_number,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),
             may_play_until: self.may_play_until,
@@ -4371,6 +4378,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_via_waterbend = wire.cast_via_waterbend;
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
+        c.chosen_number = wire.chosen_number;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.exhausted_abilities = wire.exhausted_abilities;
         c.may_play_until = wire.may_play_until;
