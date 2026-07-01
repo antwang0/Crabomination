@@ -233,3 +233,34 @@ fn sneak_rejected_outside_declare_blockers() {
     });
     assert!(res.is_err(), "Sneak only works during the declare blockers step");
 }
+
+/// Jeong Jeong's exhaust ability copies the next Lesson you cast this turn (and
+/// puts a +1/+1 counter on Jeong Jeong).
+#[test]
+fn jeong_jeong_copies_next_lesson() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let jj = g.add_card_to_battlefield(0, catalog::jeong_jeong_the_deserter());
+    for _ in 0..8 { g.add_card_to_library(0, catalog::forest()); }
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Exhaust — {3}: +1/+1 counter + arm the next-Lesson copy.
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jj, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate exhaust");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jj).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // Cast Brilliant Plan (Lesson: scry 3, draw 3). The copy draws another 3.
+    let hand_before = g.players[0].hand.len();
+    let plan = g.add_card_to_hand(0, catalog::brilliant_plan());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: plan, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Brilliant Plan");
+    drain_stack(&mut g);
+    // hand_before included the plan; it left the hand, then drew 3 + 3 = 6.
+    assert_eq!(g.players[0].hand.len(), hand_before + 6, "original + copied Lesson drew six");
+}

@@ -7,19 +7,20 @@
 //! `crabomination/src/tests/recent22.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
-    SelectionRequirement, Selector, Subtypes, Supertype, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate,
+    SelectionRequirement, Selector, SpellSubtype, Subtypes, Supertype, Value,
 };
 use crate::effect::shortcut::{bloodthirst, sneak};
 use crate::effect::{Duration, Effect};
 use crate::mana::{b, cost, generic, r, u};
 
-/// Jeong Jeong the Deserter — {2}{R} 2/3 legendary Human Rebel Ally with
-/// firebending 1. Exhaust — {3}: put a +1/+1 counter on it. (The "next Lesson
-/// you cast this turn is copied" rider is dropped.)
+/// Jeong Jeong, the Deserter — {2}{R} 2/3 legendary Human Rebel Ally with
+/// firebending 1. Exhaust — {3}: put a +1/+1 counter on it; when you next cast a
+/// Lesson spell this turn, copy it (you may choose new targets). (A non-Lesson
+/// cast first consumes the one-shot harmlessly.)
 pub fn jeong_jeong_the_deserter() -> CardDefinition {
     CardDefinition {
-        name: "Jeong Jeong the Deserter",
+        name: "Jeong Jeong, the Deserter",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
@@ -33,11 +34,26 @@ pub fn jeong_jeong_the_deserter() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             exhaust: true,
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            },
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::OnYourNextSpellCastThisTurn {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                        },
+                        then: Box::new(Effect::CopySpellMayChooseTargets {
+                            what: Selector::TriggerSource,
+                            count: Value::ONE,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
