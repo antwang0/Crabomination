@@ -5401,3 +5401,22 @@ pub fn bumi_unleashed() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fated Firepower — {X}{R}{R}{R} Enchantment. Flash. Enters with X fire
+/// counters. If a source you control would deal damage to an opponent or a
+/// permanent an opponent controls, it deals that much plus the number of fire
+/// counters on this enchantment instead.
+pub fn fated_firepower() -> CardDefinition {
+    CardDefinition {
+        name: "Fated Firepower",
+        cost: cost(&[x(), r(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        enters_with_counters: Some((CounterType::Fire, Value::XFromCost)),
+        static_abilities: vec![StaticAbility {
+            description: "Your sources deal extra damage to opponents equal to this enchantment's fire counters.",
+            effect: StaticEffect::AddDamageToOpponentsPerCounter { kind: CounterType::Fire },
+        }],
+        ..Default::default()
+    }
+}

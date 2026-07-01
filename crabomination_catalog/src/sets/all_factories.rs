@@ -4509,6 +4509,7 @@ static DECKS: &[Factory] = &[
     super::decks::avatar_destiny,
     super::decks::toph_the_first_metalbender,
     super::decks::bumi_unleashed,
+    super::decks::fated_firepower,
     super::decks::combustion_man,
     super::decks::sandbender_scavengers,
     super::decks::diligent_zookeeper,

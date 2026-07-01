@@ -3002,6 +3002,15 @@ impl GameState {
                                 amount = amount.saturating_add(*bonus);
                             }
                         }
+                        StaticEffect::AddDamageToOpponentsPerCounter { kind }
+                            if !self.same_team(c.controller, p) =>
+                        {
+                            if let Some((src_ctrl, _)) = &source_info
+                                && *src_ctrl == c.controller
+                            {
+                                amount = amount.saturating_add(c.counter_count(*kind));
+                            }
+                        }
                         StaticEffect::AddDamageFromColorToPlayers { color, amount: bonus } => {
                             // Any source of the color, any player (CR 614.x).
                             if let Some((_, src_colors)) = &source_info
@@ -10808,6 +10817,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::HalveDamageToYou
             | StaticEffect::AddDamageToOpponents { .. }
+            | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
             | StaticEffect::OpponentMillDoubled
             // GrantAffinityToISSpells — read at cast time by

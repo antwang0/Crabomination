@@ -599,6 +599,10 @@ pub enum StaticEffect {
     /// `GameState::scale_damage_to` (additive bonus applied before the
     /// doublers/halvers).
     AddDamageToOpponents { source_color: Option<crate::mana::Color>, amount: u32 },
+    /// CR 614.5 — like `AddDamageToOpponents` but the bonus equals the number of
+    /// `kind` counters on this static's own source permanent, read live at
+    /// damage time (Fated Firepower — "+ the number of fire counters on this").
+    AddDamageToOpponentsPerCounter { kind: crate::card::CounterType },
     /// CR 614.x — "If a [color] source would deal damage to a player, it deals
     /// that much damage plus `amount` to that player instead." Unlike
     /// `AddDamageToOpponents`, this matches *any* controller's source of the

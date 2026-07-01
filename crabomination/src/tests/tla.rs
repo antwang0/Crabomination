@@ -3373,3 +3373,33 @@ fn bumi_unleashed_earthbends_and_untaps_on_hit() {
     }
     assert!(!g.battlefield_find(mtn).unwrap().tapped, "Bumi's hit untapped the land");
 }
+
+/// Fated Firepower enters with X fire counters and pumps your damage to
+/// opponents by that many.
+#[test]
+fn fated_firepower_boosts_damage_by_fire_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let ff = g.add_card_to_hand(0, catalog::fated_firepower());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ff, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Fated Firepower with X=2");
+    drain_stack(&mut g);
+    let ffid = g.battlefield.iter().find(|c| c.definition.name == "Fated Firepower").unwrap().id;
+    assert_eq!(g.battlefield_find(ffid).unwrap().counter_count(CounterType::Fire), 2, "X=2 fire counters");
+    // A Lightning Bolt (3) to the opponent now deals 3 + 2 = 5.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt at opponent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 5, "3 damage + 2 fire counters = 5");
+}
