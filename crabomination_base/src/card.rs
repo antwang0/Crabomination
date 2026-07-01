@@ -3158,6 +3158,10 @@ pub struct CardInstance {
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
     pub bargained: bool,
+    /// CR 702.172 — Spree mode indices chosen at cast time (empty for
+    /// non-Spree spells). Stamped by `GameAction::CastSpellSpree` and read at
+    /// resolution by `Effect::Spree`.
+    pub spree_modes: Vec<u8>,
     /// CR 702.47 — rules text gained by splicing cards onto this spell,
     /// resolved after the main effect (each entry reads its target from the
     /// matching `additional_targets` slot). Cleared when the spell leaves
@@ -3565,6 +3569,7 @@ impl CardInstance {
             squad_count: 0,
             cast_mana_spent: 0,
             bargained: false,
+            spree_modes: Vec::new(),
             spliced_effects: Vec::new(),
             bought_back: false,
             entwined: false,

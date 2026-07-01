@@ -1155,6 +1155,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         cast_via_mayhem: false,
         cast_via_waterbend: false,
         entwined: false,
+        spree_modes: Vec::new(),
     };
     // Use SetBasePT with Duration::EndOfCombat so the layer-system
     // pathway exercises the mapping under test (PumpPT writes to the

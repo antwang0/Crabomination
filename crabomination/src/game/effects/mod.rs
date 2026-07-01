@@ -148,6 +148,10 @@ pub struct EffectContext {
     /// True if the resolving spell was entwined (CR 702.41): its
     /// `ChooseMode` runs every mode in order. Defaults to `false`.
     pub entwined: bool,
+    /// CR 702.172 — Spree mode indices chosen at cast time. Stamped from the
+    /// resolving `CardInstance.spree_modes`; read by `Effect::Spree`. Empty
+    /// for non-Spree contexts.
+    pub spree_modes: Vec<u8>,
 }
 
 impl EffectContext {
@@ -169,6 +173,7 @@ impl EffectContext {
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             entwined: false,
+            spree_modes: Vec::new(),
         }
     }
     /// Spell-resolution context with the resolving spell's
@@ -249,6 +254,7 @@ impl EffectContext {
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             entwined: false,
+            spree_modes: Vec::new(),
         }
     }
     pub fn for_trigger(
@@ -274,6 +280,7 @@ impl EffectContext {
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             entwined: false,
+            spree_modes: Vec::new(),
         }
     }
     pub fn for_ability(
@@ -298,6 +305,7 @@ impl EffectContext {
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             entwined: false,
+            spree_modes: Vec::new(),
         }
     }
 }
@@ -1347,6 +1355,35 @@ impl GameState {
                             self.run_effect(m, &sub_ctx, events)?;
                         } else {
                             self.run_effect(m, ctx, events)?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Spree { modes } => {
+                // CR 702.172 — the chosen modes were picked (and paid for) at
+                // cast time and stamped onto `ctx.spree_modes`. Run them in
+                // printed order; each target-bearing mode consumes the next
+                // target slot (slot 0 = `target`, then `additional_targets`).
+                // A cast that arrives with no chosen modes runs mode 0 (Spree
+                // requires at least one — this is a defensive floor).
+                let chosen: Vec<u8> = if ctx.spree_modes.is_empty() {
+                    vec![0]
+                } else {
+                    ctx.spree_modes.clone()
+                };
+                let mut next_slot = 0usize;
+                for &i in &chosen {
+                    if let Some(m) = modes.get(i as usize) {
+                        if m.effect.requires_target() {
+                            let mut sub_ctx = ctx.clone();
+                            sub_ctx.targets =
+                                ctx.targets.get(next_slot).cloned().into_iter().collect();
+                            next_slot += 1;
+                            self.run_effect(&m.effect, &sub_ctx, events)?;
+                        } else {
+                            self.run_effect(&m.effect, ctx, events)?;
                         }
                     }
                 }

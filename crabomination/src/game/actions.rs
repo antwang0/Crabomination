@@ -2659,6 +2659,50 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.172 — cast a Spree spell, choosing one or more modes. Each
+    /// chosen mode's mana cost is an additional cost (folded into the total
+    /// in `cast_spell_with_convoke`), and the chosen indices are stamped onto
+    /// the resolving spell so `Effect::Spree` runs exactly those modes.
+    pub(crate) fn cast_spell_spree(
+        &mut self,
+        card_id: CardId,
+        spree_modes: Vec<u8>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        // The card must be a Spree spell in hand; validate the chosen modes.
+        let mode_count = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| match &c.definition.effect {
+                crate::effect::Effect::Spree { modes } => Some(modes.len()),
+                _ => None,
+            })
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Distinct, in range, at least one (CR 702.172a — "one or more"),
+        // kept in printed order so target slots line up with resolution.
+        let mut chosen: Vec<u8> = Vec::new();
+        for &i in &spree_modes {
+            if (i as usize) < mode_count && !chosen.contains(&i) {
+                chosen.push(i);
+            }
+        }
+        chosen.sort_unstable();
+        if chosen.is_empty() {
+            return Err(GameError::InvalidTarget);
+        }
+        self.cast_atomically(|g| {
+            g.pending_spree_modes = Some(chosen.clone());
+            let cast =
+                g.cast_spell(card_id, target.clone(), additional_targets.clone(), None, x_value);
+            g.pending_spree_modes = None;
+            cast
+        })
+    }
+
     /// CR 702.27 — cast a spell paying its optional Buyback cost. The
     /// resolving spell returns to its owner's hand instead of the
     /// graveyard (`continue_spell_resolution` consults `card.bought_back`).
@@ -3726,6 +3770,11 @@ impl GameState {
         // at resolution to return the spell to hand instead of the gy.
         let buyback = buyback && card.definition.has_buyback().is_some();
         card.bought_back = buyback;
+        // CR 702.172 — Spree: stamp the chosen modes so `Effect::Spree` runs
+        // exactly those at resolution. Their mana costs fold into the total
+        // cost below.
+        let spree_modes = self.pending_spree_modes.take().unwrap_or_default();
+        card.spree_modes = spree_modes.clone();
         // CR 702.41 — opt-in Entwine; only sticks when the card has it.
         let entwine = entwine && card.definition.has_entwine().is_some();
         card.entwined = entwine;
@@ -4099,6 +4148,16 @@ impl GameState {
         // CR 702.32b — fold the optional kicker cost into the total cost.
         if kicked && let Some(kick) = card.definition.has_kicker() {
             cost.symbols.extend(kick.symbols.iter().cloned());
+        }
+        // CR 702.172 — fold each chosen Spree mode's mana cost into the total.
+        if !spree_modes.is_empty()
+            && let crate::effect::Effect::Spree { modes } = &card.definition.effect
+        {
+            for &i in &spree_modes {
+                if let Some(m) = modes.get(i as usize) {
+                    cost.symbols.extend(m.cost.symbols.iter().cloned());
+                }
+            }
         }
         // CR 702.27b — fold the optional buyback cost into the total cost.
         if buyback && let Some(bb) = card.definition.has_buyback() {
@@ -5105,6 +5164,7 @@ impl GameState {
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
                     entwined: false,
+                    spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -6285,6 +6345,7 @@ impl GameState {
                 cast_via_mayhem: false,
                 cast_via_waterbend: false,
                     entwined: false,
+                    spree_modes: Vec::new(),
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::NoAlternativeCost);
@@ -7134,6 +7195,7 @@ impl GameState {
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
                     entwined: false,
+                    spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -8529,6 +8591,7 @@ impl GameState {
                 cast_via_mayhem: false,
                 cast_via_waterbend: false,
                     entwined: false,
+                    spree_modes: Vec::new(),
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);

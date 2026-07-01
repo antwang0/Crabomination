@@ -283,6 +283,9 @@ impl Effect {
             // ChooseUpToN's modes are self-targeting (chosen at resolution).
             Effect::ChooseUpToN { .. } => false,
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
+            // Spree targets are supplied per chosen mode at cast time and
+            // consumed at resolution; no fixed cast-time slot is demanded.
+            Effect::Spree { .. } => false,
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
@@ -1073,6 +1076,7 @@ impl Effect {
             Effect::DestroyLandOfEachBasicType => {
                 "choose a land of each basic land type, then destroy those lands".into()
             }
+            Effect::Spree { .. } => "spree (choose one or more additional costs)".into(),
             Effect::DestroyNoRegen { .. } => {
                 format!("destroy {} (can't be regenerated)", self.target_phrase())
             }
@@ -1607,6 +1611,12 @@ impl Effect {
                     Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
+                // Spree targets are supplied and validated per chosen mode at
+                // resolution (the chosen modes aren't encoded in the single
+                // `mode` field, so a mode-agnostic slot filter would reject a
+                // single-mode cast of any non-first mode). No cast-time slot
+                // filter is surfaced; see `Effect::Spree`'s resolution arm.
+                Effect::Spree { .. } => None,
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode, kicked)
                 }

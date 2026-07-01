@@ -1829,6 +1829,14 @@ pub enum Effect {
         modes: Vec<Effect>,
         cost: Box<Effect>,
     },
+    /// CR 702.172 — Spree. "Choose one or more additional costs." Each mode
+    /// carries its own mana cost; the chosen modes are picked at cast time
+    /// (`GameAction::CastSpellSpree`), their costs folded into the total, and
+    /// stamped onto the resolving `CardInstance.spree_modes`. At resolution the
+    /// chosen modes run in printed order, each target-bearing mode consuming
+    /// the next target slot (slot 0 = `target`, then `additional_targets`).
+    /// Targets are validated at resolution, not cast time.
+    Spree { modes: Vec<SpreeMode> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into
@@ -4259,6 +4267,14 @@ pub enum Effect {
     /// prompt today (degraded to the auto-decider choice — same as
     /// other implicit-choice cards).
     DiminishCreaturesExceptChosenType { power: Value, toughness: Value },
+}
+
+/// CR 702.172 — one Spree mode: an additional mana cost paired with the
+/// effect it buys. Chosen at cast time; run at resolution.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpreeMode {
+    pub cost: crate::mana::ManaCost,
+    pub effect: Effect,
 }
 
 /// Lightweight mirror of `DelayedKind` for use inside

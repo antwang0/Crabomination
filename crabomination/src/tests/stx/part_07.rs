@@ -2046,6 +2046,7 @@ fn move_counter_transfers_counters_between_permanents() {
         cast_via_mayhem: false,
         cast_via_waterbend: false,
         entwined: false,
+        spree_modes: Vec::new(),
     };
     let effect = Effect::MoveCounter {
         from: Selector::This,
@@ -2090,6 +2091,7 @@ fn move_counter_clamps_at_source_pool() {
         cast_via_mayhem: false,
         cast_via_waterbend: false,
         entwined: false,
+        spree_modes: Vec::new(),
     };
     let effect = Effect::MoveCounter {
         from: Selector::This,

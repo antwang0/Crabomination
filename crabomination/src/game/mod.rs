@@ -229,6 +229,9 @@ mod tests_recent64;
 #[path = "../tests/recent65.rs"]
 mod tests_recent65;
 #[cfg(test)]
+#[path = "../tests/spree.rs"]
+mod tests_spree;
+#[cfg(test)]
 #[path = "../tests/avatar_water.rs"]
 mod tests_avatar_water;
 #[cfg(test)]
@@ -857,6 +860,13 @@ pub struct GameState {
     /// `pay_additional_costs` in lieu of the first-N auto-pick. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_discards: Option<Vec<CardId>>,
+    /// Transient: the Spree mode indices chosen for the current cast (CR
+    /// 702.172). Set by `cast_spell_spree` just before it invokes the shared
+    /// cast path, consumed there to fold the chosen modes' mana into the cost
+    /// and stamp them onto the resolving `CardInstance.spree_modes`. Never
+    /// snapshots — it lives only across the synchronous cast call.
+    #[serde(skip, default)]
+    pub(crate) pending_spree_modes: Option<Vec<u8>>,
     /// Transient: the answer to a "spend your floating mana, or tap lands
     /// instead?" confirmation (CR 601.2g — the player chooses their mana
     /// sources). `Some(true)` = spend the pre-existing float; `Some(false)` =
@@ -1342,6 +1352,7 @@ impl Clone for GameState {
             pending_cast_face: self.pending_cast_face,
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
             pending_cast_discards: self.pending_cast_discards.clone(),
+            pending_spree_modes: self.pending_spree_modes.clone(),
             pending_cast_spend_float: self.pending_cast_spend_float,
             pending_landcycle_pick: self.pending_landcycle_pick,
             pending_ability_sac_other: self.pending_ability_sac_other,
@@ -1481,6 +1492,7 @@ impl GameState {
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
+            pending_spree_modes: None,
             pending_cast_spend_float: None,
             pending_landcycle_pick: None,
             pending_ability_sac_other: None,
@@ -6239,6 +6251,13 @@ impl GameState {
             } => self.cast_spell_bargain(
                 card_id, sacrifice, target, additional_targets, mode, x_value,
             ),
+            GameAction::CastSpellSpree {
+                card_id,
+                spree_modes,
+                target,
+                additional_targets,
+                x_value,
+            } => self.cast_spell_spree(card_id, spree_modes, target, additional_targets, x_value),
             GameAction::Plot { card_id } => self.plot_card(card_id),
             GameAction::CastPlotted {
                 card_id,
@@ -7745,6 +7764,7 @@ impl GameState {
                                 cast_via_mayhem: false,
                                 cast_via_waterbend: false,
                                 entwined: false,
+                                spree_modes: Vec::new(),
                             };
                             if !self.evaluate_predicate(filter, &ctx) {
                                 if !fanout {
@@ -8134,6 +8154,7 @@ impl GameState {
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
                     entwined: false,
+                    spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -9948,7 +9969,13 @@ impl GameState {
         // left the battlefield, stopped matching the spell's target filter,
         // or became illegal to target (granted Hexproof/Shroud). Token
         // copies additionally keep the bare filter re-check.
-        if additional_targets.is_empty()
+        // CR 702.172 — Spree spells validate each chosen mode's target at
+        // resolution (per-mode), not through this single-`mode` fizzle path;
+        // the chosen modes aren't encoded in `mode`, so a slot-0 filter here
+        // could belong to an unchosen mode. Skip the blanket fizzle for Spree.
+        let is_spree = matches!(effect, Effect::Spree { .. });
+        if !is_spree
+            && additional_targets.is_empty()
             && let Some(t) = &target
         {
             let filter_fails = |g: &Self| {
@@ -9984,7 +10011,8 @@ impl GameState {
                 }
                 return Ok(events);
             }
-        } else if card.cast_target_was_battlefield
+        } else if !is_spree
+            && card.cast_target_was_battlefield
             && let Some(t0) = &target
         {
             // CR 608.2b — a multi-target spell fizzles only if EVERY target
@@ -10039,6 +10067,7 @@ impl GameState {
         ctx.cast_via_mayhem = card.cast_via_mayhem;
         ctx.cast_via_waterbend = card.cast_via_waterbend;
         ctx.entwined = card.entwined;
+        ctx.spree_modes = card.spree_modes.clone();
         // Stamp the resolving spell's identity so source-aware damage
         // replacements (Torbran) can read its controller/colors while the
         // card is in no visible zone.

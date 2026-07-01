@@ -593,6 +593,7 @@ impl GameState {
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
                     entwined: false,
+                    spree_modes: Vec::new(),
                 };
                 if !self.evaluate_predicate(&predicate, &ctx) {
                     continue;

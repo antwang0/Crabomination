@@ -258,6 +258,18 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.172 — cast a Spree spell choosing `spree_modes` (one or more
+    /// distinct mode indices). Each chosen mode's mana cost is folded into the
+    /// total; `target` (slot 0) and `additional_targets` supply per-mode
+    /// targets in the order the chosen modes appear.
+    CastSpellSpree {
+        card_id: CardId,
+        spree_modes: Vec<u8>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+    },
     /// CR 702.47 — cast a spell splicing the given hand cards onto it. Each
     /// splice card (revealed, stays in hand) must carry `Keyword::Splice`
     /// whose quality matches the cast spell's subtypes; its splice cost is
@@ -1036,6 +1048,7 @@ impl GameAction {
                 | A::CastAftermath { .. }
                 | A::CastSpellCasualty { .. }
                 | A::CastSpellBargain { .. }
+                | A::CastSpellSpree { .. }
                 | A::CastSpellSpliced { .. }
                 | A::CastSpellSacrificeReduce { .. }
                 | A::CastSpellSquad { .. }
@@ -1087,6 +1100,7 @@ impl GameAction {
             | A::CastAftermath { card_id, .. }
             | A::CastSpellCasualty { card_id, .. }
             | A::CastSpellBargain { card_id, .. }
+            | A::CastSpellSpree { card_id, .. }
             | A::CastSpellSpliced { card_id, .. }
             | A::CastSpellSacrificeReduce { card_id, .. }
             | A::CastSpellSquad { card_id, .. }

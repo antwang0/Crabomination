@@ -1580,6 +1580,13 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                     if k == "definition" || k == "token" {
                         continue;
                     }
+                    // CR 702.172 — Spree modes each use their own internal slot
+                    // 0; the resolver remaps targets per chosen mode, so their
+                    // filters aren't surfaced through the single-`mode` cast path
+                    // (which can't express "which modes were chosen").
+                    if k == "Spree" {
+                        continue;
+                    }
                     collect_slots(v, out);
                 }
             }
