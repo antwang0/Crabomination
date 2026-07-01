@@ -914,6 +914,10 @@ pub enum StaticEffect {
         enchanted_only: bool,
         filter: SelectionRequirement,
         extra: ExtraManaKind,
+        /// Only fires while the source's controller is the monarch (Regal
+        /// Behemoth). Defaults to false via `#[serde(default)]`.
+        #[serde(default)]
+        while_monarch: bool,
     },
     /// "Each [filter] card in each player's hand has typecycling [cost]"
     /// (Homing Sliver's slivercycling grant). Consulted by `landcycle_card`

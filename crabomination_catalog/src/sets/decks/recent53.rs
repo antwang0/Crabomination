@@ -424,6 +424,63 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// Adriana, Captain of the Guard — {3}{R}{W} 4/4 Legendary Human Knight. Melee;
+/// other creatures you control have melee. (Melee is the engine's flat +1/+1
+/// on-attack approximation.)
+pub fn adriana_captain_of_the_guard() -> CardDefinition {
+    use crate::effect::shortcut::melee;
+    CardDefinition {
+        name: "Adriana, Captain of the Guard",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![melee()],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control have melee.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                ability: Box::new(melee()),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Regal Behemoth — {4}{G}{G} 5/5 Dinosaur. Trample; ETB become the monarch;
+/// while you're the monarch, a land tapped for mana produces one extra mana.
+/// (The printed "one mana of any color" is approximated to the produced type.)
+pub fn regal_behemoth() -> CardDefinition {
+    use crate::card::StaticAbility as SA;
+    use crate::effect::ExtraManaKind;
+    use crate::mana::g;
+    CardDefinition {
+        name: "Regal Behemoth",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::BecomeMonarch { who: PlayerRef::You })],
+        static_abilities: vec![SA {
+            description: "Whenever you tap a land for mana while you're the monarch, add an additional one mana.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: R::Any,
+                extra: ExtraManaKind::Mirror,
+                while_monarch: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Gallant Cavalry — {3}{W} 2/2 Human Knight. Vigilance; ETB make a 2/2 white
 /// Knight token with vigilance.
 pub fn gallant_cavalry() -> CardDefinition {

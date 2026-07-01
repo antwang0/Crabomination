@@ -263,6 +263,45 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn adriana_grants_melee_to_the_team() {
+    let mut g = two_player_game();
+    let adriana = g.add_card_to_battlefield(0, catalog::adriana_captain_of_the_guard());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(adriana);
+    g.clear_sickness(ally);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: adriana, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ])).expect("attack with both");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    // Melee (flat +1/+1 approximation) fires for both attackers.
+    assert_eq!(
+        { let a = cp.iter().find(|c| c.id == ally).unwrap(); (a.power, a.toughness) },
+        (3, 3),
+        "granted melee pumped the ally",
+    );
+}
+
+#[test]
+fn regal_behemoth_doubles_land_mana_while_monarch() {
+    let mut g = two_player_game();
+    let behemoth = g.add_card_to_battlefield(0, catalog::regal_behemoth());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.fire_self_etb_triggers(behemoth, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0));
+    // Tap the Forest: one {G} from the land + one extra while monarch.
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap forest for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "monarch got an extra mana");
+}
+
+#[test]
 fn gallant_cavalry_brings_a_friend() {
     let mut g = two_player_game();
     let cav = g.add_card_to_battlefield(0, catalog::gallant_cavalry());

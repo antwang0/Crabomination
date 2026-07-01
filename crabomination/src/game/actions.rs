@@ -1220,12 +1220,15 @@ impl crate::game::GameState {
             .iter()
             .flat_map(|src| src.definition.static_abilities.iter().map(move |sa| (src, sa)))
             .filter_map(|(src, sa)| {
-                let StaticEffect::ExtraManaOnLandTap { enchanted_only, filter, extra } =
+                let StaticEffect::ExtraManaOnLandTap { enchanted_only, filter, extra, while_monarch } =
                     &sa.effect
                 else {
                     return None;
                 };
                 if *enchanted_only && src.attached_to != Some(land_id) {
+                    return None;
+                }
+                if *while_monarch && self.monarch != Some(src.controller) {
                     return None;
                 }
                 (crate::game::layers::requirement_matches_card(filter, &land, src.controller))

@@ -4546,6 +4546,7 @@ pub fn wolfwillow_haven() -> CardDefinition {
                 enchanted_only: true,
                 filter: SelectionRequirement::Any,
                 extra: ExtraManaKind::Fixed(Color::Green),
+                while_monarch: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

@@ -4151,6 +4151,8 @@ static DECKS: &[Factory] = &[
     super::decks::hopeful_initiate,
     super::decks::sanctum_prelate,
     super::decks::old_rutstein,
+    super::decks::adriana_captain_of_the_guard,
+    super::decks::regal_behemoth,
     super::decks::gallant_cavalry,
     super::decks::valiant_knight,
     super::decks::custodi_lich,

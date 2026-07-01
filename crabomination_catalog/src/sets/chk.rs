@@ -5881,6 +5881,7 @@ pub fn heartbeat_of_spring() -> CardDefinition {
                 enchanted_only: false,
                 filter: SelectionRequirement::Any,
                 extra: ExtraManaKind::Mirror,
+                while_monarch: false,
             },
         }],
         ..Default::default()

@@ -53943,6 +53943,7 @@ pub fn mana_flare() -> CardDefinition {
                 enchanted_only: false,
                 filter: SelectionRequirement::Any,
                 extra: ExtraManaKind::Mirror,
+                while_monarch: false,
             },
         }],
         ..Default::default()
@@ -53963,6 +53964,7 @@ pub fn vernal_bloom() -> CardDefinition {
                 enchanted_only: false,
                 filter: SelectionRequirement::HasLandType(LandType::Forest),
                 extra: ExtraManaKind::Fixed(Color::Green),
+                while_monarch: false,
             },
         }],
         ..Default::default()
@@ -53992,6 +53994,7 @@ pub fn wild_growth() -> CardDefinition {
                 enchanted_only: true,
                 filter: SelectionRequirement::Any,
                 extra: ExtraManaKind::Fixed(Color::Green),
+                while_monarch: false,
             },
         }],
         ..Default::default()
@@ -54025,6 +54028,7 @@ pub fn utopia_sprawl() -> CardDefinition {
                 enchanted_only: true,
                 filter: SelectionRequirement::Any,
                 extra: ExtraManaKind::ChosenColor,
+                while_monarch: false,
             },
         }],
         ..Default::default()
@@ -54056,6 +54060,7 @@ pub fn overgrowth() -> CardDefinition {
             enchanted_only: true,
             filter: SelectionRequirement::Any,
             extra: ExtraManaKind::Fixed(Color::Green),
+            while_monarch: false,
         },
     };
     CardDefinition {
@@ -54097,6 +54102,7 @@ pub fn crypt_ghast() -> CardDefinition {
                 filter: SelectionRequirement::HasLandType(LandType::Swamp)
                     .and(SelectionRequirement::ControlledByYou),
                 extra: ExtraManaKind::Fixed(Color::Black),
+                while_monarch: false,
             },
         }],
         ..Default::default()
@@ -54124,6 +54130,7 @@ pub fn nirkana_revenant() -> CardDefinition {
                 filter: SelectionRequirement::HasLandType(LandType::Swamp)
                     .and(SelectionRequirement::ControlledByYou),
                 extra: ExtraManaKind::Fixed(Color::Black),
+                while_monarch: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
