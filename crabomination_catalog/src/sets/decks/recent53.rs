@@ -424,6 +424,98 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// Warleader's Helix — {2}{R}{W} Instant. Deal 4 damage to any target and gain
+/// 4 life.
+pub fn warleaders_helix() -> CardDefinition {
+    CardDefinition {
+        name: "Warleader's Helix",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(4) },
+            Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(4) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wojek Halberdiers — {R}{W} 3/2 Human Soldier. Battalion — first strike until
+/// end of turn.
+pub fn wojek_halberdiers() -> CardDefinition {
+    use crate::effect::shortcut::battalion;
+    CardDefinition {
+        name: "Wojek Halberdiers",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![battalion(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::FirstStrike,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Firemane Avenger — {2}{R}{W} 3/3 Angel. Flying; Battalion — deal 3 damage to
+/// any target and gain 3 life.
+pub fn firemane_avenger() -> CardDefinition {
+    use crate::effect::shortcut::battalion;
+    CardDefinition {
+        name: "Firemane Avenger",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![battalion(Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+            Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Assemble the Legion — {3}{R}{W} Enchantment. At your upkeep, put a muster
+/// counter on it, then make a 1/1 red-and-white Soldier with haste for each
+/// muster counter on it.
+pub fn assemble_the_legion() -> CardDefinition {
+    use crate::card::{CounterType, TokenDefinition};
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Assemble the Legion",
+        cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Muster, amount: Value::ONE },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::TotalCountersOn { what: Box::new(Selector::This) },
+                    definition: soldier,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// War Priest of Thune — {1}{W} 2/2 Human Cleric. ETB you may destroy target
 /// enchantment.
 pub fn war_priest_of_thune() -> CardDefinition {

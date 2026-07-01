@@ -263,6 +263,80 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn warleaders_helix_burns_and_gains() {
+    let mut g = two_player_game();
+    let helix = g.add_card_to_hand(0, catalog::warleaders_helix());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let (dmg_before, life_before) = (g.players[1].life, g.players[0].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: helix, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast helix at the opponent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, dmg_before - 4, "4 damage");
+    assert_eq!(g.players[0].life, life_before + 4, "gained 4");
+}
+
+#[test]
+fn wojek_halberdiers_battalion_first_strike() {
+    let mut g = two_player_game();
+    let wojek = g.add_card_to_battlefield(0, catalog::wojek_halberdiers());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [wojek, a, b] { g.clear_sickness(id); }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: wojek, target: AttackTarget::Player(1) },
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("battalion attack");
+    drain_stack(&mut g);
+    assert!(
+        g.compute_battlefield().iter().find(|c| c.id == wojek).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "battalion granted first strike",
+    );
+}
+
+#[test]
+fn firemane_avenger_battalion_bolts() {
+    let mut g = two_player_game();
+    let fm = g.add_card_to_battlefield(0, catalog::firemane_avenger());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [fm, a, b] { g.clear_sickness(id); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let (dmg_before, life_before) = (g.players[1].life, g.players[0].life);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: fm, target: AttackTarget::Player(1) },
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("battalion attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, dmg_before - 3, "battalion dealt 3");
+    assert_eq!(g.players[0].life, life_before + 3, "battalion gained 3");
+}
+
+#[test]
+fn assemble_the_legion_musters_more_each_turn() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let assemble = g.add_card_to_battlefield(0, catalog::assemble_the_legion());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(assemble).unwrap().counter_count(CounterType::Muster), 1);
+    let after_one = g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count();
+    assert_eq!(after_one, 1, "one Soldier at one muster counter");
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let after_two = g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count();
+    assert_eq!(after_two, 1 + 2, "two more Soldiers at two muster counters");
+}
+
+#[test]
 fn war_priest_smashes_an_enchantment() {
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, catalog::mark_of_asylum());

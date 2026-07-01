@@ -353,6 +353,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Age => "Age",
         CounterType::Fire => "Fire",
         CounterType::Conqueror => "Conqueror",
+        CounterType::Muster => "Muster",
         // Silver / Prepared and any future internal counters fall through.
         _ => "Counter",
     }

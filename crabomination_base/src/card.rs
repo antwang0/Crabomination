@@ -400,6 +400,9 @@ pub enum CounterType {
     /// Nest counter — DSK Twitching Doll accrues one each time its mana
     /// ability is used; sacrificing it makes a Spider per counter on it.
     Nest,
+    /// Muster counter — Assemble the Legion tallies one each upkeep and mints a
+    /// Soldier token per counter on it.
+    Muster,
 }
 
 /// Every zone a card can occupy.
