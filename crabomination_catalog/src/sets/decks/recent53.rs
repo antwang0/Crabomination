@@ -424,6 +424,82 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// Gallant Cavalry — {3}{W} 2/2 Human Knight. Vigilance; ETB make a 2/2 white
+/// Knight token with vigilance.
+pub fn gallant_cavalry() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Gallant Cavalry",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: knight,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Valiant Knight — {3}{W} 3/4 Human Knight. Other Knights you control get
+/// +1/+1; {3}{W}{W}: Knights you control gain double strike until end of turn.
+pub fn valiant_knight() -> CardDefinition {
+    let knights = || Selector::EachPermanent(
+        R::Creature.and(R::HasCreatureType(CreatureType::Knight)).and(R::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Valiant Knight",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Other Knights you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Knight))
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), w()]),
+            effect: Effect::GrantKeyword {
+                what: knights(),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Custodi Lich — {3}{B}{B} 4/2 Zombie Cleric. ETB become the monarch; each
 /// opponent sacrifices a creature. (The printed "whenever you become the
 /// monarch, target player sacrifices" is approximated to the ETB edict.)

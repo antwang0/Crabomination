@@ -263,6 +263,44 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn gallant_cavalry_brings_a_friend() {
+    let mut g = two_player_game();
+    let cav = g.add_card_to_battlefield(0, catalog::gallant_cavalry());
+    g.fire_self_etb_triggers(cav, 0);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Knight"),
+        "made a Knight token",
+    );
+}
+
+#[test]
+fn valiant_knight_lords_and_grants_double_strike() {
+    let mut g = two_player_game();
+    let valiant = g.add_card_to_battlefield(0, catalog::valiant_knight());
+    let ally = g.add_card_to_battlefield(0, catalog::gallant_cavalry()); // a Knight
+    // Anthem: the other Knight is 2/2 → 3/3.
+    let cp = g.compute_battlefield();
+    let a = cp.iter().find(|c| c.id == ally).unwrap();
+    assert_eq!((a.power, a.toughness), (3, 3), "+1/+1 to other Knights");
+    // Activated grant: Knights gain double strike.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: valiant, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate double-strike pump");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    assert!(
+        cp.iter().find(|c| c.id == valiant).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "Knights gained double strike",
+    );
+}
+
+#[test]
 fn custodi_lich_edicts_and_crowns() {
     let mut g = two_player_game();
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
