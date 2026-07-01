@@ -8,6 +8,31 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — monarch/white sweep (`decks::recent53`)
+
+Shipped (with reusable primitives): monarch-linked exile (`ExileUntilOpponentMonarch`),
+per-count enters-with-counter (`TypeEntersWithCountersPerControlled` — Giada),
+mill-then-branch-by-type (`MillThenBranchByType` — Old Rutstein), choose-a-number
++ chosen-MV noncreature lock (`ChooseNumberForSource` /
+`NoncreatureSpellsWithChosenManaValueCantBeCast` — Sanctum Prelate),
+remove-counters-from-among-creatures cost (`remove_counter_among_filter` — Hopeful
+Initiate), monarch-gated `ExtraManaOnLandTap` (Regal Behemoth). Cards: By Force,
+Palace Jailer, Loxodon Smiter, Leonin Vanguard, Marchesa's Decree, Custodi Lich,
+Thorn of the Black Rose, Throne Warden, Skyline Despot, Keeper of Keys, Judith,
+Gallant Cavalry, Valiant Knight, Adriana (melee grant).
+Still deferred for want of a primitive:
+- **Dauntless Bodyguard** — needs a "choose+remember another creature at ETB"
+  slot to grant the remembered creature indestructible on sacrifice.
+- **Custodi Squire / Ballot Broker / Grudge Keeper** — vote-for-a-graveyard-card
+  and additional-vote / vote-mismatch payoffs (voting is only wired for
+  `WillOfTheCouncilExile` today).
+- **Odric, Lunarch Marshal** — conditional team keyword-sharing across 12
+  keywords ("your creatures gain X if any of yours has X").
+- **Evolved Sleeper** — level-up-style activated abilities that permanently set
+  the source's creature types + base P/T.
+- **Sanctum Prelate** UI number-choice — the ETB choose-a-number currently uses
+  the AutoDecider default for bots; UI suspend is a follow-up.
+
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 
 Shipped: multi-kind permanent+player target slots (`Selector::ControlledBy
@@ -79,12 +104,6 @@ primitive:
   `GrantTriggeredAbility` over a creature set; the end-step manifest half is easy.
 - **Genesis Hydra** — cast-trigger reveal-top-X + put a nonland permanent MV≤X +
   enters-with-X counters (an X-scaled `RevealTop…ToBattlefield`).
-- **Old Rutstein** — mill 1 then branch on the milled card's type (land →
-  Treasure, creature → Insect, else → Blood); needs a "what was milled" gate.
-- **Hopeful Initiate** — "{2}{W}, remove two +1/+1 counters from among creatures
-  you control: destroy artifact/enchantment" (remove-counter-cost is source-only).
-- **Giada, Font of Hope** — "each other Angel enters with +1/+1 per Angel you
-  control" (a per-entry counter replacement scaled by a live count).
 
 ## Discovered follow-ups — utility-land / hatebear sweep (`decks::recent40`–`recent44`)
 
@@ -93,14 +112,6 @@ Cards confirmed absent and deferred this run for want of a mechanic:
   land"). `Keyword::Buyback` only carries a `ManaCost`; needs a buyback variant
   that pays a sacrifice at cast time and still sets `bought_back`. Touches the
   central cast pipeline.
-- **By Force** — "Destroy X target artifacts." `Effect::ApplyToTargets` takes a
-  fixed `max_targets: u8`; needs an `XFromCost`-driven target count.
-- **Sanctum Prelate** — "Noncreature spells with the chosen mana value can't be
-  cast." Like the new `NoncreatureSpellsCantBeCastIf` but keyed on an
-  ETB-chosen exact mana value (needs a `Decision::ChooseNumber` + a per-source
-  chosen-MV gate).
-- **Palace Jailer** — monarch ETB + "exile until you're no longer the monarch"
-  (a monarch-linked exile, distinct from `ExileUntilSourceLeaves`).
 - **Goblin Welder / Daretti, Scrap Savant** — artifact-swap (sacrifice one,
   reanimate another) needs a two-target gy↔bf swap effect.
 - **Dark Depths / Smokestack / Tangle Wire** — ice/soot/fade counter engines.
@@ -2524,6 +2535,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.97 — Scavenge
 - ✅ CR 702.53 — Transmute
 - ✅ CR 122 / 614.13 — chosen-type enters-with-counter
+- ✅ CR 122 — per-count enters-with-counter (`StaticEffect::TypeEntersWithCountersPerControlled` — Giada scales entering Angels by your Angel count; `giada_scales_entering_angels`)
+- ✅ CR 724 — Monarch-linked exile (`Effect::ExileUntilOpponentMonarch` + `ExileLink.monarch_guard`; Palace Jailer returns the exile when the monarchy leaves, driven by `set_monarch`; `palace_jailer_*`)
+- ✅ CR 602.5b — remove-counters-from-among-creatures activation cost (`ActivatedAbility.remove_counter_among_filter` — Hopeful Initiate; `hopeful_initiate_*`)
 - ✅ CR 702.44 — Sunburst (`enters_with_counters: (PlusOnePlusOne, Value::ConvergedValue)` — Suntouched Myr)
 - ✅ CR 701.x — impulse-exile-until-duplicate-name (`Effect::ExileUntilDuplicateName` — Tainted Pact)
 - ✅ CR 702.96 — Overload via alt-cost `effect_override` (Mizzix's Mastery)

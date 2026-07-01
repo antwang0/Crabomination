@@ -768,6 +768,19 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         }
         _ => {}
     }
+    // Turn-length distribution: median / tail / spread from the histogram +
+    // running σ. Surfaces the game-length shape (fast concessions vs. grinds)
+    // that the average alone hides. `turn_percentile`/`turn_count_stddev` were
+    // computed but never rendered; gate on a handful of matches so short logs
+    // stay tight.
+    if n >= 5 {
+        out.push_str(&format!(
+            " turns_p50={} p95={} (σ={:.1})",
+            s.turn_percentile(0.5),
+            s.turn_percentile(0.95),
+            s.turn_count_stddev(),
+        ));
+    }
     // Win/draw split: only render once at least one win or draw is
     // recorded so pre-warmup logs stay tight. The delta vs total
     // matches surfaces "stuck" matches (channel disconnect /

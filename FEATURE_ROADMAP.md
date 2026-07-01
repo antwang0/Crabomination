@@ -148,7 +148,9 @@ Each unblocks a large swath of cards.
    `Decision::CombatDamageOrder` prompts the attacker (510.1c).
 4. ✅ **Linked "until this leaves play" exile** (603.6e).
    `Effect::ExileUntilSourceLeaves` + `return_linked_exiles` (Banisher Priest,
-   Fiend Hunter, Oblivion Ring, Brain Maggot, Tidehollow Sculler).
+   Fiend Hunter, Oblivion Ring, Brain Maggot, Tidehollow Sculler). Monarch-linked
+   sibling (CR 724 — `Effect::ExileUntilOpponentMonarch` + `ExileLink.monarch_guard`,
+   returns when the monarchy moves rather than when the source leaves; Palace Jailer).
 5. 🟡 **Copy of a permanent (clone).** `Effect::BecomeCopyOf` +
    `enters_as_copy` ship Clone, Phantasmal Image, Mirror Image, Stunt Double;
    token copies via `CreateTokenCopyOf`. Remaining: continuous layer-1

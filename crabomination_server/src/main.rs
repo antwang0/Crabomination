@@ -1115,6 +1115,24 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn format_match_stats_renders_turn_distribution_past_threshold() {
+        let mut s = MatchStats::default();
+        // Four matches: no turn distribution yet (threshold is 5).
+        for _ in 0..4 {
+            s.record_bot(Duration::from_secs(1), Format::Demo);
+            s.observe_turns(6);
+        }
+        assert!(!format_match_stats(&s).contains("turns_p50"), "hidden below 5 matches");
+        // Fifth match crosses the threshold.
+        s.record_bot(Duration::from_secs(1), Format::Demo);
+        s.observe_turns(6);
+        let line = format_match_stats(&s);
+        assert!(line.contains("turns_p50="), "turn distribution now shown");
+        assert!(line.contains("p95="));
+        assert!(line.contains("σ="));
+    }
+
+    #[test]
     pub(crate) fn match_stats_tracks_min_and_max_duration() {
         let mut s = MatchStats::default();
         s.record_bot(Duration::from_secs(60), Format::Demo);
