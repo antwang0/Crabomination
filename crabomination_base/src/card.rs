@@ -44,7 +44,7 @@ pub enum CreatureType {
     Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm,
     Armadillo, Nautilus,
     Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Shaman, Druid,
-    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek,
+    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,
     Doctor,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,

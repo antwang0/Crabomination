@@ -4778,6 +4778,15 @@ static DECKS: &[Factory] = &[
     super::decks::balduvian_bears,
     super::decks::willow_elf,
     super::decks::norwood_ranger,
+    super::decks::bog_rats,
+    super::decks::serrated_arrows,
+    super::decks::ghitu_slinger,
+    super::decks::cackling_fiend,
+    super::decks::skittering_skirge,
+    super::decks::highland_giant,
+    super::decks::shanodin_dryads,
+    super::decks::mesa_falcon,
+    super::decks::viashino_sandstalker,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
