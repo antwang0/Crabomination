@@ -1,5 +1,5 @@
-//! Monarch, artifact hate, and white-weenie staples. Tests in
-//! `tests/recent53.rs`.
+//! Monarch payoffs, artifact/enchantment hate, Boros battalion, lifegain, and
+//! white/multicolour staples. Tests in `tests/recent53.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
