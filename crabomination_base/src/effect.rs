@@ -1888,6 +1888,15 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// "You may pay {X}, where X ≤ `max`; if you do, [body reads X as
+    /// `Value::TriggerEventAmount`]." The controller is prompted for a number
+    /// in `0..=min(max, mana in pool)` via `Decision::ChooseAmount`; that many
+    /// generic mana are spent from their floated pool and `body` runs with
+    /// `event_amount` set to the paid amount. The X-cost sibling of
+    /// `Effect::MayPay` — Well of Lost Dreams ("pay {X} ≤ life gained, draw X").
+    /// `AutoDecider` pays 0 (nothing unprompted).
+    MayPayGenericUpTo { max: Value, body: Box<Effect> },
+
     /// Reflexive "when you do" payoff (CR 603.7). Wrap a *targeted* body that
     /// should choose its targets **after** the gating cost is paid — e.g. the
     /// inner half of `MayPay { body: Reflexive(<targeted bite>) }` (Itzquinth)

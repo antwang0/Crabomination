@@ -211,6 +211,9 @@ mod tests_recent58;
 #[path = "../tests/recent59.rs"]
 mod tests_recent59;
 #[cfg(test)]
+#[path = "../tests/recent60.rs"]
+mod tests_recent60;
+#[cfg(test)]
 #[path = "../tests/avatar_water.rs"]
 mod tests_avatar_water;
 #[cfg(test)]

@@ -4644,6 +4644,10 @@ static DECKS: &[Factory] = &[
     super::decks::aven_eternal,
     super::decks::storm_fleet_arsonist,
     super::decks::metallurgic_summonings,
+    super::decks::jolrael_mwonvuli_recluse,
+    super::decks::loyal_warhound,
+    super::decks::well_of_lost_dreams,
+    super::decks::custodi_soulbinders,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

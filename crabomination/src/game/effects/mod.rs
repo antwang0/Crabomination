@@ -1484,6 +1484,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayPayGenericUpTo { max, body } => {
+                // "You may pay {X}, X ≤ max" — prompt for a number bounded by
+                // both the printed cap and the mana actually in the pool, spend
+                // that many generic, then run `body` with `event_amount` = paid
+                // (read back via `Value::TriggerEventAmount`). Well of Lost Dreams.
+                use crate::decision::{Decision, DecisionAnswer};
+                let cap = self.evaluate_value(max, ctx).max(0) as u32;
+                let pool = self.players[ctx.controller].mana_pool.total();
+                let cap = cap.min(pool);
+                if cap == 0 {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let paid = match self.decider.decide(&Decision::ChooseAmount {
+                    source,
+                    prompt: "Pay how much?".to_string(),
+                    max: cap,
+                }) {
+                    DecisionAnswer::Amount(n) => n.min(cap),
+                    _ => 0,
+                };
+                if paid == 0 {
+                    return Ok(());
+                }
+                self.players[ctx.controller].mana_pool.spend_generic(paid);
+                let mut body_ctx = ctx.clone();
+                body_ctx.event_amount = paid;
+                self.run_effect(body, &body_ctx, events)?;
+                Ok(())
+            }
+
             Effect::Reflexive { body } => {
                 // CR 603.7 — a "when you do" reflexive payoff. Its targets are
                 // chosen now (after the gating cost was paid), not at the outer

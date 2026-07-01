@@ -46,8 +46,6 @@ Shipped: `StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower`
 - **Massacre Girl** — needs a "this turn, whenever a creature dies, each other
   creature gets −1/−1" delayed chain trigger (the ETB −1/−1 sweep alone is only
   half the card).
-- **Jolrael, Mwonvuli Recluse** — needs a "whenever you draw your second card
-  each turn" trigger and a set-base-P/T-to-X activated (X = cards in hand).
 - **Chandra, Acolyte of Flame** — 0-abilities incl. haste tokens that
   self-sacrifice next end step, and a −2 "cast an I/S from your graveyard this
   turn" grant.
@@ -71,8 +69,6 @@ now surface `amount`-embedded target slots (Soul's Grace). Still deferred:
 - **Heliod, Sun-Crowned / Daxos, Blessed by the Sun** — devotion-toughness CDA +
   gain-life-→-counter-on-target (both already exist as bodies elsewhere; the
   target rider / devotion-`*` toughness are the remaining faithful pieces).
-- **Well of Lost Dreams** — "pay {X} ≤ life gained, draw X" needs a pay-up-to-N
-  reflexive draw off `Value::TriggerEventAmount`.
 - **Dawnbringer Cleric** — modal ETB with target-bearing modes (choose-one at
   resolution) isn't wired for creature ETBs.
 
@@ -82,11 +78,9 @@ Shipped with existing primitives (Requiem Angel, Angel of the Dawn, Elderfang
 Disciple, Martial Coup, Beckon Apparition, Kytheon's Tactics, Rally the Ranks,
 Captain's Claws, Ancestral Blade). Noticed but deferred for want of a primitive:
 - **Trueheart Duelist** — "can block an additional creature" needs a
-  `Keyword::CanBlockAdditional(n)` wired into block declaration (Embalm half ships).
-- **Custodi Soulbinders** — enters-with-counters-per-other-creature + a
-  remove-a-+1/+1-counter activation cost on self.
-- **Loyal Warhound** — ETB Plains tutor gated on "an opponent controls more
-  lands than you" (needs a land-count comparison predicate).
+  `Keyword::CanBlockAdditional(n)` wired into block declaration (blocks are
+  keyed blocker→attacker in a `HashMap`, so this is a combat-model refactor;
+  Embalm half ships).
 
 ## Discovered follow-ups — party sweep (`decks::recent58`)
 
@@ -105,6 +99,16 @@ primitive needed after all; its exile-cost activated is approximated as a
 sacrifice). Remaining: Docent of Perfection (transforming DFC + cast-trigger
 Wizard count); Aeromunculus (a dedicated Adapt keyword vs the ad-hoc
 counter-gated activated); Cursebound Witch (spellbook draft).
+
+## Discovered follow-ups — deferred-clearing sweep (`decks::recent60`)
+
+Shipped: `Effect::MayPayGenericUpTo { max, body }` (the X-cost sibling of
+`MayPay` — prompt for a number ≤ cap and ≤ pool, spend generic, run `body`
+with `event_amount` = paid). Cleared Jolrael, Mwonvuli Recluse (draw-2nd
+trigger + `SetBasePT` team pump), Loyal Warhound (reused
+`Predicate::OpponentControlsMoreLandsThanYou`), Well of Lost Dreams (the new
+pay-up-to-X draw), Custodi Soulbinders (enters-with `CountOf - 1` +
+`remove_counter_cost`).
 
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 
