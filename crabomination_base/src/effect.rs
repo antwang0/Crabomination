@@ -2162,6 +2162,16 @@ pub enum Effect {
     /// controller chooses; nothing happens if none qualify). Cache Grab
     /// ("mill four, then return a permanent card milled this way to hand").
     MillThenToHand { amount: Value, filter: SelectionRequirement },
+    /// The controller mills one card, then runs a sub-effect keyed on the
+    /// milled card's card type: `land` if it's a land, else `creature` if it's
+    /// a creature, else `noncreature` (a nonland noncreature card). Old
+    /// Rutstein — land → Treasure, creature → Insect, else → Blood. The
+    /// sub-effects don't reference the milled card.
+    MillThenBranchByType {
+        land: Box<Effect>,
+        creature: Box<Effect>,
+        noncreature: Box<Effect>,
+    },
     /// Reveal cards from the top of each resolved player's library until
     /// `lands` land cards are revealed, then put all revealed cards into
     /// that player's graveyard (Mind Grind, Consuming Aberration's trigger).

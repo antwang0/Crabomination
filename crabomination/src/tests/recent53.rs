@@ -94,6 +94,30 @@ fn giada_scales_entering_angels() {
 }
 
 #[test]
+fn old_rutstein_mills_and_branches_by_type() {
+    let mut g = two_player_game();
+    let rutstein = g.add_card_to_battlefield(0, catalog::old_rutstein());
+    // Land on top → mills a land → Treasure.
+    let land = g.next_id();
+    g.players[0].add_to_library_top(land, catalog::forest());
+    g.fire_self_etb_triggers(rutstein, 0);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "milled land made a Treasure",
+    );
+    // Creature on top → Insect token.
+    let crea = g.next_id();
+    g.players[0].add_to_library_top(crea, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(rutstein, 0);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Insect"),
+        "milled creature made an Insect",
+    );
+}
+
+#[test]
 fn custodi_lich_edicts_and_crowns() {
     let mut g = two_player_game();
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());

@@ -4143,6 +4143,7 @@ static DECKS: &[Factory] = &[
     super::decks::leonin_vanguard,
     super::decks::marchesas_decree,
     super::decks::giada_font_of_hope,
+    super::decks::old_rutstein,
     super::decks::custodi_lich,
     super::decks::karmic_guide,
     super::decks::elspeth_suns_champion,

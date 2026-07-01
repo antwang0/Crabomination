@@ -2668,6 +2668,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MillThenBranchByType { land, creature, noncreature } => {
+                let p = ctx.controller;
+                let branch = if self.players[p].library.is_empty() {
+                    None
+                } else {
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    let is_land = card.definition.is_land();
+                    let is_creature = card.definition.is_creature();
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
+                    self.last_moved_cards.push(cid);
+                    Some(if is_land { land } else if is_creature { creature } else { noncreature })
+                };
+                if let Some(sub) = branch {
+                    self.run_effect(sub, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
 
             Effect::MillThenToHand { amount, filter } => {

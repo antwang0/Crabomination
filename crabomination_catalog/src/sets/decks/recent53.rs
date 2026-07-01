@@ -165,6 +165,49 @@ pub fn giada_font_of_hope() -> CardDefinition {
     }
 }
 
+/// Old Rutstein — {1}{B}{G} 1/4 Legendary Human Peasant. When it enters and at
+/// the beginning of your upkeep, mill a card: land → Treasure, creature → 1/1
+/// green Insect, else → Blood.
+pub fn old_rutstein() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::b;
+    use crabomination_base::tokens::{blood_token, treasure_token};
+    let insect = || TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        ..Default::default()
+    };
+    let mill_branch = move || Effect::MillThenBranchByType {
+        land: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: treasure_token() }),
+        creature: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: insect() }),
+        noncreature: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: blood_token() }),
+    };
+    CardDefinition {
+        name: "Old Rutstein",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(mill_branch()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: mill_branch(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Custodi Lich — {3}{B}{B} 4/2 Zombie Cleric. ETB become the monarch; each
 /// opponent sacrifices a creature. (The printed "whenever you become the
 /// monarch, target player sacrifices" is approximated to the ETB edict.)
