@@ -5184,3 +5184,50 @@ pub fn redirect_lightning() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zhao, the Moon Slayer — {1}{R} 2/2 Legendary Human Soldier. Menace; nonbasic
+/// lands enter tapped; {7}: put a conqueror counter on Zhao; while he has one,
+/// nonbasic lands are Mountains (they lose other types/abilities and tap for R).
+pub fn zhao_the_moon_slayer() -> CardDefinition {
+    CardDefinition {
+        name: "Zhao, the Moon Slayer",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7)]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Conqueror,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Nonbasic lands enter the battlefield tapped.",
+                effect: StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(SelectionRequirement::IsNonbasicLand),
+                },
+            },
+            StaticAbility {
+                description: "As long as Zhao has a conqueror counter, nonbasic lands are Mountains.",
+                effect: StaticEffect::LandTypeChangerWhileCounters {
+                    applies_to: Selector::EachPermanent(SelectionRequirement::IsNonbasicLand),
+                    land_type: LandType::Mountain,
+                    replace: true,
+                    kind: CounterType::Conqueror,
+                    n: 1,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

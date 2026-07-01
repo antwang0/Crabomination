@@ -342,6 +342,10 @@ pub enum CounterType {
     /// Fire counter — TLA artifacts/Vehicles that grow or animate as they
     /// accumulate them (War Balloon: 3+ fire → artifact creature).
     Fire,
+    /// Conqueror counter — TLA "as long as this has a conqueror counter"
+    /// threshold marker (Zhao, the Moon Slayer: at 1+ conqueror counters,
+    /// nonbasic lands become Mountains via `LandTypeChangerWhileCounters`).
+    Conqueror,
     /// Study counter — Strixhaven bookkeeping marker on cards in exile
     /// (Kianne // Imbraham). Cards exiled with study counters are tallied by
     /// `Value::DistinctManaValuesInExileWithCounter` (Kianne's Fractal) and

@@ -3212,3 +3212,27 @@ fn redirect_lightning_repoints_a_spell() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1_before - 3, "bolt now hits its caster");
 }
+
+/// Zhao makes nonbasic lands enter tapped, and once he has a conqueror counter
+/// nonbasic lands become Mountains.
+#[test]
+fn zhao_taps_nonbasics_and_conquers_to_mountains() {
+    use crate::card::{CardType, CounterType, LandType};
+    let mut g = two_player_game();
+    let zhao = g.add_card_to_battlefield(0, catalog::zhao_the_moon_slayer());
+    // A nonbasic land (Zhao's own controller or the opponent) enters tapped.
+    let nonbasic = g.add_card_to_hand(0, catalog::command_tower());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(nonbasic)).expect("play the nonbasic");
+    assert!(g.battlefield_find(nonbasic).unwrap().tapped, "nonbasic entered tapped");
+    // No conqueror counter yet → still its own types, not a Mountain.
+    let before = g.computed_permanent(nonbasic).unwrap();
+    assert!(!before.subtypes.land_types.contains(&LandType::Mountain), "not a Mountain yet");
+    // Give Zhao a conqueror counter → nonbasics are Mountains (lose other types).
+    g.battlefield_find_mut(zhao).unwrap().add_counters(CounterType::Conqueror, 1);
+    let after = g.computed_permanent(nonbasic).unwrap();
+    assert!(after.subtypes.land_types.contains(&LandType::Mountain), "now a Mountain");
+    assert!(after.card_types.contains(&CardType::Land), "still a land");
+}

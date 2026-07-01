@@ -701,6 +701,17 @@ pub enum StaticEffect {
         land_type: crate::card::LandType,
         replace: bool,
     },
+    /// CR 305.7 — a `LandTypeChanger` gated on the source carrying at least `n`
+    /// counters of `kind`. The layer effect only materializes while the
+    /// threshold holds (Zhao, the Moon Slayer — "As long as Zhao has a
+    /// conqueror counter on him, nonbasic lands are Mountains").
+    LandTypeChangerWhileCounters {
+        applies_to: Selector,
+        land_type: crate::card::LandType,
+        replace: bool,
+        kind: crate::card::CounterType,
+        n: u32,
+    },
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).

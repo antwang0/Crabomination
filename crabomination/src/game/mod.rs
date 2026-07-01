@@ -10702,7 +10702,20 @@ fn static_effect_to_effects(
                 duration: EffectDuration::WhileSourceOnBattlefield,
                 modification: Modification::RemoveAllAbilities,
             }],
-            StaticEffect::LandTypeChanger { applies_to, land_type, replace } => {
+            StaticEffect::LandTypeChanger { applies_to, land_type, replace }
+            | StaticEffect::LandTypeChangerWhileCounters {
+                applies_to,
+                land_type,
+                replace,
+                ..
+            } => {
+                // The counter-gated variant only materializes while the source
+                // carries the threshold (Zhao's conqueror counter).
+                if let StaticEffect::LandTypeChangerWhileCounters { kind, n, .. } = effect {
+                    if card.counter_count(*kind) < *n {
+                        return vec![];
+                    }
+                }
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => {
                         let mk = |layer, modification| ContinuousEffect {

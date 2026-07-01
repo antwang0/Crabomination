@@ -4503,6 +4503,7 @@ static DECKS: &[Factory] = &[
     super::decks::ember_island_production,
     super::decks::appa_steadfast_guardian,
     super::decks::redirect_lightning,
+    super::decks::zhao_the_moon_slayer,
     super::decks::combustion_man,
     super::decks::sandbender_scavengers,
     super::decks::diligent_zookeeper,

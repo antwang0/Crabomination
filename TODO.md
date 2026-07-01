@@ -2734,7 +2734,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   payoffs (Forgotten Monument grant, Compass Gnome tutor, Gargantuan Leech
   affinity, Spelunking). One-shot additive basic-land-type grant ✅
   (`Effect::GainAllBasicLandTypes` — layer-4 `AddLandType` ×5 per resolved land,
-  CR 305; Energybending, `energybending_fixes_lands_and_draws`).
+  CR 305; Energybending, `energybending_fixes_lands_and_draws`). Counter-gated
+  land-type static ✅ (CR 305.7 — `StaticEffect::LandTypeChangerWhileCounters`
+  only materializes while the source holds ≥N of a counter kind; Zhao, the Moon
+  Slayer — "nonbasic lands are Mountains while Zhao has a conqueror counter";
+  `zhao_taps_nonbasics_and_conquers_to_mountains`).
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.
