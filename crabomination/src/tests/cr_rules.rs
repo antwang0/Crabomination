@@ -34,7 +34,9 @@
 //! "can't block" as an illegal-blocker restriction (CR 509.1b), the Earthbend
 //! lifecycle (CR 701.66a — becomes a 0/0 haste land creature, returns tapped on
 //! death), and lethal-damage / 0-toughness SBAs measured against the *computed*
-//! type so animated lands die like creatures (CR 704.5f/g).
+//! type so animated lands die like creatures (CR 704.5f/g), combat damage to a
+//! planeswalker removing loyalty (CR 306.9 / 508.4), and the Flying/Reach block
+//! restriction (CR 702.4c / 702.9c).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -5809,4 +5811,81 @@ fn cr_121_2b_draw_cap_truncates_multidraw() {
     // Divination left hand (-1), drew only 1 of its 2 (cap) → net hand unchanged.
     assert_eq!(g.players[0].hand.len(), hand, "draw-2 capped to 1 under the Spirit");
     assert_eq!(g.players[0].cards_drawn_this_turn, 1, "exactly one draw counted");
+}
+
+// ── CR 306.9 / 508.4 — combat damage to a planeswalker removes loyalty ────────
+
+fn keyworded_body(name: &'static str, p: i32, t: i32, kws: Vec<Keyword>) -> crate::card::CardDefinition {
+    crate::card::CardDefinition {
+        name,
+        card_types: vec![crate::card::CardType::Creature],
+        power: p,
+        toughness: t,
+        keywords: kws,
+        ..Default::default()
+    }
+}
+
+/// A creature attacking a planeswalker deals its combat damage as loyalty loss
+/// (CR 306.9 — that many loyalty counters are removed).
+#[test]
+fn cr_306_9_combat_damage_to_planeswalker_removes_loyalty() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, keyworded_body("Raider", 3, 3, vec![]));
+    g.clear_sickness(atk);
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+    let start = g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Planeswalker(pw),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers; // no blocks
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    let now = g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty);
+    assert_eq!(now, start - 3, "3 combat damage removed 3 loyalty");
+}
+
+// ── CR 702.4 / 702.9 — Flying can only be blocked by flying or reach ──────────
+
+/// A flyer can't be blocked by a creature without flying or reach (CR 702.4c).
+#[test]
+fn cr_702_4c_flyer_cant_be_blocked_by_ground() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, keyworded_body("Drake", 2, 2, vec![Keyword::Flying]));
+    g.clear_sickness(atk);
+    let ground = g.add_card_to_battlefield(1, keyworded_body("Ogre", 3, 3, vec![]));
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(ground, atk)])).is_err(),
+        "a ground creature can't block a flyer",
+    );
+}
+
+/// A creature with reach can block a flyer (CR 702.9c).
+#[test]
+fn cr_702_9c_reach_blocks_flyer() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, keyworded_body("Drake", 2, 2, vec![Keyword::Flying]));
+    g.clear_sickness(atk);
+    let spider = g.add_card_to_battlefield(1, keyworded_body("Spider", 1, 3, vec![Keyword::Reach]));
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(spider, atk)]))
+        .expect("reach can block the flyer");
 }

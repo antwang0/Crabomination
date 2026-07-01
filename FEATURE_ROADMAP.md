@@ -217,8 +217,10 @@ Each unblocks a large swath of cards.
   "if excess damage was dealt this way" (Orbital Plunge). Remaining: the broader
   marking-interplay audit, and excess-to-another-permanent redirection (120.4a).)
 - 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
-  (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`).
-  Remaining: "any time" activation riders, attacking-planeswalker redirect.
+  (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`),
+  combat damage to a planeswalker removes loyalty ✅ (CR 306.9, test
+  `cr_306_9_combat_damage_to_planeswalker_removes_loyalty`). Remaining: "any
+  time" activation riders.
 - 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
   legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
   (704.5n — host fails the printed enchant filter). Remaining: Battle/Dungeon
