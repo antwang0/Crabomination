@@ -8,6 +8,26 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — ability-word conditions (`decks::abilitywords`, `recent68`)
+
+Shipped: `Predicate::{ThresholdActive, MetalcraftActive, FerociousActive,
+HellbentActive, FormidableActive}` (CR 207.2c ability words) + PlayerView flags
++ shared "✦ …" HUD chips; ~24 cards across `decks::abilitywords` and
+`decks::recent68`. Fixed two latent catalog bugs on the way: Galvanic Blast's
+non-metalcraft mode dealt 1 (should be 2), and Temur Battle Rage granted +1/+1 &
+trample with double strike gated on Ferocious (should be double strike base,
+trample gated on Ferocious). Also added a server guard: `usize_from_env_min`
+rejects a `0`/sub-floor `CRAB_MAX_CONNS[_PER_IP]` misconfig. Still deferred:
+- **Client build not verified here** — the Bevy client can't compile headless
+  (missing `wayland-client`), so the new `StatChipKind::AbilityWord` chips and the
+  `debug_export` literal update are code-reviewed but not run. Verify on a desktop.
+- **Hellbent chip noise** — "✦ hellbent" lights whenever a hand is empty (common);
+  consider gating it on controlling a hellbent-relevant permanent.
+- **Atarka Monument** & animate-artifact "becomes a Dragon" abilities need an
+  animate-self effect before shipping faithfully (skipped this wave).
+- **Vulshok Replica / Barrage Ogre** deal to "any target" as an approximation of
+  "target player or planeswalker" — narrow once such a selector lands.
+
 ## Discovered follow-ups — Spree / OTJ sweep (`decks::spree`, `decks::recent66`)
 
 Shipped: **Spree** (CR 702.172 — `Effect::Spree` + `GameAction::CastSpellSpree`,

@@ -87,6 +87,10 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
         // blue so total prevention reads as a hard shield, not a partial one.
         StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
+        // Ability-word conditions (Threshold / Metalcraft / Ferocious /
+        // Hellbent / Formidable) — a shared slate-teal so these "condition
+        // online" badges read consistently.
+        StatChipKind::AbilityWord => (Color::srgba(0.16, 0.26, 0.28, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -119,6 +123,7 @@ pub(super) enum StatChipKind {
     Descend,
     SkipCombat,
     Shield,
+    AbilityWord,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -680,6 +685,20 @@ pub fn update_player_stats_chips(
         // Void-matters payoffs are online.
         if p.void_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Void, "✦ void".to_string());
+        }
+        // Ability-word conditions — lit while the payoff is online, so cards
+        // gated on Threshold / Metalcraft / Ferocious / Hellbent / Formidable
+        // are easy to read at a glance.
+        for (on, label) in [
+            (p.threshold_active, "✦ threshold"),
+            (p.metalcraft_active, "✦ metalcraft"),
+            (p.ferocious_active, "✦ ferocious"),
+            (p.hellbent_active, "✦ hellbent"),
+            (p.formidable_active, "✦ formidable"),
+        ] {
+            if on {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::AbilityWord, label.to_string());
+            }
         }
         // LCI Descend — show the permanent-card-in-graveyard count once it's
         // non-zero, so descend-4 / descend-8 thresholds are easy to track. When

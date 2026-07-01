@@ -1431,6 +1431,37 @@ impl GameState {
             Predicate::ArtifactEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].artifacts_entered_this_turn > 0),
+            Predicate::ThresholdActive { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].graveyard.len() >= 7),
+            Predicate::MetalcraftActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_artifact())
+                    .count()
+                    >= 3
+            }
+            Predicate::FerociousActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .any(|c| self.computed_permanent(c.id).is_some_and(|cp| cp.power >= 4))
+            }
+            Predicate::HellbentActive { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].hand.is_empty()),
+            Predicate::FormidableActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let total: i32 = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
+                    .sum();
+                total >= 8
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

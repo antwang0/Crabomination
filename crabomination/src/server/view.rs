@@ -479,6 +479,24 @@ fn project_player(
             .collect();
         powers.len() >= 3
     };
+    // Ability-word conditions (mirror `crate::game::effects::eval`).
+    let threshold_active = player.graveyard.len() >= 7;
+    let metalcraft_active = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == player_seat && c.definition.is_artifact())
+        .count()
+        >= 3;
+    let controlled_creature_powers = || {
+        state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player_seat && c.definition.is_creature())
+            .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power))
+    };
+    let ferocious_active = controlled_creature_powers().any(|p| p >= 4);
+    let formidable_active = controlled_creature_powers().sum::<i32>() >= 8;
+    let hellbent_active = player.hand.is_empty();
     // CR 611.2 — per-turn spell-cast locks in play, and whether this player has
     // already cast a spell of each locked category this turn.
     let spell_cast_lock = {
@@ -588,6 +606,11 @@ fn project_player(
         ring_bearer: state.effective_ring_bearer(player_seat),
         void_active: state.nonland_permanent_left_bf_this_turn
             || state.players[player_seat].warped_spell_this_turn,
+        threshold_active,
+        metalcraft_active,
+        ferocious_active,
+        hellbent_active,
+        formidable_active,
     }
 }
 

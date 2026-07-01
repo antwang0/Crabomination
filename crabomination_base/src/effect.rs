@@ -1143,6 +1143,24 @@ pub enum Predicate {
     /// "If an artifact entered the battlefield under `who`'s control this turn"
     /// (Akal Pakal). Reads `Player.artifacts_entered_this_turn`.
     ArtifactEnteredThisTurn { who: PlayerRef },
+    /// **Threshold** (Odyssey ability word) — `who` has seven or more cards in
+    /// their graveyard. Gates "as long as / if" threshold riders (Nimble
+    /// Mongoose, Werebear, Mystic Enforcer).
+    ThresholdActive { who: PlayerRef },
+    /// **Metalcraft** (Scars of Mirrodin) — `who` controls three or more
+    /// artifacts. Gates metalcraft riders (Vault Skirge-era; Galvanic Blast).
+    MetalcraftActive { who: PlayerRef },
+    /// **Ferocious** (Khans of Tarkir) — `who` controls a creature with power
+    /// four or greater. Gates ferocious riders (Temur Battle Rage, Savage
+    /// Punch).
+    FerociousActive { who: PlayerRef },
+    /// **Hellbent** (Dissension) — `who` has no cards in hand. Gates hellbent
+    /// riders (Anthem of Rakdos, Demonfire).
+    HellbentActive { who: PlayerRef },
+    /// **Formidable** (Dragons of Tarkir ability word) — the total power of
+    /// creatures `who` controls is eight or greater. Gates formidable
+    /// activated/triggered riders (Boltwing Marauder-era, Atarka Monument).
+    FormidableActive { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

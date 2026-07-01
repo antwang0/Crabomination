@@ -5896,3 +5896,90 @@ fn cr_702_9c_reach_blocks_flyer() {
     g.perform_action(GameAction::DeclareBlockers(vec![(spider, atk)]))
         .expect("reach can block the flyer");
 }
+
+// ── CR 702.28 — Shadow (near the new Hellbent shadow-grant, Cutthroat il-Dal) ──
+
+/// A creature with shadow can be blocked only by shadow creatures, and can
+/// block only shadow creatures (CR 702.28b/c).
+#[test]
+fn cr_702_28_shadow_restricts_blocking_both_ways() {
+    let mut g = two_player_game();
+    let shadow_atk = g.add_card_to_battlefield(0, catalog::soltari_priest()); // shadow
+    g.clear_sickness(shadow_atk);
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no shadow
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shadow_atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(ground, shadow_atk)])).is_err(),
+        "a non-shadow creature can't block a shadow attacker"
+    );
+}
+
+/// A normal (non-shadow) attacker can't be blocked by a shadow creature.
+#[test]
+fn cr_702_28_normal_attacker_unblockable_by_shadow() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    let shadow_blk = g.add_card_to_battlefield(1, catalog::soltari_priest()); // shadow
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(shadow_blk, atk)])).is_err(),
+        "a shadow creature can't block a non-shadow attacker"
+    );
+}
+
+// ── CR 702.23 — Rampage (Craw Giant) ──────────────────────────────────────────
+
+/// Rampage N: the attacker gets +N/+N for each blocker beyond the first
+/// (CR 702.23a). Two blockers on a rampage-2 attacker → one extra → +2/+2.
+#[test]
+fn cr_702_23_rampage_pumps_per_extra_blocker() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::craw_giant()); // 6/4 rampage 2
+    g.clear_sickness(giant);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, giant), (b2, giant)])).unwrap();
+    let cp = g.computed_permanent(giant).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 6), "rampage 2 with one extra blocker → +2/+2");
+}
+
+// ── CR 601.2h — sacrifice as an activation cost (DECK_FEATURES 🟡) ─────────────
+
+/// A "Sacrifice this" activation cost is paid before the ability resolves, so
+/// the source is already gone when the effect happens (CR 601.2h / 602.2a).
+#[test]
+fn cr_601_2h_sac_cost_paid_before_effect_resolves() {
+    let mut g = two_player_game();
+    let replica = g.add_card_to_battlefield(0, catalog::vulshok_replica());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: replica, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate");
+    // The source is already sacrificed while the ability is on the stack.
+    assert!(g.battlefield_find(replica).is_none(), "sacrificed as a cost, before resolution");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "the 3 damage still resolves from the stack");
+}

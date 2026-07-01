@@ -353,6 +353,9 @@ Each a small targeted feature; sweep batch by batch.
   + `EventKind::DayNightChanged` "day becomes night / night becomes day"
   triggers — Brimstone Vandal); ✅ Coven (`Predicate::CovenActive` — 3+ creatures
   with different powers; HUD "✸ coven" chip);
+  ✅ **Ability-word conditions** (CR 207.2c — `Predicate::{ThresholdActive,
+  MetalcraftActive, FerociousActive, HellbentActive, FormidableActive}`,
+  PlayerView flags + shared HUD chips; `sets::decks::abilitywords` /`recent68`);
   ✅ **Descend** (LCI — `SelectionRequirement::ControllerDescend(n)` +
   `Predicate::{DescendActive,DescendedThisTurn}` count permanent cards in the
   graveyard / "descended this turn" per CR 700.11; `DynamicPt::

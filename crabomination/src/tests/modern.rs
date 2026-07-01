@@ -14794,7 +14794,7 @@ fn kiln_fiend_pumps_on_instant_cast() {
 }
 
 #[test]
-fn temur_battle_rage_grants_double_strike_with_ferocious() {
+fn temur_battle_rage_double_strike_base_trample_with_ferocious() {
     let mut g = two_player_game();
     // A 4-power creature satisfies Ferocious.
     let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
@@ -14807,9 +14807,9 @@ fn temur_battle_rage_grants_double_strike_with_ferocious() {
     }).expect("castable");
     drain_stack(&mut g);
     let c = g.battlefield.iter().find(|c| c.id == big).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample), "gains trample");
-    assert!(c.has_keyword(&Keyword::DoubleStrike), "Ferocious grants double strike");
-    assert_eq!(c.power(), 5, "+1/+1");
+    assert!(c.has_keyword(&Keyword::DoubleStrike), "base grants double strike");
+    assert!(c.has_keyword(&Keyword::Trample), "Ferocious grants trample");
+    assert_eq!(c.power(), 4, "no P/T change — TBR only grants keywords");
 }
 
 #[test]

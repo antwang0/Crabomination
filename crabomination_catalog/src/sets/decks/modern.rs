@@ -5192,10 +5192,7 @@ pub fn werebear() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Threshold — +3/+3 with seven or more cards in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ValueAtLeast(
-                    Value::GraveyardSizeOf(PlayerRef::You),
-                    Value::Const(7),
-                ),
+                condition: Predicate::ThresholdActive { who: PlayerRef::You },
                 power: 3,
                 toughness: 3,
                 keywords: vec![],
@@ -10034,14 +10031,9 @@ pub fn galvanic_blast() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(3),
-            },
+            cond: Predicate::MetalcraftActive { who: PlayerRef::You },
             then: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) }),
-            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) }),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) }),
         },
         ..Default::default()
     }
@@ -10189,29 +10181,18 @@ pub fn temur_battle_rage() -> CardDefinition {
         name: "Temur Battle Rage",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
+        // Target creature gains double strike; Ferocious grants trample too.
         effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
             Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Trample,
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::DoubleStrike,
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        SelectionRequirement::ControlledByYou
-                            .and(SelectionRequirement::PowerAtLeast(4)),
-                    ),
-                    n: Value::Const(1),
-                },
+                cond: Predicate::FerociousActive { who: PlayerRef::You },
                 then: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),
-                    keyword: Keyword::DoubleStrike,
+                    keyword: Keyword::Trample,
                     duration: Duration::EndOfTurn,
                 }),
                 else_: Box::new(Effect::Noop),
@@ -29265,10 +29246,7 @@ pub fn nimble_mongoose() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Threshold — gets +2/+2 if seven or more cards are in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ValueAtLeast(
-                    Value::GraveyardSizeOf(PlayerRef::You),
-                    Value::Const(7),
-                ),
+                condition: Predicate::ThresholdActive { who: PlayerRef::You },
                 power: 2,
                 toughness: 2,
                 keywords: vec![],
@@ -33518,12 +33496,7 @@ pub fn etched_champion() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Metalcraft — protection from each color while you control 3+ artifacts.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    n: Value::Const(3),
-                },
+                condition: Predicate::MetalcraftActive { who: PlayerRef::You },
                 power: 0,
                 toughness: 0,
                 keywords: vec![

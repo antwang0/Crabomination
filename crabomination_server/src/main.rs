@@ -42,7 +42,7 @@ mod config;
 mod slots;
 mod stats;
 
-use config::{deck_overrides, pairing_timeout_from_env, usize_from_env, Format};
+use config::{deck_overrides, pairing_timeout_from_env, usize_from_env_min, Format};
 use config::{DEFAULT_MAX_CONNS, DEFAULT_MAX_CONNS_PER_IP};
 use slots::{SlotGuard, SlotManager};
 use stats::{format_duration, format_match_stats, match_stats};
@@ -61,9 +61,12 @@ fn main() {
     // Validate CRAB_DECK / CRAB_BOT_DECK at boot (exits on a bad list).
     let _ = deck_overrides();
     let pairing_timeout = pairing_timeout_from_env();
+    // Connection caps must be at least 1 — a `0` (typo or empty-string-ish
+    // misconfig) would otherwise silently refuse every client, so treat
+    // sub-1 values as a misconfig and fall back to the default.
     let slots = SlotManager::new(
-        usize_from_env("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS),
-        usize_from_env("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP),
+        usize_from_env_min("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS, 1),
+        usize_from_env_min("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP, 1),
     );
 
     let listener = match TcpListener::bind(&bind) {
@@ -670,22 +673,28 @@ mod tests {
 
     #[test]
     pub(crate) fn usize_from_env_defaults_when_unset() {
-        let v = with_env("CRAB_MAX_CONNS", None, || usize_from_env("CRAB_MAX_CONNS", 42));
+        let v = with_env("CRAB_MAX_CONNS", None, || usize_from_env_min("CRAB_MAX_CONNS", 42, 0));
         assert_eq!(v, 42);
     }
 
     #[test]
-    pub(crate) fn usize_from_env_parses_zero() {
-        // Unlike pairing_timeout_from_env, here 0 is meaningful: it means
-        // "unlimited". Make sure the parser preserves it.
-        let v = with_env("CRAB_MAX_CONNS", Some("0"), || usize_from_env("CRAB_MAX_CONNS", 42));
+    pub(crate) fn usize_from_env_min_zero_allows_zero() {
+        // With min 0 the parser preserves a literal 0 (the "unlimited" reading).
+        let v = with_env("CRAB_MAX_CONNS", Some("0"), || usize_from_env_min("CRAB_MAX_CONNS", 42, 0));
         assert_eq!(v, 0);
+    }
+
+    #[test]
+    pub(crate) fn usize_from_env_min_one_rejects_zero() {
+        // Connection caps use min 1: a 0 is a misconfig → default.
+        let v = with_env("CRAB_MAX_CONNS", Some("0"), || usize_from_env_min("CRAB_MAX_CONNS", 42, 1));
+        assert_eq!(v, 42);
     }
 
     #[test]
     pub(crate) fn usize_from_env_rejects_garbage() {
         let v = with_env("CRAB_MAX_CONNS", Some("nope"), || {
-            usize_from_env("CRAB_MAX_CONNS", 42)
+            usize_from_env_min("CRAB_MAX_CONNS", 42, 0)
         });
         assert_eq!(v, 42);
     }

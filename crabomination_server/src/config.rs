@@ -190,12 +190,8 @@ pub(crate) const DEFAULT_MAX_CONNS_PER_IP: usize = 5;
 /// to `default` for missing, empty, or non-numeric values. `0` is preserved
 /// (callers treat 0 as "unlimited"). Surrounding whitespace is trimmed, matching
 /// `Format::parse` — so `CRAB_MAX_CONNS=" 50 "` reads as `50`, not the default.
-pub(crate) fn usize_from_env(key: &str, default: usize) -> usize {
-    parse_usize_or(env::var(key).ok().as_deref(), key, default)
-}
-
-/// Pure core of [`usize_from_env`] — trims, then parses `raw`, falling back to
-/// `default` for `None`/empty/non-numeric input. Split out so the parsing and
+/// Pure core of [`usize_from_env_min`] — trims, then parses `raw`, falling back
+/// to `default` for `None`/empty/non-numeric input. Split out so the parsing and
 /// trimming behavior is unit-testable without touching the process environment.
 pub(crate) fn parse_usize_or(raw: Option<&str>, key: &str, default: usize) -> usize {
     match raw.map(str::trim) {
@@ -209,6 +205,26 @@ pub(crate) fn parse_usize_or(raw: Option<&str>, key: &str, default: usize) -> us
                 default
             }
         },
+    }
+}
+
+/// Read `key` as a `usize`, enforcing a minimum: values below `min` (most
+/// importantly `0`) are treated as a misconfig and fall back to `default`.
+/// Pass `min == 0` for "any non-negative value is fine". Used for the connection
+/// caps, where a `0` would otherwise refuse every client — mirroring the
+/// zero-guard in [`pairing_timeout_from_env`].
+pub(crate) fn usize_from_env_min(key: &str, default: usize, min: usize) -> usize {
+    parse_usize_min(env::var(key).ok().as_deref(), key, default, min)
+}
+
+/// Pure core of [`usize_from_env_min`]; testable without the process env.
+pub(crate) fn parse_usize_min(raw: Option<&str>, key: &str, default: usize, min: usize) -> usize {
+    let v = parse_usize_or(raw, key, default);
+    if v < min {
+        eprintln!("warning: {key}={v} below the minimum {min} — using default {default}");
+        default
+    } else {
+        v
     }
 }
 
@@ -253,7 +269,17 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_usize_or, Format};
+    use super::{parse_usize_min, parse_usize_or, Format};
+
+    #[test]
+    fn parse_usize_min_rejects_below_floor() {
+        // Connection caps: a 0 (or below-floor) value is a misconfig → default.
+        assert_eq!(parse_usize_min(Some("0"), "K", 9, 1), 9, "0 → default");
+        assert_eq!(parse_usize_min(Some("1"), "K", 9, 1), 1, "at the floor is kept");
+        assert_eq!(parse_usize_min(Some("50"), "K", 9, 1), 50, "above floor kept");
+        assert_eq!(parse_usize_min(None, "K", 9, 1), 9, "unset → default");
+        assert_eq!(parse_usize_min(Some("bad"), "K", 9, 1), 9, "garbage → default");
+    }
 
     #[test]
     fn parse_usize_trims_and_falls_back() {

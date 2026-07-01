@@ -720,6 +720,24 @@ pub struct PlayerView {
     /// Void" chip. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub void_active: bool,
+    /// Ability-word conditions this seat currently meets, surfaced so the client
+    /// can show badges and light up the matching payoffs. All `#[serde(default)]`
+    /// for snapshot back-compat.
+    /// Threshold (7+ cards in graveyard).
+    #[serde(default)]
+    pub threshold_active: bool,
+    /// Metalcraft (control 3+ artifacts).
+    #[serde(default)]
+    pub metalcraft_active: bool,
+    /// Ferocious (control a creature with power 4+).
+    #[serde(default)]
+    pub ferocious_active: bool,
+    /// Hellbent (no cards in hand).
+    #[serde(default)]
+    pub hellbent_active: bool,
+    /// Formidable (creatures you control total power 8+).
+    #[serde(default)]
+    pub formidable_active: bool,
 }
 
 /// One source-commander's combat-damage tally against a player (CR 903.10a).
