@@ -4746,6 +4746,13 @@ static DECKS: &[Factory] = &[
     super::decks::auriok_transfixer,
     super::decks::snapping_creeper,
     super::decks::nyxborn_rollicker,
+    super::decks::krosan_archer,
+    super::decks::dwarven_grunt,
+    super::decks::vengeful_firebrand,
+    super::decks::anaba_shaman,
+    super::decks::balduvian_barbarians,
+    super::decks::zephyr_falcon,
+    super::decks::regal_unicorn,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
