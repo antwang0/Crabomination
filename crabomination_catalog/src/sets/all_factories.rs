@@ -4393,6 +4393,7 @@ static DECKS: &[Factory] = &[
     super::decks::caught_in_the_crossfire,
     super::decks::rush_of_dread,
     super::decks::phantom_interference,
+    super::decks::three_steps_ahead,
     super::decks::dance_of_the_tumbleweeds,
     super::decks::acrobatic_cheerleader,
     super::decks::cautious_survivor,

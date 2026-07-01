@@ -237,6 +237,46 @@ pub fn phantom_interference() -> CardDefinition {
     }
 }
 
+/// Three Steps Ahead — {U} Instant. Spree: +{1}{U} counter target spell; +{3}
+/// create a token copy of target artifact or creature you control; +{2} draw
+/// two cards, then discard a card.
+pub fn three_steps_ahead() -> CardDefinition {
+    CardDefinition {
+        name: "Three Steps Ahead",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: spree(vec![
+            mode(
+                cost(&[generic(1), u()]),
+                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            ),
+            mode(
+                cost(&[generic(3)]),
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(
+                        R::Artifact.or(R::Creature).and(R::ControlledByYou),
+                    ),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
+                    legendary: false,
+                },
+            ),
+            mode(
+                cost(&[generic(2)]),
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+            ),
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Dance of the Tumbleweeds — {1}{G} Sorcery. Spree: +{1} search your library
 /// for a basic land or Desert card and put it onto the battlefield; +{3} create
 /// an X/X green Elemental, where X is the number of lands you control.

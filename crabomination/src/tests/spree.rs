@@ -192,6 +192,35 @@ fn phantom_interference_makes_a_spirit() {
 }
 
 #[test]
+fn three_steps_ahead_copies_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::three_steps_ahead());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(spree(id, vec![1], Some(Target::Permanent(bear)), vec![]))
+        .expect("cast copy mode");
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "original + token copy");
+}
+
+#[test]
+fn three_steps_ahead_draws_and_discards() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::three_steps_ahead());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib = g.players[0].library.len();
+    g.perform_action(spree(id, vec![2], None, vec![])).expect("cast loot mode");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 2, "drew two");
+}
+
+#[test]
 fn spreeable_affordance_surfaces_castable_spree_card() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::explosive_derailment());
