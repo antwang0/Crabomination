@@ -54,8 +54,6 @@ Shipped: `StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower`
 - **Kamigawa channel lands** (Boseiju/Otawara/Eiganjo/Takenuma/Sokenzan) —
   `from_hand` activated ability with a discard-self cost and a
   cost-reduction-per-legendary-creature rider (Channel, CR 702.x).
-- **Metallurgic Summonings** — create an X/X Construct where X = the cast
-  spell's mana value (needs dynamic-P/T token minting off `event_amount`).
 - **Master Biomancer** — the "enters as a Mutant in addition to its types" layer
   rider is omitted (only the counters are wired).
 - **Ingenious Smith** — "rest on the bottom in a random order" is approximated by
@@ -97,6 +95,16 @@ multi-role creature fills only one slot; Changelings fill all). Squad Commander,
 Kabira Outrider, Tajuru Paragon. Remaining ZNR party bits: the reveal-6
 "shares a creature type with it" pick (Tajuru's kicked ETB is approximated as
 "any creature card"); Kelsien's damage-party engine.
+
+## Discovered follow-ups — spellslinger/tempo sweep (`decks::recent59`)
+
+Sky Terror, Talrand's Invocation, Ondu Cleric, Aven Eternal (amass), Storm Fleet
+Arsonist (raid), Metallurgic Summonings (the X/X Construct is minted as a 0/0 +
+X +1/+1 counters read off the cast spell's mana value — no dynamic-P/T token
+primitive needed after all; its exile-cost activated is approximated as a
+sacrifice). Remaining: Docent of Perfection (transforming DFC + cast-trigger
+Wizard count); Aeromunculus (a dedicated Adapt keyword vs the ad-hoc
+counter-gated activated); Cursebound Witch (spellbook draft).
 
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 

@@ -4638,6 +4638,12 @@ static DECKS: &[Factory] = &[
     super::decks::squad_commander,
     super::decks::kabira_outrider,
     super::decks::tajuru_paragon,
+    super::decks::sky_terror,
+    super::decks::talrands_invocation,
+    super::decks::ondu_cleric,
+    super::decks::aven_eternal,
+    super::decks::storm_fleet_arsonist,
+    super::decks::metallurgic_summonings,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
