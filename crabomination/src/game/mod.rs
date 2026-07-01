@@ -247,6 +247,9 @@ mod tests_recent70;
 #[path = "../tests/recent71.rs"]
 mod tests_recent71;
 #[cfg(test)]
+#[path = "../tests/recent72.rs"]
+mod tests_recent72;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -5023,6 +5026,12 @@ impl GameState {
                         c.controller == card.controller && c.definition.is_artifact()
                     }).count() as i32;
                     (base + n, base + n)
+                }
+                crate::card::DynamicPt::EnchantmentsInPlay { base_p, base_t } => {
+                    let n = self.battlefield.iter()
+                        .filter(|c| c.definition.is_enchantment())
+                        .count() as i32;
+                    (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t } => {
                     let gy = &self.players[card.controller].graveyard;

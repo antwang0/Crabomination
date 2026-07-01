@@ -2559,6 +2559,10 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of artifacts the controller
     /// controls (counting the source). Broodstar (base 0/0, CR 604.3 CDA).
     ArtifactsControlled { base: i32 },
+    /// Power = `base_p` + the number of enchantments on the battlefield,
+    /// toughness = `base_t` + that count. Yavimaya Enchantress (2/2 + one per
+    /// enchantment in play, any controller; CR 604.3 CDA).
+    EnchantmentsInPlay { base_p: i32, base_t: i32 },
     /// Power = number of instant and sorcery cards in the controller's
     /// graveyard and exile; toughness = `base_t`. Crackling Drake (0/4).
     InstantsSorceriesInGraveyardAndExile { base_t: i32 },
