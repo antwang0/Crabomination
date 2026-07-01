@@ -232,6 +232,7 @@ mod tests {
             miracle_hand: vec![],
             bargainable_hand: vec![],
             squadable_hand: vec![],
+            spreeable_hand: vec![],
             replicatable_hand: vec![],
             conspirable_hand: vec![],
             multikickable_hand: vec![],

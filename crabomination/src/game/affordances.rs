@@ -502,6 +502,56 @@ impl GameState {
         out
     }
 
+    /// CR 702.172 — hand Spree cards the caster could cast right now choosing
+    /// the single cheapest mode. Offered so the client surfaces the per-mode
+    /// cost picker; the actual mode/target choice happens in the UI.
+    fn spreeable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let candidates: Vec<(CardId, usize)> = self.players[caster]
+            .hand
+            .iter()
+            .filter_map(|c| match &c.definition.effect {
+                crate::effect::Effect::Spree { modes } if !modes.is_empty() => {
+                    // Probe the cheapest single mode (by total mana value) so a
+                    // castable-with-some-mode card is offered even when the
+                    // priciest mode is unaffordable.
+                    let cheapest = modes
+                        .iter()
+                        .enumerate()
+                        .min_by_key(|(_, m)| m.cost.cmc())
+                        .map(|(i, _)| i)?;
+                    Some((c.id, cheapest))
+                }
+                _ => None,
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, mode) in candidates {
+            let effect = self.players[caster].hand.iter().find(|c| c.id == id).map(|c| {
+                if let crate::effect::Effect::Spree { modes } = &c.definition.effect {
+                    modes[mode].effect.clone()
+                } else {
+                    crate::effect::Effect::Noop
+                }
+            });
+            let (target, additional_targets) = match &effect {
+                Some(eff) if eff.requires_target() => {
+                    self.auto_targets_for_effect_all_slots(eff, caster, None)
+                }
+                _ => (None, Vec::new()),
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellSpree {
+                card_id: id,
+                spree_modes: vec![mode as u8],
+                target,
+                additional_targets,
+                x_value: None,
+            }) {
+                out.push(id);
+            }
+        }
+        out
+    }
+
     /// CR 702.33c — hand cards with Multikicker the caster could cast paying
     /// the kicker cost at least once right now (probed at `times: 1`).
     fn multikickable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
@@ -1059,6 +1109,7 @@ impl GameState {
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             bargainable: self.bargainable_hand_cards_on(&template, seat),
             squadable: self.squadable_hand_cards_on(&template, seat),
+            spreeable: self.spreeable_hand_cards_on(&template, seat),
             replicatable: self.replicatable_hand_cards_on(&template, seat),
             conspirable: self.conspirable_hand_cards_on(&template, seat),
             multikickable: self.multikickable_hand_cards_on(&template, seat),

@@ -487,6 +487,9 @@ pub struct HandAffordances {
     /// CR 702.157 — hand cards with Squad castable paying the squad cost at
     /// least once, so the client can offer a "pay Squad N times?" stepper.
     pub squadable: Vec<CardId>,
+    /// CR 702.172 — hand Spree cards castable choosing at least the cheapest
+    /// mode right now, so the client can offer the per-mode cost picker.
+    pub spreeable: Vec<CardId>,
     /// CR 702.107 — hand cards with Replicate castable paying the replicate
     /// cost at least once, so the client can offer a "replicate N times?" stepper.
     pub replicatable: Vec<CardId>,

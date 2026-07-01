@@ -325,6 +325,11 @@ pub struct ClientView {
     /// Squad N times?" stepper. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub squadable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand that are Spree spells castable choosing at
+    /// least the cheapest mode (CR 702.172), so the client can offer the
+    /// per-mode cost picker. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub spreeable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Replicate they could cast paying the
     /// replicate cost at least once (CR 702.107). `#[serde(default)]` for
     /// snapshot back-compat.

@@ -6,6 +6,7 @@ use crate::catalog;
 use crate::game::types::Target;
 use crate::game::*;
 use crate::mana::Color;
+use crate::TurnStep;
 
 fn spree(
     card_id: CardId,
@@ -188,6 +189,20 @@ fn phantom_interference_makes_a_spirit() {
     let spirits: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").collect();
     assert_eq!(spirits.len(), 1);
     assert_eq!((spirits[0].definition.power, spirits[0].definition.toughness), (2, 2));
+}
+
+#[test]
+fn spreeable_affordance_surfaces_castable_spree_card() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::explosive_derailment());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // No mana → not offered (can't afford even the cheapest mode).
+    assert!(!g.compute_hand_affordances(0).spreeable.contains(&id));
+    // {R} + a mode's {2} → offered.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.compute_hand_affordances(0).spreeable.contains(&id));
 }
 
 #[test]
