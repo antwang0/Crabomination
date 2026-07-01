@@ -22531,6 +22531,7 @@ pub fn cranial_plating() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 0,
                 count_self_counters: None,
+                count_graveyard: None,
             }),
             triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
@@ -25073,6 +25074,7 @@ pub fn nettlecyst() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: None,
+                count_graveyard: None,
             }), triggered_abilities: vec![], ..Default::default() }),
         // Living weapon (CR 702.91): mint a Germ and attach on ETB.
         triggered_abilities: vec![etb(Effect::Seq(vec![
@@ -25152,6 +25154,7 @@ pub fn lion_sash() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: Some(CounterType::PlusOnePlusOne),
+                count_graveyard: None,
             }), triggered_abilities: vec![], ..Default::default() }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
@@ -38307,6 +38310,7 @@ pub fn ethereal_armor() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: None,
+                count_graveyard: None,
             }),
             ..Default::default()
         }),

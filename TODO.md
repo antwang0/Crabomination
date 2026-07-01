@@ -456,20 +456,20 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
-- **Avatar (`tla`) card backlog.** ~33 `set:tla` non-land cards remain (verified
+- **Avatar (`tla`) card backlog.** ~28 `set:tla` non-land cards remain (verified
   against the *whole* catalog, not just `tla.rs`). Shipped since: Airbender
-  Ascension (quest-counter engine + end-step flicker completed), Appa Steadfast
-  Guardian (airbend-any + cast-from-exile Ally), Redirect Lightning
-  (`ChooseNewTargetsForSpell`). The remainder each need a non-trivial primitive:
-  the Avatar planeswalker / DFC bombs (Aang, Ozai, Koh), **Firebender Ascension**
-  (copy an attacking creature's own triggered ability at 4+ quest counters),
-  DFC Sagas (The Legend of … // Avatar …), Vehicles with Exhaust animation
-  (Invasion Submersible, Phoenix Fleet Airship). Avatar Destiny needs a
-  graveyard-scaling aura pump (extend `EquipScale` with a controller-graveyard
-  count). Crashing Wave needs variable "up to X target" (waterbend-X-sized).
-  Zhao needs a counter-gated `LandTypeChanger`; Toph the First Metalbender needs
-  a "nontoken artifacts are lands" static. Solstice Revelations needs an
-  impulse-cast-if-under-a-count effect.
+  Ascension (quest engine + flicker), Appa Steadfast Guardian, Redirect
+  Lightning, Zhao the Moon Slayer (counter-gated `LandTypeChangerWhileCounters`),
+  Toph Hardheaded Teacher (`Effect::MayDiscard`), Crashing Wave, Avatar Destiny
+  (`EquipScale.count_graveyard` + `EquipBonus.add_creature_types`). The remainder
+  each need a non-trivial primitive: the Avatar planeswalker / DFC bombs (Aang,
+  Ozai, Koh), **Firebender Ascension** (copy an attacking creature's own
+  triggered ability at 4+ quest counters), DFC Sagas (The Legend of … // Avatar
+  …), Vehicles with Exhaust animation (Invasion Submersible, Phoenix Fleet
+  Airship). Toph the First Metalbender needs a "nontoken artifacts are lands"
+  static. Solstice Revelations needs an impulse-cast-if-under-a-count effect.
+  Avatar's Wrath needs an "airbend all creatures except the chosen target"
+  selector.
   - ✅ **Exhaust** activated-ability keyword (CR 702.177) — already supported via
     `ActivatedAbility.exhaust`; now used by Rebellious Captives, Rough Rhino
     Cavalry, Mai Jaded Edge.

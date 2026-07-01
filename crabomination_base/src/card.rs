@@ -2374,6 +2374,12 @@ pub struct EquipBonus {
     pub set_card_types: Option<Vec<CardType>>,
     #[serde(default)]
     pub set_creature_types: Option<Vec<CreatureType>>,
+    /// Creature types the host gains *in addition* to its own (the "enchanted
+    /// creature is an X in addition to its other types" auras — Avatar Destiny's
+    /// "is an Avatar"). Additive layer-4, distinct from the `set_creature_types`
+    /// override.
+    #[serde(default)]
+    pub add_creature_types: Vec<CreatureType>,
     /// Land types the host's type line becomes (the "is a Forest land" auras —
     /// Song of the Dryads). Pairs with `set_card_types: Some([Land])` so the
     /// intrinsic basic-land mana ability follows the granted type.
@@ -2433,6 +2439,11 @@ pub struct EquipScale {
     /// this Equipment") rather than the controlled-permanent count by `filter`.
     #[serde(default)]
     pub count_self_counters: Option<CounterType>,
+    /// When set, the count is the number of cards matching this filter in the
+    /// source's controller's graveyard (Avatar Destiny — "+1/+1 for each
+    /// creature card in your graveyard") rather than the battlefield count.
+    #[serde(default)]
+    pub count_graveyard: Option<SelectionRequirement>,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by

@@ -3275,3 +3275,35 @@ fn toph_hardheaded_returns_is_and_earthbends() {
         "earthbend 1 put one +1/+1 counter"
     );
 }
+
+/// Avatar Destiny buffs its host by graveyard-creature count and makes it an
+/// Avatar; when the host dies it returns to hand and reanimates a gy creature.
+#[test]
+fn avatar_destiny_scales_and_recurs() {
+    use crate::card::{CreatureType, CardType};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::avatar_destiny());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, aura, crate::game::types::Target::Permanent(bear));
+    let comp = g.computed_permanent(bear).expect("host alive");
+    assert_eq!((comp.power, comp.toughness), (4, 4), "2/2 + two gy creatures");
+    assert!(comp.subtypes.creature_types.contains(&CreatureType::Avatar), "is an Avatar");
+    // Host dies (SBA records the aura) → aura returns to hand, a gy creature is
+    // reanimated.
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "aura back in hand");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.card_types.contains(&CardType::Creature)),
+        "a creature was reanimated from the graveyard"
+    );
+}

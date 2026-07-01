@@ -3940,9 +3940,16 @@ impl GameState {
             // for each artifact/enchantment the Equipment's controller controls).
             let (mut bp, mut bt) = (bonus.power, bonus.toughness);
             if let Some(scale) = &bonus.scale {
-                let n = match scale.count_self_counters {
-                    Some(kind) => card.counter_count(kind) as i32,
-                    None => self
+                let n = match (&scale.count_self_counters, &scale.count_graveyard) {
+                    (Some(kind), _) => card.counter_count(*kind) as i32,
+                    (None, Some(gy_filter)) => self.players[card.controller]
+                        .graveyard
+                        .iter()
+                        .filter(|c| {
+                            self.evaluate_requirement_on_card(gy_filter, c, card.controller)
+                        })
+                        .count() as i32,
+                    (None, None) => self
                         .battlefield
                         .iter()
                         .filter(|c| {
@@ -4020,6 +4027,10 @@ impl GameState {
             if let Some(types) = &bonus.set_creature_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::SetCreatureTypes(types.clone()));
+            }
+            for ct in &bonus.add_creature_types {
+                push_mod(&mut all_effects, Layer::L4Type, None,
+                    Modification::AddCreatureType(*ct));
             }
             if let Some(types) = &bonus.set_land_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,

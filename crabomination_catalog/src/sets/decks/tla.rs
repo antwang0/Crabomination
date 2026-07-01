@@ -5273,3 +5273,58 @@ pub fn toph_hardheaded_teacher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Avatar Destiny — {2}{G}{G} Aura. Enchant creature you control. Enchanted
+/// creature gets +1/+1 for each creature card in your graveyard and is an Avatar
+/// in addition to its other types. When it dies, mill cards equal to its power,
+/// return this to hand, and return up to one creature card from your graveyard
+/// to the battlefield. ("Milled this way" is approximated as "from your
+/// graveyard".)
+pub fn avatar_destiny() -> CardDefinition {
+    use crate::card::{EquipBonus, EquipScale};
+    CardDefinition {
+        name: "Avatar Destiny",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: None,
+                count_graveyard: Some(SelectionRequirement::HasCardType(CardType::Creature)),
+            }),
+            add_creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                },
+                Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
