@@ -165,6 +165,39 @@ pub fn giada_font_of_hope() -> CardDefinition {
     }
 }
 
+/// Hopeful Initiate — {W} 1/2 Human Warlock. Training. {2}{W}, remove two
+/// +1/+1 counters from among creatures you control: destroy target artifact or
+/// enchantment.
+pub fn hopeful_initiate() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::training;
+    CardDefinition {
+        name: "Hopeful Initiate",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![training()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            remove_counter_among_filter: Some((
+                CounterType::PlusOnePlusOne,
+                2,
+                R::Creature.and(R::ControlledByYou),
+            )),
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sanctum Prelate — {1}{W}{W} 2/2 Human Cleric. As it enters, choose a number.
 /// Noncreature spells with mana value equal to the chosen number can't be cast.
 pub fn sanctum_prelate() -> CardDefinition {

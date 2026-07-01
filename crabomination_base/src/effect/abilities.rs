@@ -1387,6 +1387,15 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// Optional cost: remove `u32` counters of the named kind from among
+    /// permanents matching the filter the activator controls (CR 602.5b —
+    /// "Remove N [kind] counters from among creatures you control:"). Unlike
+    /// `remove_counter_cost` the counters may come from any mix of matching
+    /// permanents, not just the source. Rejected when the total available is
+    /// below the count; the auto-picker drains lowest-value permanents first.
+    /// Hopeful Initiate. Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub remove_counter_among_filter: Option<(crate::card::CounterType, u32, SelectionRequirement)>,
     /// True if activating this ability returns the source permanent to its
     /// owner's hand as part of the cost (CR 602.5b "Return this … to its
     /// owner's hand:" cost lines). The bounce happens after tap/mana/life

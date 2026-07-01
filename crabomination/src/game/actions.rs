@@ -8942,6 +8942,21 @@ impl GameState {
             }
         }
 
+        // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
+        // matching permanents you control must together carry `count` counters.
+        if let Some((kind, count, filter)) = ability.remove_counter_among_filter.as_ref() {
+            let have: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .map(|c| c.counter_count(*kind))
+                .sum();
+            if have < *count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -9305,6 +9320,29 @@ impl GameState {
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             c.remove_counters(kind, count);
+        }
+
+        // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`
+        // counters distributed across matching permanents you control. The
+        // auto-picker takes them lowest-power-first (validated pre-flight).
+        if let Some((kind, count, filter)) = ability.remove_counter_among_filter.clone() {
+            let mut picks: Vec<(CardId, i32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && c.counter_count(kind) > 0)
+                .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .map(|c| (c.id, c.power()))
+                .collect();
+            picks.sort_by_key(|(_, pw)| *pw);
+            let mut left = count;
+            for (cid, _) in picks {
+                if left == 0 { break; }
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                    let take = left.min(c.counter_count(kind));
+                    c.remove_counters(kind, take);
+                    left -= take;
+                }
+            }
         }
 
         // Discard-as-cost (CR 602.5b): with tap/mana/life paid, discard each

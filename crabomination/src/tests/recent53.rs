@@ -94,6 +94,30 @@ fn giada_scales_entering_angels() {
 }
 
 #[test]
+fn hopeful_initiate_removes_counters_from_among_creatures() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let init = g.add_card_to_battlefield(0, catalog::hopeful_initiate());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(1, catalog::mark_of_asylum());
+    // Spread two +1/+1 counters across the two creatures.
+    g.battlefield.iter_mut().find(|c| c.id == init).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield.iter_mut().find(|c| c.id == ally).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: init, ability_index: 0, target: Some(Target::Permanent(ench)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activates by removing two counters from among creatures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+    assert_eq!(g.battlefield_find(init).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+#[test]
 fn sanctum_prelate_locks_chosen_mana_value() {
     let mut g = two_player_game();
     let prelate = g.add_card_to_battlefield(0, catalog::sanctum_prelate());
