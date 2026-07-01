@@ -316,3 +316,30 @@ fn watery_grasp_and_unagi_are_defined() {
     assert!(catalog::watery_grasp().activated_abilities[0].waterbend);
     assert!(catalog::the_unagi_of_kyoshi_island().keywords.iter().any(|k| matches!(k, Keyword::Ward(_))));
 }
+
+/// Crashing Wave taps X target creatures (waterbend X), then distributes three
+/// stun counters among tapped creatures an opponent controls.
+#[test]
+fn crashing_wave_taps_then_stuns() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::crashing_wave());
+    g.players[0].mana_pool.add(Color::Blue, 4); // UU + waterbend {2}
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpellWaterbend {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: Some(2),
+        helpers: vec![],
+    }).expect("waterbend {X=2}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped, "target a tapped");
+    assert!(g.battlefield_find(b).unwrap().tapped, "target b tapped");
+    let stun_total = g.battlefield_find(a).unwrap().counter_count(CounterType::Stun)
+        + g.battlefield_find(b).unwrap().counter_count(CounterType::Stun);
+    assert_eq!(stun_total, 3, "three stun counters distributed among the tapped creatures");
+}

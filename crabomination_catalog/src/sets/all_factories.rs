@@ -4033,6 +4033,7 @@ static DECKS: &[Factory] = &[
     super::decks::ruinous_waterbending,
     super::decks::flexible_waterbender,
     super::decks::giant_koi,
+    super::decks::crashing_wave,
     super::decks::geyser_leaper,
     super::decks::ruthless_waterbender,
     super::decks::foggy_swamp_vinebender,

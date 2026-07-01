@@ -630,3 +630,31 @@ pub fn watery_grasp() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crashing Wave — {U}{U} Sorcery. Waterbend {X}. Tap up to X target creatures,
+/// then distribute three stun counters among any number of tapped creatures your
+/// opponents control.
+pub fn crashing_wave() -> CardDefinition {
+    CardDefinition {
+        name: "Crashing Wave",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        waterbend: Some(Waterbend { amount: Value::XFromCost, optional: false }),
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                filter: SelectionRequirement::Creature,
+                max_targets: u8::MAX,
+                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            },
+            Effect::DistributeCounters {
+                total: Value::Const(3),
+                counter: CounterType::Stun,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::Tapped),
+                max_targets: 3,
+            },
+        ]),
+        ..Default::default()
+    }
+}
