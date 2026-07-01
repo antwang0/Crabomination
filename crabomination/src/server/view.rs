@@ -501,6 +501,7 @@ fn project_player(
         seat: player_seat,
         name: player.name.clone(),
         life: player.life,
+        starting_life: player.starting_life,
         poison_counters: player.poison_counters,
         energy: player.energy,
         speed: player.speed,
@@ -3122,6 +3123,18 @@ mod tests {
         assert_eq!(pv.crew_power_bonus, 2, "rider surfaces");
         let bv = view.battlefield.iter().find(|p| p.id == plain).expect("bears in view");
         assert_eq!(bv.crew_power_bonus, 0, "no rider on a plain creature");
+    }
+
+    /// PlayerView surfaces the starting-life total so the HUD can render
+    /// "N above starting" gates (CR 103.4 — Speaker of the Heavens).
+    #[test]
+    fn starting_life_surfaces_in_player_view() {
+        let mut g = two_player_game();
+        g.players[0].starting_life = 40;
+        g.players[0].life = 47;
+        let pv = &project(&g, 0).players[0];
+        assert_eq!(pv.starting_life, 40);
+        assert_eq!(pv.life - pv.starting_life, 7, "HUD can show +7 above start");
     }
 
     /// A non-mana alternative cost surfaces a descriptive label (Escape

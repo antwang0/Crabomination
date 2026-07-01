@@ -21,8 +21,6 @@ Palace Jailer, Loxodon Smiter, Leonin Vanguard, Marchesa's Decree, Custodi Lich,
 Thorn of the Black Rose, Throne Warden, Skyline Despot, Keeper of Keys, Judith,
 Gallant Cavalry, Valiant Knight, Adriana (melee grant).
 Still deferred for want of a primitive:
-- **Dauntless Bodyguard** — needs a "choose+remember another creature at ETB"
-  slot to grant the remembered creature indestructible on sacrifice.
 - **Custodi Squire / Ballot Broker / Grudge Keeper** — vote-for-a-graveyard-card
   and additional-vote / vote-mismatch payoffs (voting is only wired for
   `WillOfTheCouncilExile` today).
@@ -62,6 +60,23 @@ Shipped: `StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower`
   rider is omitted (only the counters are wired).
 - **Ingenious Smith** — "rest on the bottom in a random order" is approximated by
   `LookPickToHand { rest_to_graveyard: false }` (bottom, deterministic order).
+
+## Discovered follow-ups — lifegain-matters sweep (`decks::recent56`)
+
+Shipped primitives: `Player.starting_life` + `Predicate::PlayerLifeAtLeastAboveStarting`
+(CR 103.4 — Speaker of the Heavens, Righteous Valkyrie; `PlayerView.starting_life`
+surfaced + a start-relative HUD delta), `StaticEffect::LifeGainMultiplier` (CR 614
+— Rhox Faithmender), `CardInstance.chosen_permanent` +
+`Effect::ChoosePermanentForSource` + `Selector::ChosenPermanentOfSource` (Dauntless
+Bodyguard — reads its stamp from die-LKI when sacrificed as the cost). GainLife/LoseLife
+now surface `amount`-embedded target slots (Soul's Grace). Still deferred:
+- **Heliod, Sun-Crowned / Daxos, Blessed by the Sun** — devotion-toughness CDA +
+  gain-life-→-counter-on-target (both already exist as bodies elsewhere; the
+  target rider / devotion-`*` toughness are the remaining faithful pieces).
+- **Well of Lost Dreams** — "pay {X} ≤ life gained, draw X" needs a pay-up-to-N
+  reflexive draw off `Value::TriggerEventAmount`.
+- **Dawnbringer Cleric** — modal ETB with target-bearing modes (choose-one at
+  resolution) isn't wired for creature ETBs.
 
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 

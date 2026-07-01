@@ -5744,3 +5744,69 @@ fn cr_613_counter_gated_creature_type_composes_with_pt() {
     assert!(cp.card_types.contains(&CardType::Creature), "layer-4 AddCardType from 3 fire counters");
     assert_eq!((cp.power, cp.toughness), (5, 4), "printed 4/3 + a +1/+1 counter");
 }
+
+/// CR 103.4 — "N more than your starting life total" reads the *actual*
+/// starting life, not a hardcoded 20+N. At a 40-life start Speaker of the
+/// Heavens needs 47, not 27.
+#[test]
+fn cr_103_4_above_starting_reads_actual_starting_life() {
+    let mut g = two_player_game();
+    let speaker = g.add_card_to_battlefield(0, catalog::speaker_of_the_heavens());
+    g.players[0].starting_life = 40;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // 46 = start+6 — still below the +7 gate even though it's well over 27.
+    g.players[0].life = 46;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: speaker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "blocked at only +6 above a 40 start");
+    g.battlefield_find_mut(speaker).unwrap().tapped = false;
+    g.players[0].life = 47; // start+7
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: speaker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("fires at +7 above a 40 start");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Angel"), "Angel made at +7");
+}
+
+/// CR 614 / 119.10 — a life-gain multiplier applies before an additive bonus,
+/// and neither applies to a gain of 0 (no life-gain event occurs).
+#[test]
+fn cr_614_life_gain_multiplier_precedes_bonus() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rhox_faithmender()); // x2
+    g.add_card_to_battlefield(0, catalog::angel_of_vitality()); // +1
+    let life = g.players[0].life;
+    // 3 → ×2 = 6 → +1 = 7.
+    g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, life + 7, "multiplier then bonus");
+    // A gain of 0 is not a gain — the replacements leave it at 0 (CR 119.10).
+    let now = g.players[0].life;
+    g.adjust_life(0, 0);
+    assert_eq!(g.players[0].life, now, "0-gain untouched by ×2/+1");
+}
+
+/// CR 121.2b — "can't draw more than one card each turn" truncates a multi-draw
+/// to the remaining allowance (Spirit of the Labyrinth).
+#[test]
+fn cr_121_2b_draw_cap_truncates_multidraw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spirit_of_the_labyrinth());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let div = g.add_card_to_hand(0, catalog::divination()); // draw 2
+    g.players[0].cards_drawn_this_turn = 0;
+    let hand = g.players[0].hand.len(); // includes Divination
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Divination");
+    drain_stack(&mut g);
+    // Divination left hand (-1), drew only 1 of its 2 (cap) → net hand unchanged.
+    assert_eq!(g.players[0].hand.len(), hand, "draw-2 capped to 1 under the Spirit");
+    assert_eq!(g.players[0].cards_drawn_this_turn, 1, "exactly one draw counted");
+}

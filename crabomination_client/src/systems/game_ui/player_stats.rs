@@ -258,8 +258,21 @@ fn life_badge_style(life: i32) -> (Color, Color) {
 /// Spawn the prominent life readout — a larger badge than the other
 /// chips, since life is the number the eye goes to. Replaces the
 /// floating 3-D life numeral the crest used to project over each disc.
-fn spawn_life_badge(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, life: i32) {
+fn spawn_life_badge(
+    parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    life: i32,
+    starting_life: i32,
+) {
     let (bg, fg) = life_badge_style(life);
+    // A "(+N)"/"(−N)" suffix relative to the starting total contextualizes
+    // life-threshold cards (Speaker of the Heavens, Righteous Valkyrie).
+    let delta = life - starting_life;
+    let label = match delta {
+        0 => format!("\u{2665} {life}"),
+        d if d > 0 => format!("\u{2665} {life} (+{d})"),
+        d => format!("\u{2665} {life} ({d})"),
+    };
     parent
         .spawn((
             Node {
@@ -274,7 +287,7 @@ fn spawn_life_badge(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, life:
         ))
         .with_children(|chip| {
             chip.spawn((
-                Text::new(format!("\u{2665} {life}")),
+                Text::new(label),
                 ui_fonts.tf(18.0),
                 TextColor(fg),
                 Pickable::IGNORE,
@@ -548,7 +561,7 @@ pub fn update_player_stats_chips(
     commands.entity(row).with_children(|row| {
         spawn_avatar(row, &ui_fonts, p.seat, &p.name);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-        spawn_life_badge(row, &ui_fonts, p.life);
+        spawn_life_badge(row, &ui_fonts, p.life, p.starting_life);
         // CR 903.10a commander damage taken — surfaced right next to life
         // since 21 from a single commander is its own loss condition. Only
         // present in Commander games (the vec is empty otherwise).
@@ -917,7 +930,7 @@ pub fn update_opponent_stats_rows(
             .with_children(|row| {
                 spawn_avatar(row, &ui_fonts, p.seat, &p.name);
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-                spawn_life_badge(row, &ui_fonts, p.life);
+                spawn_life_badge(row, &ui_fonts, p.life, p.starting_life);
                 // CR 903.10a commander damage taken — see the viewer row.
                 for entry in &p.commander_damage_taken {
                     spawn_commander_damage_chip(row, &ui_fonts, entry);

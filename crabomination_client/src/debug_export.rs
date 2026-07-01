@@ -169,6 +169,7 @@ mod tests {
                 seat: 0,
                 name: "Alice".into(),
                 life: 20,
+                starting_life: 20,
                 poison_counters: 0,
                 energy: 0,
                 rad_counters: 0,

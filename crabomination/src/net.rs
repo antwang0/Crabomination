@@ -498,6 +498,12 @@ pub struct PlayerView {
     pub seat: usize,
     pub name: String,
     pub life: i32,
+    /// The life total this player started the game with (CR 103.4). Surfaced
+    /// so the HUD can show a player's standing relative to their start and
+    /// preview "N more than your starting life total" gates (Speaker of the
+    /// Heavens, Righteous Valkyrie). Defaults to 20 for pre-field snapshots.
+    #[serde(default = "default_view_starting_life")]
+    pub starting_life: i32,
     pub poison_counters: u32,
     /// CR 122 energy counters ({E}) this player has. Surfaced so the
     /// client HUD can show an energy chip alongside life/poison.
@@ -1448,6 +1454,10 @@ fn default_divide_noun() -> String {
 /// matching the engine-side default for pre-`max_hand_size` snapshots.
 fn default_max_hand_size_view() -> Option<usize> {
     Some(crate::player::DEFAULT_MAX_HAND_SIZE)
+}
+
+fn default_view_starting_life() -> i32 {
+    20
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

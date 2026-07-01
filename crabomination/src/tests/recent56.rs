@@ -304,3 +304,22 @@ fn valkyrie_harbinger_and_regal_bloodlord_make_tokens_at_end_step() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Angel"), "Harbinger made an Angel");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Bat"), "Bloodlord made a Bat");
 }
+
+/// The new `#[serde(default)]` state — Player.starting_life and
+/// CardInstance.chosen_permanent — survives a full-state snapshot round-trip.
+#[test]
+fn new_serde_fields_survive_snapshot_roundtrip() {
+    let mut g = two_player_game();
+    g.players[0].starting_life = 40;
+    let ward = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let guard = g.add_card_to_battlefield(0, catalog::dauntless_bodyguard());
+    g.fire_self_etb_triggers(guard, 0);
+    drain_stack(&mut g);
+    let json = serde_json::to_string(&g).expect("serialize");
+    let g2: GameState = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(g2.players[0].starting_life, 40, "starting_life round-trips");
+    assert_eq!(
+        g2.battlefield_find(guard).unwrap().chosen_permanent, Some(ward),
+        "chosen_permanent round-trips",
+    );
+}

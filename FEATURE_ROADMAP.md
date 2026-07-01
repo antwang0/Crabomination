@@ -204,7 +204,10 @@ Each unblocks a large swath of cards.
   — Questing Beast) now ride the `adjust_life` / prevention chokepoints.
   Noncombat-only damage doubling (`DoubleNoncombatDamageToOpponents` — Solphim,
   Mayhem Dominus) rides the `deal_damage_to_from` funnel and stacks with the
-  global Furnace-of-Rath doubler (combat damage stays exempt).
+  global Furnace-of-Rath doubler (combat damage stays exempt). Life-gain
+  replacements now cover both a flat bonus (`LifeGainBonus` — Honor Troll) and a
+  multiplier (`LifeGainMultiplier` — Rhox Faithmender), multiplier applied first
+  (CR 614), neither firing on a 0-gain (CR 119.10).
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
 - 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
   CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power
