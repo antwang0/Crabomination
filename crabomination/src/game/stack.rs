@@ -846,8 +846,8 @@ impl GameState {
                     // Metallic Mimic-style chosen-type ETB counters (any matching
                     // creature entry the caster controls).
                     if is_creature_resolve {
-                        for kind in self.chosen_type_etb_counter_specs(card_id, caster) {
-                            counter_specs.push((kind, crate::effect::Value::Const(1)));
+                        for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
+                            counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
                     }
                     // CR 122.1 — Solemnity drops enters-with-counters.

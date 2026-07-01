@@ -819,6 +819,17 @@ pub enum StaticEffect {
     /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
     /// `ChosenTypeEntersWithCounter`; Changeling entrants count.
     TypeEntersWithCounter { creature_type: crate::card::CreatureType, kind: CounterType },
+    /// "Each other [creature_type] creature you control enters with an
+    /// additional `kind` counter for each permanent matching `per` you
+    /// control" (Giada, Font of Hope — `per` = "Angel you control", so a new
+    /// Angel enters with +1/+1 counters equal to your Angel count). Read at the
+    /// same ETB-counter sites as `TypeEntersWithCounter`; the entrant is
+    /// excluded from the count.
+    TypeEntersWithCountersPerControlled {
+        creature_type: crate::card::CreatureType,
+        kind: CounterType,
+        per: crate::card::SelectionRequirement,
+    },
     /// Strict Proctor — "If a permanent entering the battlefield causes
     /// a triggered ability of a permanent to trigger, that ability's
     /// controller sacrifices the permanent unless they pay {amount}."

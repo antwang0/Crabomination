@@ -973,8 +973,8 @@ impl GameState {
                 }
                 // Metallic Mimic-style chosen-type ETB counters (any matching
                 // creature entry — tokens, reanimation, search-to-battlefield).
-                for kind in self.chosen_type_etb_counter_specs(cid, p) {
-                    counter_specs.push((kind, crate::effect::Value::Const(1)));
+                for (kind, n) in self.chosen_type_etb_counter_specs(cid, p) {
+                    counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                 }
                 if self.counters_locked() { counter_specs.clear(); }
                 for (kind, value) in counter_specs {

@@ -80,6 +80,20 @@ fn leonin_vanguard_pumps_with_a_full_board() {
 }
 
 #[test]
+fn giada_scales_entering_angels() {
+    let mut g = two_player_game();
+    // Giada + one more Angel already out = two Angels you control.
+    g.add_card_to_battlefield(0, catalog::giada_font_of_hope());
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    // A third Angel enters (reanimation/move path) with +1/+1 per existing Angel.
+    let newcomer = g.move_card_to_battlefield_for_test(0, catalog::serra_angel());
+    let cp = g.compute_battlefield();
+    let a = cp.iter().find(|c| c.id == newcomer).unwrap();
+    // Serra Angel is 4/4; two Angels already controlled → +2/+2 → 6/6.
+    assert_eq!((a.power, a.toughness), (6, 6), "entered with two +1/+1 counters");
+}
+
+#[test]
 fn custodi_lich_edicts_and_crowns() {
     let mut g = two_player_game();
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());

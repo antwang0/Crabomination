@@ -2,13 +2,14 @@
 //! `tests/recent53.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
+    StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{Duration, ManaPayload, PlayerRef};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, r, w, x};
+use crate::mana::{cost, g, generic, r, w, x, Color, SpendRestriction};
 
 /// By Force — {X}{R} Sorcery. Destroy X target artifacts.
 pub fn by_force() -> CardDefinition {
@@ -124,6 +125,42 @@ pub fn marchesas_decree() -> CardDefinition {
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Giada, Font of Hope — {1}{W} 2/2 Legendary Angel. Flying, vigilance. Each
+/// other Angel you control enters with an additional +1/+1 counter for each
+/// Angel you already control. {T}: Add {W}, spend only to cast an Angel spell.
+pub fn giada_font_of_hope() -> CardDefinition {
+    CardDefinition {
+        name: "Giada, Font of Hope",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Each other Angel you control enters with an additional +1/+1 counter on it for each Angel you already control.",
+            effect: StaticEffect::TypeEntersWithCountersPerControlled {
+                creature_type: CreatureType::Angel,
+                kind: CounterType::PlusOnePlusOne,
+                per: R::Creature.and(R::HasCreatureType(CreatureType::Angel)).and(R::ControlledByYou),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![Color::White])),
+                    SpendRestriction::CreatureOfType(CreatureType::Angel),
+                ),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

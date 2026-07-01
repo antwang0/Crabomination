@@ -2400,7 +2400,7 @@ impl GameState {
         &self,
         entering: CardId,
         controller: usize,
-    ) -> Vec<crate::card::CounterType> {
+    ) -> Vec<(crate::card::CounterType, u32)> {
         use crate::effect::StaticEffect;
         let Some(ec) = self.battlefield.iter().find(|c| c.id == entering) else {
             return vec![];
@@ -2425,12 +2425,36 @@ impl GameState {
                             .chosen_creature_type
                             .is_some_and(|ct| entering_types.contains(&ct) || changeling)
                         => {
-                            specs.push(*kind);
+                            specs.push((*kind, 1));
                         }
                     StaticEffect::TypeEntersWithCounter { creature_type, kind }
                         if entering_types.contains(creature_type) || changeling =>
                     {
-                        specs.push(*kind);
+                        specs.push((*kind, 1));
+                    }
+                    // Giada — each other Angel enters with +1/+1 for each Angel
+                    // you already control (the source counts, the entrant does
+                    // not — it isn't yet on the battlefield at spec time here,
+                    // but a token/reanimation entry already is, so exclude it).
+                    StaticEffect::TypeEntersWithCountersPerControlled { creature_type, kind, per }
+                        if entering_types.contains(creature_type) || changeling =>
+                    {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == controller && c.id != entering)
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    per,
+                                    &crate::game::Target::Permanent(c.id),
+                                    controller,
+                                    Some(src.id),
+                                )
+                            })
+                            .count() as u32;
+                        if n > 0 {
+                            specs.push((*kind, n));
+                        }
                     }
                     _ => {}
                 }
@@ -11107,6 +11131,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraManaOnLandTap { .. }
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
             | StaticEffect::TypeEntersWithCounter { .. }
+            | StaticEffect::TypeEntersWithCountersPerControlled { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
