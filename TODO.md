@@ -78,6 +78,20 @@ now surface `amount`-embedded target slots (Soul's Grace). Still deferred:
 - **Dawnbringer Cleric** — modal ETB with target-bearing modes (choose-one at
   resolution) isn't wired for creature ETBs.
 
+## Discovered follow-ups — go-wide white sweep (`decks::recent57`)
+
+Shipped with existing primitives (Requiem Angel, Angel of the Dawn, Elderfang
+Disciple, Martial Coup, Beckon Apparition, Kytheon's Tactics, Rally the Ranks,
+Captain's Claws, Ancestral Blade). Noticed but deferred for want of a primitive:
+- **Trueheart Duelist** — "can block an additional creature" needs a
+  `Keyword::CanBlockAdditional(n)` wired into block declaration (Embalm half ships).
+- **Squad Commander** — party count (`Value::PartyCount` / full-party gate) isn't
+  modeled.
+- **Custodi Soulbinders** — enters-with-counters-per-other-creature + a
+  remove-a-+1/+1-counter activation cost on self.
+- **Loyal Warhound** — ETB Plains tutor gated on "an opponent controls more
+  lands than you" (needs a land-count comparison predicate).
+
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 
 Shipped: multi-kind permanent+player target slots (`Selector::ControlledBy

@@ -4626,6 +4626,15 @@ static DECKS: &[Factory] = &[
     super::decks::valkyrie_harbinger,
     super::decks::regal_bloodlord,
     super::decks::gideons_company,
+    super::decks::requiem_angel,
+    super::decks::angel_of_the_dawn,
+    super::decks::elderfang_disciple,
+    super::decks::martial_coup,
+    super::decks::beckon_apparition,
+    super::decks::kytheons_tactics,
+    super::decks::rally_the_ranks,
+    super::decks::captains_claws,
+    super::decks::ancestral_blade,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
