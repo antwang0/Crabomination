@@ -1,11 +1,11 @@
 //! Functionality tests for the keyword-trigger shortcuts
-//! (`effect::shortcut::{frenzy, afflict, afterlife}`) — CR 702.68 /
-//! 702.131 / 702.135. Each test builds a synthetic creature carrying the
-//! keyword trigger and drives combat (or a death) to observe the rider.
-//! (Bushido / Flanking / Rampage already ship as `Keyword::*` combat
+//! (`effect::shortcut::{afflict, afterlife}`) — CR 702.131 / 702.135 — plus
+//! the `Keyword::Frenzy` combat rule (CR 702.35). Each test builds a synthetic
+//! creature carrying the keyword and drives combat (or a death) to observe the
+//! rider. (Bushido / Flanking / Rampage / Frenzy ship as `Keyword::*` combat
 //! rules wired in `combat.rs`.)
 
-use crate::card::{CardDefinition, CardType, Subtypes, TriggeredAbility};
+use crate::card::{CardDefinition, CardType, Keyword, Subtypes, TriggeredAbility};
 use crate::catalog;
 use crate::effect::shortcut;
 use crate::game::*;
@@ -25,18 +25,30 @@ fn body(name: &'static str, p: i32, t: i32, trig: Vec<TriggeredAbility>) -> Card
     }
 }
 
+/// A bare N/M creature carrying the given keywords.
+fn body_kw(name: &'static str, p: i32, t: i32, keywords: Vec<Keyword>) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        power: p,
+        toughness: t,
+        keywords,
+        ..Default::default()
+    }
+}
+
 fn advance_to(g: &mut GameState, step: TurnStep) {
     while g.step != step {
         g.perform_action(GameAction::PassPriority).expect("pass priority");
     }
 }
 
-// ── CR 702.68 Frenzy ─────────────────────────────────────────────────────────
+// ── CR 702.35 Frenzy ─────────────────────────────────────────────────────────
 
 #[test]
-fn cr_702_68_frenzy_pumps_only_when_unblocked() {
+fn cr_702_35_frenzy_pumps_only_when_unblocked() {
     let mut g = two_player_game();
-    let atk = g.add_card_to_battlefield(0, body("Berserker", 2, 2, vec![shortcut::frenzy(3)]));
+    let atk = g.add_card_to_battlefield(0, body_kw("Berserker", 2, 2, vec![Keyword::Frenzy(3)]));
     g.clear_sickness(atk);
     advance_to(&mut g, TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -52,9 +64,9 @@ fn cr_702_68_frenzy_pumps_only_when_unblocked() {
 }
 
 #[test]
-fn cr_702_68_frenzy_silent_when_blocked() {
+fn cr_702_35_frenzy_silent_when_blocked() {
     let mut g = two_player_game();
-    let atk = g.add_card_to_battlefield(0, body("Berserker", 2, 2, vec![shortcut::frenzy(3)]));
+    let atk = g.add_card_to_battlefield(0, body_kw("Berserker", 2, 2, vec![Keyword::Frenzy(3)]));
     let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(atk);
     advance_to(&mut g, TurnStep::DeclareAttackers);

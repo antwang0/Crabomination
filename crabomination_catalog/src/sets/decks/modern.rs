@@ -25824,9 +25824,8 @@ pub fn marsh_viper() -> CardDefinition {
     }
 }
 
-/// Frenzy Sliver — {1}{B} 1/1 Sliver. Frenzy 1 (CR 702.68). The printed
-/// card grants frenzy 1 to all Slivers; modeled here as self-frenzy on the
-/// Sliver itself (the lord half is dropped).
+/// Frenzy Sliver — {1}{B} 1/1 Sliver. All Sliver creatures have frenzy 1
+/// (CR 702.35), granted via a real lord static over `Keyword::Frenzy`.
 pub fn frenzy_sliver() -> CardDefinition {
     CardDefinition {
         name: "Frenzy Sliver",
@@ -25838,7 +25837,15 @@ pub fn frenzy_sliver() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::frenzy(1)],
+        static_abilities: vec![StaticAbility {
+            description: "All Sliver creatures have frenzy 1.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                ),
+                keyword: Keyword::Frenzy(1),
+            },
+        }],
         ..Default::default()
     }
 }

@@ -97,6 +97,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Combat-pump statics from the Kamigawa/legacy sets read at a glance.
         Bushido(_) => "Bsd",
         Rampage(_) => "Rmp",
+        Frenzy(_) => "Frz",
         Banding => "Bnd",
         // Generalized menace — "can't be blocked except by N or more."
         CantBeBlockedExceptByN(_) => "Men+",

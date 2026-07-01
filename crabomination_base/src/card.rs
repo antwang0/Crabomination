@@ -517,6 +517,9 @@ pub enum Keyword {
     Absorb(u32),
     /// Rampage N (CR 702.23) — when this becomes blocked, it gets +N/+N for each blocker beyond the first.
     Rampage(u32),
+    /// Frenzy N (CR 702.35) — whenever this attacks and isn't blocked, it gets
+    /// +N/+0 until end of turn.
+    Frenzy(u32),
     Intimidate,
     Skulk,
     /// CR 702.36 — Fear. "This creature can't be blocked except by

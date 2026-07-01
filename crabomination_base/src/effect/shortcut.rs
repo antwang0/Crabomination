@@ -1933,18 +1933,6 @@ pub fn on_unblocked(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// Frenzy N (CR 702.68): "Whenever this creature attacks and isn't
-/// blocked, it gets +N/+0 until end of turn." An
-/// `AttacksAndIsntBlocked / SelfSource` pump of `This`.
-pub fn frenzy(n: i32) -> TriggeredAbility {
-    on_unblocked(Effect::PumpPT {
-        what: Selector::This,
-        power: Value::Const(n),
-        toughness: Value::Const(0),
-        duration: Duration::EndOfTurn,
-    })
-}
-
 /// Afflict N (CR 702.131): "Whenever this creature becomes blocked,
 /// defending player loses N life." A `BecomesBlocked / SelfSource`
 /// trigger draining the `DefendingPlayer` (resolved while the source

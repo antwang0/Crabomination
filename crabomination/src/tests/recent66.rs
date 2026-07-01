@@ -232,6 +232,32 @@ fn weatherseed_treaty_read_ahead_defaults_to_chapter_one() {
 }
 
 #[test]
+fn frenzy_sliver_grants_frenzy_to_unblocked_slivers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::frenzy_sliver());
+    let gale = g.add_card_to_battlefield(0, catalog::galerider_sliver()); // 1/1
+    g.clear_sickness(gale);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gale,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    // Unblocked → Frenzy 1 from Frenzy Sliver: +1/+0.
+    assert_eq!(g.computed_permanent(gale).unwrap().power, 2);
+}
+
+#[test]
 fn rambling_possum_pumps_when_saddled_attacks() {
     let mut g = two_player_game();
     let possum = g.add_card_to_battlefield(0, catalog::rambling_possum());

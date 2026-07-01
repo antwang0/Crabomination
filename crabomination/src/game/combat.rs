@@ -1146,10 +1146,29 @@ impl GameState {
         // attacker; consumers can read it via `Selector::TriggerSource`.
         // The block_map maps blocker → attacker, so an attacker is
         // unblocked iff no entry has it as a value.
+        let mut frenzy_deltas: Vec<(CardId, i32)> = Vec::new();
         for atk in &self.attacking {
             let blocked = self.block_map.values().any(|&aid| aid == atk.attacker);
             if !blocked {
                 events.push(GameEvent::AttackerWentUnblocked { attacker: atk.attacker });
+                // CR 702.35 — Frenzy N: an unblocked attacker gets +N/+0.
+                // Read computed keywords so statically-granted Frenzy (Frenzy
+                // Sliver) counts too.
+                if let Some(cp) = self.computed_permanent(atk.attacker) {
+                    let fn_: i32 = cp
+                        .keywords
+                        .iter()
+                        .filter_map(|k| if let Keyword::Frenzy(x) = k { Some(*x as i32) } else { None })
+                        .sum();
+                    if fn_ > 0 {
+                        frenzy_deltas.push((atk.attacker, fn_));
+                    }
+                }
+            }
+        }
+        for (id, d) in frenzy_deltas {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.power_bonus += d;
             }
         }
         self.give_priority_to_active();
