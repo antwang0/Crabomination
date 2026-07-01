@@ -4738,6 +4738,14 @@ static DECKS: &[Factory] = &[
     super::decks::barrage_ogre,
     super::decks::craw_giant,
     super::decks::reckless_imp,
+    super::decks::frost_giant,
+    super::decks::highland_game,
+    super::decks::rushwood_dryad,
+    super::decks::ainok_tracker,
+    super::decks::charging_slateback,
+    super::decks::auriok_transfixer,
+    super::decks::snapping_creeper,
+    super::decks::nyxborn_rollicker,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
