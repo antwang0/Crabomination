@@ -1,7 +1,7 @@
 //! Functionality tests for `catalog::sets::decks::recent60` — deferred
 //! follow-ups cleared with fresh primitives.
 
-use crate::card::{CardType, CounterType, CreatureType, Subtypes};
+use crate::card::{CardType, CreatureType, Subtypes};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;

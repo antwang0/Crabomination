@@ -2,7 +2,6 @@
 
 use crate::card::{CounterType, Keyword};
 use crate::catalog;
-use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::{Target, TurnStep};
 use crate::game::*;
 
