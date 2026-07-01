@@ -4680,6 +4680,13 @@ static DECKS: &[Factory] = &[
     super::decks::sky_spirit,
     super::decks::cephalid_broker,
     super::decks::riverwise_augur,
+    super::decks::ruthless_cullblade,
+    super::decks::guul_draz_vampire,
+    super::decks::bloodrite_invoker,
+    super::decks::nip_gwyllion,
+    super::decks::barony_vampire,
+    super::decks::nested_shambler,
+    super::decks::duty_bound_dead,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -151,6 +151,20 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // gates blocking and combat damage, not just spell targeting.
         ProtectionFromCreatures => "ProCr",
         ProtectionFromCreatureType(_) => "ProCT",
+        // Combat compulsions/restrictions that change how an opponent should
+        // attack or block into this creature — the mirror side of MustAttack.
+        MustBlock | AllMustBlock => "MBlk",
+        AttacksAlone => "Solo",
+        // "Assigns no combat damage" (Illusionist's Gambit-style) — a real
+        // combat read: it can chump/soak without dealing back.
+        DealsNoCombatDamage => "0dmg",
+        // Exert — "you may exert as it attacks" for a bonus; a glanceable
+        // reminder the attack carries an optional payoff.
+        Exert => "Exrt",
+        // Soulbond — a paired keyword-grant; worth flagging that it (un)pairs.
+        Soulbond => "Bond",
+        // Spell-count evasion (Illvoi Infiltrator) — reads as evasion.
+        CantBeBlockedIfControllerCastSpells(_) => "Eva",
         _ => return None,
     })
 }
