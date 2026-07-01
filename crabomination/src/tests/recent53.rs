@@ -263,6 +263,52 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn war_priest_smashes_an_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::mark_of_asylum());
+    let priest = g.add_card_to_battlefield(0, catalog::war_priest_of_thune());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(ench)),
+    ]));
+    g.fire_self_etb_triggers(priest, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+#[test]
+fn goldnight_redeemer_gains_two_per_other_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let redeemer = g.add_card_to_battlefield(0, catalog::goldnight_redeemer());
+    let before = g.players[0].life;
+    g.fire_self_etb_triggers(redeemer, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 4, "2 life × 2 other creatures");
+}
+
+#[test]
+fn kinsbaile_borderguard_scales_and_leaves_tokens() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Two other Kithkin already out.
+    g.add_card_to_battlefield(0, catalog::kinsbaile_borderguard());
+    g.add_card_to_battlefield(0, catalog::kinsbaile_borderguard());
+    let newcomer = g.move_card_to_battlefield_for_test(0, catalog::kinsbaile_borderguard());
+    assert_eq!(
+        g.battlefield_find(newcomer).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "entered with a counter per other Kithkin",
+    );
+    let tokens_before = g.battlefield.iter().filter(|c| c.definition.name == "Kithkin Soldier").count();
+    g.remove_to_graveyard_with_triggers(newcomer);
+    drain_stack(&mut g);
+    let tokens_after = g.battlefield.iter().filter(|c| c.definition.name == "Kithkin Soldier").count();
+    assert_eq!(tokens_after - tokens_before, 2, "made a token per counter on death");
+}
+
+#[test]
 fn terror_of_the_peaks_pings_on_creature_entry() {
     let mut g = two_player_game();
     let terror = g.add_card_to_battlefield(0, catalog::terror_of_the_peaks());

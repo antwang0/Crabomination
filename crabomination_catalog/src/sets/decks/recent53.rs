@@ -424,6 +424,103 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// War Priest of Thune — {1}{W} 2/2 Human Cleric. ETB you may destroy target
+/// enchantment.
+pub fn war_priest_of_thune() -> CardDefinition {
+    CardDefinition {
+        name: "War Priest of Thune",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "destroy target enchantment".into(),
+            body: Box::new(Effect::Destroy { what: target_filtered(R::Enchantment) }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goldnight Redeemer — {4}{W}{W} 4/4 Angel. Flying; ETB gain 2 life for each
+/// other creature you control.
+pub fn goldnight_redeemer() -> CardDefinition {
+    CardDefinition {
+        name: "Goldnight Redeemer",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::Player(PlayerRef::You),
+            amount: Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    )),
+                    filter: R::Creature,
+                }),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kinsbaile Borderguard — {1}{W}{W} 1/1 Kithkin Soldier. Enters with a +1/+1
+/// counter for each other Kithkin you control; when it dies, make a 1/1 white
+/// Kithkin Soldier token for each counter on it.
+pub fn kinsbaile_borderguard() -> CardDefinition {
+    use crate::card::{CounterType, TokenDefinition};
+    use crate::effect::shortcut::on_dies;
+    let kithkin = || TokenDefinition {
+        name: "Kithkin Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kinsbaile Borderguard",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Kithkin))
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanSource),
+                )),
+                filter: R::Creature,
+            },
+        )),
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::TotalCountersOn { what: Box::new(Selector::This) },
+            definition: kithkin(),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Warstorm Surge — {5}{R} Enchantment. Whenever a creature you control enters,
 /// it deals damage equal to its power to any target.
 pub fn warstorm_surge() -> CardDefinition {
