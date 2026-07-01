@@ -1761,6 +1761,9 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Ascend { .. } => "Ascend",
         Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
         Effect::ReturnTopCreatureFromGraveyard { .. } => "Reanimate top creature",
+        Effect::Regenerate { .. } => "Regenerate",
+        Effect::SacrificePermanent { .. } => "Sacrifice",
+        Effect::LoseKeywordThisTurn { .. } => "Remove keyword",
         _ => "Activate",
     }
 }

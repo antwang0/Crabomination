@@ -93,8 +93,11 @@ The "engine-wide ⏳" notes on these were stale. Status:
 - ✅ **transform-and-cast-from-graveyard** — `GameAction::CastSpellBack` now hops a permitted graveyard card into hand for the back-face cast pipeline (Muldrotha idiom), gated by a one-shot `CardInstance::may_cast_back_from_graveyard` flag set by `Effect::GrantCastBackFromGraveyard`. Pestilent Cauldron's sac ability grants it; Restorative Burst is then castable from the graveyard.
 
 ### 4. No "controller-of-target" / "that player" actor (forces each-opponent / you)
-~~Generous Gift~~ ✅ **FIXED** (now mints the 3/3 Elephant for the target's controller via `CreateToken { who: ControllerOf(Target(0)) }`, created before the Destroy — the "no primitive" doc note was stale) · Harsh Annotation · Kemuri-Onna ·
-Hellrider · Emeritus of Truce // STP · Channeled Force · several CHK Ninjas.
+~~Generous Gift~~ ✅ **FIXED** · ~~Hellrider~~ ✅ **FIXED** (now `Attacks/YourControl`
+→ `DealDamage { DefendingPlayer, 1 }`; was `SelfSource` → `EachOpponent`, doubly
+wrong — it should trigger on *any* creature you control attacking and hit the
+defending player) · Harsh Annotation · Kemuri-Onna · Emeritus of Truce // STP ·
+Channeled Force · several CHK Ninjas.
 
 ### 5. No "first/Nth spell this turn" / "no card drawn this turn" gate (over-triggers)
 Thalia, Heretic Cathar · Quandrix Mathwarden / Spellmage / Streamcaller ·
