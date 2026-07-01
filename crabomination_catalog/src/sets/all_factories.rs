@@ -4655,6 +4655,15 @@ static DECKS: &[Factory] = &[
     super::decks::firefist_striker,
     super::decks::scab_clan_berserker,
     super::decks::fireblade_charger,
+    super::decks::servo_schematic,
+    super::decks::cogworkers_puzzleknot,
+    super::decks::renegade_freighter,
+    super::decks::bomat_bazaar_barge,
+    super::decks::peema_outrider,
+    super::decks::deadeye_harpooner,
+    super::decks::gearshift_ace,
+    super::decks::veteran_motorist,
+    super::decks::aether_chaser,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
