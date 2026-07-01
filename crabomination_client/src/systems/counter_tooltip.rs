@@ -1073,6 +1073,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Defense => "Defense",
         CounterType::Possession => "Possession",
         CounterType::Nest => "Nest",
+        CounterType::Fire => "Fire",
+        CounterType::Conqueror => "Conqueror",
     }
 }
 
@@ -1094,6 +1096,8 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Bounty => "When this bountied creature dies, its bounty's owner draws a card and gains 1 life.",
         CounterType::Possession => "DSK Eerie tally — counted by the creature's death-replacement payoff.",
         CounterType::Nest => "DSK Twitching Doll tally — one Spider token per counter when sacrificed.",
+        CounterType::Fire => "Firebending tally — the permanent becomes a creature (or scales damage) once enough accumulate.",
+        CounterType::Conqueror => "Zhao's conquest tally — while present, nonbasic lands become Mountains.",
         _ => return None,
     })
 }
