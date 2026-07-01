@@ -263,6 +263,40 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn terror_of_the_peaks_pings_on_creature_entry() {
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::terror_of_the_peaks());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let before = g.players[1].life;
+    // Cast a 2/2; Terror pings for its power (2).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    drain_stack(&mut g);
+    let _ = terror;
+    assert_eq!(g.players[1].life, before - 2, "Terror dealt the entrant's power");
+}
+
+#[test]
+fn warstorm_surge_pings_for_entrant_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::warstorm_surge());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let before = g.players[1].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 2, "Warstorm Surge pinged for the entrant's power");
+}
+
+#[test]
 fn tuktuk_returns_bigger() {
     let mut g = two_player_game();
     let tuk = g.add_card_to_battlefield(0, catalog::tuktuk_the_explorer());

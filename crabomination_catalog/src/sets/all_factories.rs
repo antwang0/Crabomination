@@ -4151,6 +4151,8 @@ static DECKS: &[Factory] = &[
     super::decks::hopeful_initiate,
     super::decks::sanctum_prelate,
     super::decks::old_rutstein,
+    super::decks::warstorm_surge,
+    super::decks::terror_of_the_peaks,
     super::decks::tuktuk_the_explorer,
     super::decks::tine_shrike,
     super::decks::balustrade_spy,

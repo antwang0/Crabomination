@@ -424,6 +424,56 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// Warstorm Surge — {5}{R} Enchantment. Whenever a creature you control enters,
+/// it deals damage equal to its power to any target.
+pub fn warstorm_surge() -> CardDefinition {
+    CardDefinition {
+        name: "Warstorm Surge",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Terror of the Peaks — {3}{R}{R} 5/4 Dragon. Flying; whenever another creature
+/// you control enters, it deals damage equal to that creature's power to any
+/// target. (The "opponents' spells targeting this cost 3 life more" rider is
+/// dropped — there's no life-tax on targeting yet.)
+pub fn terror_of_the_peaks() -> CardDefinition {
+    CardDefinition {
+        name: "Terror of the Peaks",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Tuktuk the Explorer — {2}{R} 1/1 Goblin. Haste; when it dies, create Tuktuk
 /// the Returned, a legendary 5/5 colorless Goblin Golem artifact token.
 pub fn tuktuk_the_explorer() -> CardDefinition {
