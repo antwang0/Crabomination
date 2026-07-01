@@ -10736,10 +10736,10 @@ fn static_effect_to_effects(
             } => {
                 // The counter-gated variant only materializes while the source
                 // carries the threshold (Zhao's conqueror counter).
-                if let StaticEffect::LandTypeChangerWhileCounters { kind, n, .. } = effect {
-                    if card.counter_count(*kind) < *n {
-                        return vec![];
-                    }
+                if let StaticEffect::LandTypeChangerWhileCounters { kind, n, .. } = effect
+                    && card.counter_count(*kind) < *n
+                {
+                    return vec![];
                 }
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => {
