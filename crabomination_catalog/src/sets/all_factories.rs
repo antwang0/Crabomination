@@ -4648,6 +4648,13 @@ static DECKS: &[Factory] = &[
     super::decks::loyal_warhound,
     super::decks::well_of_lost_dreams,
     super::decks::custodi_soulbinders,
+    super::decks::kessig_malcontents,
+    super::decks::somberwald_vigilante,
+    super::decks::ash_zealot,
+    super::decks::perimeter_captain,
+    super::decks::firefist_striker,
+    super::decks::scab_clan_berserker,
+    super::decks::fireblade_charger,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

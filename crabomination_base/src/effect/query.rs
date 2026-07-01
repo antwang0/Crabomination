@@ -1462,12 +1462,18 @@ impl Effect {
     }
 
     fn keyword_is_friendly(kw: &Keyword) -> bool {
-        // Defensive / offensive keywords benefit the controller. We exclude
-        // negative-value keywords like Defender / "can't attack" if they ever
-        // get added; for now every Keyword variant is a buff.
+        // Most keywords benefit the bearer, so a grant defaults to a friendly
+        // pick. The exceptions are the "can't act" / restriction keywords —
+        // a "target creature can't block" grant should hit an *opponent's*
+        // creature, so classify those as hostile.
         !matches!(
             kw,
-            Keyword::Defender // arguably a debuff in isolation
+            Keyword::Defender
+                | Keyword::Decayed
+                | Keyword::CantBlock
+                | Keyword::CantAttack
+                | Keyword::CantAttackAlone
+                | Keyword::CantAttackOrBlockAlone
         )
     }
 
