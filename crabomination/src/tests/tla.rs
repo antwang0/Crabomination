@@ -3236,3 +3236,42 @@ fn zhao_taps_nonbasics_and_conquers_to_mountains() {
     assert!(after.subtypes.land_types.contains(&LandType::Mountain), "now a Mountain");
     assert!(after.card_types.contains(&CardType::Land), "still a land");
 }
+
+/// Toph, Hardheaded Teacher: ETB discards a card to return an instant/sorcery,
+/// and each spell you cast earthbends a land.
+#[test]
+fn toph_hardheaded_returns_is_and_earthbends() {
+    use crate::card::{CardType, CounterType};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    // A castable instant in the graveyard to return, and a filler card to
+    // discard as the cost.
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::forest());
+    let toph = g.add_card_to_battlefield(0, catalog::toph_hardheaded_teacher());
+    // Accept the "may discard" reflexive cost.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_self_etb_triggers(toph, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "bolt returned to hand");
+    // Cast a spell → earthbend 1 turns the land into a creature with a counter.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let cast_bolt = g.players[0].hand.iter().find(|c| c.id == bolt).map(|c| c.id).unwrap();
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast_bolt,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the returned bolt");
+    drain_stack(&mut g);
+    let comp = g.computed_permanent(land).expect("land present");
+    assert!(comp.card_types.contains(&CardType::Creature), "earthbent land is a creature");
+    assert_eq!(
+        g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "earthbend 1 put one +1/+1 counter"
+    );
+}

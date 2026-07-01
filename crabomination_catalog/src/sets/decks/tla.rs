@@ -5231,3 +5231,45 @@ pub fn zhao_the_moon_slayer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Toph, Hardheaded Teacher — {2}{R}{G} 3/4 Legendary Human Warrior Ally. ETB
+/// you may discard a card; if you do, return target instant or sorcery card from
+/// your graveyard to your hand. Whenever you cast a spell, earthbend 1. (The
+/// "extra +1/+1 counter if that spell is a Lesson" rider is dropped.)
+pub fn toph_hardheaded_teacher() -> CardDefinition {
+    CardDefinition {
+        name: "Toph, Hardheaded Teacher",
+        cost: cost(&[generic(2), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::MayDiscard {
+                description: "Discard a card to return an instant or sorcery?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::Reflexive {
+                    body: Box::new(Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        }),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                }),
+                else_: None,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: Effect::Earthbend { n: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}

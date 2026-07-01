@@ -822,12 +822,19 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
         {
             Some(body)
         }
-        // A reflexive tap-cost trigger (Caparocti Sunborn) surfaces the same
-        // `OptionalTrigger` prompt; its `then` payoff is what the bot screens.
-        Effect::MayTap { description, then, .. } if description == desc => Some(then),
+        // A reflexive tap-cost (Caparocti Sunborn) or discard-cost (Toph,
+        // Hardheaded Teacher) trigger surfaces the same `OptionalTrigger`
+        // prompt; its `then` payoff is what the bot screens.
+        Effect::MayTap { description, then, .. }
+        | Effect::MayDiscard { description, then, .. }
+            if description == desc =>
+        {
+            Some(then)
+        }
         Effect::MayDo { body, .. }
         | Effect::MayPay { body, .. }
         | Effect::MayTap { then: body, .. }
+        | Effect::MayDiscard { then: body, .. }
         | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
         Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
         Effect::ChooseMode(v)
@@ -3960,6 +3967,34 @@ mod tests {
 
     /// Blight (CR 701.68) shrinks the bot's own board, so a "may blight N for
     /// upside" optional trigger is declined.
+    /// A `MayDiscard` reflexive whose payoff isn't self-costly (Toph's
+    /// return-a-spell) is accepted by the bot — card filtering is upside.
+    #[test]
+    fn bot_takes_beneficial_maydiscard() {
+        use crate::card::{CardType, TriggeredAbility};
+        use crate::effect::{EventKind, EventScope, EventSpec, Selector, Value};
+        let mut g = two_player_game();
+        let def = CardDefinition {
+            name: "Rummager",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::MayDiscard {
+                    description: "discard to draw?".to_string(),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: None,
+                },
+            }],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, def);
+        assert!(optional_trigger_beneficial(&g, id, "discard to draw?"),
+            "a MayDiscard whose payoff is a draw is accepted");
+    }
+
     #[test]
     fn bot_declines_blight_optional_trigger() {
         use crate::effect::Value;

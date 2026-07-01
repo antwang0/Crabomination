@@ -1906,6 +1906,20 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// "You may discard [count] card(s). If you do, [then]." The reflexive
+    /// discard cost (Toph, Hardheaded Teacher — "you may discard a card; if you
+    /// do, return target instant or sorcery card from your graveyard to your
+    /// hand"). Asks the controller yes/no (gated on holding `count` cards); on
+    /// yes the highest-mana-value cards are discarded (least castable) and
+    /// `then` runs, else `else_`.
+    MayDiscard {
+        description: String,
+        count: Value,
+        then: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
     /// Reveal-from-hand gate: "you may reveal a [filter] card from your
     /// hand. If you do, run `then`; otherwise run `else_`." Used by the
     /// STX Snarl dual-land cycle (Frostboil, Furycalm, Necroblossom,
