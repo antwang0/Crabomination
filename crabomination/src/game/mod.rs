@@ -193,6 +193,9 @@ mod tests_recent52;
 #[path = "../tests/recent53.rs"]
 mod tests_recent53;
 #[cfg(test)]
+#[path = "../tests/recent54.rs"]
+mod tests_recent54;
+#[cfg(test)]
 #[path = "../tests/avatar_water.rs"]
 mod tests_avatar_water;
 #[cfg(test)]
@@ -2452,6 +2455,14 @@ impl GameState {
                                 )
                             })
                             .count() as u32;
+                        if n > 0 {
+                            specs.push((*kind, n));
+                        }
+                    }
+                    // Master Biomancer — any other creature you control enters
+                    // with additional counters equal to the source's live power.
+                    StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { kind } => {
+                        let n = src.power().max(0) as u32;
                         if n > 0 {
                             specs.push((*kind, n));
                         }
@@ -11133,6 +11144,7 @@ fn static_effect_to_effects(
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
             | StaticEffect::TypeEntersWithCounter { .. }
             | StaticEffect::TypeEntersWithCountersPerControlled { .. }
+            | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
