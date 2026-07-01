@@ -2268,9 +2268,9 @@ pub fn bloodthirst(n: i32) -> TriggeredAbility {
 
 /// Renown N (CR 702.111) — a combat trigger: "Whenever this creature
 /// deals combat damage to a player, if it isn't renowned, put N +1/+1
-/// counters on it and it becomes renowned." The "isn't renowned" gate
-/// is approximated by "has no +1/+1 counters" (same shape as Adapt) —
-/// it only renowns once because the counters then block re-triggering.
+/// counters on it and it becomes renowned." Gated on the real `renowned`
+/// flag (`Predicate::SourceIsRenowned`), so it renowns exactly once and
+/// unrelated +1/+1 counters don't suppress it.
 pub fn renown(n: i32) -> TriggeredAbility {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec};
     // CR 702.93 — "if it isn't renowned, put N +1/+1 counters on it and it
@@ -3098,7 +3098,7 @@ pub fn offering(
     }
 }
 
-/// Graft N (CR 702.57) — the trigger half: "Whenever another creature
+/// Graft N (CR 702.58) — the trigger half: "Whenever another creature
 /// enters, you may move a +1/+1 counter from this creature onto it."
 /// Pair with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`.
 /// The counter only moves while this creature still has one (the
@@ -3124,16 +3124,16 @@ pub fn graft() -> TriggeredAbility {
     }
 }
 
-/// Melee (CR 702.121): "Whenever this creature attacks, it gets +1/+1
+/// Melee (CR 702.122): "Whenever this creature attacks, it gets +1/+1
 /// until end of turn for each opponent you attacked this combat."
-/// Approximated as a flat +1/+1 on attack (one opponent in the common
-/// 1v1 / single-defender case — the engine has no per-combat
-/// attacked-opponent tally yet).
+/// `Value::OpponentsAttackedThisCombat` counts the distinct defending
+/// seats in the current attack declaration (one in 1v1, more in
+/// multiplayer).
 pub fn melee() -> TriggeredAbility {
     on_attack(Effect::PumpPT {
         what: Selector::This,
-        power: Value::Const(1),
-        toughness: Value::Const(1),
+        power: Value::OpponentsAttackedThisCombat,
+        toughness: Value::OpponentsAttackedThisCombat,
         duration: Duration::EndOfTurn,
     })
 }

@@ -190,6 +190,25 @@ impl GameState {
                 .map(|&p| self.players[p].noncreature_spells_cast_this_game_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::OpponentsAttackedThisCombat => {
+                use crate::game::types::AttackTarget;
+                let mut seats = std::collections::HashSet::new();
+                for atk in &self.attacking {
+                    let defender = match atk.target {
+                        AttackTarget::Player(p) => Some(p),
+                        AttackTarget::Planeswalker(id) => {
+                            self.battlefield_find(id).map(|c| c.controller)
+                        }
+                        AttackTarget::Battle(id) => {
+                            self.battlefield_find(id).and_then(|c| c.protected_by)
+                        }
+                    };
+                    if let Some(seat) = defender {
+                        seats.insert(seat);
+                    }
+                }
+                seats.len() as i32
+            }
             Value::DistinctPowerYouControl => {
                 let mut powers: Vec<i32> = self
                     .battlefield

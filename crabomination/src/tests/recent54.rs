@@ -367,6 +367,34 @@ fn travel_preparations_counters_two() {
 }
 
 #[test]
+fn graft_moves_a_counter_to_a_new_creature() {
+    // CR 702.58 — Plaxcaster Frogling enters with 3 counters and grafts one
+    // onto each creature that enters afterward.
+    let mut g = two_player_game();
+    let frog = g.move_card_to_battlefield_for_test(0, catalog::plaxcaster_frogling());
+    drain_stack(&mut g);
+    assert_eq!(counters(&g, frog), 3, "graft enters with 3 +1/+1 counters");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_from_hand(&mut g, bear, &[(Color::Green, 1)], 1);
+    assert_eq!(counters(&g, bear), 1, "grafted a counter onto the entrant");
+    assert_eq!(counters(&g, frog), 2, "graft source lost the moved counter");
+}
+
+#[test]
+fn renown_triggers_only_once() {
+    // CR 702.111 — renowns once on combat damage; a second trigger is inert.
+    let mut g = two_player_game();
+    let aven = g.add_card_to_battlefield(0, catalog::stalwart_aven());
+    let effect = catalog::stalwart_aven().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_trigger(aven, 0, None, 0);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(counters(&g, aven), 1, "renowned with one +1/+1 counter");
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(counters(&g, aven), 1, "already renowned → no second counter");
+}
+
+#[test]
 fn master_biomancer_scales_entrants_by_its_power() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::master_biomancer()); // 2/4

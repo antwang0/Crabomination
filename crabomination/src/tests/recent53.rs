@@ -530,6 +530,30 @@ fn adriana_grants_melee_to_the_team() {
 }
 
 #[test]
+fn melee_counts_each_opponent_attacked() {
+    // CR 702.122 — in multiplayer, Melee scales with distinct opponents hit.
+    let mut g = crate::game::multi_player_game(3);
+    let adriana = g.add_card_to_battlefield(0, catalog::adriana_captain_of_the_guard());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(adriana);
+    g.clear_sickness(ally);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: adriana, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack two different opponents");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    // Two distinct opponents attacked → melee grants +2/+2 (Adriana 4/4 → 6/6).
+    assert_eq!(
+        { let a = cp.iter().find(|c| c.id == adriana).unwrap(); (a.power, a.toughness) },
+        (6, 6),
+        "Adriana got +2/+2 for two opponents",
+    );
+}
+
+#[test]
 fn regal_behemoth_doubles_land_mana_while_monarch() {
     let mut g = two_player_game();
     let behemoth = g.add_card_to_battlefield(0, catalog::regal_behemoth());
