@@ -424,6 +424,63 @@ pub fn old_rutstein() -> CardDefinition {
     }
 }
 
+/// Serra Ascendant — {W} 1/1 Human Monk. Lifelink; while you have 30+ life it
+/// gets +5/+5 and has flying.
+pub fn serra_ascendant() -> CardDefinition {
+    CardDefinition {
+        name: "Serra Ascendant",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +5/+5 and has flying as long as you have 30 or more life.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 30 },
+                power: 5,
+                toughness: 5,
+                keywords: vec![Keyword::Flying],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Angelic Accord — {3}{W} Enchantment. At each end step, if you gained 4 or
+/// more life this turn, make a 4/4 white Angel token with flying.
+pub fn angelic_accord() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let angel = TokenDefinition {
+        name: "Angel".into(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Angelic Accord",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::If {
+                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(4) },
+                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: angel }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Warleader's Helix — {2}{R}{W} Instant. Deal 4 damage to any target and gain
 /// 4 life.
 pub fn warleaders_helix() -> CardDefinition {

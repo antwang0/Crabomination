@@ -4151,6 +4151,8 @@ static DECKS: &[Factory] = &[
     super::decks::hopeful_initiate,
     super::decks::sanctum_prelate,
     super::decks::old_rutstein,
+    super::decks::serra_ascendant,
+    super::decks::angelic_accord,
     super::decks::warleaders_helix,
     super::decks::wojek_halberdiers,
     super::decks::firemane_avenger,

@@ -263,6 +263,39 @@ fn marchesas_decree_bleeds_attackers() {
 }
 
 #[test]
+fn serra_ascendant_is_huge_at_high_life() {
+    let mut g = two_player_game();
+    let serra = g.add_card_to_battlefield(0, catalog::serra_ascendant());
+    // Below 30 life: a 1/1.
+    g.players[0].life = 20;
+    let cp = g.compute_battlefield();
+    let s = cp.iter().find(|c| c.id == serra).unwrap();
+    assert_eq!((s.power, s.toughness), (1, 1));
+    assert!(!s.keywords.contains(&Keyword::Flying));
+    // 30+ life: 6/6 flier.
+    g.players[0].life = 30;
+    let cp = g.compute_battlefield();
+    let s = cp.iter().find(|c| c.id == serra).unwrap();
+    assert_eq!((s.power, s.toughness), (6, 6));
+    assert!(s.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn angelic_accord_makes_an_angel_after_big_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::angelic_accord());
+    // Gain 4 life this turn, then hit the end step.
+    g.adjust_life_applied(0, 4);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Angel"),
+        "gained 4+ → Angel token",
+    );
+}
+
+#[test]
 fn warleaders_helix_burns_and_gains() {
     let mut g = two_player_game();
     let helix = g.add_card_to_hand(0, catalog::warleaders_helix());

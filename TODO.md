@@ -32,6 +32,13 @@ Still deferred for want of a primitive:
   the source's creature types + base P/T.
 - **Sanctum Prelate** UI number-choice — the ETB choose-a-number currently uses
   the AutoDecider default for bots; UI suspend is a follow-up.
+- **Death-trigger creature-type filters (LKI).** A `CreatureDied` trigger whose
+  `EntityMatches { TriggerSource, HasCreatureType(X) }` filter is evaluated at
+  resolution fails, because the dead creature's types aren't read from
+  `died_card_snapshots` (only `event_actor`'s controller lookup is). Blocks
+  Bishop of Wings' "when an Angel you control dies" half; `NotToken` filters work
+  today because they don't need the type. Fix: route the deferred filter's
+  `TriggerSource` through the die-snapshot for graveyard/dead subjects.
 
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 
