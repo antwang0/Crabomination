@@ -4635,6 +4635,9 @@ static DECKS: &[Factory] = &[
     super::decks::rally_the_ranks,
     super::decks::captains_claws,
     super::decks::ancestral_blade,
+    super::decks::squad_commander,
+    super::decks::kabira_outrider,
+    super::decks::tajuru_paragon,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

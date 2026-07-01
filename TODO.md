@@ -85,12 +85,18 @@ Disciple, Martial Coup, Beckon Apparition, Kytheon's Tactics, Rally the Ranks,
 Captain's Claws, Ancestral Blade). Noticed but deferred for want of a primitive:
 - **Trueheart Duelist** — "can block an additional creature" needs a
   `Keyword::CanBlockAdditional(n)` wired into block declaration (Embalm half ships).
-- **Squad Commander** — party count (`Value::PartyCount` / full-party gate) isn't
-  modeled.
 - **Custodi Soulbinders** — enters-with-counters-per-other-creature + a
   remove-a-+1/+1-counter activation cost on self.
 - **Loyal Warhound** — ETB Plains tutor gated on "an opponent controls more
   lands than you" (needs a land-count comparison predicate).
+
+## Discovered follow-ups — party sweep (`decks::recent58`)
+
+Shipped `Value::PartyCount` (CR 700.18 — a max bipartite matching so a
+multi-role creature fills only one slot; Changelings fill all). Squad Commander,
+Kabira Outrider, Tajuru Paragon. Remaining ZNR party bits: the reveal-6
+"shares a creature type with it" pick (Tajuru's kicked ETB is approximated as
+"any creature card"); Kelsien's damage-party engine.
 
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 

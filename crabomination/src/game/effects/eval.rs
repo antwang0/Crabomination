@@ -74,6 +74,52 @@ impl GameState {
                 .unwrap_or(0),
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
+            Value::PartyCount => {
+                use crate::card::{CreatureType as CT, Keyword};
+                let roles = [CT::Cleric, CT::Rogue, CT::Warrior, CT::Wizard];
+                // Per creature you control, which of the four roles it can fill
+                // (a Changeling fills all — CR 702.73). One creature fills at
+                // most one slot, so party size is a max bipartite matching.
+                let creatures: Vec<[bool; 4]> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id))
+                    .map(|cp| {
+                        let changeling = cp.keywords.contains(&Keyword::Changeling);
+                        std::array::from_fn(|i| {
+                            changeling || cp.subtypes.creature_types.contains(&roles[i])
+                        })
+                    })
+                    .collect();
+                // Kuhn's algorithm: match each role to a distinct creature.
+                fn augment(
+                    role: usize,
+                    creatures: &[[bool; 4]],
+                    seen: &mut [bool],
+                    to_role: &mut [Option<usize>],
+                ) -> bool {
+                    for (ci, has) in creatures.iter().enumerate() {
+                        if has[role] && !seen[ci] {
+                            seen[ci] = true;
+                            if to_role[ci].is_none()
+                                || augment(to_role[ci].unwrap(), creatures, seen, to_role)
+                            {
+                                to_role[ci] = Some(role);
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                }
+                let mut to_role: Vec<Option<usize>> = vec![None; creatures.len()];
+                (0..4)
+                    .filter(|&role| {
+                        let mut seen = vec![false; creatures.len()];
+                        augment(role, &creatures, &mut seen, &mut to_role)
+                    })
+                    .count() as i32
+            }
             Value::CountMatching { sel, filter } => self
                 .resolve_selector(sel, ctx)
                 .into_iter()

@@ -325,6 +325,11 @@ pub enum Value {
     /// Studies.
     CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
     PowerOf(Box<Selector>),
+    /// CR 700.18 — the size of the controller's party: the number of distinct
+    /// roles (Cleric, Rogue, Warrior, Wizard) among creatures they control,
+    /// capped at 4. A single creature counts for at most one role. Powers
+    /// Zendikar Rising party payoffs (Squad Commander, Tajuru Paragon).
+    PartyCount,
     /// Number of creatures currently blocking the resolved permanent
     /// (Spined Sliver's "+1/+1 for each creature blocking it").
     BlockersOf(Box<Selector>),
