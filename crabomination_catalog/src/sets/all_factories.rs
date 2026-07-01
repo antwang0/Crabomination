@@ -4507,6 +4507,7 @@ static DECKS: &[Factory] = &[
     super::decks::zhao_the_moon_slayer,
     super::decks::toph_hardheaded_teacher,
     super::decks::avatar_destiny,
+    super::decks::toph_the_first_metalbender,
     super::decks::combustion_man,
     super::decks::sandbender_scavengers,
     super::decks::diligent_zookeeper,

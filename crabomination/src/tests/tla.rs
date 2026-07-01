@@ -3307,3 +3307,30 @@ fn avatar_destiny_scales_and_recurs() {
         "a creature was reanimated from the graveyard"
     );
 }
+
+/// Toph, the First Metalbender turns your nontoken artifacts into lands and
+/// earthbends a land at your end step.
+#[test]
+fn toph_metalbender_artifacts_are_lands_and_end_step_earthbend() {
+    use crate::card::{CardType, CounterType};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    // Not yet a land — Toph isn't out.
+    assert!(!g.computed_permanent(rock).unwrap().card_types.contains(&CardType::Land));
+    g.add_card_to_battlefield(0, catalog::toph_the_first_metalbender());
+    let comp = g.computed_permanent(rock).unwrap();
+    assert!(comp.card_types.contains(&CardType::Land), "artifact is now a land");
+    assert!(comp.card_types.contains(&CardType::Artifact), "still an artifact");
+    // End step earthbend 2 on a land.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "earthbend 2 at end step"
+    );
+}

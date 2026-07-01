@@ -164,6 +164,13 @@ pub enum StaticEffect {
     /// `AddCardType(Creature)` self-effect while the count holds; the printed
     /// P/T already carry the creature stats.
     SelfIsCreatureWhileCountersAtLeast { kind: crate::card::CounterType, n: u32 },
+    /// "[permanents] are [card type] in addition to their other types" — a
+    /// layer-4 additive `AddCardType` over everything `applies_to` resolves to
+    /// (Toph, the First Metalbender: "nontoken artifacts you control are lands").
+    AddCardTypeToMatching {
+        applies_to: Selector,
+        card_type: crate::card::CardType,
+    },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

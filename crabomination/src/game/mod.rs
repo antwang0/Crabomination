@@ -10713,6 +10713,20 @@ fn static_effect_to_effects(
                 duration: EffectDuration::WhileSourceOnBattlefield,
                 modification: Modification::RemoveAllAbilities,
             }],
+            StaticEffect::AddCardTypeToMatching { applies_to, card_type } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddCardType(card_type.clone()),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::LandTypeChanger { applies_to, land_type, replace }
             | StaticEffect::LandTypeChangerWhileCounters {
                 applies_to,

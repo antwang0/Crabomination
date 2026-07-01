@@ -5328,3 +5328,37 @@ pub fn avatar_destiny() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Toph, the First Metalbender — {1}{R}{G}{W} 3/3 Legendary Human Warrior Ally.
+/// Nontoken artifacts you control are lands in addition to their other types.
+/// At the beginning of your end step, earthbend 2.
+pub fn toph_the_first_metalbender() -> CardDefinition {
+    CardDefinition {
+        name: "Toph, the First Metalbender",
+        cost: cost(&[generic(1), r(), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Nontoken artifacts you control are lands in addition to their other types.",
+            effect: StaticEffect::AddCardTypeToMatching {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::NotToken)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                card_type: CardType::Land,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Earthbend { n: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
