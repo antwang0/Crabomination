@@ -4319,6 +4319,8 @@ static DECKS: &[Factory] = &[
     super::decks::nezumi_linkbreaker,
     super::decks::gold_rush,
     super::decks::prosperity_tycoon,
+    super::decks::ambuscade,
+    super::decks::nyxborn_unicorn,
     super::decks::iron_fist_pulverizer,
     super::decks::mardu_woe_reaper,
     super::decks::peek,

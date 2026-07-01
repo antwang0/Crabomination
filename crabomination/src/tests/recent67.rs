@@ -59,6 +59,52 @@ fn prosperity_tycoon_etb_mercenary_and_sac_for_indestructible() {
 }
 
 #[test]
+fn ambuscade_pumps_then_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/2 after +1/+0
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::ambuscade());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Ambuscade");
+    drain_stack(&mut g);
+    // Pumped to power 3, dealt 3 to the 2/2 → it dies.
+    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the opposing 2/2");
+}
+
+#[test]
+fn nyxborn_unicorn_bestows_plus_two_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::nyxborn_unicorn());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Cast for bestow, enchanting the bear.
+    g.perform_action(GameAction::CastBestow {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bestow onto the bear");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 from the bestowed Unicorn");
+}
+
+#[test]
 fn iron_fist_pulverizer_burns_on_second_spell() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::iron_fist_pulverizer());

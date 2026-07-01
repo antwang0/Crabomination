@@ -126,6 +126,56 @@ pub fn prosperity_tycoon() -> CardDefinition {
     }
 }
 
+/// Ambuscade — {2}{G} Instant. Target creature you control gets +1/+0 until end
+/// of turn, then deals damage equal to its power to target creature an opponent
+/// controls.
+pub fn ambuscade() -> CardDefinition {
+    CardDefinition {
+        name: "Ambuscade",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamageEqualToPower {
+                source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Nyxborn Unicorn — {1}{W} 2/2 Enchantment Creature. Bestow {3}{W}, Mentor;
+/// the enchanted creature gets +2/+2 and has mentor.
+pub fn nyxborn_unicorn() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Nyxborn Unicorn",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::mentor()],
+        bestow: Some(cost(&[generic(3), w()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![crate::effect::shortcut::mentor()],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Iron-Fist Pulverizer — {4}{R} 4/5 Giant Warrior. Reach. Whenever you cast
 /// your second spell each turn, deal 2 damage to target opponent and scry 1.
 pub fn iron_fist_pulverizer() -> CardDefinition {
