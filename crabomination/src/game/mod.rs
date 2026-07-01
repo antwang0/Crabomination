@@ -199,6 +199,9 @@ mod tests_recent54;
 #[path = "../tests/recent55.rs"]
 mod tests_recent55;
 #[cfg(test)]
+#[path = "../tests/recent56.rs"]
+mod tests_recent56;
+#[cfg(test)]
 #[path = "../tests/avatar_water.rs"]
 mod tests_avatar_water;
 #[cfg(test)]
@@ -1752,6 +1755,7 @@ impl GameState {
         };
         for p in &mut self.players {
             p.life = life;
+            p.starting_life = life;
         }
         self.skip_first_draw = self.players.len() <= 2;
 
@@ -1954,6 +1958,11 @@ impl GameState {
         // "you gain that much plus N" replacement (Honor Troll). Folded in
         // before the gain applies so the bonus counts toward
         // `life_gained_this_turn` and any downstream lifegain triggers.
+        let delta = if delta > 0 {
+            delta.saturating_mul(self.life_gain_multiplier_now(seat))
+        } else {
+            delta
+        };
         let delta = if delta > 0 {
             delta.saturating_add(self.life_gain_bonus_now(seat))
         } else {
@@ -3727,6 +3736,30 @@ impl GameState {
                 })
             })
             .sum()
+    }
+
+    /// CR 614 — combined life-gain multiplier currently applied to `seat` by
+    /// `StaticEffect::LifeGainMultiplier` statics (Rhox Faithmender's "twice").
+    /// Multiple multipliers compound; returns 1 when none are active.
+    pub fn life_gain_multiplier_now(&self, seat: usize) -> i32 {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        self.battlefield
+            .iter()
+            .flat_map(|src| {
+                src.definition.static_abilities.iter().filter_map(move |sa| {
+                    if let StaticEffect::LifeGainMultiplier { target, factor } = &sa.effect {
+                        let hits = match target {
+                            PlayerStaticTarget::Controller => src.controller == seat,
+                            PlayerStaticTarget::EachOpponent => src.controller != seat,
+                            PlayerStaticTarget::EachPlayer => true,
+                        };
+                        hits.then_some(*factor)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .fold(1, |acc, f| acc.saturating_mul(f))
     }
 
     /// CR 121.2b — the smallest per-turn draw cap currently imposed on
@@ -11028,6 +11061,9 @@ fn static_effect_to_effects(
             // LifeGainBonus — consulted in `adjust_life` via
             // `life_gain_bonus_now` (Honor Troll); no layer effect.
             | StaticEffect::LifeGainBonus { .. }
+            // LifeGainMultiplier — consulted in `adjust_life` via
+            // `life_gain_multiplier_now` (Rhox Faithmender); no layer effect.
+            | StaticEffect::LifeGainMultiplier { .. }
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented

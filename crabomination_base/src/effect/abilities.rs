@@ -400,6 +400,12 @@ pub enum StaticEffect {
     /// CR 119.10 a gain of 0 isn't a gain, so the bonus only applies on a
     /// genuine positive delta.
     LifeGainBonus { target: PlayerStaticTarget, amount: i32 },
+    /// CR 614 — life-gain multiplier replacement: while active, when a targeted
+    /// player *would* gain life, they gain `factor` times that much instead
+    /// (Rhox Faithmender / Boon Reflection: "you gain twice that much life
+    /// instead"). Consulted in `adjust_life` for positive deltas, applied
+    /// before any additive `LifeGainBonus`. Multiple multipliers compound.
+    LifeGainMultiplier { target: PlayerStaticTarget, factor: i32 },
     /// CR 121.2a / 614 — draw replacement: while active, when the source's
     /// controller would draw a card, they draw two instead (Thought
     /// Reflection, Alhammarret's Archive). Consulted per draw event in

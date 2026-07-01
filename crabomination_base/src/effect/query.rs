@@ -157,6 +157,8 @@ impl Effect {
             Effect::MillThenBranchByType { .. } => false,
             // "As this enters, choose a number" — no cast-time target.
             Effect::ChooseNumberForSource { .. } => false,
+            // "As this enters, choose a permanent" — chosen at resolution.
+            Effect::ChoosePermanentForSource { .. } => false,
             // CR 603.7 — a reflexive payoff is opaque to cast-time target
             // validation; its body's targets are chosen when it resolves.
             Effect::Reflexive { .. } => false,
@@ -1646,7 +1648,11 @@ impl Effect {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
                 Effect::ExchangeControlChoosing { with, .. } => sel_find(with, slot),
-                Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_find(who, slot),
+                // `amount` may read a target's power (Soul's Grace gains life
+                // equal to target creature's power).
+                Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
+                    sel_find(who, slot).or_else(|| val_find(amount, slot))
+                }
                 Effect::LoseHalfLife { who, .. }
                 | Effect::MillHalf { who, .. }
                 | Effect::DiscardHalf { who, .. }

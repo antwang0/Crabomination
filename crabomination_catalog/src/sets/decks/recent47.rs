@@ -178,9 +178,7 @@ pub fn speaker_of_the_heavens() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
-            // "at least 7 more than your starting total" — 20 + 7 in the
-            // default-life formats this card sees.
-            condition: Some(Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 27 }),
+            condition: Some(Predicate::PlayerLifeAtLeastAboveStarting { who: PlayerRef::You, delta: 7 }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

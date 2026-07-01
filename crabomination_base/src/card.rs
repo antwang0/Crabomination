@@ -3293,6 +3293,11 @@ pub struct CardInstance {
     /// A number chosen as this permanent entered (Sanctum Prelate — "choose a
     /// number"). Read by `noncreature_spell_cast_locked` for the chosen-MV lock.
     pub chosen_number: Option<u32>,
+    /// Another permanent chosen and remembered as this one entered (Dauntless
+    /// Bodyguard — "As this enters, choose another creature you control").
+    /// `Selector::ChosenPermanentOfSource` resolves to it. `None` until the
+    /// ETB choice resolves (or if no legal choice existed).
+    pub chosen_permanent: Option<CardId>,
     /// Indices of activated abilities flagged `once_per_turn` that have
     /// already been used this turn. Cleared at the start of each turn by
     /// `clean_per_turn_state`. Empty for the common case (most abilities
@@ -3592,6 +3597,7 @@ impl CardInstance {
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_number: None,
+            chosen_permanent: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
@@ -4078,6 +4084,8 @@ struct CardInstanceWire {
     #[serde(default)]
     chosen_number: Option<u32>,
     #[serde(default)]
+    chosen_permanent: Option<CardId>,
+    #[serde(default)]
     once_per_turn_used: Vec<usize>,
     #[serde(default)]
     exhausted_abilities: Vec<usize>,
@@ -4263,6 +4271,7 @@ impl serde::Serialize for CardInstance {
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             chosen_number: self.chosen_number,
+            chosen_permanent: self.chosen_permanent,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),
             may_play_until: self.may_play_until,
@@ -4382,6 +4391,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_number = wire.chosen_number;
+        c.chosen_permanent = wire.chosen_permanent;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.exhausted_abilities = wire.exhausted_abilities;
         c.may_play_until = wire.may_play_until;

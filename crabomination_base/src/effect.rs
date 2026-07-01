@@ -114,6 +114,11 @@ pub enum Selector {
     TargetFiltered { slot: u8, filter: SelectionRequirement },
     /// The object that caused this trigger (attacker, dying creature, etc).
     TriggerSource,
+    /// The permanent the source chose and remembered as it entered — the
+    /// `CardInstance.chosen_permanent` stamp (Dauntless Bodyguard's
+    /// "the chosen creature"). Resolves to nothing if the remembered
+    /// permanent has left the battlefield.
+    ChosenPermanentOfSource,
     /// CR 509.1 — the attacker the source permanent is currently blocking.
     /// Resolves via `GameState.block_map[source]`. Used by "whenever this
     /// blocks a creature, [affect that creature]" triggers (Wall of Frost).
@@ -760,6 +765,11 @@ pub enum Predicate {
     /// `life`. Powers "as long as you have N or more life" statics (Angel of
     /// Vitality).
     PlayerLifeAtLeast { who: PlayerRef, life: i32 },
+    /// True if any player matched by `who` has an effective life total at least
+    /// `delta` above the life total they started the game with (CR 103.4).
+    /// Powers "as long as you have at least N life more than your starting life
+    /// total" statics/activations (Righteous Valkyrie, Speaker of the Heavens).
+    PlayerLifeAtLeastAboveStarting { who: PlayerRef, delta: i32 },
     /// True if any player matched by `who` has the most life, or is tied for
     /// the most, among all (non-eliminated) players. Powers Dethrone (CR
     /// 702.105 — "attacks the player with the most life or tied for most
@@ -3996,6 +4006,12 @@ pub enum Effect {
     /// source permanent's `chosen_number` field (Sanctum Prelate — read by the
     /// chosen-MV noncreature lock). `max` bounds the choice.
     ChooseNumberForSource { max: u32 },
+
+    /// "As [this] enters, choose a permanent matching `filter`." Stores the
+    /// chosen permanent's id on the source's `chosen_permanent` field
+    /// (Dauntless Bodyguard). `Selector::ChosenPermanentOfSource` reads it
+    /// back. No-op (leaves `None`) when no legal choice exists.
+    ChoosePermanentForSource { filter: SelectionRequirement },
 
     /// CR 201.3 — "Choose a nonland card name. Opponents can't cast spells
     /// with the chosen name until your next turn" (Academic Probation). Asks

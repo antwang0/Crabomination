@@ -25,7 +25,7 @@ def main(names):
             continue
         cost = data.get("mana_cost", "")
         tline = data.get("type_line", "")
-        otext = (data.get("oracle_text", "") or "").replace("\n", " | ")[:200]
+        otext = (data.get("oracle_text", "") or "").replace("\n", " | ")
         pt = ""
         if data.get("power") is not None:
             pt = f" {data.get('power')}/{data.get('toughness')}"

@@ -11005,6 +11005,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChoosePermanentForSource { filter } => {
+                // Dauntless Bodyguard — "As this enters, choose another creature
+                // you control." Store the pick on the source's `chosen_permanent`.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let controller = ctx.controller;
+                let cands: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.id != source)
+                    .map(|c| c.id)
+                    .filter(|cid| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(*cid),
+                            controller,
+                            Some(source),
+                        )
+                    })
+                    .filter_map(|cid| {
+                        self.battlefield_find(cid)
+                            .map(|c| (cid, c.definition.name.to_string()))
+                    })
+                    .collect();
+                if cands.is_empty() {
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Choose a permanent".to_string(),
+                    candidates: cands.clone(),
+                    min: 1,
+                    max: 1,
+                });
+                let picked = match answer {
+                    DecisionAnswer::Cards(v) => v.into_iter().next(),
+                    _ => None,
+                }
+                .or_else(|| cands.first().map(|(id, _)| *id));
+                if let (Some(cid), Some(c)) = (picked, self.battlefield_find_mut(source)) {
+                    c.chosen_permanent = Some(cid);
+                }
+                Ok(())
+            }
+
             Effect::NameOpponentCastLock => {
                 // Academic Probation mode 0 — the controller names a nonland
                 // card; their opponents can't cast spells with that name until
@@ -12339,6 +12384,21 @@ impl GameState {
                 .into_iter()
                 .collect(),
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
+            Selector::ChosenPermanentOfSource => ctx
+                .source
+                // The source may already have left the battlefield when this
+                // resolves (Dauntless Bodyguard sacrifices itself as the cost),
+                // so consult the die-snapshot / leaves-LKI for its stamp.
+                .and_then(|s| {
+                    self.battlefield_find(s)
+                        .or_else(|| self.died_card_snapshots.get(&s))
+                        .or_else(|| self.leaves_bf_lki.get(&s))
+                })
+                .and_then(|c| c.chosen_permanent)
+                .filter(|cid| self.battlefield.iter().any(|c| c.id == *cid))
+                .map(EntityRef::Permanent)
+                .into_iter()
+                .collect(),
             Selector::BlockedAttacker => ctx
                 .source
                 .and_then(|blocker| self.block_map.get(&blocker).copied())

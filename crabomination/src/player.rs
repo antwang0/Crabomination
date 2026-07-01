@@ -15,6 +15,10 @@ fn default_max_hand_size() -> Option<usize> {
     Some(DEFAULT_MAX_HAND_SIZE)
 }
 
+fn default_starting_life() -> i32 {
+    20
+}
+
 /// CR 114 — an emblem owned by a player. Has no characteristics other
 /// than the triggered abilities it grants its owner, and sits in the
 /// command zone for the rest of the game (emblems never leave). Created
@@ -50,6 +54,12 @@ pub struct Player {
     pub id: PlayerId,
     pub name: String,
     pub life: i32,
+    /// The life total this player began the game with (CR 103.4). Set by
+    /// `apply_format`; drives "N more/less than your starting life total"
+    /// thresholds (Righteous Valkyrie, Speaker of the Heavens). `#[serde(default
+    /// = "default_starting_life")]` for snapshot back-compat.
+    #[serde(default = "default_starting_life")]
+    pub starting_life: i32,
     pub mana_pool: ManaPool,
     /// Top of library is `library[0]`.
     pub library: Vec<CardInstance>,
@@ -538,6 +548,7 @@ impl Player {
             id: PlayerId(idx),
             name: name.into(),
             life: 20,
+            starting_life: 20,
             mana_pool: ManaPool::new(),
             library: Vec::new(),
             hand: Vec::new(),
