@@ -3334,3 +3334,42 @@ fn toph_metalbender_artifacts_are_lands_and_end_step_earthbend() {
         "earthbend 2 at end step"
     );
 }
+
+/// Bumi, Unleashed earthbends 4 on ETB and, on connecting, untaps your lands and
+/// grants an extra combat phase.
+#[test]
+fn bumi_unleashed_earthbends_and_untaps_on_hit() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bumi = g.add_card_to_battlefield(0, catalog::bumi_unleashed());
+    let ebland = g.add_card_to_battlefield(0, catalog::forest());
+    g.fire_self_etb_triggers(bumi, 0);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ebland).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "earthbend 4 at ETB"
+    );
+    // A tapped land that Bumi's connect should untap.
+    let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    g.battlefield_find_mut(mtn).unwrap().tapped = true;
+    g.clear_sickness(bumi);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bumi,
+        target: AttackTarget::Player(1),
+    }])).expect("attack");
+    // Advance through combat damage so Bumi's connect trigger fires.
+    for _ in 0..12 {
+        if g.battlefield_find(mtn).map(|c| c.tapped) == Some(false) {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(!g.battlefield_find(mtn).unwrap().tapped, "Bumi's hit untapped the land");
+}
