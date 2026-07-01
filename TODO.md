@@ -8,6 +8,27 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Spree / OTJ sweep (`decks::spree`, `decks::recent66`)
+
+Shipped: **Spree** (CR 702.172 — `Effect::Spree` + `GameAction::CastSpellSpree`,
+choose 1+ modes at cast, fold per-mode mana, run chosen modes at resolution;
+server affordance `spreeable` + client highlight), **Read Ahead** (CR 702.155 —
+`CardDefinition.read_ahead` + `saga_enter_advance` starting-chapter choice),
+**Frenzy** as a first-class `Keyword::Frenzy(n)` combat rule (CR 702.35; Frenzy
+Sliver now a real lord). 8 Spree spells + 13 OTJ staples with tests.
+Still deferred:
+- **Spree client per-mode UI** — the engine takes `spree_modes` + per-mode
+  targets, and `spreeable_hand` flags castable Spree cards, but the Bevy client
+  still needs a mode-checkbox + per-mode target picker (today only the cheapest
+  single mode is probed for the highlight). Cast-time target *validation* for
+  Spree is deferred to resolution (each mode re-checks its own targets).
+- **Spree/Escalate cast-time mode selection** for bots/auto-target — bots don't
+  yet choose Spree modes, so a bot casting a Spree spell resolves the default
+  (cheapest) mode only.
+- **Trash the Town mode 3 / Final Showdown mode 1** — grant-a-triggered-ability
+  and lose-all-abilities Spree modes need those effect primitives before those
+  two Spree cards can ship faithfully.
+
 ## Discovered follow-ups — monarch/white sweep (`decks::recent53`)
 
 Shipped (with reusable primitives): monarch-linked exile (`ExileUntilOpponentMonarch`),

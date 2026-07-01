@@ -27,8 +27,9 @@ exercising each) was elided in a compaction pass; recover it from
   Soulbond/Mentor); counter-matters (Proliferate/Bolster/Adapt/Training/Evolve/
   Modular/Graft/Outlast/Renown/Bloodthirst/Monstrosity/Devour/Amass); cast-mode
   + alt-cost (Kicker/Casualty/Connive/Offspring/Plot/Saddle/Blitz/Spectacle/
-  Escalate/Buyback/Bestow/Foretell/Suspend/Flashback/Madness/Escape/Adventure/
-  Cascade/Storm/Convoke/Delve); plus Fading/Vanishing, Cumulative Upkeep, Echo,
+  Escalate/Spree/Buyback/Bestow/Foretell/Suspend/Flashback/Madness/Escape/Adventure/
+  Cascade/Storm/Convoke/Delve/Squad); Frenzy (702.35 combat rule) and Read Ahead
+  (702.155 Saga starting-chapter choice); plus Fading/Vanishing, Cumulative Upkeep, Echo,
   Dredge, Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift,
   Unleash, Devoid, Ingest, Absorb, Warp, Station (CR 702.184/721 — charge-counter
   `{N+}` Spacecraft/Planet striations: keyword + base-P/T + static, triggered

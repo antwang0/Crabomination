@@ -26,8 +26,11 @@ newer batches also added small reusable ones (no-max-hand-size,
 play-lands-from-graveyard, mana-doubling, ability-lock statics, Cipher, block
 tax, landfall, graveyard escape/retrace, level bands, sideboard wishes,
 manifest-from-hand, token Role Auras, Absorb, Cleave, reflect-prevention
-shields, restricted colorless mana, multi-pick reveals, …). Each card has at
-least one test in `crabomination/src/tests/modern.rs`.
+shields, restricted colorless mana, multi-pick reveals, Spree (702.172),
+Read Ahead (702.155), Frenzy keyword (702.35), …). Each card has at
+least one test in `crabomination/src/tests/modern.rs`. OTJ Spree spells live in
+`catalog::sets::decks::spree` (tests `tests/spree.rs`); other OTJ staples in
+`catalog::sets::decks::recent66` (tests `tests/recent66.rs`).
 
 All Modern-supplement cards are wired (including Karn, Scion of Urza and
 Tezzeret, Cruel Captain, on real oracle text).
