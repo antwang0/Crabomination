@@ -129,6 +129,92 @@ pub fn marchesas_decree() -> CardDefinition {
     }
 }
 
+/// Thorn of the Black Rose — {3}{B} 1/3 Human Assassin. Deathtouch; ETB become
+/// the monarch.
+pub fn thorn_of_the_black_rose() -> CardDefinition {
+    use crate::mana::b;
+    CardDefinition {
+        name: "Thorn of the Black Rose",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::BecomeMonarch { who: PlayerRef::You })],
+        ..Default::default()
+    }
+}
+
+/// Throne Warden — {1}{W} 2/2 Human Soldier. At your end step, if you're the
+/// monarch, put a +1/+1 counter on it.
+pub fn throne_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Throne Warden",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::IsMonarch { who: PlayerRef::You },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyline Despot — {5}{R}{R} 5/5 Dragon. Flying; ETB become the monarch; at
+/// your upkeep, if you're the monarch, make a 5/5 red flying Dragon token.
+pub fn skyline_despot() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let dragon = || TokenDefinition {
+        name: "Dragon".into(),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Skyline Despot",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: dragon() }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Giada, Font of Hope — {1}{W} 2/2 Legendary Angel. Flying, vigilance. Each
 /// other Angel you control enters with an additional +1/+1 counter for each
 /// Angel you already control. {T}: Add {W}, spend only to cast an Angel spell.

@@ -158,6 +158,49 @@ fn old_rutstein_mills_and_branches_by_type() {
 }
 
 #[test]
+fn thorn_of_the_black_rose_takes_the_crown() {
+    let mut g = two_player_game();
+    let thorn = g.add_card_to_battlefield(0, catalog::thorn_of_the_black_rose());
+    g.fire_self_etb_triggers(thorn, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0));
+}
+
+#[test]
+fn throne_warden_grows_while_monarch() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let warden = g.add_card_to_battlefield(0, catalog::throne_warden());
+    // Not the monarch → no growth.
+    g.monarch = None;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(warden).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // Monarch → +1/+1.
+    g.monarch = Some(0);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(warden).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn skyline_despot_makes_a_dragon_while_monarch() {
+    let mut g = two_player_game();
+    let despot = g.add_card_to_battlefield(0, catalog::skyline_despot());
+    g.fire_self_etb_triggers(despot, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "took the crown on ETB");
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Dragon"),
+        "monarch upkeep minted a Dragon",
+    );
+}
+
+#[test]
 fn custodi_lich_edicts_and_crowns() {
     let mut g = two_player_game();
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
