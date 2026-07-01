@@ -40,6 +40,29 @@ Still deferred for want of a primitive:
   today because they don't need the type. Fix: route the deferred filter's
   `TriggerSource` through the die-snapshot for graveyard/dead subjects.
 
+## Discovered follow-ups — counters / artifacts sweep (`decks::recent54`–`recent55`)
+
+Shipped: `StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower`
+(Master Biomancer); faithful Melee via `Value::OpponentsAttackedThisCombat`
+(CR 702.122). Still deferred for want of a primitive:
+- **Massacre Girl** — needs a "this turn, whenever a creature dies, each other
+  creature gets −1/−1" delayed chain trigger (the ETB −1/−1 sweep alone is only
+  half the card).
+- **Jolrael, Mwonvuli Recluse** — needs a "whenever you draw your second card
+  each turn" trigger and a set-base-P/T-to-X activated (X = cards in hand).
+- **Chandra, Acolyte of Flame** — 0-abilities incl. haste tokens that
+  self-sacrifice next end step, and a −2 "cast an I/S from your graveyard this
+  turn" grant.
+- **Kamigawa channel lands** (Boseiju/Otawara/Eiganjo/Takenuma/Sokenzan) —
+  `from_hand` activated ability with a discard-self cost and a
+  cost-reduction-per-legendary-creature rider (Channel, CR 702.x).
+- **Metallurgic Summonings** — create an X/X Construct where X = the cast
+  spell's mana value (needs dynamic-P/T token minting off `event_amount`).
+- **Master Biomancer** — the "enters as a Mutant in addition to its types" layer
+  rider is omitted (only the counters are wired).
+- **Ingenious Smith** — "rest on the bottom in a random order" is approximated by
+  `LookPickToHand { rest_to_graveyard: false }` (bottom, deterministic order).
+
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 
 Shipped: multi-kind permanent+player target slots (`Selector::ControlledBy
