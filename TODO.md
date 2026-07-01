@@ -110,6 +110,25 @@ trigger + `SetBasePT` team pump), Loyal Warhound (reused
 pay-up-to-X draw), Custodi Soulbinders (enters-with `CountOf - 1` +
 `remove_counter_cost`).
 
+## Discovered follow-ups — aggro batches (`decks::recent61`–`recent65`)
+
+Red/white, Kaladesh artifacts, green midrange, blue tempo, and black aggro
+(43 cards this run). Engine/UI/server fixes shipped alongside:
+`keyword_is_friendly` now classifies `CantBlock`/`CantAttack`/`Decayed` as
+hostile so "target creature can't block" auto-targets an opponent; client
+`keyword_label` badges MustBlock/AttacksAlone/DealsNoCombatDamage/Exert/
+Soulbond/spell-count-evasion; `view::ability_effect_label` surfaces
+`MayPayGenericUpTo`; new `CreatureType::Hag`. Noticed but deferred:
+- **Kalastria Highborn** — "whenever this or another Vampire dies, may pay {B}:
+  target player loses 2 / you gain 2" needs a targeted reflexive drain inside a
+  death-trigger `MayPay` (the target must be chosen after the cost).
+- **Nether Traitor / Bloodghast-style recursion** — "when another creature is
+  put into your graveyard, may pay {B}: return this from gy" — a graveyard-cast
+  reflexive off a leaves-battlefield trigger.
+- **Fathom Seer / Vodalian Mystic** — morph-flip cantrip and change-a-spell's-
+  color are unbuilt (morph flip ships; the turned-face-up draw rider and stack
+  color-change are the remaining pieces).
+
 ## Discovered follow-ups — TLA sweep (`decks::tla` batches 11–14)
 
 Shipped: multi-kind permanent+player target slots (`Selector::ControlledBy
