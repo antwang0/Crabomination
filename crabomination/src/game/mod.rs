@@ -229,6 +229,9 @@ mod tests_recent64;
 #[path = "../tests/recent65.rs"]
 mod tests_recent65;
 #[cfg(test)]
+#[path = "../tests/recent66.rs"]
+mod tests_recent66;
+#[cfg(test)]
 #[path = "../tests/spree.rs"]
 mod tests_spree;
 #[cfg(test)]
