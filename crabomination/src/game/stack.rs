@@ -600,6 +600,72 @@ impl GameState {
     /// CR 714 — put a lore counter on a Saga and fire the chapter ability/ies
     /// for the new lore-counter total. Called on ETB (chapter I) and as a
     /// turn-based action at the start of the controller's precombat main.
+    /// CR 714.2b — a Saga entering the battlefield gets its first lore
+    /// counter. CR 702.155 (Read Ahead): a read-ahead Saga instead enters with
+    /// a chosen number of lore counters (1..final chapter), firing only the
+    /// chosen chapter. Non-read-ahead Sagas defer to [`saga_advance`].
+    pub(crate) fn saga_enter_advance(&mut self, card_id: CardId) {
+        let Some(card) = self.battlefield.iter().find(|c| c.id == card_id) else {
+            return;
+        };
+        if card.definition.saga_chapters.is_empty() {
+            return;
+        }
+        if !card.definition.read_ahead {
+            self.saga_advance(card_id);
+            return;
+        }
+        let final_ch = card
+            .definition
+            .saga_chapters
+            .iter()
+            .map(|(n, _)| *n)
+            .max()
+            .unwrap_or(1);
+        let controller = card.controller;
+        // Choose the starting chapter (1..=final). AutoDecider/tests answer
+        // through the installed decider; the amount is clamped into range.
+        let decision = crate::decision::Decision::ChooseAmount {
+            source: card_id,
+            max: final_ch,
+            prompt: "Read ahead — choose a starting chapter".into(),
+        };
+        let chosen = match self.decider.decide(&decision) {
+            crate::decision::DecisionAnswer::Amount(n) => n.clamp(1, final_ch),
+            _ => 1,
+        };
+        if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+            card.add_counters(crate::card::CounterType::Lore, chosen);
+        }
+        let effects: Vec<Effect> = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|card| {
+                card.definition
+                    .saga_chapters
+                    .iter()
+                    .filter(|(n, _)| *n == chosen)
+                    .map(|(_, e)| e.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut queue: Vec<PendingTriggerPush> = Vec::new();
+        for effect in effects {
+            let mode = self.pick_trigger_mode(&effect, card_id, controller);
+            queue.push(PendingTriggerPush {
+                source: card_id,
+                controller,
+                effect,
+                subject: None,
+                event_amount: 0,
+                mode,
+                intervening_if: None,
+            });
+        }
+        self.drain_trigger_queue(queue);
+    }
+
     pub(crate) fn saga_advance(&mut self, card_id: CardId) {
         let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) else {
             return;
@@ -1154,7 +1220,7 @@ impl GameState {
                         .iter()
                         .any(|c| c.id == card_id && !c.definition.saga_chapters.is_empty());
                     if is_saga {
-                        self.saga_advance(card_id);
+                        self.saga_enter_advance(card_id);
                     }
 
                     // AnotherOfYours creature-ETB triggers are dispatched

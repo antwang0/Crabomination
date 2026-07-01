@@ -1500,7 +1500,7 @@ impl GameState {
             .iter()
             .any(|c| c.id == card_id && !c.definition.saga_chapters.is_empty())
         {
-            self.saga_advance(card_id);
+            self.saga_enter_advance(card_id);
         }
         Ok(vec![
             GameEvent::LandPlayed { player: p, card_id },

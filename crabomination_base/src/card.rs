@@ -1884,6 +1884,11 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]`.
     #[serde(default)]
     pub saga_chapters: Vec<(u32, crate::effect::Effect)>,
+    /// CR 702.155 — Read Ahead. A Saga with this flag enters with a chosen
+    /// number of lore counters (1..final chapter) instead of one, firing only
+    /// the chosen chapter. Defaults to `false`.
+    #[serde(default)]
+    pub read_ahead: bool,
     /// CR 701.x — "Exile this spell" rider for instants and sorceries that
     /// route to exile instead of their owner's graveyard after resolution.
     /// Used by Strixhaven's "Then exile this spell" wording (Awaken the

@@ -186,6 +186,51 @@ fn trained_arynx_first_strike_when_saddled_attacks() {
     assert!(g.computed_permanent(arynx).unwrap().keywords.contains(&Keyword::FirstStrike));
 }
 
+fn cast_weatherseed(g: &mut GameState) -> CardId {
+    let id = g.add_card_to_hand(0, catalog::the_weatherseed_treaty());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast The Weatherseed Treaty");
+    drain_stack(g);
+    id
+}
+
+#[test]
+fn weatherseed_treaty_read_ahead_starts_on_chosen_chapter() {
+    let mut g = two_player_game();
+    // Read ahead → start on chapter II (make a Saproling), skipping chapter I.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    let saga = cast_weatherseed(&mut g);
+    assert_eq!(
+        g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore),
+        2,
+        "entered with 2 lore counters"
+    );
+    assert_eq!(count_named(&g, 0, "Saproling"), 1, "chapter II fired");
+}
+
+#[test]
+fn weatherseed_treaty_read_ahead_defaults_to_chapter_one() {
+    let mut g = two_player_game();
+    // AutoDecider declines the amount → falls back to chapter I.
+    let saga = cast_weatherseed(&mut g);
+    assert_eq!(
+        g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore),
+        1,
+        "default start is chapter I"
+    );
+    assert_eq!(count_named(&g, 0, "Saproling"), 0, "chapter II not fired");
+}
+
 #[test]
 fn rambling_possum_pumps_when_saddled_attacks() {
     let mut g = two_player_game();

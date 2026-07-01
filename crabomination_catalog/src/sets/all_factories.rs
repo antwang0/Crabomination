@@ -4315,6 +4315,7 @@ static DECKS: &[Factory] = &[
     super::decks::quick_draw,
     super::decks::deserts_due,
     super::decks::prickly_pair,
+    super::decks::the_weatherseed_treaty,
     super::decks::mardu_woe_reaper,
     super::decks::peek,
     super::decks::pieces_of_the_puzzle,

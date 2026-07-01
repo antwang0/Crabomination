@@ -340,6 +340,71 @@ pub fn prickly_pair() -> CardDefinition {
     }
 }
 
+/// The Weatherseed Treaty — {2}{G} Saga with Read Ahead (CR 702.155 / 714).
+/// I: search your library for a basic land, put it onto the battlefield tapped.
+/// II: create a 1/1 green Saproling. III: Domain — target creature you control
+/// gets +X/+X and gains trample until end of turn, where X is the number of
+/// basic land types among lands you control.
+pub fn the_weatherseed_treaty() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "The Weatherseed Treaty",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        read_ahead: true,
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ),
+            (
+                2,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Saproling".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Saproling],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            ),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        power: Value::DomainCount(PlayerRef::You),
+                        toughness: Value::DomainCount(PlayerRef::You),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
 /// The 1/1 red Mercenary token minted by Prickly Pair.
 fn mercenary_token() -> TokenDefinition {
     use crate::card::ActivatedAbility;
