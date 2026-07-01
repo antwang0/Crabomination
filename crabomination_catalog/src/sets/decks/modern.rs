@@ -8283,12 +8283,8 @@ pub fn yarok_the_desecrated() -> CardDefinition {
     }
 }
 
-/// Hellrider — {2}{R}{R} Creature — Devil. 3/3 Haste. "Whenever this
-/// creature attacks, it deals 1 damage to defending player."
-///
-/// Wired with an `Attacks/SelfSource` trigger that pings each opponent
-/// for 1 (the auto-target picks an opp via `EachOpponent`). The "defending
-/// player" half is collapsed to each opponent — fine for 2-player.
+/// Hellrider — {2}{R}{R} 3/3 Devil, Haste. Whenever a creature you control
+/// attacks, Hellrider deals 1 damage to the player that creature is attacking.
 pub fn hellrider() -> CardDefinition {
     CardDefinition {
         name: "Hellrider",
@@ -8302,9 +8298,9 @@ pub fn hellrider() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
             effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::Player(PlayerRef::DefendingPlayer),
                 amount: Value::Const(1),
             },
         }],

@@ -4753,6 +4753,18 @@ static DECKS: &[Factory] = &[
     super::decks::balduvian_barbarians,
     super::decks::zephyr_falcon,
     super::decks::regal_unicorn,
+    super::decks::nightmare,
+    super::decks::rukh_egg,
+    super::decks::sabertooth_tiger,
+    super::decks::ironroot_treefolk,
+    super::decks::fire_elemental,
+    super::decks::dross_crocodile,
+    super::decks::segovian_leviathan,
+    super::decks::vampire_bats,
+    super::decks::durkwood_boars,
+    super::decks::wall_of_spears,
+    super::decks::wall_of_ice,
+    super::decks::rod_of_ruin,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

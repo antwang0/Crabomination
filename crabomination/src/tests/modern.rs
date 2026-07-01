@@ -18911,18 +18911,22 @@ fn yarok_under_opponent_control_does_not_double_or_suppress_yours() {
 }
 
 #[test]
-fn hellrider_attack_pings_each_opponent_for_one() {
+fn hellrider_pings_defending_player_when_any_creature_attacks() {
     let mut g = two_player_game();
     let hellrider = g.add_card_to_battlefield(0, catalog::hellrider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(hellrider);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
     let p1_life = g.players[1].life;
-    let trig = catalog::hellrider().triggered_abilities[0].effect.clone();
-    let ctx = crate::game::effects::EffectContext::for_trigger(
-        hellrider, 0, None, 0,
-    );
-    let _ = g.resolve_effect(&trig, &ctx);
+    // Only the Bear attacks — Hellrider still pings, since the trigger fires on
+    // any creature you control attacking, not just Hellrider itself.
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life - 1, "Opp pinged for 1");
+    assert_eq!(g.players[1].life, p1_life - 1, "defending player pinged for 1");
 }
 
 #[test]
