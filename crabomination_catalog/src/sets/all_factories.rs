@@ -4797,6 +4797,15 @@ static DECKS: &[Factory] = &[
     super::decks::rowan_treefolk,
     super::decks::sabertooth_nishoba,
     super::decks::kris_mage,
+    super::decks::fungusaur,
+    super::decks::serpent_warrior,
+    super::decks::ekundu_griffin,
+    super::decks::nettletooth_djinn,
+    super::decks::hulking_cyclops,
+    super::decks::pygmy_pyrosaur,
+    super::decks::owl_familiar,
+    super::decks::fire_drake,
+    super::decks::muck_rats,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

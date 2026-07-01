@@ -8,14 +8,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Discovered follow-ups — retro commons sweep (`decks::recent71`–`recent73`)
+## Discovered follow-ups — retro commons sweep (`decks::recent71`–`recent75`)
 
-Shipped: 34 classic-frame cards + `DynamicPt::EnchantmentsInPlay` (Yavimaya
-Enchantress CDA), the `Nomad` creature subtype, and a Hellrider faithfulness
-fix (`Attacks/YourControl` + `DealDamage { DefendingPlayer }`, was `SelfSource` +
-`EachOpponent`). Server affordance labels for `Regenerate` / `SacrificePermanent`
-/ `LoseKeywordThisTurn` (were falling through to the generic "Activate").
+Shipped: 53 classic-frame cards + `DynamicPt::EnchantmentsInPlay` (Yavimaya
+Enchantress CDA), the `Nomad` + `Nightstalker` creature subtypes, and a Hellrider
+faithfulness fix (`Attacks/YourControl` + `DealDamage { DefendingPlayer }`, was
+`SelfSource` + `EachOpponent`). Server affordance labels for `Regenerate` /
+`SacrificePermanent` / `LoseKeywordThisTurn` (were falling through to the generic
+"Activate").
 Still deferred / noticed but not tackled:
+- **Sea Drake** ("ETB return two target lands you control") needs an exactly-N
+  own-permanent bounce with cast-time targeting; skipped.
+- **Mtenda Lion / other "defending player may pay {U} to prevent this creature's
+  combat damage"** need a pay-to-prevent combat rider.
+- **Zombie Cannibal** ("combat damage to a player → exile a card from that
+  player's graveyard") needs a defending-player-scoped graveyard-exile target.
 - **Serrated Arrows** stores arrowhead counters as `CounterType::Charge` (no
   dedicated Arrowhead kind); the view tooltip reads "charge counter". Add a
   named counter kind if flavor fidelity matters.
