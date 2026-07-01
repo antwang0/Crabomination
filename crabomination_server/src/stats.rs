@@ -586,7 +586,10 @@ impl MatchStats {
     /// `format_match_stats` to surface `p50` and `p95` in the rolling
     /// summary line.
     pub(crate) fn percentile(&self, p: f32) -> Duration {
-        let total = self.total_matches();
+        // Rank against this histogram's own sample count, not `total_matches()`.
+        // They coincide when every recorded match observes a duration, but
+        // decoupling keeps the quantile correct even if the two ever drift.
+        let total: u64 = self.duration_buckets.iter().map(|&n| n as u64).sum();
         if total == 0 {
             return Duration::ZERO;
         }
@@ -612,7 +615,8 @@ impl MatchStats {
     /// distribution centre (p50) and tail (p95) directly instead of
     /// eyeballing the histogram columns.
     pub(crate) fn turn_percentile(&self, p: f32) -> u32 {
-        let total = self.total_matches();
+        // Rank against the turn histogram's own sample count (see `percentile`).
+        let total: u64 = self.turn_buckets.iter().map(|&n| n as u64).sum();
         if total == 0 {
             return 0;
         }

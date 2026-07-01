@@ -143,6 +143,14 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Ability-lock granted by auras/effects (Petrify) — its activated
         // abilities can't be activated, worth surfacing alongside NoAtk/NoBlk.
         CantActivateAbilities => "NoAbil",
+        // Resilience: regenerate shields and totem/umbra armor both mean "the
+        // next destruction is soaked" — it changes how an opponent trades.
+        Regenerate(_) => "Rgn",
+        UmbraArmor => "TArm",
+        // Protection from creatures / a creature type is board-relevant: it
+        // gates blocking and combat damage, not just spell targeting.
+        ProtectionFromCreatures => "ProCr",
+        ProtectionFromCreatureType(_) => "ProCT",
         _ => return None,
     })
 }
@@ -302,6 +310,9 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
         assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
         assert_eq!(keyword_strip(&[Keyword::Saddle(3)]), "Sdl");
+        assert_eq!(keyword_strip(&[Keyword::Regenerate(0)]), "Rgn");
+        assert_eq!(keyword_strip(&[Keyword::UmbraArmor]), "TArm");
+        assert_eq!(keyword_strip(&[Keyword::ProtectionFromCreatures]), "ProCr");
     }
 
     #[test]

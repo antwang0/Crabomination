@@ -1342,6 +1342,21 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn turn_percentile_ranks_against_its_own_histogram() {
+        // Turn samples outnumber recorded matches (the two counters drifted).
+        // The percentile must rank against the turn histogram's own sum, so
+        // p50 still lands in the populated short bucket rather than skewing to
+        // the tail because the denominator was too small.
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(1), Format::Demo); // total_matches == 1
+        for _ in 0..9 {
+            s.observe_turns(2);
+        }
+        s.observe_turns(30);
+        assert_eq!(s.turn_percentile(0.5), 2, "p50 uses the 10-sample turn histogram");
+    }
+
+    #[test]
     pub(crate) fn format_match_stats_includes_turn_percentiles() {
         let mut s = MatchStats::default();
         s.record_bot(Duration::from_secs(15), Format::Demo);
