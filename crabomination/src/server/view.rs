@@ -1615,6 +1615,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         // so the UI shows what the player gets to do (the "may"
         // prompting goes through the decision panel separately).
         Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => ability_effect_label(body),
+        // "You may pay {X}" (Well of Lost Dreams) — surface the paid-for body.
+        Effect::MayPayGenericUpTo { body, .. } => ability_effect_label(body),
         Effect::LoseLife { .. } => "Pay life / fetch land",
         Effect::Search { .. } => "Search library",
         Effect::Move { .. } => "Move permanent",

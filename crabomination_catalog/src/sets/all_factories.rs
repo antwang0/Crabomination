@@ -4673,6 +4673,13 @@ static DECKS: &[Factory] = &[
     super::decks::wildsize,
     super::decks::broken_bond,
     super::decks::woodfall_primus,
+    super::decks::peregrine_drake,
+    super::decks::cloud_elemental,
+    super::decks::thought_courier,
+    super::decks::jhessian_thief,
+    super::decks::sky_spirit,
+    super::decks::cephalid_broker,
+    super::decks::riverwise_augur,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
