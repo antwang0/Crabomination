@@ -4501,6 +4501,8 @@ static DECKS: &[Factory] = &[
     super::decks::the_cave_of_two_lovers,
     super::decks::war_balloon,
     super::decks::ember_island_production,
+    super::decks::appa_steadfast_guardian,
+    super::decks::redirect_lightning,
     super::decks::combustion_man,
     super::decks::sandbender_scavengers,
     super::decks::diligent_zookeeper,

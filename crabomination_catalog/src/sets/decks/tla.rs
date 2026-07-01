@@ -5129,3 +5129,58 @@ pub fn war_balloon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Appa, Steadfast Guardian — {2}{W}{W} 3/4 Legendary Bison Ally. Flash, flying;
+/// ETB airbend any number of other nonland permanents you control; whenever you
+/// cast a spell from exile, make a 1/1 white Ally token. ("Any number of target"
+/// is capped at eight.)
+pub fn appa_steadfast_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Appa, Steadfast Guardian",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bison, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::ApplyToTargets {
+                max_targets: 8,
+                filter: SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+                effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellFromExile),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: ally_token(),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Redirect Lightning — {2}{R} Instant — Lesson. Change the target of target
+/// spell. (The printed "pay 5 life or {2}" alternative additional cost is
+/// collapsed into a flat {2}; the "or ability" half is approximated to spells.)
+pub fn redirect_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Redirect Lightning",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: lesson(),
+        effect: Effect::ChooseNewTargetsForSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}

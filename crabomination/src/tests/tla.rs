@@ -3159,3 +3159,56 @@ fn ember_island_copies_your_creature_as_hero() {
     assert_eq!((cp.power, cp.toughness), (4, 4), "4/4 override");
     assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Hero), "is a Hero");
 }
+
+/// Appa airbends your own permanents on ETB, and casting one from exile mints a
+/// 1/1 Ally.
+#[test]
+fn appa_airbends_then_ally_on_exile_cast() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let appa = g.add_card_to_battlefield(0, catalog::appa_steadfast_guardian());
+    g.fire_self_etb_triggers(appa, 0);
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("bear airbent to exile");
+    assert!(exiled.may_play_until.is_some(), "castable from exile for two");
+    // Cast the airbent bear from exile (pay the {2} grant) → Appa's second
+    // trigger mints an Ally.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear from exile");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Ally"), 1, "cast-from-exile made an Ally token");
+}
+
+/// Redirect Lightning repoints a spell that targets you at its caster.
+#[test]
+fn redirect_lightning_repoints_a_spell() {
+    let mut g = two_player_game();
+    // Opponent casts Lightning Bolt at us; we Redirect it back.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bolt at us");
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Target(crate::game::types::Target::Player(1)),
+    ]));
+    let rl = g.add_card_to_hand(0, catalog::redirect_lightning());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rl,
+        target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Redirect Lightning at the bolt");
+    let life1_before = g.players[1].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 3, "bolt now hits its caster");
+}

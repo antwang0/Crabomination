@@ -253,6 +253,45 @@ fn airbender_ascension_airbends() {
     assert!(g.exile.iter().any(|c| c.id == victim), "airbent the creature");
 }
 
+/// Airbender Ascension accrues a quest counter for each creature you control
+/// that enters.
+#[test]
+fn airbender_ascension_gains_quest_counter_on_creature_etb() {
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::airbender_ascension());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest),
+        1,
+        "one quest counter per creature ETB"
+    );
+}
+
+/// With four or more quest counters, Airbender Ascension flickers a creature you
+/// control at your end step (it re-enters under a fresh id).
+#[test]
+fn airbender_ascension_flickers_at_four_quest_counters() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let asc = g.add_card_to_battlefield(0, catalog::airbender_ascension());
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 4);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    // Blink preserves the id but resets summoning sickness.
+    let back = g.battlefield.iter().find(|c| c.id == bear).expect("bear returned");
+    assert!(back.summoning_sick, "flickered creature re-entered summoning sick");
+}
+
 /// Whirlwind Technique draws two, discards one, and airbends a creature.
 #[test]
 fn whirlwind_technique_draws_and_airbends() {

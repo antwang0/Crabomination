@@ -6,11 +6,12 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector,
-    SpellSubtype, Subtypes, TriggeredAbility, Value,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement,
+    Selector, SpellSubtype, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, ZoneDest};
+use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 use crabomination_base::tokens::clue_token;
 
@@ -222,18 +223,54 @@ pub fn aang_the_last_airbender() -> CardDefinition {
     }
 }
 
-/// Airbender Ascension — {1}{W} Enchantment. When it enters, airbend up to one
-/// target creature. (Quest-counter engine omitted.)
+/// Airbender Ascension — {1}{W} Enchantment. ETB airbend up to one target
+/// creature; a quest counter whenever a creature you control enters; at your
+/// end step, if it has four or more, flicker up to one creature you control.
 pub fn airbender_ascension() -> CardDefinition {
     CardDefinition {
         name: "Airbender Ascension",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::ApplyToTargets {
-            max_targets: 1,
-            filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Quest,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                    .with_filter(Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                        Value::Const(4),
+                    )),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Exile { what: Selector::Target(0) },
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                tapped: false,
+                            },
+                        },
+                    ])),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

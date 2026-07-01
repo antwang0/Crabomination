@@ -456,16 +456,20 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 ## Discovered follow-ups — `decks::recent8`/`9`/`10` (Avatar / Lorwyn) batch
 
-- **Avatar (`tla`) card backlog.** ~44 `set:tla` non-land cards remain (verified
-  against the *whole* catalog, not just `tla.rs`). The simple commons are all
-  implemented now — the remainder each need a non-trivial primitive: the Avatar
-  planeswalker / DFC bombs (Aang, Ozai, Koh), the quest-counter "Ascension"
-  enchantment engine (Firebender/Waterbender/Airbender Ascension), Vehicles with
-  counter-gated animation (War Balloon, Phoenix Fleet Airship), Sagas (The Cave
-  of Two Lovers), and **Bumi, King of Three Trials** (variable "choose up to X"
-  modal). Avatar Destiny needs a graveyard-scaling aura pump (extend `EquipScale`
-  with a controller-graveyard count). White Lotus Tile needs a
-  `Value::GreatestCreaturesSharingAType` for its any-color mana ability.
+- **Avatar (`tla`) card backlog.** ~33 `set:tla` non-land cards remain (verified
+  against the *whole* catalog, not just `tla.rs`). Shipped since: Airbender
+  Ascension (quest-counter engine + end-step flicker completed), Appa Steadfast
+  Guardian (airbend-any + cast-from-exile Ally), Redirect Lightning
+  (`ChooseNewTargetsForSpell`). The remainder each need a non-trivial primitive:
+  the Avatar planeswalker / DFC bombs (Aang, Ozai, Koh), **Firebender Ascension**
+  (copy an attacking creature's own triggered ability at 4+ quest counters),
+  DFC Sagas (The Legend of … // Avatar …), Vehicles with Exhaust animation
+  (Invasion Submersible, Phoenix Fleet Airship). Avatar Destiny needs a
+  graveyard-scaling aura pump (extend `EquipScale` with a controller-graveyard
+  count). Crashing Wave needs variable "up to X target" (waterbend-X-sized).
+  Zhao needs a counter-gated `LandTypeChanger`; Toph the First Metalbender needs
+  a "nontoken artifacts are lands" static. Solstice Revelations needs an
+  impulse-cast-if-under-a-count effect.
   - ✅ **Exhaust** activated-ability keyword (CR 702.177) — already supported via
     `ActivatedAbility.exhaust`; now used by Rebellious Captives, Rough Rhino
     Cavalry, Mai Jaded Edge.
