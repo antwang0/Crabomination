@@ -4787,6 +4787,16 @@ static DECKS: &[Factory] = &[
     super::decks::shanodin_dryads,
     super::decks::mesa_falcon,
     super::decks::viashino_sandstalker,
+    super::decks::water_elemental,
+    super::decks::wall_of_water,
+    super::decks::spitting_drake,
+    super::decks::blood_pet,
+    super::decks::foul_imp,
+    super::decks::skyshroud_vampire,
+    super::decks::feral_shadow,
+    super::decks::rowan_treefolk,
+    super::decks::sabertooth_nishoba,
+    super::decks::kris_mage,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
