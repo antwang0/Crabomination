@@ -1,0 +1,91 @@
+//! Functionality tests for `catalog::sets::decks::recent53` — monarch,
+//! artifact hate, and white-weenie staples.
+
+use crate::card::Keyword;
+use crate::catalog;
+use crate::decision::{DecisionAnswer, ScriptedDecider};
+use crate::game::*;
+use crate::mana::Color;
+
+#[test]
+fn by_force_destroys_x_artifacts() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let b = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::by_force());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast {X=2}{R} destroying two artifacts");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both artifacts destroyed");
+}
+
+#[test]
+fn palace_jailer_takes_the_crown_and_a_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jailer = g.add_card_to_battlefield(0, catalog::palace_jailer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.fire_self_etb_triggers(jailer, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "controller became the monarch");
+    assert!(g.battlefield_find(victim).is_none(), "opponent's creature exiled");
+
+    // CR 724 — when an opponent takes the crown, the creature comes back.
+    let mut events = vec![];
+    g.set_monarch(1, &mut events);
+    assert!(g.battlefield_find(victim).is_some(), "creature returns when the monarchy moves");
+}
+
+#[test]
+fn palace_jailer_keeps_the_creature_if_it_dies_while_monarch() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jailer = g.add_card_to_battlefield(0, catalog::palace_jailer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.fire_self_etb_triggers(jailer, 0);
+    drain_stack(&mut g);
+    // Jailer leaving does NOT release a monarch-guarded exile (unlike O-Ring).
+    g.remove_from_battlefield_to_graveyard_raw(jailer);
+    assert!(g.battlefield_find(victim).is_none(), "creature stays exiled while you're still the monarch");
+}
+
+#[test]
+fn loxodon_smiter_cant_be_countered() {
+    assert!(catalog::loxodon_smiter().keywords.contains(&Keyword::CantBeCountered));
+}
+
+#[test]
+fn leonin_vanguard_pumps_with_a_full_board() {
+    let mut g = two_player_game();
+    let leonin = g.add_card_to_battlefield(0, catalog::leonin_vanguard());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    g.step = TurnStep::BeginCombat;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let v = cp.iter().find(|c| c.id == leonin).unwrap();
+    assert_eq!((v.power, v.toughness), (2, 2), "buffed with 3 creatures");
+    assert_eq!(g.players[0].life, life + 1, "gained a life");
+}
+
+#[test]
+fn custodi_lich_edicts_and_crowns() {
+    let mut g = two_player_game();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lich = g.add_card_to_battlefield(0, catalog::custodi_lich());
+    g.fire_self_etb_triggers(lich, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "took the crown");
+    assert!(g.battlefield_find(opp).is_none(), "opponent sacrificed its only creature");
+}

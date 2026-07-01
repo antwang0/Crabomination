@@ -1095,7 +1095,12 @@ impl GameState {
         let linked: Vec<CardId> = self
             .exile
             .iter()
-            .filter(|c| c.exiled_by.map(|l| l.source) == Some(source))
+            // Monarch-guarded exiles (Palace Jailer) return when the monarchy
+            // moves, not when the source leaves — `set_monarch` handles them.
+            .filter(|c| {
+                c.exiled_by.map(|l| l.source) == Some(source)
+                    && c.exiled_by.and_then(|l| l.monarch_guard).is_none()
+            })
             .map(|c| c.id)
             .collect();
         for cid in linked {
@@ -1139,6 +1144,34 @@ impl GameState {
                     tapped: false,
                 },
             };
+            self.place_card_in_dest(card, owner, &dest, events);
+        }
+    }
+
+    /// CR 724 — after the monarchy moves to `new_monarch`, return every
+    /// monarch-guarded exile (Palace Jailer) whose guard player is no longer
+    /// the monarch, to the battlefield under its owner's control.
+    pub(crate) fn return_monarch_guarded_exiles(
+        &mut self,
+        new_monarch: Option<usize>,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let freed: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| {
+                c.exiled_by
+                    .and_then(|l| l.monarch_guard)
+                    .is_some_and(|guard| new_monarch != Some(guard))
+            })
+            .map(|c| c.id)
+            .collect();
+        for cid in freed {
+            let Some(pos) = self.exile.iter().position(|c| c.id == cid) else { continue };
+            let mut card = self.exile.remove(pos);
+            card.exiled_by = None;
+            let owner = card.owner;
+            let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false };
             self.place_card_in_dest(card, owner, &dest, events);
         }
     }

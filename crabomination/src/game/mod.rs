@@ -190,6 +190,9 @@ mod tests_recent51;
 #[path = "../tests/recent52.rs"]
 mod tests_recent52;
 #[cfg(test)]
+#[path = "../tests/recent53.rs"]
+mod tests_recent53;
+#[cfg(test)]
 #[path = "../tests/avatar_water.rs"]
 mod tests_avatar_water;
 #[cfg(test)]
@@ -1508,6 +1511,7 @@ impl GameState {
         }
         self.monarch = Some(player);
         events.push(GameEvent::MonarchChanged { player });
+        self.return_monarch_guarded_exiles(Some(player), events);
     }
 
     /// CR 701.54 — the Ring tempts `player`. Bumps their temptation level
@@ -9488,6 +9492,7 @@ impl GameState {
                         card.exiled_by = Some(crate::card::ExileLink {
                             source,
                             return_to,
+                            monarch_guard: None,
                         });
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });

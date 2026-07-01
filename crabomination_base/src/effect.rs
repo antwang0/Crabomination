@@ -2628,6 +2628,12 @@ pub enum Effect {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
     },
+    /// CR 724 — Palace Jailer's "exile [what] until an opponent becomes the
+    /// monarch". Exiles the resolved permanent(s) with a `monarch_guard` set to
+    /// the controller (who has just become the monarch); the card returns to the
+    /// battlefield the moment the monarchy leaves that player, not when the
+    /// source leaves play.
+    ExileUntilOpponentMonarch { what: Selector },
     /// Exile each resolved permanent, then return it to the battlefield under
     /// its owner's control at the beginning of the next end step, entering with
     /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).

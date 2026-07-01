@@ -1,0 +1,156 @@
+//! Monarch, artifact hate, and white-weenie staples. Tests in
+//! `tests/recent53.rs`.
+
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
+    Predicate, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
+};
+use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::{Duration, PlayerRef};
+use crate::game::types::TurnStep;
+use crate::mana::{cost, g, generic, r, w, x};
+
+/// By Force — {X}{R} Sorcery. Destroy X target artifacts.
+pub fn by_force() -> CardDefinition {
+    CardDefinition {
+        name: "By Force",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DestroyTargets { filter: R::Artifact },
+        ..Default::default()
+    }
+}
+
+/// Palace Jailer — {2}{W}{W} 2/2 Human Soldier. ETB: become the monarch, then
+/// exile target creature an opponent controls until an opponent becomes the
+/// monarch.
+pub fn palace_jailer() -> CardDefinition {
+    CardDefinition {
+        name: "Palace Jailer",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::ExileUntilOpponentMonarch {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Loxodon Smiter — {1}{G}{W} 4/4 Elephant Soldier. Can't be countered. (The
+/// discard→battlefield replacement is approximated to the uncounterable body.)
+pub fn loxodon_smiter() -> CardDefinition {
+    CardDefinition {
+        name: "Loxodon Smiter",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeCountered],
+        ..Default::default()
+    }
+}
+
+/// Leonin Vanguard — {W} 1/1 Cat Soldier. At the beginning of combat on your
+/// turn, if you control three or more creatures, it gets +1/+1 until end of
+/// turn and you gain 1 life.
+pub fn leonin_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Leonin Vanguard",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            R::Creature.and(R::ControlledByYou),
+                        )),
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                    Value::Const(3),
+                ),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Marchesa's Decree — {3}{B} Enchantment. ETB become the monarch; whenever a
+/// creature attacks you or a planeswalker you control, that creature's
+/// controller loses 1 life.
+pub fn marchesas_decree() -> CardDefinition {
+    use crate::mana::b;
+    CardDefinition {
+        name: "Marchesa's Decree",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Custodi Lich — {3}{B}{B} 4/2 Zombie Cleric. ETB become the monarch; each
+/// opponent sacrifices a creature. (The printed "whenever you become the
+/// monarch, target player sacrifices" is approximated to the ETB edict.)
+pub fn custodi_lich() -> CardDefinition {
+    use crate::mana::b;
+    CardDefinition {
+        name: "Custodi Lich",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Creature,
+            }),
+        ],
+        ..Default::default()
+    }
+}

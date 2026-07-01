@@ -2115,6 +2115,8 @@ impl GameState {
         // leaving).
         if self.monarch == Some(p) {
             self.monarch = if self.active_player_idx == p { None } else { Some(self.active_player_idx) };
+            let mut events = vec![];
+            self.return_monarch_guarded_exiles(self.monarch, &mut events);
         }
     }
 

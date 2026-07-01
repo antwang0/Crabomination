@@ -2931,6 +2931,7 @@ mod tests {
         bolt.exiled_by = Some(crate::card::ExileLink {
             source: src,
             return_to: crate::card::ExileReturnZone::Hand,
+            monarch_guard: None,
         });
         state.exile.push(bolt);
         let view = project(&state, 0);

@@ -442,6 +442,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
+            | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
             | Effect::PhaseOut { what }
             | Effect::Tap { what }
@@ -728,6 +729,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
+            | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
@@ -1068,6 +1070,9 @@ impl Effect {
             Effect::Exile { .. } => format!("exile {}", self.target_phrase()),
             Effect::ExileUntilSourceLeaves { .. } => {
                 format!("exile {} until this leaves the battlefield", self.target_phrase())
+            }
+            Effect::ExileUntilOpponentMonarch { .. } => {
+                format!("exile {} until an opponent becomes the monarch", self.target_phrase())
             }
             Effect::DealDamage { amount, .. } => {
                 let t = self.target_phrase();

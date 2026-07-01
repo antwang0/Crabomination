@@ -4115,11 +4115,32 @@ impl GameState {
                         c.exiled_by = Some(crate::card::ExileLink {
                             source,
                             return_to: *return_to,
+                            monarch_guard: None,
                         });
                     }
                     // Chainable: a follow-up `GrantMayPlay(LastMoved)` lets
                     // the controller cast the exiled card (Hostage Taker).
                     self.last_moved_cards.push(cid);
+                }
+                Ok(())
+            }
+
+            Effect::ExileUntilOpponentMonarch { what } => {
+                // CR 724 — exile until the monarchy leaves the controller
+                // (Palace Jailer). Guarded by the controller seat rather than
+                // the source, so `return_linked_exiles` skips it.
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    self.remove_from_battlefield_to_exile(cid);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_by = Some(crate::card::ExileLink {
+                            source: source.unwrap_or(cid),
+                            return_to: crate::card::ExileReturnZone::Battlefield,
+                            monarch_guard: Some(ctx.controller),
+                        });
+                    }
                 }
                 Ok(())
             }
@@ -6573,6 +6594,7 @@ impl GameState {
                     card.exiled_by = Some(crate::card::ExileLink {
                         source,
                         return_to: crate::card::ExileReturnZone::Hand,
+                        monarch_guard: None,
                     });
                     events.push(GameEvent::PermanentExiled { card_id: card.id });
                     self.exile.push(card);
@@ -13223,6 +13245,7 @@ impl GameState {
                     c.exiled_by = Some(crate::card::ExileLink {
                         source,
                         return_to: crate::card::ExileReturnZone::Battlefield,
+                        monarch_guard: None,
                     });
                 }
             }
