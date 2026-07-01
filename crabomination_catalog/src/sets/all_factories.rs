@@ -4664,6 +4664,15 @@ static DECKS: &[Factory] = &[
     super::decks::gearshift_ace,
     super::decks::veteran_motorist,
     super::decks::aether_chaser,
+    super::decks::scion_of_the_wild,
+    super::decks::grazing_gladehart,
+    super::decks::snapping_sailback,
+    super::decks::baloth_woodcrasher,
+    super::decks::kavu_climber,
+    super::decks::might_of_oaks,
+    super::decks::wildsize,
+    super::decks::broken_bond,
+    super::decks::woodfall_primus,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
