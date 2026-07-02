@@ -130,6 +130,9 @@ fn evaluate_permanent(
         R::WithCounter(k) => perm.counters.iter().any(|(kk, n)| kk == k && *n > 0),
         R::IsAttacking => perm.attacking,
         R::IsBlocking => perm.blocking_attacker.is_some(),
+        // "target that was dealt damage this turn" (Needle Drop) — precise
+        // now that the view carries the flag instead of highlighting all.
+        R::DealtDamageThisTurn => perm.dealt_damage_this_turn,
         // The cast card isn't on the battlefield yet, so the source-
         // exclusion check trivially passes.
         R::OtherThanSource => true,

@@ -431,6 +431,20 @@ mod tests {
     use std::net::IpAddr;
 
     #[test]
+    fn win_kind_buckets_reconcile_with_wins() {
+        let mut s = MatchStats::default();
+        // Seat 0 wins by lethal damage (seat 1 at -1).
+        s.observe_win_kind(0, &[20, -1], &[None, Some(LossReason::LifeDepleted)]);
+        // Seat 0 wins by decking (seat 1 alive at 5 life).
+        s.observe_win_kind(0, &[20, 5], &[None, Some(LossReason::Decked)]);
+        assert_eq!(s.damage_wins, 1, "one lethal-damage win");
+        assert_eq!(s.deckout_wins, 1, "one alternate win");
+        assert_eq!(s.deck_wins, 1, "the alternate win was a deck-out");
+        // The two buckets partition every classified win.
+        assert_eq!(s.damage_wins + s.deckout_wins, 2);
+    }
+
+    #[test]
     fn panic_message_recovers_str_and_string_payloads() {
         let s = std::panic::catch_unwind(|| panic!("boom")).unwrap_err();
         assert_eq!(panic_message(s.as_ref()), "boom");

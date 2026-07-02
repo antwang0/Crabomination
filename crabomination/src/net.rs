@@ -1101,6 +1101,13 @@ pub struct PermanentView {
     pub card_types: Vec<CardType>,
     pub tapped: bool,
     pub damage: u32,
+    /// True if this permanent was dealt damage this turn (distinct from
+    /// currently-*marked* `damage`, which clears on heal/regen). Lets the
+    /// client precisely highlight "target that was dealt damage this turn"
+    /// filters (Needle Drop) instead of every creature. Defaults to false
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub dealt_damage_this_turn: bool,
     pub summoning_sick: bool,
     /// Computed power after layer effects (0 for non-creatures).
     pub power: i32,

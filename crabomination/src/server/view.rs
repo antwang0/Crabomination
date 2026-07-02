@@ -964,6 +964,7 @@ fn project_permanent(
             .unwrap_or_else(|| card.definition.card_types.clone()),
         tapped: card.tapped,
         damage: card.damage,
+        dealt_damage_this_turn: card.dealt_damage_this_turn,
         summoning_sick: card.summoning_sick,
         power: cp.map(|c| c.power).unwrap_or_else(|| card.power()),
         toughness: cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness()),

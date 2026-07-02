@@ -137,6 +137,12 @@ pub(crate) struct MatchStats {
     /// `Some(Some(seat))` outcomes with available life data. Push
     /// (claude/modern_decks).
     pub(crate) deckout_wins: u64,
+    /// Number of clean wins that *did* close via lethal face damage (every
+    /// losing seat at ≤ 0 life). The complement of `deckout_wins`, tracked
+    /// explicitly so the win-kind buckets reconcile with `wins`
+    /// (`damage_wins + deckout_wins == wins`) rather than leaving the common
+    /// case implicit. Push (claude/modern_decks).
+    pub(crate) damage_wins: u64,
     /// Subset of `deckout_wins` where at least one losing seat was
     /// eliminated specifically by poison (CR 104.3c). Classified from the
     /// outcome's precise `loss_reasons`, not the life-total heuristic, so
@@ -433,6 +439,8 @@ impl MatchStats {
             let any_alternate = reasons.iter().any(|r| *r != LossReason::LifeDepleted);
             if any_alternate {
                 self.deckout_wins = self.deckout_wins.saturating_add(1);
+            } else {
+                self.damage_wins = self.damage_wins.saturating_add(1);
             }
             if reasons.contains(&LossReason::Poison) {
                 self.poison_wins = self.poison_wins.saturating_add(1);
@@ -461,6 +469,8 @@ impl MatchStats {
         }
         if losers.all(|l| l > 0) {
             self.deckout_wins = self.deckout_wins.saturating_add(1);
+        } else {
+            self.damage_wins = self.damage_wins.saturating_add(1);
         }
     }
     /// Average win-by-life delta across all sampled wins. Returns 0
@@ -500,6 +510,11 @@ impl MatchStats {
     /// where bots grind to empty libraries instead of closing on life.
     pub(crate) fn deckout_pct(&self) -> u64 {
         self.deckout_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
+    }
+    /// Percent of wins that closed via lethal face damage — the complement of
+    /// `deckout_pct`. Returns 0 when no wins have been recorded.
+    pub(crate) fn damage_pct(&self) -> u64 {
+        self.damage_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
     /// Percent of wins in which a losing seat died to poison (CR 104.3c).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
@@ -805,6 +820,9 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         // win has been seen so the common all-damage case stays tight.
         if s.deckout_wins > 0 {
             out.push_str(&format!(" alt_wins={} ({}%)", s.deckout_wins, s.deckout_pct()));
+            // The complementary lethal-damage share, so the split reads
+            // directly (dmg + alt == wins) without subtracting in your head.
+            out.push_str(&format!(" dmg_wins={} ({}%)", s.damage_wins, s.damage_pct()));
             // Split the alternate-win share into its two main paths when seen.
             if s.poison_wins > 0 {
                 out.push_str(&format!(" poison={} ({}%)", s.poison_wins, s.poison_pct()));
