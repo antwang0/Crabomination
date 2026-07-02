@@ -2336,6 +2336,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddExperience(amount) => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                let p = ctx.controller;
+                self.players[p].experience = self.players[p].experience.saturating_add(amt);
+                Ok(())
+            }
+
             Effect::PayEnergy { amount, then } => {
                 let p = ctx.controller;
                 if self.players[p].energy >= *amount {

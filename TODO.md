@@ -26,11 +26,13 @@ New primitives: `DoubleControllerTriggersOfType`,
 for precise client targeting; server `damage_wins` stat.
 
 Still deferred / noticed but not tackled:
-- **Player experience counters** — `CounterType::Experience` exists but no
-  player-side storage or `AddCounter`-to-player path, and no
-  experience-scaled cost reduction. Blocks Mizzix of the Izmagnus, Elsha,
-  Kess, and the experience-counter cycle. Needs a player-counters framework
-  (mirror `energy`/`poison`) + a `CostReductionPerControllerCounter` static.
+- **Meren of Clan Nel Toth** — the experience framework now ships
+  (`decks::experience`: Mizzix, Ezuri Claw of Progress, Daxos, Kalemne), but
+  Meren's end-step "return target creature card; to the battlefield if its mv ≤
+  your experience, else to hand" needs a targeted graveyard-reanimate effect
+  with a per-target mv/experience branch (no such effect yet). Mizzix's runaway
+  gate ("mv > your experience") is approximated as any I/S cast; Daxos's token
+  P/T is a mint-time snapshot rather than a live CDA.
 - **Pyromancer Ascension** — needs a `CastSpellMatches`-style predicate for
   "the cast spell shares a name with a card in your graveyard" (quest-counter
   trigger) plus the 2+-counter copy trigger.

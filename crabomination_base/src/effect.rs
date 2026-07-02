@@ -393,6 +393,9 @@ pub enum Value {
     XFromCost,
     /// Number of spells cast this turn by controller (Storm).
     StormCount,
+    /// The controller's current experience-counter count (Ezuri's "X is the
+    /// number of experience counters you have").
+    ControllerExperience,
     /// CR 702.140 — the number of times the trigger source has mutated (the
     /// count of mutate cards merged onto it). Archipelagore / Insatiable
     /// Hemophage's "X is the number of times this creature has mutated".
@@ -2141,6 +2144,10 @@ pub enum Effect {
     /// ({E}). Energy is a per-player resource pool (`Player.energy`), not
     /// tied to any object. "You get {E}{E}" → `AddEnergy(Const(2))`.
     AddEnergy(Value),
+    /// The controller gets `amount` experience counters (`Player.experience`).
+    /// A per-player resource that only accumulates; payoffs read the count.
+    /// Mizzix ("get an experience counter") → `AddExperience(Const(1))`.
+    AddExperience(Value),
     /// Pay `amount` energy counters as a cost at resolution; if the
     /// controller has at least that much, deduct it and resolve `then`,
     /// otherwise do nothing. Models energy-only activated/triggered

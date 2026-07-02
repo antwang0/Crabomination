@@ -310,6 +310,9 @@ mod tests_recent89;
 #[path = "../tests/recent90.rs"]
 mod tests_recent90;
 #[cfg(test)]
+#[path = "../tests/experience.rs"]
+mod tests_experience;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -5141,6 +5144,10 @@ impl GameState {
                         c.controller == card.controller && c.definition.is_land()
                     }).map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne) as i32).sum();
                     (base_p + n, base_t)
+                }
+                crate::card::DynamicPt::ControllerExperience { base_p, base_t } => {
+                    let n = self.players[card.controller].experience as i32;
+                    (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::CreaturesOfTypeControlled { creature_type } => {
                     let n = self.battlefield.iter().filter(|c| {
@@ -11188,6 +11195,7 @@ fn static_effect_to_effects(
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
+            | StaticEffect::CostReductionPerControllerExperience { .. }
             | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }

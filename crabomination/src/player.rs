@@ -388,6 +388,12 @@ pub struct Player {
     /// `Effect::PayEnergy`. Defaults to 0 for snapshot back-compat.
     #[serde(default)]
     pub energy: u32,
+    /// Experience counters (CR 122 / 720-era Commander mechanic). A per-player
+    /// resource that only accumulates; payoffs read the count (Mizzix's cost
+    /// reduction, Ezuri's +1/+1 distribution). Added by
+    /// `Effect::AddExperience`. Default 0 for snapshot back-compat.
+    #[serde(default)]
+    pub experience: u32,
     /// CR 122.1i / 728 — rad counters on this player. At the start of
     /// their precombat main phase they mill that many cards; for each
     /// nonland milled, they lose 1 life and shed a rad counter (handled
@@ -615,6 +621,7 @@ impl Player {
             speed: 0,
             speed_increased_this_turn: false,
             energy: 0,
+            experience: 0,
             rad_counters: 0,
             city_blessing: false,
             max_hand_size: default_max_hand_size(),

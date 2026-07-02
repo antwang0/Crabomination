@@ -320,6 +320,12 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 {
                     reduction += amount;
                 }
+                StaticEffect::CostReductionPerControllerExperience { filter }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += state.players[caster].experience;
+                }
                 StaticEffect::CostReductionWhile { filter, amount, condition }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>

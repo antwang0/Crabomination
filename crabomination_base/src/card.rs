@@ -2558,6 +2558,10 @@ pub enum DynamicPt {
     /// Power = toughness = the number of creatures of `creature_type` the
     /// controller controls (counting the source). Pack Rat.
     CreaturesOfTypeControlled { creature_type: CreatureType },
+    /// Power = `base_p` + the controller's experience counters; toughness =
+    /// `base_t` + that count. Daxos the Returned's Spirit token (0/0 base) and
+    /// Kalemne, Disciple of Iroas (2/4 base, "+1/+1 for each experience").
+    ControllerExperience { base_p: i32, base_t: i32 },
     /// Power = toughness = `base` + the number of lands the controller
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },

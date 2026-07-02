@@ -197,6 +197,11 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Generic cost reduction equal to the controller's experience-counter
+    /// count, for spells matching `filter` (Mizzix of the Izmagnus — "Instant
+    /// and sorcery spells you cast cost {X} less, where X is the number of
+    /// experience counters you have"). Generic-only; clamped at the generic pip.
+    CostReductionPerControllerExperience { filter: SelectionRequirement },
     /// Like `CostReduction`, but applies only while `condition` holds for the
     /// controller (Gran-Gran — "Noncreature spells you cast cost {1} less as
     /// long as there are three or more Lesson cards in your graveyard"). The

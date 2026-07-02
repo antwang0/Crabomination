@@ -679,6 +679,7 @@ impl Effect {
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
+            Effect::AddExperience(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),
             Effect::PayAnyEnergyDealDamage { to } => sel_has_target(to),
             Effect::TimeTravel { who } => player_has_target(who),

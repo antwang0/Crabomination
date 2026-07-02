@@ -524,6 +524,7 @@ fn project_player(
         starting_life: player.starting_life,
         poison_counters: player.poison_counters,
         energy: player.energy,
+        experience: player.experience,
         speed: player.speed,
         at_max_speed: player.speed >= 4,
         rad_counters: player.rad_counters,
