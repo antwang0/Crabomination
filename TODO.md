@@ -2784,6 +2784,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 111 / 614.13 — `Effect::CreateToken` now mints for **every** matched
   player (EachPlayer / EachOpponent), with each player's own token-doublers
   applied; fixes a latent single-player bug (gift cycle, Edge Rover).
+  Transient tokens: `Effect::ExileLastCreatedTokensAtNextEndStep` registers a
+  `DelayedKind::NextEndStep` exile per token minted this resolution (chain it
+  after `CreateToken` in a `Seq`) — Valduk, Keeper of the Flame now exiles its
+  Elemental tokens at the next end step (faithful).
 - ✅ CR 310 — Battle / Siege. `CardType::Battle` + `BattleSubtype::Siege`, defense
   counters (310.7), protector choice (310.6), attack-your-own-Siege
   (`AttackTarget::Battle`), combat damage strips defense counters (310.10),
@@ -3426,6 +3430,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   be activated from the controller's hand — paired with `exile_self_cost` it
   models the Spirit Guides' "Exile this from your hand: Add {C}." pitch mana
   ability; tap costs are rejected from a hand source).
+  Push claude/modern_decks: `CardDefinition.discard_activated`
+  (`GameAction::ActivateDiscardAbility`) models a "[cost], Discard this card:
+  [effect]" from-hand activated ability — the discard-self *is* the cost, the
+  card leaves hand before the (targetless) effect resolves. Magma Opus's
+  {U/R}{U/R} Treasure mode rides it; surfaced in `PlayerView.
+  discard_activatable_hand`, offered by the bot as a fallback value play.
   (b) **602.1b** — 🟡 (`ActivatedAbility.condition` covers per-ability
   predicate gates ("Activate only if …"); `once_per_turn` /
   `sorcery_speed` / `from_graveyard` cover the canonical instructions.

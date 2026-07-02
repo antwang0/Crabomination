@@ -1936,6 +1936,22 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Discard-activated hand abilities (Magma Opus's {U/R}{U/R}, Discard:
+    // create a Treasure) — a fallback value play, offered only when the bot
+    // has no spell/face-down candidate so it never pitches a castable card.
+    if castable.is_empty() {
+        for c in state.players[seat]
+            .hand
+            .iter()
+            .filter(|c| c.definition.discard_activated.is_some())
+        {
+            let action = GameAction::ActivateDiscardAbility { card_id: c.id };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+    }
+
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an
@@ -5368,6 +5384,22 @@ mod tests {
                 );
             }
             other => panic!("expected CastSpell(Vandalblast), got {other:?}"),
+        }
+    }
+
+    /// The bot uses Magma Opus's discard-a-card-for-a-Treasure mode as a
+    /// fallback value play when the full {6}{U}{R} spell is unaffordable.
+    #[test]
+    fn bot_uses_discard_activated_ability_as_fallback() {
+        let mut g = two_player_game();
+        let opus = g.add_card_to_hand(0, catalog::magma_opus());
+        // Only {U/R}{U/R} worth of mana — can't cast the {8} spell.
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot should act");
+        match action {
+            GameAction::ActivateDiscardAbility { card_id } => assert_eq!(card_id, opus),
+            other => panic!("expected ActivateDiscardAbility(Magma Opus), got {other:?}"),
         }
     }
 
