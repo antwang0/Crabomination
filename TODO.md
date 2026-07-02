@@ -15,14 +15,11 @@ live-recompute over `IsAttacking`/`IsModified` (Orcish Oriflamme); `AttachedTo`
 LKI now consults `leaves_bf_lki` so a `sac_cost` ability reads the enchanted
 creature (Carapace); the bot's block heuristic folds Rampage (CR 702.23) into its
 gang-block / second-blocker math; the client keyword strip surfaces the N on
-count-scaling keywords (Rmp2 / Tox3 / Ann2).
+count-scaling keywords (Rmp2 / Tox3 / Ann2); `Predicate::ActivePlayerControls`
+gates "at the upkeep of enchanted [permanent]'s controller" Aura pings (Warp
+Artifact / Cursed Land / Wanderlust).
 
 Still deferred / noticed but not tackled (recent77–78):
-- **Warp Artifact / Cursed Land / Wanderlust** — "at the upkeep of enchanted
-  [permanent]'s controller, deal 1 damage to that player" needs a new
-  `EventScope` (or an AnyPlayer-upkeep + "the step's player controls the
-  enchanted permanent" gate) binding that controller as the target. Clean
-  3-card cluster once the scope lands.
 - **Meekstone / Winter Orb family** — "creatures with power ≥3 don't untap"
   needs a filtered untap-skip static (only `LandsDontUntapNextUntapStep` exists).
 - **Dragon Whelp** — firebreathing with "if activated 4+ times this turn,

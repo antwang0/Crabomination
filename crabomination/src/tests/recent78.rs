@@ -202,6 +202,40 @@ fn fear_grants_fear() {
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Fear));
 }
 
+#[test]
+fn wanderlust_pings_enchanted_creatures_controller() {
+    let mut g = two_player_game();
+    let foe_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::wanderlust());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe_creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant the opponent's creature");
+    drain_stack(&mut g);
+    let foe = g.players[1].life;
+    // It's the enchanted creature's controller (P1) whose upkeep triggers the
+    // ping. P0's upkeep must NOT fire it.
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe, "no ping on the caster's upkeep");
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe - 1, "1 damage at the enchanted controller's upkeep");
+}
+
+#[test]
+fn warp_artifact_and_cursed_land_are_upkeep_ping_auras() {
+    // Structural: both are Auras with a single upkeep-triggered ability.
+    for card in [catalog::warp_artifact(), catalog::cursed_land()] {
+        assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
+        assert_eq!(card.triggered_abilities.len(), 1, "one upkeep ping trigger");
+    }
+}
+
 // ── Comp-rules sections implemented / verified this run ──────────────────────
 
 #[test]

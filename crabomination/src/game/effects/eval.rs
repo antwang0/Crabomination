@@ -775,6 +775,13 @@ impl GameState {
                 .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::ActivePlayerControls(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_permanent_id())
+                .any(|cid| {
+                    self.battlefield_find(cid).map(|c| c.controller) == Some(self.active_player_idx)
+                }),
             Predicate::CurrentStepIs(step) => self.step == *step,
             Predicate::EntityMatches { what, filter } => self
                 .resolve_selector(what, ctx)

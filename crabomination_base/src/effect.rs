@@ -710,6 +710,12 @@ pub enum Predicate {
     ExcessDamageDealtThisResolution,
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
+    /// The active player (whose turn it is) controls at least one permanent the
+    /// selector resolves to. Gates "at the beginning of the upkeep of enchanted
+    /// [permanent]'s controller, …" Aura triggers (Warp Artifact, Cursed Land,
+    /// Wanderlust): pair with an `AnyPlayer` upkeep trigger so it fires only on
+    /// the enchanted permanent's controller's upkeep.
+    ActivePlayerControls(Box<Selector>),
     /// The game is currently in the given turn step (CR 500). Gates
     /// "activate only during [your] upkeep / end step" abilities; pair with
     /// `IsTurnOf(You)` for the "your" qualifier.

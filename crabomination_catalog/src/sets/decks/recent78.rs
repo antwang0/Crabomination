@@ -204,6 +204,50 @@ pub fn fear() -> CardDefinition {
     }
 }
 
+/// Upkeep-ping Aura: at the beginning of the upkeep of the enchanted
+/// permanent's controller, deal 1 damage to that player.
+fn upkeep_ping_aura(
+    name: &'static str,
+    mana: ManaCost,
+    enchant: crate::card::SelectionRequirement,
+) -> CardDefinition {
+    let attached = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(enchant) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::ActivePlayerControls(Box::new(attached()))),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(attached()))),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warp Artifact — {B}{B} Aura (enchant artifact). At the upkeep of enchanted
+/// artifact's controller, deal 1 damage to that player.
+pub fn warp_artifact() -> CardDefinition {
+    upkeep_ping_aura("Warp Artifact", cost(&[b(), b()]), R::Artifact)
+}
+
+/// Cursed Land — {2}{B}{B} Aura (enchant land). At the upkeep of enchanted
+/// land's controller, deal 1 damage to that player.
+pub fn cursed_land() -> CardDefinition {
+    upkeep_ping_aura("Cursed Land", cost(&[generic(2), b(), b()]), R::Land)
+}
+
+/// Wanderlust — {2}{G} Aura (enchant creature). At the upkeep of enchanted
+/// creature's controller, deal 1 damage to that player.
+pub fn wanderlust() -> CardDefinition {
+    upkeep_ping_aura("Wanderlust", cost(&[generic(2), g()]), R::Creature)
+}
+
 /// Instill Energy — {G} Aura. Enchanted creature can attack as though it had
 /// haste; "{0}: Untap enchanted creature," once each turn during your turn.
 pub fn instill_energy() -> CardDefinition {
