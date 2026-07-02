@@ -1541,6 +1541,14 @@ impl GameState {
         self.leaves_bf_lki.get(&src).map(|snap| snap.power())
     }
 
+    /// The caster (controller) of the spell with id `cid` if it's on the stack.
+    pub(crate) fn stack_spell_caster(&self, cid: CardId) -> Option<usize> {
+        self.stack.iter().find_map(|si| match si {
+            StackItem::Spell { card, caster, .. } if card.id == cid => Some(*caster),
+            _ => None,
+        })
+    }
+
     pub(crate) fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
@@ -1561,20 +1569,36 @@ impl GameState {
                 || self.evaluate_requirement_static(b, target, controller, source),
             R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller, source),
             R::ControlledByYou => match target {
-                Target::Permanent(cid) => self.battlefield_find(*cid).map(|c| c.controller == controller).unwrap_or(false),
+                // A `Target::Permanent` can also address a spell on the stack
+                // (a "copy target spell you control" ability); its caster is
+                // its controller.
+                Target::Permanent(cid) => self
+                    .battlefield_find(*cid)
+                    .map(|c| c.controller)
+                    .or_else(|| self.stack_spell_caster(*cid))
+                    .map(|ctrl| ctrl == controller)
+                    .unwrap_or(false),
                 Target::Player(p) => *p == controller,
             },
             R::ControlledByOpponent => match target {
                 Target::Permanent(cid) => self
                     .battlefield_find(*cid)
-                    .map(|c| !self.same_team(c.controller, controller))
+                    .map(|c| c.controller)
+                    .or_else(|| self.stack_spell_caster(*cid))
+                    .map(|ctrl| !self.same_team(ctrl, controller))
                     .unwrap_or(false),
                 Target::Player(p) => !self.same_team(*p, controller),
             },
             R::OwnedByYou => match target {
-                Target::Permanent(cid) => {
-                    self.battlefield_find(*cid).map(|c| c.owner == controller).unwrap_or(false)
-                }
+                Target::Permanent(cid) => self
+                    .battlefield_find(*cid)
+                    .map(|c| c.owner)
+                    .or_else(|| self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, .. } if card.id == *cid => Some(card.owner),
+                        _ => None,
+                    }))
+                    .map(|owner| owner == controller)
+                    .unwrap_or(false),
                 Target::Player(_) => false,
             },
             R::DealtDamageToControllerThisTurn => match target {
@@ -2027,6 +2051,10 @@ impl GameState {
                     .count()
                     >= *n as usize
             }
+            R::SharesNameWithControllerGraveyardCard => self.players[controller]
+                .graveyard
+                .iter()
+                .any(|c| c.id != card.id && c.definition.name == card.definition.name),
             R::ControllerDrewAtLeastThisTurn(n) => {
                 self.players[controller].cards_drawn_this_turn >= *n
             }

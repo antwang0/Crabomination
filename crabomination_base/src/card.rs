@@ -1469,6 +1469,11 @@ pub enum SelectionRequirement {
     /// long as there are eight or more permanent cards in your graveyard"
     /// (Watertight Gondola), and as a generic gate for Descend payoffs.
     ControllerDescend(u32),
+    /// True when the candidate shares its name with a card in its controller's
+    /// graveyard ("a spell that has the same name as a card in your graveyard"
+    /// — Pyromancer Ascension). The candidate itself (typically a spell on the
+    /// stack, not yet in the graveyard) is not counted.
+    SharesNameWithControllerGraveyardCard,
     /// True when the candidate's controller has drawn N or more cards this turn
     /// (CR 121 — `Player.cards_drawn_this_turn`). Used as the `condition` of a
     /// `SelfHasKeywordWhile` for "as long as you've drawn two or more cards this

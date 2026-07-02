@@ -2529,6 +2529,11 @@ pub enum Effect {
     /// (the picks are already random). Hidden-information mechanic from
     /// Tarkir: Dragonstorm (Roost Seek, Nesting Instinct, Divining Dive).
     Seek { who: PlayerRef, filter: SelectionRequirement, count: Value, to: ZoneDest },
+    /// Return `count` cards matching `filter` at random from `who`'s graveyard
+    /// to their hand ("return a[n] [filter] card at random from your graveyard
+    /// to your hand" — Charmbreaker Devils). No player choice; stops early if
+    /// the graveyard runs out of matches.
+    ReturnRandomFromGraveyard { who: PlayerRef, filter: SelectionRequirement, count: Value },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s hand and graveyard into their library (Day's

@@ -413,6 +413,9 @@ impl Effect {
             Effect::Seek { who, to, count, .. } => {
                 player_has_target(who) || zonedest_has_target(to) || value_has_target(count)
             }
+            Effect::ReturnRandomFromGraveyard { who, count, .. } => {
+                player_has_target(who) || value_has_target(count)
+            }
             Effect::ShuffleGraveyardIntoLibrary { who }
             | Effect::ShuffleHandAndGraveyardIntoLibrary { who } => player_has_target(who),
             Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),

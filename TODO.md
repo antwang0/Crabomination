@@ -8,6 +8,35 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — experience + Izzet legends (`decks::experience`, `decks::recent91`)
+
+Shipped: the experience-counter framework (`Player.experience`,
+`Effect::AddExperience`, `Value::ControllerExperience`,
+`StaticEffect::CostReductionPerControllerExperience`,
+`DynamicPt::ControllerExperience`, `PlayerView.experience`) with Mizzix, Ezuri
+Claw of Progress, Daxos, Kalemne. Izzet legends (Kykar, Niv-Mizzet Parun, The
+Locust God, Izzet Guildmage, Veyran, Charmbreaker Devils, Pyromancer Ascension)
+on `Effect::ReturnRandomFromGraveyard` +
+`SelectionRequirement::SharesNameWithControllerGraveyardCard`. Engine
+improvement: `evaluate_requirement_static` now resolves stack-spell targets for
+control/ownership filters, so an **activated** "copy target spell you control"
+ability validates its target (Izzet Guildmage).
+
+Still deferred / noticed:
+- **Melek, Izzet Paragon** — needs a "cast from library" provenance so the
+  copy trigger fires only for top-of-library I/S casts (top-reveal +
+  cast-from-top statics already exist).
+- **Thousand-Year Storm** — "copy for each other I/S cast before it this turn"
+  wants a `Value` counting I/S casts this turn (only all-spell `StormCount`
+  exists).
+- **Veyran / Mizzix runaway gate / Daxos live token** — Veyran's magecraft
+  trigger-doubling half, Mizzix's "mv > experience" gate, and a live-CDA token
+  P/T are all approximated (see the card docs).
+- **Niv-Mizzet, Parun uncounterable** — no card-level "this spell can't be
+  countered" flag yet (only mana-provenance / turn-scoped grants).
+- **Meren of Clan Nel Toth** — end-step "reanimate if mv ≤ experience, else to
+  hand" wants a targeted graveyard-reanimate with a per-target mv branch.
+
 ## Discovered follow-ups — Izzet spells-matter sweep (`decks::recent90`)
 
 Shipped: 40 cards (the Izzet spells-matter core — Adeliz, Balmor, Bloodwater
@@ -33,9 +62,6 @@ Still deferred / noticed but not tackled:
   with a per-target mv/experience branch (no such effect yet). Mizzix's runaway
   gate ("mv > your experience") is approximated as any I/S cast; Daxos's token
   P/T is a mint-time snapshot rather than a live CDA.
-- **Pyromancer Ascension** — needs a `CastSpellMatches`-style predicate for
-  "the cast spell shares a name with a card in your graveyard" (quest-counter
-  trigger) plus the 2+-counter copy trigger.
 - **Zada, Hedron Grinder / Wort, the Raidmother** — Zada needs
   "copy target spell for each other creature it could target, each copy a
   different target"; Wort needs a "your R/G I/S spells have Conspire" granted
