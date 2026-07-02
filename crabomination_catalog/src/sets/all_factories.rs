@@ -4525,6 +4525,7 @@ static DECKS: &[Factory] = &[
     super::decks::compassionate_healer,
     super::decks::bonehoard,
     super::decks::necropolis_fiend,
+    super::decks::caustic_bronco,
     super::decks::goblin_recruiter,
     super::decks::sea_serpent,
     super::decks::haru_hidden_talent,

@@ -171,7 +171,7 @@ impl Effect {
             // lowest-seat opponent, so no cast-time target is demanded.
             Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,
             Effect::NameCardRevealTop { .. } => false,
-            Effect::RevealTopToHandOpponentsLoseMv => false,
+            Effect::RevealTopToHandLoseMv { .. } => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::ReturnExiledBySourceToBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,

@@ -8,7 +8,7 @@ use crate::card::{
     EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, r, u, x, Color};
@@ -75,6 +75,30 @@ pub fn necropolis_fiend() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Caustic Bronco — {1}{B} 2/2 Snake Horse Mount. Whenever it attacks, reveal
+/// the top card and put it into your hand; you lose life equal to its mana
+/// value if it isn't saddled, otherwise each opponent loses that much. Saddle 3.
+pub fn caustic_bronco() -> CardDefinition {
+    CardDefinition {
+        name: "Caustic Bronco",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Horse, CreatureType::Mount],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Saddle(3)],
+        triggered_abilities: vec![on_attack(Effect::If {
+            cond: Predicate::SourceSaddled,
+            then: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::EachOpponent }),
+            else_: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::You }),
+        })],
         ..Default::default()
     }
 }

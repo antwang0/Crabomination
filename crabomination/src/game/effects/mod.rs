@@ -8446,8 +8446,10 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopToHandOpponentsLoseMv => {
-                // Sorin +1: top card to hand; each opponent loses its MV.
+            Effect::RevealTopToHandLoseMv { who } => {
+                // Top card to hand; `who` loses life equal to its MV (Sorin +1
+                // → each opponent; Caustic Bronco → each opponent when saddled,
+                // else the controller).
                 let p = ctx.controller;
                 if self.players[p].library.is_empty() {
                     return Ok(());
@@ -8461,10 +8463,10 @@ impl GameState {
                 });
                 self.players[p].hand.push(card);
                 if mv > 0 {
-                    for opp in self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx) {
-                        let applied = self.adjust_life_applied(opp, -mv);
+                    for who in self.resolve_players(who, ctx) {
+                        let applied = self.adjust_life_applied(who, -mv);
                         if applied < 0 {
-                            events.push(GameEvent::LifeLost { player: opp, amount: (-applied) as u32 });
+                            events.push(GameEvent::LifeLost { player: who, amount: (-applied) as u32 });
                         }
                     }
                 }

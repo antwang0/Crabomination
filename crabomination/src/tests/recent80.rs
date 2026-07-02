@@ -111,6 +111,51 @@ fn sea_serpent_needs_defender_island_to_attack() {
 }
 
 #[test]
+fn caustic_bronco_unsaddled_hits_you_saddled_hits_opponent() {
+    // Unsaddled: the controller loses life equal to the revealed card's MV.
+    let mut g = two_player_game();
+    let bronco = g.add_card_to_battlefield(0, catalog::caustic_bronco());
+    g.clear_sickness(bronco);
+    g.add_card_to_library(0, catalog::grizzly_bears()); // top card, MV 2
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bronco,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, my_life - 2, "unsaddled: you lose the revealed card's MV");
+    assert_eq!(g.players[1].life, opp_life, "opponent untouched while unsaddled");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "revealed card to hand");
+}
+
+#[test]
+fn caustic_bronco_saddled_hits_opponent() {
+    let mut g = two_player_game();
+    let bronco = g.add_card_to_battlefield(0, catalog::caustic_bronco());
+    g.clear_sickness(bronco);
+    g.battlefield_find_mut(bronco).unwrap().saddled = true;
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bronco,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2, "saddled: each opponent loses the MV");
+    assert_eq!(g.players[0].life, my_life, "you untouched while saddled");
+}
+
+#[test]
 fn goblin_recruiter_stacks_goblins_on_top() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();

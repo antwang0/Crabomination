@@ -2419,9 +2419,11 @@ pub enum Effect {
     /// highest-MV match; a `wants_ui` controller picks (or declines) via
     /// the search decision.
     PutFromHandOrGraveyardOntoBattlefield { filter: crate::card::SelectionRequirement },
-    /// "Reveal the top card of your library and put it into your hand. Each
-    /// opponent loses life equal to its mana value." Sorin, Grim Nemesis +1.
-    RevealTopToHandOpponentsLoseMv,
+    /// "Reveal the top card of your library and put it into your hand. `who`
+    /// loses life equal to its mana value." Sorin, Grim Nemesis +1 (`who:
+    /// EachOpponent`); Caustic Bronco's saddled/unsaddled attack (each opponent
+    /// / you).
+    RevealTopToHandLoseMv { who: PlayerRef },
     /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of target
     /// opponent's library, exile one face down (auto-pick: highest MV) with
     /// a while-exiled cast permission for you, and bottom the rest randomly.
