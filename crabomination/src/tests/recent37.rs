@@ -123,3 +123,48 @@ fn dawn_of_hope_makes_a_soldier() {
     assert!(sol.definition.keywords.contains(&crate::card::Keyword::Lifelink));
     assert!(sol.definition.card_types.contains(&CardType::Creature));
 }
+
+/// Golden Demise wipes everything without the city's blessing, but spares your
+/// creatures once you have it.
+#[test]
+fn golden_demise_spares_your_board_with_city_blessing() {
+    // No blessing: -2/-2 hits all creatures; both 2/2s die.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gd = g.add_card_to_hand(0, catalog::golden_demise());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, gd);
+    assert!(!g.battlefield.iter().any(|c| c.id == mine), "your creature dies without the blessing");
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "their creature dies too");
+
+    // With the blessing: only opponents' creatures take -2/-2.
+    let mut g = two_player_game();
+    g.players[0].city_blessing = true;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gd = g.add_card_to_hand(0, catalog::golden_demise());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, gd);
+    assert!(g.battlefield.iter().any(|c| c.id == mine), "your creature is spared with the blessing");
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "their creature still dies");
+}
+
+/// Yahenni's Expertise wipes the board (-3/-3) and lets you free-cast a spell
+/// with mana value 3 or less from your hand.
+#[test]
+fn yahennis_expertise_wipes_then_free_casts() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 dies to -3/-3
+    let free = g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2 → castable free
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![free])]));
+    let ye = g.add_card_to_hand(0, catalog::yahennis_expertise());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, ye);
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "board wiped by -3/-3");
+    assert!(g.battlefield_find(free).is_some(), "MV≤3 hand card free-cast");
+}

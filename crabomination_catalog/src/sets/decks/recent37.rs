@@ -132,26 +132,46 @@ pub fn mutilate() -> CardDefinition {
     }
 }
 
-/// Golden Demise — {1}{B}{B} Sorcery. All creatures get -2/-2 until end of turn.
-/// (The city's-blessing "opponents only" rider is dropped.)
+/// Golden Demise — {1}{B}{B} Sorcery. Ascend. All creatures get -2/-2 until end
+/// of turn; if you have the city's blessing, only your opponents' creatures do.
 pub fn golden_demise() -> CardDefinition {
     CardDefinition {
         name: "Golden Demise",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: wipe(Value::Const(-2), Value::Const(-2)),
+        effect: Effect::Seq(vec![
+            Effect::Ascend { who: PlayerRef::You },
+            Effect::If {
+                cond: Predicate::HasCityBlessing { who: PlayerRef::You },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(wipe(Value::Const(-2), Value::Const(-2))),
+            },
+        ]),
         ..Default::default()
     }
 }
 
 /// Yahenni's Expertise — {2}{B}{B} Sorcery. All creatures get -3/-3 until end of
-/// turn. (The free-cast rider is dropped.)
+/// turn. You may cast a spell with mana value 3 or less from your hand for free.
 pub fn yahennis_expertise() -> CardDefinition {
     CardDefinition {
         name: "Yahenni's Expertise",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: wipe(Value::Const(-3), Value::Const(-3)),
+        effect: Effect::Seq(vec![
+            wipe(Value::Const(-3), Value::Const(-3)),
+            Effect::CastFromHandWithoutPaying {
+                filter: Some(SelectionRequirement::ManaValueAtMost(3)),
+            },
+        ]),
         ..Default::default()
     }
 }
