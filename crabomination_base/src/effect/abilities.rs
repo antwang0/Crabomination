@@ -149,6 +149,13 @@ pub enum StaticEffect {
         power: i32,
         toughness: i32,
     },
+    /// "Each creature gets +P/+T for each other creature on the battlefield that
+    /// shares a creature type with it" (Coat of Arms, CR 702-adjacent tribal
+    /// anthem). Resolved state-aware in `gather_continuous_effects`: one
+    /// per-creature layer-7 effect scaled by the count of other creatures
+    /// sharing ≥1 creature type (Changeling shares every type). Affects every
+    /// creature on the battlefield, all controllers.
+    PumpPerSharedType { power: i32, toughness: i32 },
     /// Each creature `applies_to` matches gets +`per_power`/+`per_toughness`
     /// for each of *its own* creature types, capped at `max` types (CR 613.7c
     /// layer-7 per-target dynamic pump). Diligent Zookeeper's "+1/+1 for each

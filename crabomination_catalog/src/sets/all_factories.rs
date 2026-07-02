@@ -4576,6 +4576,8 @@ static DECKS: &[Factory] = &[
     super::decks::urzas_incubator,
     super::decks::heralds_horn,
     super::decks::seismic_assault,
+    super::decks::coat_of_arms,
+    super::decks::akromas_memorial,
     super::decks::ghost_ship,
     super::decks::serpent_assassin,
     super::decks::sea_monster,

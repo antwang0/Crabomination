@@ -294,6 +294,10 @@ mod tests_recent85;
 #[cfg(test)]
 #[path = "../tests/recent86.rs"]
 mod tests_recent86;
+
+#[cfg(test)]
+#[path = "../tests/recent87.rs"]
+mod tests_recent87;
 #[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
@@ -4561,6 +4565,57 @@ impl GameState {
                             others * toughness,
                         ),
                     });
+                }
+            }
+        }
+        // Coat of Arms — each creature gets +P/+T for each OTHER creature that
+        // shares ≥1 creature type with it (Changeling shares all types). The
+        // bonus is per-creature (shared-type count differs per subject), so it's
+        // gathered state-aware like Sliver Legion above.
+        {
+            use crate::card::Keyword;
+            let creatures: Vec<(CardId, &Vec<crate::card::CreatureType>, bool)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.is_creature())
+                .map(|c| {
+                    (c.id, &c.definition.subtypes.creature_types,
+                     c.definition.keywords.contains(&Keyword::Changeling))
+                })
+                .collect();
+            for src in &self.battlefield {
+                for sa in &src.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpPerSharedType { power, toughness } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    for (id, types, changeling) in &creatures {
+                        let shared = creatures
+                            .iter()
+                            .filter(|(oid, otypes, ochange)| {
+                                oid != id
+                                    && (*changeling
+                                        || *ochange
+                                        || otypes.iter().any(|t| types.contains(t)))
+                            })
+                            .count() as i32;
+                        if shared == 0 {
+                            continue;
+                        }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: src.object_timestamp(),
+                            source: src.id,
+                            affected: AffectedPermanents::Specific(vec![*id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(
+                                shared * power,
+                                shared * toughness,
+                            ),
+                        });
+                    }
                 }
             }
         }
@@ -11283,6 +11338,9 @@ fn static_effect_to_effects(
             // PumpPTPerOtherOfType — needs the live type count; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpPTPerOtherOfType { .. }
+            // PumpPerSharedType (Coat of Arms) — per-creature shared-type count;
+            // resolved in `gather_continuous_effects`.
+            | StaticEffect::PumpPerSharedType { .. }
             // SelfIsCreatureWhileCountersAtLeast — live counter check; resolved
             // in `gather_continuous_effects`.
             | StaticEffect::SelfIsCreatureWhileCountersAtLeast { .. }
