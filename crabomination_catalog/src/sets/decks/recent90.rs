@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, deal, draw, etb, on_dies, target_any, you};
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, u, x, Color};
+use crate::mana::{b, cost, g, generic, r, u, x, Color};
 
 /// Trigger on "whenever you cast an instant or sorcery spell you control."
 fn on_cast_is(effect: Effect) -> TriggeredAbility {
@@ -902,6 +902,141 @@ pub fn dwarven_trader() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf], ..Default::default() },
         power: 1,
         toughness: 1,
+        ..Default::default()
+    }
+}
+
+
+/// Peel from Reality — {1}{U} Instant. Return target creature you control and
+/// target creature you don't control to their owners' hands.
+pub fn peel_from_reality() -> CardDefinition {
+    let bounce = |slot: u8, filter: R| Effect::Move {
+        what: Selector::TargetFiltered { slot, filter },
+        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(slot)))),
+    };
+    CardDefinition {
+        name: "Peel from Reality",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            bounce(0, R::Creature.and(R::ControlledByYou)),
+            bounce(1, R::Creature.and(R::ControlledByOpponent)),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Consume Spirit — {X}{1}{B} Sorcery. Deals X damage to any target and you
+/// gain X life.
+pub fn consume_spirit() -> CardDefinition {
+    CardDefinition {
+        name: "Consume Spirit",
+        cost: cost(&[x(), generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+            Effect::GainLife { who: you(), amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Vessel of Nascency — {G} Enchantment. {1}{G}, Sacrifice this: look at the
+/// top four cards of your library, put one into your hand, the rest into your
+/// graveyard.
+pub fn vessel_of_nascency() -> CardDefinition {
+    CardDefinition {
+        name: "Vessel of Nascency",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            sac_cost: true,
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: Some(Value::Const(1)),
+                to_battlefield: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skywinder Drake — {2}{U} 3/1 Drake, flying; can block only creatures with
+/// flying.
+pub fn skywinder_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Skywinder Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        ..Default::default()
+    }
+}
+
+/// Ridgetop Raptor — {3}{R} 2/1 Dinosaur Beast with double strike.
+pub fn ridgetop_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Ridgetop Raptor",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        ..Default::default()
+    }
+}
+
+
+/// Warden of Evos Isle — {2}{U} 2/2 Bird Wizard, flying. Creature spells with
+/// flying you cast cost {1} less.
+pub fn warden_of_evos_isle() -> CardDefinition {
+    CardDefinition {
+        name: "Warden of Evos Isle",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Creature spells with flying you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: R::Creature.and(R::HasKeyword(Keyword::Flying)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cloud Pirates — {U} 1/1 Human Pirate, flying; can block only flyers.
+pub fn cloud_pirates() -> CardDefinition {
+    CardDefinition {
+        name: "Cloud Pirates",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         ..Default::default()
     }
 }

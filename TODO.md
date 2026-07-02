@@ -10,12 +10,17 @@ state-corrupting in ordinary play.
 
 ## Discovered follow-ups — Izzet spells-matter sweep (`decks::recent90`)
 
-Shipped: 22 cards (Adeliz, Balmor, Bloodwater Entity, Improbable Alliance,
-Runaway Steam-Kin, Harmonic Prodigy, Spellheart Chimera, Roil Eruption,
-Dualcaster Mage, Naru Meha, Docent of Perfection, Beacon Bolt, Archaeomancer,
-Magmatic Insight, Niv-Mizzet the Firemind, Cloud Sprite, Cinder Elemental,
-Living Lightning, Needle Drop, Rise from the Tides, Storm Fleet Aerialist,
-Chandra's Spitfire). New primitives: `DoubleControllerTriggersOfType`,
+Shipped: 40 cards (the Izzet spells-matter core — Adeliz, Balmor, Bloodwater
+Entity, Improbable Alliance, Runaway Steam-Kin, Harmonic Prodigy, Spellheart
+Chimera, Roil Eruption, Dualcaster Mage, Naru Meha, Docent of Perfection,
+Beacon Bolt, Archaeomancer, Magmatic Insight, Niv-Mizzet the Firemind, Cinder
+Pyromancer, Mystic Retrieval, Deprive, Cerebral Vortex, Chandra's Spitfire —
+plus classic-frame filler: Cloud Sprite/Cloud Pirates/Skywinder Drake,
+Cinder Elemental, Living Lightning, Needle Drop, Rise from the Tides, Storm
+Fleet Aerialist, Flamewave Invoker, Goblin Taskmaster, Fireslinger, Orcish
+Cannoneers, Jackal Pup, Rummaging Goblin, Dwarven Trader, Peel from Reality,
+Consume Spirit, Vessel of Nascency, Ridgetop Raptor, Warden of Evos Isle).
+New primitives: `DoubleControllerTriggersOfType`,
 `PlayerDealtNoncombatDamage` event + `DamageDealt.combat`,
 `AdditionalCastCost::Discard.filter`; `PermanentView.dealt_damage_this_turn`
 for precise client targeting; server `damage_wins` stat.

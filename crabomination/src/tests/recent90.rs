@@ -517,3 +517,78 @@ fn rummaging_goblin_loots() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded a card");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "drew a card");
 }
+
+#[test]
+fn peel_from_reality_bounces_one_of_each() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::peel_from_reality());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(),
+        "both creatures returned to hand");
+}
+
+#[test]
+fn consume_spirit_drains_for_x() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::consume_spirit());
+    g.players[0].mana_pool.add(Color::Black, 3); // {2}{1}{B} for X=2
+    g.players[0].mana_pool.add_colorless(1);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: Some(2),
+    }).expect("cast X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2, "X=2 damage");
+    assert_eq!(g.players[0].life, l0 + 2, "gain X life");
+}
+
+#[test]
+fn vessel_of_nascency_digs_four_and_fills_graveyard() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::vessel_of_nascency());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let gy_before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: v, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac to dig");
+    drain_stack(&mut g);
+    // Took one of four to hand; the other three (+ the sacrificed Vessel) hit gy.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "kept one");
+    assert!(g.players[0].graveyard.len() >= gy_before + 3, "rest milled");
+}
+
+#[test]
+fn skywinder_drake_and_ridgetop_raptor_have_their_keywords() {
+    let mut g = two_player_game();
+    let d = g.add_card_to_battlefield(0, catalog::skywinder_drake());
+    let r = g.add_card_to_battlefield(0, catalog::ridgetop_raptor());
+    let dk = &g.computed_permanent(d).unwrap().keywords;
+    assert!(dk.contains(&Keyword::Flying) && dk.contains(&Keyword::CanBlockOnlyFlying));
+    assert!(g.computed_permanent(r).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    let p = g.add_card_to_battlefield(0, catalog::cloud_pirates());
+    let pk = &g.computed_permanent(p).unwrap().keywords;
+    assert!(pk.contains(&Keyword::Flying) && pk.contains(&Keyword::CanBlockOnlyFlying));
+}
+
+#[test]
+fn warden_of_evos_isle_discounts_flying_creatures() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::warden_of_evos_isle());
+    // A flying creature (Serra Angel) is discounted {1}; a nonflyer isn't.
+    let angel = crate::card::CardInstance::new(g.next_id(), catalog::serra_angel(), 0);
+    let bears = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &angel, None), 1, "flying creature −1");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bears, None), 0, "nonflyer unaffected");
+}
