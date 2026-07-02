@@ -54,6 +54,7 @@ pub enum CreatureType {
     Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
+    Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
@@ -798,6 +799,10 @@ pub enum Keyword {
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
     CantBlock,
+    /// CR 509.1b — "This creature can't block creatures with power N or
+    /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the
+    /// attacker's *computed* power in `can_block_attacker_computed`.
+    CantBlockPowerAtLeast(u32),
     /// "This creature can't attack." A static restriction on the bearer
     /// (or an Aura/effect grant — Pacifism, Faith's Fetters, Bound in
     /// Silence). Enforced from the *computed* keyword set in

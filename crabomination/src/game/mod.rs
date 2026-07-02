@@ -259,6 +259,9 @@ mod tests_recent74;
 #[path = "../tests/recent75.rs"]
 mod tests_recent75;
 #[cfg(test)]
+#[path = "../tests/recent76.rs"]
+mod tests_recent76;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -11584,6 +11587,13 @@ pub(crate) fn can_block_attacker_computed(
     // or less — a fixed threshold, not relative to the attacker's power.
     if attacker_kws.iter().any(|k| {
         matches!(k, Keyword::CantBeBlockedByPowerAtMost(n) if blocker_computed.power <= *n as i32)
+    }) {
+        return false;
+    }
+    // Ironclaw Orcs (CR 509.1b): this blocker can't block creatures with power
+    // N or greater — a restriction on the blocker keyed off the attacker.
+    if blocker_kws.iter().any(|k| {
+        matches!(k, Keyword::CantBlockPowerAtLeast(n) if attacker_power >= *n as i32)
     }) {
         return false;
     }
