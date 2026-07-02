@@ -22,7 +22,19 @@ improvement: `evaluate_requirement_static` now resolves stack-spell targets for
 control/ownership filters, so an **activated** "copy target spell you control"
 ability validates its target (Izzet Guildmage).
 
+Batch 3–4 (`decks::recent92`, `recent93`): Firemind Vessel, Thousand-Year
+Storm, Swarm Intelligence, Mirari, Niv-Mizzet Dracogenius, Jhoira, Arjun,
+Electrodominance, Galecaster Colossus, Gadwick, Sphinx of Lost Truths, Rielle.
+
 Still deferred / noticed:
+- **Rielle's** first-discard-each-turn "draw that many" trigger, **Arjun's**
+  hand→library-bottom (modeled as discard), **Firemind Vessel's**
+  different-colors constraint, and **Niv-Mizzet Dracogenius's** damage-to-a-
+  player restriction (fires on any damage) are all approximated.
+- **Ral, Storm Conduit / Saheeli, the Gifted / Jaya Ballard** (planeswalkers),
+  **Sea Gate Stormcaller** (delayed copy-next-spell), **Goblin Dark-Dwellers /
+  Finale of Promise** (free cast-from-graveyard), **Curious Homunculus** (DFC
+  transform on 3+ I/S in gy) remain — each needs a non-trivial primitive.
 - **Melek, Izzet Paragon** — needs a "cast from library" provenance so the
   copy trigger fires only for top-of-library I/S casts (top-reveal +
   cast-from-top statics already exist).
