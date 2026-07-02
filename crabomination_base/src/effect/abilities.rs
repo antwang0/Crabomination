@@ -770,6 +770,9 @@ pub enum StaticEffect {
     /// it (Patchwork Banner). No effect while no type has been chosen.
     /// `opponents: true` instead applies the (typically negative) modifier to
     /// each *opponent's* creatures of the chosen type (Plague Engineer).
+    /// When `per_counter: Some(kind)`, `power`/`toughness` are each multiplied
+    /// by the number of `kind` counters on the source — "+1/+1 for each charge
+    /// counter on this" (Door of Destinies).
     AnthemForChosenType {
         power: i32,
         toughness: i32,
@@ -777,6 +780,8 @@ pub enum StaticEffect {
         exclude_source: bool,
         #[serde(default)]
         opponents: bool,
+        #[serde(default)]
+        per_counter: Option<crate::card::CounterType>,
     },
     /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
     /// Read at cast time by `controller_grants_spells_delve`: a delve-cards

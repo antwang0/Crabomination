@@ -850,6 +850,13 @@ pub enum Predicate {
     /// (`CardInstance.named_card`). Gates "whenever an opponent casts a spell
     /// with the chosen name" triggers — Silverquill Silencer.
     TriggerObjectNameMatchesNamedCard,
+    /// True if the trigger's object (the triggering spell/permanent,
+    /// `trigger_source`) has a creature type matching the effect source's
+    /// ETB-chosen `chosen_creature_type` (Changeling satisfies any type).
+    /// Gates chosen-type *event* triggers — "whenever you cast a spell of
+    /// the chosen type" (Vanquisher's Banner) and "whenever a creature of
+    /// the chosen type enters or attacks" (Kindred Discovery).
+    TriggerObjectIsChosenType,
     /// True if any player `who` resolves to attacked with a creature this
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.

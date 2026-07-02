@@ -941,6 +941,23 @@ impl GameState {
                 };
                 matches!((named, cast_name), (Some(n), Some(c)) if n == c)
             }
+            Predicate::TriggerObjectIsChosenType => {
+                let chosen = ctx
+                    .source
+                    .and_then(|cid| self.find_card_anywhere(cid))
+                    .and_then(|c| c.chosen_creature_type);
+                let obj = ctx
+                    .trigger_source
+                    .and_then(|e| e.as_card_id())
+                    .and_then(|id| self.find_card_anywhere(id));
+                match (chosen, obj) {
+                    (Some(ct), Some(card)) => {
+                        card.has_keyword(&crate::card::Keyword::Changeling)
+                            || card.definition.subtypes.creature_types.contains(&ct)
+                    }
+                    _ => false,
+                }
+            }
             Predicate::PlayerAttackedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

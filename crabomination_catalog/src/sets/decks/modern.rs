@@ -7183,7 +7183,7 @@ pub fn portable_hole() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(
                 SelectionRequirement::ControlledByOpponent
-                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land)))
+                    .and(SelectionRequirement::Nonland)
                     .and(SelectionRequirement::ManaValueAtMost(2)),
             ),
             return_to: ExileReturnZone::Battlefield,
@@ -32969,7 +32969,7 @@ pub fn adaptive_automaton() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control of the chosen type get +1/+1.",
-            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: true, opponents: false },
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: true, opponents: false, per_counter: None },
         }],
         ..Default::default()
     }
@@ -32987,7 +32987,7 @@ pub fn patchwork_banner() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
-            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false, opponents: false },
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false, opponents: false, per_counter: None },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -38395,7 +38395,7 @@ pub fn obelisk_of_urd() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +2/+2.",
-            effect: StaticEffect::AnthemForChosenType { power: 2, toughness: 2, exclude_source: false, opponents: false },
+            effect: StaticEffect::AnthemForChosenType { power: 2, toughness: 2, exclude_source: false, opponents: false, per_counter: None },
         }],
         ..Default::default()
     }
@@ -39238,7 +39238,7 @@ pub fn shared_triumph() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type get +1/+1.",
-            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false, opponents: false },
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false, opponents: false, per_counter: None },
         }],
         ..Default::default()
     }
@@ -39571,7 +39571,7 @@ pub fn leyline_binding() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(
                 SelectionRequirement::Permanent
-                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land)))
+                    .and(SelectionRequirement::Nonland)
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
             return_to: ExileReturnZone::Battlefield,
@@ -57304,7 +57304,7 @@ pub fn ruinous_ultimatum() -> CardDefinition {
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::ControlledByOpponent
-                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land))),
+                    .and(SelectionRequirement::Nonland),
             ),
             body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
         },
@@ -57558,7 +57558,7 @@ pub fn gust_of_wind() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Not(Box::new(SelectionRequirement::Land))
+                    SelectionRequirement::Nonland
                         .and(SelectionRequirement::ControlledByOpponent),
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),

@@ -135,15 +135,21 @@ pub fn vanquishers_banner() -> CardDefinition {
         name: "Vanquisher's Banner",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![
+            etb(Effect::NameCreatureType { what: Selector::This }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(crate::effect::Predicate::TriggerObjectIsChosenType),
+                effect: crate::effect::shortcut::draw(1),
+            },
+        ],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
-                opponents: false,
-            },
+                opponents: false, per_counter: None },
         }],
         ..Default::default()
     }
@@ -164,8 +170,7 @@ pub fn icon_of_ancestry() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
-                opponents: false,
-            },
+                opponents: false, per_counter: None },
         }],
         ..Default::default()
     }

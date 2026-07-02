@@ -1078,19 +1078,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     Curious Obsession / Renewed Faith / Fecundity all use direct effects for this
     reason. A test-friendly "accept clearly-beneficial MayDo" AutoDecider policy
     would let those cards keep the printed "may" without breaking tests.
-  - **No chosen-type *event* predicate.** `StaticEffect::AnthemForChosenType` +
-    `Effect::NameCreatureType` cover chosen-type anthems, but "whenever you cast
-    a spell of the chosen type" (Door of Destinies) and "whenever a creature you
-    control of the chosen type enters/attacks" (Kindred Discovery) need a
-    `Predicate` that matches an event subject against the source's
-    `chosen_creature_type`. Herald's Horn's chosen-type upkeep reveal wants it too.
-- ⏳ **Auto-targeter doesn't see `SelectionRequirement::Not(Land)`.** A
-  `target_filtered(Not(Box::new(Land)).and(ControlledByOpponent))` ETB exile
-  silently fizzles under the bot/auto-target path, while the canonical
-  `SelectionRequirement::Nonland` form is targeted correctly (caught wiring
-  Sheltered by Ghosts). The auto-target candidate scan should treat
-  `Not(Land)` as `Nonland`, or card defs should always prefer `Nonland`. Audit
-  catalogs for `Not(Box::new(SelectionRequirement::Land))` in target filters.
+  - ✅ **Chosen-type *event* predicate** — `Predicate::TriggerObjectIsChosenType`
+    matches an event subject's creature types against the source's
+    `chosen_creature_type` (Changeling satisfies any). Ships Vanquisher's Banner's
+    cast-of-type draw (now faithful), Kindred Discovery (enters/attacks → draw),
+    and Door of Destinies (`AnthemForChosenType.per_counter` counter-scaled
+    anthem + cast-of-type charge counter). Herald's Horn's chosen-type upkeep
+    reveal still wants a top-card-of-chosen-type check.
+- ✅ **Auto-targeter `Not(Land)` normalization.** All catalog target filters
+  using `Not(Box::new(Land))` were rewritten to the canonical
+  `SelectionRequirement::Nonland` (5 sites: modern.rs ×4, tla.rs ×1), so they
+  auto-target correctly under the bot/auto-target path. Prefer `Nonland` in new
+  card defs.
 
 - ⏳ **Flash-loyalty client affordance.** Engine ships `CardDefinition.flash_loyalty`
   (CR 606.3b — The Wandering Emperor activates loyalty at instant speed the turn

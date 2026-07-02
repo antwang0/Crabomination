@@ -4567,6 +4567,8 @@ static DECKS: &[Factory] = &[
     super::decks::overgrown_battlement,
     super::decks::gatecreeper_vine,
     super::decks::blunt_the_assault,
+    super::decks::kindred_discovery,
+    super::decks::door_of_destinies,
     super::decks::ghost_ship,
     super::decks::serpent_assassin,
     super::decks::sea_monster,

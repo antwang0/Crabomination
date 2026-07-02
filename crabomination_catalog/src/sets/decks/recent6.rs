@@ -591,8 +591,7 @@ pub fn plague_engineer() -> CardDefinition {
                 power: -1,
                 toughness: -1,
                 exclude_source: false,
-                opponents: true,
-            },
+                opponents: true, per_counter: None },
         }],
         ..Default::default()
     }

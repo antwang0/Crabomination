@@ -4648,7 +4648,7 @@ pub fn serpent_of_the_pass() -> CardDefinition {
                 description: "This spell costs {1} less to cast for each noncreature, nonland card in your graveyard.",
                 effect: StaticEffect::SelfCostReducedPerGraveyardCardMatching {
                     filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))
-                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land))),
+                        .and(SelectionRequirement::Nonland),
                     per: 1,
                 },
             },

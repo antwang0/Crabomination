@@ -282,6 +282,10 @@ mod tests_recent82;
 #[cfg(test)]
 #[path = "../tests/recent83.rs"]
 mod tests_recent83;
+
+#[cfg(test)]
+#[path = "../tests/recent84.rs"]
+mod tests_recent84;
 #[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
@@ -4867,12 +4871,22 @@ impl GameState {
         // Patchwork Banner.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents } =
+                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents, per_counter } =
                     &sa.effect
                 else {
                     continue;
                 };
                 let Some(ct) = card.chosen_creature_type else { continue };
+                // Per-counter scaling (Door of Destinies): +P/+T for each
+                // counter of `per_counter` on the source. No counters → no pump.
+                let (power, toughness) = match per_counter {
+                    Some(kind) => {
+                        let n = card.counters.get(kind).copied().unwrap_or(0) as i32;
+                        if n == 0 { continue }
+                        (power * n, toughness * n)
+                    }
+                    None => (*power, *toughness),
+                };
                 // Whose creatures the modifier hits: the controller's (the
                 // tribal-anthem default) or each opponent's (Plague Engineer).
                 let seats: Vec<usize> = if *opponents {
@@ -4892,7 +4906,7 @@ impl GameState {
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        modification: Modification::ModifyPowerToughness(power, toughness),
                     });
                 }
             }
