@@ -1698,7 +1698,7 @@ pub fn quarrels_end() -> CardDefinition {
         name: "Quarrel's End",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
         effect: Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: soldier },

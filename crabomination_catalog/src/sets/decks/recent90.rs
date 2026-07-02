@@ -1,16 +1,17 @@
-//! Izzet spells-matter batch: Wizards-tribal payoffs (Adeliz, Jori En, Balmor,
-//! Naru Meha, Docent of Perfection), prowess bodies (Bloodwater Entity,
-//! Harmonic Prodigy), spell-copy (Dualcaster Mage), counter engines (Runaway
-//! Steam-Kin), and a few burn/utility pieces. Tests in `tests/recent90.rs`.
+//! Izzet spells-matter batch: Wizards-tribal payoffs (Adeliz, Balmor, Naru
+//! Meha, Docent of Perfection), prowess bodies (Bloodwater Entity, Harmonic
+//! Prodigy), spell-copy (Dualcaster Mage), counter engines (Runaway Steam-Kin),
+//! I/S-graveyard scalers (Spellheart Chimera, Beacon Bolt, Rise from the
+//! Tides), and burn/utility pieces. Tests in `tests/recent90.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, Effect,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{cast_is_instant_or_sorcery, deal, draw, etb, target_any};
+use crate::effect::shortcut::{cast_is_instant_or_sorcery, deal, draw, etb, on_dies, target_any};
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, u, Color};
+use crate::mana::{cost, generic, r, u, x, Color};
 
 /// Trigger on "whenever you cast an instant or sorcery spell you control."
 fn on_cast_is(effect: Effect) -> TriggeredAbility {
@@ -420,6 +421,220 @@ pub fn beacon_bolt() -> CardDefinition {
                 ])
             },
         },
+        ..Default::default()
+    }
+}
+
+
+/// Archaeomancer — {2}{U}{U} 1/2 Human Wizard. ETB, return target instant or
+/// sorcery card from your graveyard to your hand.
+pub fn archaeomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Archaeomancer",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::InYourGraveyard.and(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                ),
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Magmatic Insight — {R} Sorcery. Additional cost: discard a land card. Draw
+/// two cards.
+pub fn magmatic_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Magmatic Insight",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: Some(R::Land),
+        }],
+        effect: draw(2),
+        ..Default::default()
+    }
+}
+
+/// Niv-Mizzet, the Firemind — {2}{U}{U}{R}{R} 4/4 Legendary Dragon Wizard,
+/// flying. Whenever you draw a card, deal 1 damage to any target. {T}: Draw.
+pub fn niv_mizzet_the_firemind() -> CardDefinition {
+    CardDefinition {
+        name: "Niv-Mizzet, the Firemind",
+        cost: cost(&[generic(2), u(), u(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: deal(1, target_any()),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+
+
+/// Cloud Sprite — {U} 1/1 Faerie with flying that can block only flyers.
+pub fn cloud_sprite() -> CardDefinition {
+    CardDefinition {
+        name: "Cloud Sprite",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        ..Default::default()
+    }
+}
+
+/// Cinder Elemental — {3}{R} 2/2 Elemental. {X}{R}, {T}, Sacrifice this: it
+/// deals X damage to any target.
+pub fn cinder_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Cinder Elemental",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), r()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Living Lightning — {3}{R} 3/2 Elemental Shaman. When it dies, return target
+/// instant or sorcery card from your graveyard to your hand.
+pub fn living_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Living Lightning",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![on_dies(Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::InYourGraveyard.and(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                ),
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Needle Drop — {R} Instant. Deals 1 damage to any target that was dealt
+/// damage this turn. Draw a card.
+pub fn needle_drop() -> CardDefinition {
+    CardDefinition {
+        name: "Needle Drop",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::DealtDamageThisTurn.and(
+                        R::Creature.or(R::Player).or(R::Planeswalker),
+                    ),
+                },
+                amount: Value::Const(1),
+            },
+            draw(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rise from the Tides — {5}{U} Sorcery. Create a tapped 2/2 black Zombie for
+/// each instant and sorcery card in your graveyard.
+pub fn rise_from_the_tides() -> CardDefinition {
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        tapped: true,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rise from the Tides",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::count(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            }),
+            definition: zombie,
+        },
+        ..Default::default()
+    }
+}
+
+/// Storm Fleet Aerialist — {1}{U} 1/2 Human Pirate, flying. Raid — enters with
+/// a +1/+1 counter if you attacked this turn.
+pub fn storm_fleet_aerialist() -> CardDefinition {
+    CardDefinition {
+        name: "Storm Fleet Aerialist",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
         ..Default::default()
     }
 }

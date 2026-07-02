@@ -71,7 +71,7 @@ pub fn seize_the_spoils() -> CardDefinition {
         name: "Seize the Spoils",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
         effect: Effect::Seq(vec![
             draw(2),
             Effect::CreateToken {

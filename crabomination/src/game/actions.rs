@@ -155,7 +155,7 @@ pub(crate) fn flashback_additional_cost_for_name(
         }],
         // Variable additional cost: "Flashback—{R}{R}, Discard X cards"
         // (the flashback cast's chosen X defines the discard count).
-        "Conflagrate" => vec![A::Discard { count: x }],
+        "Conflagrate" => vec![A::Discard { count: x, filter: None }],
         "Dread Return" => vec![A::SacrificePermanent {
             filter: S::Creature.and(S::ControlledByYou),
             count: 3,
@@ -3722,17 +3722,23 @@ impl GameState {
                                 return Ok(vec![]);
                             }
                         }
-                        crate::card::AdditionalCastCost::Discard { count }
+                        crate::card::AdditionalCastCost::Discard { count, filter }
                             if *count >= 1 && self.pending_cast_discards.is_none() =>
                         {
                             // The card being cast is still in hand here but is
                             // moving to the stack — exclude it as a discard
                             // option (you can't discard the spell to pay its
-                            // own cost).
+                            // own cost). A `filter` (Magmatic Insight's "a land
+                            // card") restricts the eligible pitches.
                             let hand: Vec<(CardId, String)> = self.players[p]
                                 .hand
                                 .iter()
                                 .filter(|c| c.id != card_id)
+                                .filter(|c| {
+                                    filter.as_ref().is_none_or(|f| {
+                                        self.evaluate_requirement_on_card(f, c, p)
+                                    })
+                                })
                                 .map(|c| (c.id, c.definition.name.to_string()))
                                 .collect();
                             if hand.len() > *count as usize {
@@ -4466,7 +4472,16 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
-            A::Discard { count } => self.players[p].hand.len() >= *count as usize,
+            A::Discard { count, filter } => {
+                self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| {
+                        filter.as_ref().is_none_or(|f| self.evaluate_requirement_on_card(f, c, p))
+                    })
+                    .count()
+                    >= *count as usize
+            }
             A::ReturnToHand { filter, count } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
@@ -4594,10 +4609,15 @@ impl GameState {
                         events.append(&mut die);
                     }
                 }
-                A::Discard { count } => {
+                A::Discard { count, filter } => {
                     // Honor the player's explicit discard picks when present and
-                    // still in hand; auto-pick the first cards in hand for any
-                    // remainder (bots/tests, or an under-specified answer).
+                    // still in hand; auto-pick the first *matching* cards in hand
+                    // for any remainder (bots/tests, or an under-specified
+                    // answer). A `filter` (Magmatic Insight's "a land card")
+                    // restricts the auto-pick.
+                    let matches = |g: &Self, c: &crate::card::CardInstance| {
+                        filter.as_ref().is_none_or(|f| g.evaluate_requirement_on_card(f, c, p))
+                    };
                     let mut chosen_ids: Vec<CardId> = Vec::new();
                     if let Some(ids) = discard_override.take() {
                         for id in ids {
@@ -4614,7 +4634,7 @@ impl GameState {
                             .players[p]
                             .hand
                             .iter()
-                            .find(|c| !chosen_ids.contains(&c.id))
+                            .find(|c| !chosen_ids.contains(&c.id) && matches(self, c))
                             .map(|c| c.id)
                         else {
                             break;
@@ -5374,7 +5394,7 @@ impl GameState {
         let mut flashback_additional =
             flashback_additional_cost_for_name(card.definition.name, x_value.unwrap_or(0));
         if jumpstart {
-            flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1 });
+            flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1, filter: None });
         }
         if !flashback_additional.is_empty()
             && !self.additional_costs_payable(p, &flashback_additional)

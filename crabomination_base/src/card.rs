@@ -2296,8 +2296,16 @@ pub enum AdditionalCastCost {
         #[serde(default = "one_u32")]
         count: u32,
     },
-    /// "As an additional cost, discard N card(s)."
-    Discard { count: u32 },
+    /// "As an additional cost, discard N card(s)." When `filter` is set, the
+    /// discard is restricted to matching cards ("discard a land card" —
+    /// Magmatic Insight); `None` allows any card (Big Score, Illuminate
+    /// History). The cast is rejected if the hand holds fewer than `count`
+    /// matching cards.
+    Discard {
+        count: u32,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// "As an additional cost to cast this spell, return N permanent(s) you
     /// control matching `filter` to their owner's hand." Devour in Flames
     /// ("return a land you control"). Auto-picker bounces the lowest-impact

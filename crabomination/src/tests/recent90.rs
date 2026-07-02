@@ -170,3 +170,146 @@ fn beacon_bolt_scales_with_instants_in_graveyard_and_exile() {
     let cp = g.battlefield_find(victim).expect("survives 2 damage");
     assert_eq!(cp.damage, 2, "Beacon Bolt deals gy+exile I/S count");
 }
+
+#[test]
+fn archaeomancer_returns_instant_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let arch = g.add_card_to_battlefield(0, catalog::archaeomancer());
+    g.fire_self_etb_triggers(arch, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "bolt returned to hand");
+}
+
+#[test]
+fn magmatic_insight_requires_a_land_pitch_and_draws_two() {
+    let mut g = two_player_game();
+    // A land in hand to pay the additional cost; a nonland must NOT be pitched.
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    let keep = g.add_card_to_hand(0, catalog::lightning_bolt());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::magmatic_insight());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with a land to pitch");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == land), "the land was discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep), "the nonland was kept");
+    // -spell -land +2 draws = net +0 from the starting hand count.
+    assert_eq!(g.players[0].hand.len(), hand_before - 2 + 2, "drew two");
+}
+
+#[test]
+fn magmatic_insight_uncastable_without_a_land() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::lightning_bolt()); // nonland only
+    let id = g.add_card_to_hand(0, catalog::magmatic_insight());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no land to pitch → not castable");
+}
+
+#[test]
+fn niv_mizzet_pings_when_you_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::niv_mizzet_the_firemind());
+    g.add_card_to_library(0, catalog::forest());
+    let life = g.players[1].life;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "drawing pings the opponent for 1");
+}
+
+
+#[test]
+fn cloud_sprite_can_block_only_flyers() {
+    let mut g = two_player_game();
+    let cs = g.add_card_to_battlefield(0, catalog::cloud_sprite());
+    let kw = &g.computed_permanent(cs).unwrap().keywords;
+    assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::CanBlockOnlyFlying));
+}
+
+#[test]
+fn cinder_elemental_sacrifices_for_x_damage() {
+    let mut g = two_player_game();
+    let ce = g.add_card_to_battlefield(0, catalog::cinder_elemental());
+    g.clear_sickness(ce);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ce, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: Some(3),
+    }).expect("activate for X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "X=3 damage to face");
+    assert!(g.battlefield_find(ce).is_none(), "sacrificed as a cost");
+}
+
+#[test]
+fn living_lightning_returns_instant_on_death() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let ll = g.add_card_to_battlefield(0, catalog::living_lightning());
+    g.remove_to_graveyard_with_triggers(ll);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "dying returns an I/S from gy");
+}
+
+#[test]
+fn needle_drop_only_hits_already_damaged_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).unwrap();
+        c.damage = 1;
+        c.dealt_damage_this_turn = true; // legal target for Needle Drop
+    }
+    let hand_before = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::needle_drop());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    for _ in 0..1 { g.add_card_to_library(0, catalog::forest()); }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable at a damaged creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 with 1 marked dies to +1");
+    // hand_before excluded Needle Drop; casting it and drawing 1 nets +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+#[test]
+fn rise_from_the_tides_mints_a_zombie_per_instant_in_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // not I/S — ignored
+    let id = g.add_card_to_hand(0, catalog::rise_from_the_tides());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let zs: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Zombie").collect();
+    assert_eq!(zs.len(), 2, "one tapped Zombie per I/S in gy");
+    assert!(zs.iter().all(|z| z.tapped), "the Zombies enter tapped");
+}
+
+#[test]
+fn storm_fleet_aerialist_raid_counter() {
+    // Enters with a +1/+1 counter only after you've attacked this turn.
+    let mut g = two_player_game();
+    g.players[0].attacked_this_turn = true;
+    let a = g.add_card_to_battlefield(0, catalog::storm_fleet_aerialist());
+    g.fire_self_etb_triggers(a, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "Raid → enters 2/3");
+}

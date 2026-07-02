@@ -474,7 +474,7 @@ pub fn souls_of_the_lost() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
         dynamic_pt: Some(DynamicPt::PermanentCardsInControllerGraveyard { base_p: 0, base_t: 1 }),
         ..Default::default()
     }
@@ -615,7 +615,7 @@ pub fn bitter_triumph() -> CardDefinition {
         name: "Bitter Triumph",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),

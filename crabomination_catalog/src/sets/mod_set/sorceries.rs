@@ -325,7 +325,7 @@ pub fn big_score() -> CardDefinition {
         name: "Big Score",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1, filter: None }],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,

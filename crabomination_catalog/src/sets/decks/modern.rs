@@ -58356,7 +58356,7 @@ pub fn honor_the_god_pharaoh() -> CardDefinition {
         name: "Honor the God-Pharaoh",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
         effect: Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             amass_zombies(1),
@@ -60233,7 +60233,7 @@ pub fn unexpected_windfall() -> CardDefinition {
         name: "Unexpected Windfall",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Instant],
-        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1 }],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1, filter: None }],
         effect: Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::CreateToken {
