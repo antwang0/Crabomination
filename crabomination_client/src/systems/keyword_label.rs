@@ -82,6 +82,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Prowess => "Prw",
         // Combat-relevant statuses worth a glance on the board.
         CantBlock => "NoBlk",
+        // Ironclaw Orcs — can't block creatures with power N or greater.
+        CantBlockPowerAtLeast(_) => "NoBlk≥",
         // "Can't attack" (Pacifism / Cage of Hands) and the conditional
         // Goblin-Cohort lock both read at a glance on the board.
         CantAttack => "NoAtk",

@@ -232,7 +232,15 @@ pub(crate) fn parse_usize_min(raw: Option<&str>, key: &str, default: usize, min:
 /// `DEFAULT_PAIRING_TIMEOUT` for missing, empty, non-numeric, or zero values
 /// (zero would mean "drop seat 0 instantly", almost certainly a misconfig).
 pub(crate) fn pairing_timeout_from_env() -> Duration {
-    match env::var("CRAB_PAIRING_TIMEOUT_SECS").ok().as_deref() {
+    parse_pairing_timeout(env::var("CRAB_PAIRING_TIMEOUT_SECS").ok().as_deref())
+}
+
+/// Pure core of [`pairing_timeout_from_env`]: trims, parses, zero-guards, and
+/// clamps to [`MAX_PAIRING_TIMEOUT`]. Split out (like `parse_usize_or` /
+/// `Format::parse`) so the whole ladder — default / zero / clamp / garbage — is
+/// unit-testable without touching the process environment.
+pub(crate) fn parse_pairing_timeout(raw: Option<&str>) -> Duration {
+    match raw.map(str::trim) {
         None | Some("") => DEFAULT_PAIRING_TIMEOUT,
         Some(s) => match s.parse::<u64>() {
             Ok(0) => {
@@ -242,18 +250,7 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
                 );
                 DEFAULT_PAIRING_TIMEOUT
             }
-            Ok(n) => {
-                let want = Duration::from_secs(n);
-                if want > MAX_PAIRING_TIMEOUT {
-                    eprintln!(
-                        "warning: CRAB_PAIRING_TIMEOUT_SECS={n} exceeds the {}s cap — clamping",
-                        MAX_PAIRING_TIMEOUT.as_secs(),
-                    );
-                    MAX_PAIRING_TIMEOUT
-                } else {
-                    want
-                }
-            }
+            Ok(n) => Duration::from_secs(n).min(MAX_PAIRING_TIMEOUT),
             Err(_) => {
                 eprintln!(
                     "warning: CRAB_PAIRING_TIMEOUT_SECS={s:?} not a non-negative integer — \
@@ -269,7 +266,20 @@ pub(crate) fn pairing_timeout_from_env() -> Duration {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_usize_min, parse_usize_or, Format};
+    use super::{
+        parse_pairing_timeout, parse_usize_min, parse_usize_or, Format, DEFAULT_PAIRING_TIMEOUT,
+        MAX_PAIRING_TIMEOUT,
+    };
+
+    #[test]
+    fn parse_pairing_timeout_covers_the_ladder() {
+        assert_eq!(parse_pairing_timeout(None), DEFAULT_PAIRING_TIMEOUT, "unset → default");
+        assert_eq!(parse_pairing_timeout(Some("")), DEFAULT_PAIRING_TIMEOUT, "empty → default");
+        assert_eq!(parse_pairing_timeout(Some("  90 ")).as_secs(), 90, "trimmed & parsed");
+        assert_eq!(parse_pairing_timeout(Some("0")), DEFAULT_PAIRING_TIMEOUT, "zero → default");
+        assert_eq!(parse_pairing_timeout(Some("nope")), DEFAULT_PAIRING_TIMEOUT, "garbage → default");
+        assert_eq!(parse_pairing_timeout(Some("999999999")), MAX_PAIRING_TIMEOUT, "clamped to cap");
+    }
 
     #[test]
     fn parse_usize_min_rejects_below_floor() {
