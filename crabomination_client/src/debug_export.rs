@@ -258,6 +258,7 @@ mod tests {
             morphable_hand: vec![],
             turn_up_able: vec![],
             reinforceable_hand: vec![],
+            discard_activatable_hand: vec![],
             legal_attackers: vec![],
             legal_blockers: vec![],
         }

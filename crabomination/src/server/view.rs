@@ -141,6 +141,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         morphable_hand: affordances.morphable,
         turn_up_able: affordances.turn_up_able,
         reinforceable_hand: affordances.reinforceable,
+        discard_activatable_hand: affordances.discard_activatable,
         room_castable_hand: affordances.room_castable,
         room_unlockable: affordances.room_unlockable,
         legal_attackers: viewer.map(|s| state.legal_attackers(s)).unwrap_or_default(),

@@ -566,6 +566,10 @@ pub struct HandAffordances {
     /// right now (a legal creature target exists), so the client can offer the
     /// from-hand Reinforce activation.
     pub reinforceable: Vec<CardId>,
+    /// Hand cards with a `discard_activated` ability whose cost is payable
+    /// right now (Magma Opus), so the client can offer the from-hand
+    /// "discard: …" activation.
+    pub discard_activatable: Vec<CardId>,
     /// CR 709.5 — Room hand cards whose left/right door is castable right
     /// now (`(card, door)` — door 0 = left, 1 = right).
     pub room_castable: Vec<(CardId, u8)>,
@@ -6539,6 +6543,9 @@ impl GameState {
             GameAction::SubmitDecision(_) => unreachable!(),
             GameAction::Cycle { card_id, x_value } => self.cycle_card(card_id, x_value),
             GameAction::Reinforce { card_id, target } => self.reinforce_card(card_id, target),
+            GameAction::ActivateDiscardAbility { card_id } => {
+                self.activate_discard_ability(card_id)
+            }
             GameAction::Landcycle { card_id } => self.landcycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
             GameAction::Reconfigure { equipment, target } => {
@@ -6819,6 +6826,31 @@ impl GameState {
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tid) {
             c.add_counters(CounterType::PlusOnePlusOne, n);
         }
+        Ok(events)
+    }
+
+    /// Activate a card's `discard_activated` ability from the hand: pay the
+    /// cost, discard the card, then resolve its (targetless) effect.
+    fn activate_discard_ability(
+        &mut self,
+        card_id: crate::card::CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let seat = self.player_with_priority();
+        let (cost, effect) = self.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| {
+                c.definition
+                    .discard_activated
+                    .as_ref()
+                    .map(|d| (d.cost.clone(), d.effect.clone()))
+            })
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+        let mut events = vec![];
+        self.discard_card(seat, card_id, &mut events);
+        events.extend(self.continue_ability_resolution(card_id, seat, effect, None)?);
         Ok(events)
     }
 

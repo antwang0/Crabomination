@@ -687,6 +687,7 @@ impl Effect {
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
             Effect::SacrificePermanent { what } => sel_has_target(what),
+            Effect::ExileLastCreatedTokensAtNextEndStep => false,
         }
     }
 

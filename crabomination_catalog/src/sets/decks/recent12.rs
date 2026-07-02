@@ -200,8 +200,7 @@ pub fn goblin_gaveleer() -> CardDefinition {
 
 /// Valduk, Keeper of the Flame — {2}{R} Legendary Human Shaman 3/2. At combat on
 /// your turn, for each Aura and Equipment attached to Valduk, create a 3/1 red
-/// Elemental with trample and haste. (Printed "exile those tokens at the next
-/// end step" is dropped — the tokens persist.)
+/// Elemental with trample and haste, then exile those tokens at the next end step.
 pub fn valduk_keeper_of_the_flame() -> CardDefinition {
     use crate::game::types::TurnStep;
     let elemental = TokenDefinition {
@@ -230,15 +229,18 @@ pub fn valduk_keeper_of_the_flame() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::BeginCombat),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::CountMatching {
-                    sel: Box::new(Selector::AttachedToMe(Box::new(Selector::This))),
-                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
-                        .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::CountMatching {
+                        sel: Box::new(Selector::AttachedToMe(Box::new(Selector::This))),
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                    },
+                    definition: elemental,
                 },
-                definition: elemental,
-            },
+                Effect::ExileLastCreatedTokensAtNextEndStep,
+            ]),
         }],
         ..Default::default()
     }

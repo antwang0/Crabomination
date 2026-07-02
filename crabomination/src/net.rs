@@ -436,6 +436,10 @@ pub struct ClientView {
     /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub reinforceable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with a `discard_activated` ability that
+    /// can be activated right now (cost payable). Empty off-priority.
+    #[serde(default)]
+    pub discard_activatable_hand: Vec<CardId>,
     /// Creatures the viewer controls that may be declared as attackers right
     /// now (only during the viewer's Declare Attackers step). Drives the
     /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`

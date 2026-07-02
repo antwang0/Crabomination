@@ -1119,6 +1119,7 @@ impl GameState {
             morphable: self.morphable_hand_cards_on(&template, seat),
             turn_up_able: self.turn_up_able_permanents_on(&template, seat),
             reinforceable: self.reinforceable_hand_cards_on(&template, seat),
+            discard_activatable: self.discard_activatable_hand_cards_on(&template, seat),
             room_castable: self.room_castable_on(&template, seat),
             room_unlockable: self.room_unlockable_on(&template, seat),
             prepare_castable: self.prepare_castable_on(&template, seat),
@@ -1241,6 +1242,20 @@ impl GameState {
                         target: crate::game::types::Target::Permanent(tid),
                     },
                 )
+            })
+            .collect()
+    }
+
+    /// Hand cards `seat` could activate a `discard_activated` ability on right
+    /// now (the cost is payable). Surfaced in `PlayerView.discard_activatable_hand`.
+    fn discard_activatable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| c.definition.discard_activated.is_some())
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(template, GameAction::ActivateDiscardAbility { card_id: id })
             })
             .collect()
     }

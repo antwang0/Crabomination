@@ -1403,11 +1403,12 @@ pub fn expressive_iteration() -> CardDefinition {
 /// divided (`DealDamageDivided`) among up to four creatures/planeswalkers,
 /// tap, a 4/4 Elemental token, and draw 2. The tap rider strict-upgrades
 /// from "up to two creatures" to "all opponent creatures" (favors the
-/// caster; matters only with 3+ opp creatures). The {U/R}{U/R}-and-
-/// discard-self → Treasure alt mode is a doc-tracked engine-wide gap
-/// (no discard-as-activation-cost primitive yet). Tracked in TODO.md.
+/// caster; matters only with 3+ opp creatures). The {U/R}{U/R}, Discard
+/// Magma Opus → Treasure alt mode ships via `discard_activated`.
 pub fn magma_opus() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
     let elemental = crate::catalog::sets::sos::elemental_token();
+    let ur = || hybrid(Color::Blue, Color::Red);
     CardDefinition {
         name: "Magma Opus",
         cost: cost(&[generic(6), u(), r()]),
@@ -1434,6 +1435,14 @@ pub fn magma_opus() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        discard_activated: Some(Box::new(crate::card::DiscardActivated {
+            cost: cost(&[ur(), ur()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+        })),
         ..Default::default()
     }
 }

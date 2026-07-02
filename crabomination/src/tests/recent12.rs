@@ -301,4 +301,11 @@ fn valduk_makes_token_per_attachment() {
     let elems = g.battlefield.iter()
         .filter(|c| c.controller == 0 && c.definition.name == "Elemental").count();
     assert_eq!(elems, 1, "one Elemental per attached Equipment");
+    // The transient token is exiled at the next end step.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let elems = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Elemental").count();
+    assert_eq!(elems, 0, "Elemental exiled at the next end step");
 }

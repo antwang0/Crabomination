@@ -588,6 +588,9 @@ pub enum GameAction {
     /// must carry a `Keyword::Reinforce(n, cost)`. Pays the cost, discards the
     /// card, then puts N +1/+1 counters on `target`.
     Reinforce { card_id: CardId, target: Target },
+    /// Activate a card's `discard_activated` ability from your hand: pay the
+    /// cost, discard the card, then resolve its targetless effect (Magma Opus).
+    ActivateDiscardAbility { card_id: CardId },
     /// CR 702.29e — Activate a card's Landcycling ability from your hand.
     /// `card_id` must carry a `Keyword::Landcycling(cost, type)`. Pays the
     /// cost, discards the card, then searches the library for a land of the

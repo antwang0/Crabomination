@@ -7973,6 +7973,7 @@ impl GameState {
             | A::Cycle { .. }
             | A::Landcycle { .. }
             | A::Reinforce { .. }
+            | A::ActivateDiscardAbility { .. }
             | A::Equip { .. }
             | A::Reconfigure { .. }
             | A::Crew { .. }

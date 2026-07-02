@@ -1053,17 +1053,13 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **Noticed this run (recent80 primitive batch):**
-  - **Valduk, Keeper of the Flame** still leaves its Elemental tokens in play —
-    wants a "create token(s), then exile them at the next end step" delayed
-    trigger (also helps other transient-token makers).
   - **Champion** (`Effect::Champion`) auto-picks the lowest-power creature to
     exile; the printed "you may instead sacrifice this" decline + a `wants_ui`
     picker is a follow-up.
   - **Run Away Together** stays "any two creatures" — a `distinct_controllers`
     flag on `Effect::ApplyToTargets` (enforced at cast-time targeting) would make
-    it and similar "different players" spells faithful.
-  - **Magma Opus** alt mode ("{U/R}{U/R}, Discard this from hand: make a
-    Treasure") — wants a from-hand activated ability with a discard-self cost.
+    it and similar "different players" spells faithful. (Deferred: the flag would
+    have to be threaded through all 84 `ApplyToTargets` construction sites.)
   - **Goblin Recruiter** "any number" is capped at 10 via `SearchUpToN`; a true
     unbounded search-to-top would need an "any number" search count.
 - ⏳ **Auto-targeter doesn't see `SelectionRequirement::Not(Land)`.** A

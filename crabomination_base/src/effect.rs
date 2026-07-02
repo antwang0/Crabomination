@@ -2967,6 +2967,11 @@ pub enum Effect {
     GainControlWhileSourceRemains { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// Register a `DelayedKind::NextEndStep` exile for every token minted
+    /// earlier in this resolution (reads `last_created_tokens`). Chain after
+    /// a `CreateToken` inside a `Seq` for "create N transient tokens, exile
+    /// them at the next end step" (Valduk, Keeper of the Flame).
+    ExileLastCreatedTokensAtNextEndStep,
     /// Incubate N (CR 701.53): create an Incubator double-faced token under
     /// `who`'s control with `amount` +1/+1 counters on it.
     Incubate { who: PlayerRef, amount: Value },

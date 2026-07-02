@@ -2027,6 +2027,10 @@ pub struct CardDefinition {
     /// abilities and types. Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub prototype: Option<Box<Prototype>>,
+    /// A "[cost], Discard this card: [effect]" from-hand activated ability
+    /// (`GameAction::ActivateDiscardAbility`). Magma Opus's Treasure mode.
+    #[serde(default)]
+    pub discard_activated: Option<Box<DiscardActivated>>,
     /// CR 702.140 — Mutate. `Some(cost)` lets this non-Human creature spell
     /// be cast for its mutate cost (`GameAction::CastMutate`), merging with a
     /// target non-Human creature you own instead of entering on its own.
@@ -2155,6 +2159,16 @@ impl Adventure {
     pub fn is_instant_speed(&self) -> bool {
         self.card_types.contains(&CardType::Instant)
     }
+}
+
+/// A "[cost], Discard this card: [effect]" ability usable from the hand at
+/// instant speed (Magma Opus's {U/R}{U/R} Treasure mode). The effect resolves
+/// as a targetless activated ability with the card as its source.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct DiscardActivated {
+    pub cost: ManaCost,
+    pub effect: crate::effect::Effect,
 }
 
 /// CR 702.165 — Gift. The printed spell's base resolution lives in the parent

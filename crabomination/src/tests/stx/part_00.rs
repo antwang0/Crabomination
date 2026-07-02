@@ -3420,6 +3420,21 @@ fn magma_opus_etb_deals_four_taps_creates_elemental_draws_two() {
 }
 
 #[test]
+fn magma_opus_discard_mode_makes_a_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::magma_opus());
+    // {U/R}{U/R} paid with two blue.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    assert!(g.would_accept(GameAction::ActivateDiscardAbility { card_id: id }),
+        "discard-Treasure mode is offered while affordable");
+    g.perform_action(GameAction::ActivateDiscardAbility { card_id: id })
+        .expect("discard Magma Opus for a Treasure");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Magma Opus discarded");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.name == "Treasure"), "Treasure token minted");
+}
+
+#[test]
 fn reckless_amplimancer_doubles_power_and_toughness() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::reckless_amplimancer());
