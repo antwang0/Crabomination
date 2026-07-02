@@ -168,6 +168,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Soulbond => "Bond",
         // Spell-count evasion (Illvoi Infiltrator) — reads as evasion.
         CantBeBlockedIfControllerCastSpells(_) => "Eva",
+        // "Can attack only if the defending player controls a [permanent]"
+        // (Sea Serpent, Dandân) — a conditional attacker worth flagging so the
+        // player sees why it can't always be declared.
+        CanAttackOnlyIfDefenderControls(_) => "Atk?",
         _ => return None,
     })
 }
@@ -405,5 +409,16 @@ mod tests {
     fn strip_surfaces_must_attack_and_crew() {
         assert_eq!(keyword_strip(&[Keyword::MustAttack]), "Atk!");
         assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
+    }
+
+    #[test]
+    fn strip_surfaces_conditional_attacker() {
+        use crabomination::card::SelectionRequirement;
+        assert_eq!(
+            keyword_strip(&[Keyword::CanAttackOnlyIfDefenderControls(Box::new(
+                SelectionRequirement::HasLandType(crabomination::card::LandType::Island)
+            ))]),
+            "Atk?"
+        );
     }
 }

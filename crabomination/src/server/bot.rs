@@ -2845,10 +2845,13 @@ fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
         if !mount.can_attack() {
             continue;
         }
-        // Candidate saddlers: the bot's other untapped creatures that can't
-        // attack profitably themselves are tapped first — sort smallest power
-        // first (the crew-power rider counts, CR 702.171).
-        let mut riders: Vec<(CardId, u32)> = state
+        // Candidate saddlers: the bot's other untapped creatures. Tap the ones
+        // that can't attack this turn (summoning-sick / Defender) *first* — they
+        // are "free" since they'd sit idle anyway — then fall back to would-be
+        // attackers, smallest power first (the crew-power rider counts, CR
+        // 702.171). Track how much *attacker* power we spend so the overspend
+        // guard below doesn't fault free saddlers.
+        let mut riders: Vec<(CardId, u32, bool)> = state
             .battlefield
             .iter()
             .filter(|c| {
@@ -2857,23 +2860,31 @@ fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
                     && c.definition.is_creature()
                     && !c.tapped
             })
-            .map(|c| (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32))
+            .map(|c| {
+                (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32, c.can_attack())
+            })
             .collect();
-        riders.sort_by_key(|&(_, p)| p);
+        // (can-attack ascending, then power ascending): free saddlers first.
+        riders.sort_by_key(|&(_, p, can_attack)| (can_attack, p));
         let mut picked = Vec::new();
         let mut total = 0u32;
-        for (id, p) in &riders {
+        let mut attacker_power = 0u32;
+        for (id, p, can_attack) in &riders {
             if total >= saddle_n {
                 break;
             }
             picked.push(*id);
             total += p;
+            if *can_attack {
+                attacker_power += p;
+            }
         }
         if total < saddle_n {
             continue;
         }
-        // Don't tap more board power than the Mount is worth.
-        if total > mount.power().max(0) as u32 {
+        // Don't tap real attackers worth more board power than the Mount is
+        // worth. Idle (can't-attack) saddlers are free and don't count.
+        if attacker_power > mount.power().max(0) as u32 {
             continue;
         }
         let action = GameAction::Saddle { mount: mount.id, creatures: picked };
@@ -4388,6 +4399,34 @@ mod tests {
         // A summoning-sick Mount can't attack → don't waste a saddler on it.
         g.battlefield_find_mut(ghoda).unwrap().summoning_sick = true;
         assert!(pick_saddle(&g, 0).is_none(), "won't saddle a Mount that can't attack");
+    }
+
+    /// Saddle 3 on a 2-power Mount (Caustic Bronco) still gets saddled when the
+    /// only saddlers are idle (summoning-sick) creatures: they can't attack, so
+    /// their power isn't "wasted" against the overspend guard.
+    #[test]
+    fn bot_saddles_high_cost_mount_with_idle_creatures() {
+        let mut g = two_player_game();
+        let bronco = g.add_card_to_battlefield(0, catalog::caustic_bronco()); // 2/2, Saddle 3
+        g.clear_sickness(bronco);
+        // Two summoning-sick 2/2s — idle this turn, so free to tap.
+        let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        match pick_saddle(&g, 0) {
+            Some(GameAction::Saddle { mount, creatures }) => {
+                assert_eq!(mount, bronco);
+                assert_eq!(creatures.len(), 2, "taps both idle bears to reach Saddle 3");
+                assert!(creatures.contains(&a) && creatures.contains(&b));
+            }
+            other => panic!("expected a saddle action, got {other:?}"),
+        }
+        // If the same bears could attack, don't overspend real attacker power.
+        g.clear_sickness(a);
+        g.clear_sickness(b);
+        assert!(
+            pick_saddle(&g, 0).is_none(),
+            "won't tap 4 attacker-power to saddle a 2-power Mount"
+        );
     }
 
     /// The bot sacrifices Pus Kami to destroy a bigger opposing creature, but
