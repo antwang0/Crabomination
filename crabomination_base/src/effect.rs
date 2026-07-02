@@ -2224,6 +2224,12 @@ pub enum Effect {
     /// controller chooses; nothing happens if none qualify). Cache Grab
     /// ("mill four, then return a permanent card milled this way to hand").
     MillThenToHand { amount: Value, filter: SelectionRequirement },
+    /// Like [`MillThenToHand`] but the controller may take *up to* `take`
+    /// matching cards (not just one). `take` is a [`Value`] so it can scale
+    /// with game state — Gather the Pack's spell mastery ("put up to two
+    /// creature cards instead of one if 2+ instant/sorcery cards are in your
+    /// graveyard").
+    MillThenToHandN { amount: Value, filter: SelectionRequirement, take: Value },
     /// The controller mills one card, then runs a sub-effect keyed on the
     /// milled card's card type: `land` if it's a land, else `creature` if it's
     /// a creature, else `noncreature` (a nonland noncreature card). Old

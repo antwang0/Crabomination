@@ -226,3 +226,42 @@ fn hour_of_promise_makes_zombies_with_three_deserts() {
         "two 2/2 Zombies with 3+ Deserts"
     );
 }
+
+/// Gather the Pack takes one creature normally, two with spell mastery.
+#[test]
+fn gather_the_pack_spell_mastery_takes_two() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    // No spell mastery: only one creature goes to hand even if two are milled.
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let gp = g.add_card_to_hand(0, catalog::gather_the_pack());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![c1, c2])]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, gp);
+    assert_eq!(
+        g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        1,
+        "without spell mastery, only one creature to hand"
+    );
+
+    // Spell mastery: two instants/sorceries already in the graveyard → take two.
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let c1 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let gp = g.add_card_to_hand(0, catalog::gather_the_pack());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![c1, c2])]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, gp);
+    assert_eq!(
+        g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2,
+        "spell mastery puts up to two creatures to hand"
+    );
+}

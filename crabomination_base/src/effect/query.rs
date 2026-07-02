@@ -363,6 +363,9 @@ impl Effect {
             }
             Effect::MillTwoRepeatSharedColor { who } => sel_has_target(who),
             Effect::MillThenToHand { amount, .. } => value_has_target(amount),
+            Effect::MillThenToHandN { amount, take, .. } => {
+                value_has_target(amount) || value_has_target(take)
+            }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),

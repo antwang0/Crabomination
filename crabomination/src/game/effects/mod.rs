@@ -2799,6 +2799,61 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MillThenToHandN { amount, filter, take } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
+                let mut milled: Vec<CardId> = Vec::new();
+                for _ in 0..n {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
+                    milled.push(cid);
+                }
+                // `take` is read *after* milling (Gather the Pack's spell mastery
+                // counts the just-milled instant/sorcery cards too, CR 700.11-ish).
+                let take = self.evaluate_value(take, ctx).max(0) as u32;
+                if take == 0 {
+                    return Ok(());
+                }
+                let cands: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| {
+                        milled.contains(&c.id)
+                            && crate::game::layers::requirement_matches_card(filter, c, p)
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if cands.is_empty() {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Put which cards milled this way into your hand?".to_string(),
+                    candidates: cands,
+                    min: 0,
+                    max: take,
+                });
+                if let DecisionAnswer::Cards(picked) = answer {
+                    for cid in picked.into_iter().take(take as usize) {
+                        if let Some(pos) =
+                            self.players[p].graveyard.iter().position(|c| c.id == cid)
+                        {
+                            let card = self.players[p].graveyard.remove(pos);
+                            self.players[p].hand.push(card);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
 
             Effect::MillTwoRepeatSharedColor { who } => self.resolve_mill_two_repeat_shared_color(who, ctx, events),
 

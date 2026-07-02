@@ -2970,9 +2970,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     control" rider — wants a search-to-battlefield-**attached** primitive (also
     helps Stoneforge-style tutors).
   - Approximations still to revisit: Pir's Whim (full friend/foe vote →
-    you=friend/opponents=foe), Gather the Pack (spell mastery's 2nd creature
-    dropped — needs a "take N" on `MillThenToHand`), Three Dreams (different-
-    names search dropped). ✅ Hour of Promise (3+ Deserts Zombies), Golden Demise
+    you=friend/opponents=foe), Three Dreams (different-names search dropped).
+    ✅ Gather the Pack (spell mastery's 2nd creature via `Effect::MillThenToHandN`
+    + `Value::IfAtLeast` over I/S in gy), ✅ Hour of Promise (3+ Deserts Zombies),
+    Golden Demise
     (Ascend + city's-blessing opponents-only), Yahenni's Expertise (MV≤3 free
     cast via `CastFromHandWithoutPaying`), and Goblin Assault ("Goblins attack
     each combat" via `GrantKeyword(MustAttack)`) are now faithful.

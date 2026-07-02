@@ -124,13 +124,29 @@ pub fn wayward_swordtooth() -> CardDefinition {
 
 /// Gather the Pack — {1}{G} Sorcery. Reveal the top five cards of your library,
 /// put a creature card among them into your hand, and the rest into your
-/// graveyard. (Spell mastery's second creature is dropped.)
+/// graveyard. Spell mastery — put up to two instead of one if there are two or
+/// more instant/sorcery cards in your graveyard.
 pub fn gather_the_pack() -> CardDefinition {
+    // Spell mastery counts I/S in the graveyard *after* milling this way.
+    let is_in_gy = Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::HasCardType(CardType::Instant)
+            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+    };
     CardDefinition {
         name: "Gather the Pack",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::MillThenToHand { amount: Value::Const(5), filter: SelectionRequirement::Creature },
+        effect: Effect::MillThenToHandN {
+            amount: Value::Const(5),
+            filter: SelectionRequirement::Creature,
+            take: Value::IfAtLeast {
+                value: Box::new(is_in_gy),
+                threshold: 2,
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::Const(1)),
+            },
+        },
         ..Default::default()
     }
 }
