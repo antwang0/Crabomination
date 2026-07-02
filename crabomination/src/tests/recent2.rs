@@ -848,3 +848,34 @@ fn hightide_hermit_energy_then_attacks() {
         attacker: crab, target: AttackTarget::Player(1),
     }])).expect("defender can attack this turn");
 }
+
+/// Sweettooth Witch sacrifices a Food to drain a target player for 3.
+#[test]
+fn sweettooth_witch_sacs_food_to_drain() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::sweettooth_witch());
+    g.clear_sickness(witch);
+    let food = crabomination_base::tokens::food_token();
+    g.add_token_to_battlefield(0, &food);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_life = g.players[1].life;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: witch,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("sac a Food to drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 3, "target player loses 3");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count(),
+        0,
+        "the Food was sacrificed"
+    );
+}

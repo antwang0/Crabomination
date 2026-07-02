@@ -284,9 +284,10 @@ pub fn jewel_thief() -> CardDefinition {
     }
 }
 
-/// Sweettooth Witch — {2}{B} 3/2 Human Warlock. ETB create a Food token. (The
-/// "{2}, Sacrifice a Food: target player loses 3 life" ability is dropped.)
+/// Sweettooth Witch — {2}{B} 3/2 Human Warlock. ETB create a Food token.
+/// {2}, Sacrifice a Food: target player loses 3 life.
 pub fn sweettooth_witch() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype, SelectionRequirement};
     CardDefinition {
         name: "Sweettooth Witch",
         cost: cost(&[generic(2), b()]),
@@ -302,6 +303,18 @@ pub fn sweettooth_witch() -> CardDefinition {
             count: Value::Const(1),
             definition: crabomination_base::tokens::food_token(),
         })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                1,
+            )),
+            effect: Effect::LoseLife {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
