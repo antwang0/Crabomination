@@ -26,8 +26,6 @@ Still deferred / noticed but not tackled (recent77–78):
   sacrifice at next end step" needs a per-turn activation counter + self-sac.
 - **Balduvian Horde / Bull Elephant** — ETB "sacrifice unless you {discard at
   random / return two Forests}" needs an ETB sacrifice-unless-alt-cost rider.
-- **Sea Serpent** — "when you control no Islands, sacrifice this" needs a
-  board-state sacrifice trigger (the can't-attack-without-Island half is fine).
 - **Kormus Bell / Living Lands** — animate-all-lands-of-type continuous effect.
 - **Scavenging Ghoul** — corpse counters per creature died + remove-to-regen.
 
@@ -44,9 +42,8 @@ Still deferred / noticed but not tackled:
 - **Thicket Basilisk / Cockatrice** (destroy on block/blocked-by a non-Wall
   creature at end of combat) need a blocks-or-blocked-by delayed-destroy chain;
   skipped this wave.
-- **Sea Serpent / Leviathan** "can't attack unless defending player controls an
-  Island; sacrifice when none" gate is unmodeled (no per-attacker land-control
-  attack restriction with a sacrifice rider).
+- (✅ Sea Serpent ships via `Keyword::CanAttackOnlyIfDefenderControls` + a
+  no-Island upkeep sacrifice, matching Dandân. Other Leviathans can reuse it.)
 - **Bull Elephant / other "ETB unless you bounce two Forests"** upkeep-tax ETBs
   need a "sacrifice unless you return N matching lands" alt-cost ETB.
 
@@ -803,9 +800,9 @@ plays its headline pattern):
   —" riders. Surfaced in `PlayerView.speed`. Cards: Nesting Bot, Burnout
   Bashtronaut, Swiftwing Assailant, Risen Necroregent, Embalmed Ascendant.
   Remaining: client HUD speed chip; the rest of the DFT speed pool.
-- **Caustic Bronco** — deferred: needs a "reveal top → hand, then lose life =
-  its mana value unless saddled, else each opponent loses that much" composite
-  (only the opponents-lose-MV half, `RevealTopToHandOpponentsLoseMv`, exists).
+- (✅ Caustic Bronco ships — `RevealTopToHandLoseMv { who }` generalized the old
+  Sorin-only opponents-lose-MV effect, and `Predicate::SourceSaddled` picks the
+  branch.)
 - **Sovereign Okinec Ahau** — deferred: attack "for each creature you control
   with power greater than that creature's base power, add the difference in
   +1/+1 counters" needs a per-creature base-power-comparison value.
@@ -1778,8 +1775,8 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     Gravecrawler's `from_graveyard` Move approximation).
   - **Karplusan Minotaur** — cumulative upkeep whose cost is a coin flip
     (CR 702.24 + 705) + the win/lose-flip "deal 1 to any target" pair.
-  - **Goblin Recruiter** — "search for any number of Goblins, put them on
-    top in any order" (multi-pick search-to-top ordering).
+  - (✅ Goblin Recruiter ships via `SearchUpToN` (Goblin filter) to library top;
+    "any number" modeled as up to 10.)
   - **Cursed Scroll** — name-a-card + reveal-at-random-from-hand + conditional
     damage if the random card matches.
   - **Price of Progress / Pyromancer Ascension / Tibalt's Trickery /
@@ -2972,18 +2969,19 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Quest for the Holy Relic** drops the "attach it to a creature you
     control" rider — wants a search-to-battlefield-**attached** primitive (also
     helps Stoneforge-style tutors).
-  - Approximations shipped this run, to revisit: Pir's Whim (full friend/foe
-    vote → you=friend/opponents=foe), Hour of Promise (3+ Deserts Zombie rider
-    dropped), Golden Demise (city's-blessing "opponents only" dropped),
-    Yahenni's Expertise (free-cast rider dropped), Gather the Pack (spell
-    mastery's 2nd creature dropped), Three Dreams (different-names dropped),
-    Goblin Assault ("Goblins attack each combat" dropped).
-  - Still missing, need new primitives: **Bonehoard** (`EquipScale` counts
-    controlled permanents, not graveyard cards), **Necropolis Fiend** ({X},{T},
-    exile X from gy: −X/−X — no X-driven gy-exile activation cost), **Pulmonic
-    Sliver** (graveyard→library replacement static), **Caustic Bronco** (Value
-    reading a just-revealed card's MV), **Goblin Welder** / **Gilt-Leaf
-    Archdruid** / **Pyromancer Ascension** / **Twilight Prophet**.
+  - Approximations still to revisit: Pir's Whim (full friend/foe vote →
+    you=friend/opponents=foe), Gather the Pack (spell mastery's 2nd creature
+    dropped — needs a "take N" on `MillThenToHand`), Three Dreams (different-
+    names search dropped). ✅ Hour of Promise (3+ Deserts Zombies), Golden Demise
+    (Ascend + city's-blessing opponents-only), Yahenni's Expertise (MV≤3 free
+    cast via `CastFromHandWithoutPaying`), and Goblin Assault ("Goblins attack
+    each combat" via `GrantKeyword(MustAttack)`) are now faithful.
+  - Still missing, need new primitives: **Pulmonic Sliver** (graveyard→library
+    replacement static), **Goblin Welder** / **Gilt-Leaf Archdruid** /
+    **Pyromancer Ascension** / **Twilight Prophet**. ✅ Bonehoard
+    (`EquipScale.count_all_graveyards`), **Necropolis Fiend**
+    (`ActivatedAbility.exile_other_x` — {X},{T}, exile X from gy: −X/−X), and
+    **Caustic Bronco** (`RevealTopToHandLoseMv { who }`) now ship.
     (Fog Bank / Guard Gomazoa shipped via `StaticEffect::PreventAllCombatDamage-
     ToThis`; Wall of Denial shipped as Defender/Flying/Shroud per current oracle.)
 
@@ -3005,9 +3003,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     all damage target instant/sorcery would deal" — no prevent-spell-damage
     effect); Pyromancer Ascension (quest-counter + spell-copy enchantment);
     Crime // Punishment (split card).
-- ⏳ **recent20 (OTJ) approximations / follow-ups:** Magda, the Hoardmaster
-  drops the "Sacrifice three Treasures: make a 4/4 Scorpion Dragon" ability
-  (needs a fixed-count sacrifice-cost picker); Gisa's "Ward—{2}, Pay 2 life" is
+- ⏳ **recent20 (OTJ) approximations / follow-ups:** (✅ Magda, the Hoardmaster's
+  "Sacrifice three Treasures: make a 4/4 Scorpion Dragon" now ships via
+  `sac_other_filter: Some((Treasure, 3))`.) Gisa's "Ward—{2}, Pay 2 life" is
   modeled as Ward—{2} (the life half is dropped — `WardCost` has no compound
   variant); Bovine Intervention mints the Ox before the destroy so
   `ControllerOf(Target)` still resolves. Also: CR 700.13 crime detection covers
@@ -3026,8 +3024,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   is modeled as any-two-creatures bounce (the "controlled by different players"
   restriction isn't enforced); Sky Crier / Dryad Greenseeker approximate
   "put into hand" as a draw; Angel of Finality / Burglar Rat target each
-  opponent rather than a chosen player (1v1-faithful). Charmed Sleep deferred —
-  wants an Aura that taps + sets `untap_locked_by` on the host at ETB.
+  opponent rather than a chosen player (1v1-faithful). (✅ Charmed Sleep ships as
+  a `tap_down_aura` — ETB tap + `PreventUntap` on the host.)
 - ⏳ **Cards noticed this run (recent12–15) but deferred — need new primitives:**
   Kutzil's Flanker (mode 1 wants a "creatures that left the battlefield under
   your control this turn" count); Caustic Bronco (attack-reveal life-loss/drain
