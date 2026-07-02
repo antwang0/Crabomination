@@ -1590,14 +1590,12 @@ impl GameState {
                 Target::Player(p) => !self.same_team(*p, controller),
             },
             R::OwnedByYou => match target {
+                // Ownership is stable across zones — look the card up anywhere
+                // (battlefield / graveyard / exile / stack) so "target creature
+                // card in your graveyard" (Meren) resolves.
                 Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
-                    .map(|c| c.owner)
-                    .or_else(|| self.stack.iter().find_map(|si| match si {
-                        StackItem::Spell { card, .. } if card.id == *cid => Some(card.owner),
-                        _ => None,
-                    }))
-                    .map(|owner| owner == controller)
+                    .find_card_anywhere(*cid)
+                    .map(|c| c.owner == controller)
                     .unwrap_or(false),
                 Target::Player(_) => false,
             },

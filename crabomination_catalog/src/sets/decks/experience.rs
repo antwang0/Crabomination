@@ -10,7 +10,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, target_filtered};
-use crate::effect::PlayerRef;
+use crate::effect::{PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Mizzix of the Izmagnus — {2}{U}{R} 2/2 Legendary Goblin Wizard. Cast an
@@ -139,6 +139,52 @@ pub fn daxos_the_returned() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Meren of Clan Nel Toth — {2}{B}{G} 3/4 Legendary Human Shaman. Another
+/// creature you control dies → get an experience counter. Your end step →
+/// target creature card in your graveyard: return it to the battlefield if its
+/// mana value ≤ your experience, otherwise to your hand.
+pub fn meren_of_clan_nel_toth() -> CardDefinition {
+    CardDefinition {
+        name: "Meren of Clan Nel Toth",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::AddExperience(Value::Const(1)),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::ManaValueOf(Box::new(Selector::Target(0))),
+                        Value::ControllerExperience,
+                    ),
+                    then: Box::new(Effect::Move {
+                        what: target_filtered(R::Creature.and(R::OwnedByYou)),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                    else_: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

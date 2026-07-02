@@ -141,3 +141,40 @@ fn kalemne_experience_only_on_big_creature_spells() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].experience, 0, "a cheap creature gives no experience");
 }
+
+#[test]
+fn meren_gains_experience_when_your_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::meren_of_clan_nel_toth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().damage = 2; // lethal → CreatureDied
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].experience, 1, "another creature dying gave experience");
+}
+
+#[test]
+fn meren_reanimates_when_experience_is_enough() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::meren_of_clan_nel_toth());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // mv 2
+    g.players[0].experience = 3;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "mv ≤ experience → returned to the battlefield");
+}
+
+#[test]
+fn meren_returns_to_hand_when_experience_is_short() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::meren_of_clan_nel_toth());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // mv 2
+    g.players[0].experience = 1; // < 2
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "not reanimated");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "mv > experience → to hand");
+}

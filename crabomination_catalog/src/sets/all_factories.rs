@@ -399,6 +399,7 @@ static DECKS: &[Factory] = &[
     super::decks::mizzix_of_the_izmagnus,
     super::decks::ezuri_claw_of_progress,
     super::decks::daxos_the_returned,
+    super::decks::meren_of_clan_nel_toth,
     super::decks::kalemne_disciple_of_iroas,
     super::decks::brotherhood_ambushers,
     super::decks::merciless_harlequin,

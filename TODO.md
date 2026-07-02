@@ -67,13 +67,13 @@ New primitives: `DoubleControllerTriggersOfType`,
 for precise client targeting; server `damage_wins` stat.
 
 Still deferred / noticed but not tackled:
-- **Meren of Clan Nel Toth** — the experience framework now ships
-  (`decks::experience`: Mizzix, Ezuri Claw of Progress, Daxos, Kalemne), but
-  Meren's end-step "return target creature card; to the battlefield if its mv ≤
-  your experience, else to hand" needs a targeted graveyard-reanimate effect
-  with a per-target mv/experience branch (no such effect yet). Mizzix's runaway
-  gate ("mv > your experience") is approximated as any I/S cast; Daxos's token
-  P/T is a mint-time snapshot rather than a live CDA.
+- The experience framework ships the full Commander 2015 cycle
+  (`decks::experience`: Mizzix, Ezuri Claw of Progress, Daxos, Kalemne, **Meren
+  of Clan Nel Toth** — end-step conditional reanimate-or-hand on
+  `Effect::If`/`ManaValueOf`/`ControllerExperience`, enabled by
+  `R::OwnedByYou` now resolving any-zone cards). Mizzix's runaway gate ("mv >
+  your experience") is approximated as any I/S cast; Daxos's token P/T is a
+  mint-time snapshot rather than a live CDA.
 - **Zada, Hedron Grinder / Wort, the Raidmother** — Zada needs
   "copy target spell for each other creature it could target, each copy a
   different target"; Wort needs a "your R/G I/S spells have Conspire" granted
