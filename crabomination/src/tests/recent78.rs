@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::recent78`.
 
-use crate::card::{Keyword, LandType};
+use crate::card::Keyword;
 use crate::catalog;
 use crate::game::two_player_game;
 use crate::game::types::Target;
@@ -52,7 +52,6 @@ fn instill_energy_untaps_once_per_turn() {
     }).expect("enchant");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "granted haste");
-    g.battlefield_find(bear).map(|_| ());
     // Tap the bear, then the {0} untap ability should free it.
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) { c.tapped = true; }
     g.perform_action(GameAction::ActivateAbility {

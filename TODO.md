@@ -1062,6 +1062,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     have to be threaded through all 84 `ApplyToTargets` construction sites.)
   - **Goblin Recruiter** "any number" is capped at 10 via `SearchUpToN`; a true
     unbounded search-to-top would need an "any number" search count.
+- ⏳ **Noticed this run (recent84–89, chosen-type/tribal batches):**
+  - **Herald's Horn upkeep reveal** — the "look at top card; if it's a chosen-type
+    creature, may reveal it to hand" rider is dropped (cost-reduction half is
+    faithful). Wants a "top-card-of-chosen-type" reveal effect.
+  - **Still-missing tribal payoffs needing new primitives:** Brass Herald
+    (ETB reveal-4, keep chosen-type creatures), Belbe's Portal (put a chosen-type
+    creature from hand onto the battlefield), Kindred Charge (token-copy each of
+    your chosen-type creatures), Shared Animosity (attack: +1/+0 per other
+    attacker sharing a type — a per-attacker shared-type count), Mirror Entity
+    (set your team's base P/T to X + grant all types), Kindred Summons / Kindred
+    Dominance (cast-time creature-type choice on a spell with no permanent to
+    stamp `chosen_creature_type`).
 - ⏳ **Noticed this run (recent81–83 batches):**
   - **Auto-targeter ignores target slots embedded in a `Value`.** A trigger
     whose only target lives inside `Value::PowerOf(Selector::TargetFiltered{..})`

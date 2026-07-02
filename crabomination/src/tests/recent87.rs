@@ -3,7 +3,6 @@
 use crate::card::{CreatureType, Keyword, Subtypes};
 use crate::catalog;
 use crate::game::two_player_game;
-use crate::game::*;
 use crate::mana::Color;
 
 /// A vanilla creature of the given types for tribal-count tests.
