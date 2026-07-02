@@ -172,6 +172,7 @@ mod tests {
                 starting_life: 20,
                 poison_counters: 0,
                 energy: 0,
+                experience: 0,
                 rad_counters: 0,
                 mana_pool: ManaPool::default(),
                 library: LibraryView::default(),

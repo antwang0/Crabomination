@@ -316,6 +316,9 @@ mod tests_experience;
 #[path = "../tests/recent91.rs"]
 mod tests_recent91;
 #[cfg(test)]
+#[path = "../tests/recent92.rs"]
+mod tests_recent92;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]

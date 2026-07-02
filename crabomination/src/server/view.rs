@@ -1889,6 +1889,16 @@ mod tests {
     }
 
     #[test]
+    fn project_surfaces_experience() {
+        // The view exposes each seat's experience-counter count so the client
+        // can badge an experience chip (Mizzix/Ezuri decks).
+        let mut g = two_player_game();
+        assert_eq!(project(&g, 0).players[0].experience, 0, "none by default");
+        g.players[0].experience = 3;
+        assert_eq!(project(&g, 0).players[0].experience, 3, "surfaced to the view");
+    }
+
+    #[test]
     fn project_surfaces_at_max_speed() {
         // CR 702.179c — the view pre-derives the max-speed flag so the client
         // can highlight live "Max speed —" abilities.

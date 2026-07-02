@@ -40,6 +40,7 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Energy (CR 122) — a Kaladesh aether teal.
         StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
+        StatChipKind::Experience => (Color::srgba(0.30, 0.22, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Rad counters (CR 122) — a Phyrexian hazard green; a slow mill/poison
         // clock the player wants to keep an eye on.
         StatChipKind::Rad => (Color::srgba(0.14, 0.32, 0.12, 1.0), theme::TEXT_PRIMARY),
@@ -104,6 +105,7 @@ pub(super) enum StatChipKind {
     Emblem,
     Devotion,
     Energy,
+    Experience,
     Rad,
     DrawCap,
     Storm,
@@ -591,6 +593,10 @@ pub fn update_player_stats_chips(
         if p.energy > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
         }
+        // Experience counters — surface once the player has any (Mizzix/Ezuri).
+        if p.experience > 0 {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Experience, format!("✦ {}", p.experience));
+        }
         // CR 702.179 speed — surface once "Start your engines!" has started it.
         if p.speed > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
@@ -966,6 +972,9 @@ pub fn update_opponent_stats_rows(
                 }
                 if p.energy > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+                }
+                if p.experience > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Experience, format!("✦ {}", p.experience));
                 }
                 if p.speed > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
