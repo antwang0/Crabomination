@@ -79,6 +79,66 @@ pub fn necropolis_fiend() -> CardDefinition {
     }
 }
 
+/// Ghost Ship — {2}{U}{U} 2/4 Spirit. Flying. {U}{U}{U}: Regenerate this
+/// creature.
+pub fn ghost_ship() -> CardDefinition {
+    CardDefinition {
+        name: "Ghost Ship",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u(), u()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Serpent Assassin — {3}{B}{B} 2/2 Snake Assassin. When it enters, you may
+/// destroy target nonblack creature.
+pub fn serpent_assassin() -> CardDefinition {
+    CardDefinition {
+        name: "Serpent Assassin",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "destroy target nonblack creature".into(),
+            body: Box::new(Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black))))),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sea Monster — {4}{U}{U} 6/6 Serpent. Can't attack unless defending player
+/// controls an Island.
+pub fn sea_monster() -> CardDefinition {
+    CardDefinition {
+        name: "Sea Monster",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(R::HasLandType(
+            LandType::Island,
+        )))],
+        ..Default::default()
+    }
+}
+
 /// Caustic Bronco — {1}{B} 2/2 Snake Horse Mount. Whenever it attacks, reveal
 /// the top card and put it into your hand; you lose life equal to its mana
 /// value if it isn't saddled, otherwise each opponent loses that much. Saddle 3.

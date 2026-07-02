@@ -83,6 +83,76 @@ fn charmed_sleep_taps_and_locks_untap() {
 }
 
 #[test]
+fn ghost_ship_regenerates() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::ghost_ship());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 3);
+    // {U}{U}{U}: set up a regeneration shield.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ship,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("regenerate");
+    drain_stack(&mut g);
+    // Lethal damage is replaced by the shield: the Ship survives.
+    g.battlefield_find_mut(ship).unwrap().damage = 99;
+    let sba = g.check_state_based_actions();
+    let _ = sba;
+    assert!(g.battlefield.iter().any(|c| c.id == ship), "regeneration shield saves the Ship");
+}
+
+#[test]
+fn serpent_assassin_etb_destroys_nonblack() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let white = g.add_card_to_battlefield(1, catalog::serra_angel()); // nonblack
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let assassin = g.add_card_to_hand(0, catalog::serpent_assassin());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: assassin,
+        target: Some(Target::Permanent(white)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Serpent Assassin castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == white), "ETB destroys the nonblack creature");
+}
+
+#[test]
+fn sea_monster_needs_defender_island() {
+    let mut g = two_player_game();
+    let sm = g.add_card_to_battlefield(0, catalog::sea_monster());
+    g.clear_sickness(sm);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: sm,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "can't attack a defender with no Island"
+    );
+    g.add_card_to_battlefield(1, catalog::island());
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: sm,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_ok(),
+        "may attack once the defender controls an Island"
+    );
+}
+
+#[test]
 fn sea_serpent_needs_defender_island_to_attack() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::island()); // p0 keeps its Island so it survives upkeep

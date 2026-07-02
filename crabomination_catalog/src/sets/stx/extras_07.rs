@@ -1469,11 +1469,10 @@ pub fn quandrix_trampler() -> CardDefinition {
 /// "When this creature enters, create a Treasure token. / {T}: Sacrifice
 /// a Treasure. Add one mana of any color. Draw a card."
 ///
-/// Treasure-mint + draw-on-spend artifact synergy. ETB ramps; the
-/// activated ability turns Treasures into card velocity. The
-/// "sacrifice a Treasure" runs inside the resolution body rather than
-/// as an additional cost (engine has no generic "sac a filter" cost
-/// variant for activations); the auto-sac picks the cheapest Treasure.
+/// Treasure-mint + draw-on-spend artifact synergy (a synthesized STX name).
+/// ETB ramps; the activated ability turns Treasures into card velocity. The
+/// "sacrifice a Treasure" runs inside the resolution body (auto-sac picks the
+/// cheapest); modeling it as a `sac_other_filter` cost is a lateral follow-up.
 pub fn prismari_painter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Painter",
