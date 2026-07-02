@@ -22509,6 +22509,7 @@ pub fn cranial_plating() -> CardDefinition {
                 per_toughness: 0,
                 count_self_counters: None,
                 count_graveyard: None,
+                count_all_graveyards: None,
             }),
             triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
@@ -25052,6 +25053,7 @@ pub fn nettlecyst() -> CardDefinition {
                 per_toughness: 1,
                 count_self_counters: None,
                 count_graveyard: None,
+                count_all_graveyards: None,
             }), triggered_abilities: vec![], ..Default::default() }),
         // Living weapon (CR 702.91): mint a Germ and attach on ETB.
         triggered_abilities: vec![etb(Effect::Seq(vec![
@@ -25132,6 +25134,7 @@ pub fn lion_sash() -> CardDefinition {
                 per_toughness: 1,
                 count_self_counters: Some(CounterType::PlusOnePlusOne),
                 count_graveyard: None,
+                count_all_graveyards: None,
             }), triggered_abilities: vec![], ..Default::default() }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
@@ -28157,11 +28160,17 @@ pub fn hammerhand() -> CardDefinition {
 /// Dehydration). CR 502.3 prevention is aura-anchored via
 /// `StaticEffect::PreventUntap { applies_to: AttachedTo(This) }`.
 fn tap_down_aura(name: &'static str) -> CardDefinition {
+    tap_down_aura_cost(name, cost(&[generic(2), u()]))
+}
+
+/// Like [`tap_down_aura`] but with an explicit mana cost (Charmed Sleep is
+/// {1}{U}{U}, not {2}{U}).
+fn tap_down_aura_cost(name: &'static str, mana: crate::mana::ManaCost) -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     use crate::effect::shortcut::etb;
     CardDefinition {
         name,
-        cost: cost(&[generic(2), u()]),
+        cost: mana,
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes {
             enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
@@ -28194,6 +28203,12 @@ pub fn claustrophobia() -> CardDefinition {
 /// untap during its controller's untap step.
 pub fn dehydration() -> CardDefinition {
     tap_down_aura("Dehydration")
+}
+
+/// Charmed Sleep — {1}{U}{U} Aura. ETB taps the enchanted creature; it doesn't
+/// untap during its controller's untap step.
+pub fn charmed_sleep() -> CardDefinition {
+    tap_down_aura_cost("Charmed Sleep", cost(&[generic(1), u(), u()]))
 }
 
 /// Heartless Act — {1}{B} Instant. Choose one — Destroy target creature with
@@ -38287,6 +38302,7 @@ pub fn ethereal_armor() -> CardDefinition {
                 per_toughness: 1,
                 count_self_counters: None,
                 count_graveyard: None,
+                count_all_graveyards: None,
             }),
             ..Default::default()
         }),

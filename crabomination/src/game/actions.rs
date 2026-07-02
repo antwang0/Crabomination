@@ -8686,7 +8686,12 @@ impl GameState {
         let exile_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_other_filter.as_ref()
         {
-            let count = *count as usize;
+            // "Exile X cards from your graveyard:" costs read the activation's X.
+            let count = if ability.exile_other_x {
+                x_value.unwrap_or(0) as usize
+            } else {
+                *count as usize
+            };
             let candidates: Vec<CardId> = self.players[p]
                 .graveyard
                 .iter()
@@ -9038,7 +9043,7 @@ impl GameState {
         } else {
             ability.mana_cost.clone()
         };
-        let activated_x = if ability.mana_cost.has_x() || ability.sac_other_x {
+        let activated_x = if ability.mana_cost.has_x() || ability.sac_other_x || ability.exile_other_x {
             x_value.unwrap_or(0)
         } else {
             0

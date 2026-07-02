@@ -5303,6 +5303,7 @@ pub fn avatar_destiny() -> CardDefinition {
                 per_toughness: 1,
                 count_self_counters: None,
                 count_graveyard: Some(SelectionRequirement::HasCardType(CardType::Creature)),
+                count_all_graveyards: None,
             }),
             add_creature_types: vec![CreatureType::Avatar],
             ..Default::default()

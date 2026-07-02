@@ -52,6 +52,7 @@ pub fn blanchwood_armor() -> CardDefinition {
                 per_toughness: 1,
                 count_self_counters: None,
                 count_graveyard: None,
+                count_all_graveyards: None,
             }),
             ..Default::default()
         }),

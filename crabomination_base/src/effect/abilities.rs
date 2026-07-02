@@ -1279,6 +1279,12 @@ pub struct ActivatedAbility {
     /// your graveyard as an additional cost".
     #[serde(default)]
     pub exile_other_filter: Option<(SelectionRequirement, u32)>,
+    /// When true, `exile_other_filter`'s count is the activation's X value
+    /// rather than the fixed `u32` (which is then ignored). Mirrors
+    /// `sac_other_x`. Used by "{X}, {T}, Exile X cards from your graveyard:"
+    /// costs — Necropolis Fiend's "-X/-X".
+    #[serde(default)]
+    pub exile_other_x: bool,
     /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
     /// activation's generic mana cost is reduced by one for each counter
     /// of `kind` on the source permanent (clamped at the printed generic

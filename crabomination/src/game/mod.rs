@@ -271,6 +271,9 @@ mod tests_recent78;
 #[path = "../tests/recent79.rs"]
 mod tests_recent79;
 #[cfg(test)]
+#[path = "../tests/recent80.rs"]
+mod tests_recent80;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -4111,16 +4114,28 @@ impl GameState {
             // for each artifact/enchantment the Equipment's controller controls).
             let (mut bp, mut bt) = (bonus.power, bonus.toughness);
             if let Some(scale) = &bonus.scale {
-                let n = match (&scale.count_self_counters, &scale.count_graveyard) {
-                    (Some(kind), _) => card.counter_count(*kind) as i32,
-                    (None, Some(gy_filter)) => self.players[card.controller]
+                let n = match (
+                    &scale.count_self_counters,
+                    &scale.count_graveyard,
+                    &scale.count_all_graveyards,
+                ) {
+                    (Some(kind), _, _) => card.counter_count(*kind) as i32,
+                    (None, Some(gy_filter), _) => self.players[card.controller]
                         .graveyard
                         .iter()
                         .filter(|c| {
                             self.evaluate_requirement_on_card(gy_filter, c, card.controller)
                         })
                         .count() as i32,
-                    (None, None) => self
+                    (None, None, Some(all_gy_filter)) => self
+                        .players
+                        .iter()
+                        .flat_map(|pl| pl.graveyard.iter())
+                        .filter(|c| {
+                            self.evaluate_requirement_on_card(all_gy_filter, c, card.controller)
+                        })
+                        .count() as i32,
+                    (None, None, None) => self
                         .battlefield
                         .iter()
                         .filter(|c| {

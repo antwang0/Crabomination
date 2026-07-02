@@ -2460,6 +2460,11 @@ pub struct EquipScale {
     /// creature card in your graveyard") rather than the battlefield count.
     #[serde(default)]
     pub count_graveyard: Option<SelectionRequirement>,
+    /// When set, the count is the number of cards matching this filter across
+    /// *every* player's graveyard (Bonehoard — "+X/+X where X is the number of
+    /// creature cards in all graveyards"), rather than just the controller's.
+    #[serde(default)]
+    pub count_all_graveyards: Option<SelectionRequirement>,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by
