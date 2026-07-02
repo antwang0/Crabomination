@@ -216,14 +216,8 @@ pub fn tablet_of_discovery() -> CardDefinition {
 
 /// Potioner's Trove — {3} Artifact.
 /// "{T}: Add one mana of any color. / {T}: You gain 2 life. Activate
-/// only if you've cast an instant or sorcery spell this turn."
-///
-/// Approximation: the conditional "activate only if you've cast an
-/// instant or sorcery spell this turn" gate is omitted (the engine
-/// has no per-turn-cast-tracking gate on activated abilities yet). The
-/// mana ability is fully wired, and the lifegain ability is unconditional
-/// in practice. Tracked under TODO.md "Activated-Ability Per-Turn-Cast
-/// Gate".
+/// only if you've cast an instant or sorcery spell this turn." The
+/// lifegain gate rides `Predicate::InstantsOrSorceriesCastThisTurnAtLeast`.
 pub fn potioners_trove() -> CardDefinition {
     use crate::effect::ManaPayload;
     CardDefinition {
