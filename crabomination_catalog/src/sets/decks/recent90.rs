@@ -9,7 +9,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{cast_is_instant_or_sorcery, deal, draw, etb, on_dies, target_any};
+use crate::effect::shortcut::{cast_is_instant_or_sorcery, deal, draw, etb, on_dies, target_any, you};
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u, x, Color};
 
@@ -805,6 +805,103 @@ pub fn goblin_taskmaster() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Fireslinger — {1}{R} 1/1 Human Wizard. {T}: deals 1 damage to any target and
+/// 1 damage to you.
+pub fn fireslinger() -> CardDefinition {
+    CardDefinition {
+        name: "Fireslinger",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![deal(1, target_any()), deal(1, you())]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Orcish Cannoneers — {1}{R}{R} 1/3 Orc Warrior. {T}: deals 2 damage to any
+/// target and 3 damage to you.
+pub fn orcish_cannoneers() -> CardDefinition {
+    CardDefinition {
+        name: "Orcish Cannoneers",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![deal(2, target_any()), deal(3, you())]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jackal Pup — {R} 2/1 Jackal. Whenever it's dealt damage, it deals that much
+/// damage to you.
+pub fn jackal_pup() -> CardDefinition {
+    CardDefinition {
+        name: "Jackal Pup",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Jackal], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: you(), amount: Value::TriggerEventAmount },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rummaging Goblin — {2}{R} 1/1 Goblin Rogue. {T}, Discard a card: Draw a card.
+pub fn rummaging_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Rummaging Goblin",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dwarven Trader — {R} 1/1 Dwarf (vanilla).
+pub fn dwarven_trader() -> CardDefinition {
+    CardDefinition {
+        name: "Dwarven Trader",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf], ..Default::default() },
+        power: 1,
+        toughness: 1,
         ..Default::default()
     }
 }

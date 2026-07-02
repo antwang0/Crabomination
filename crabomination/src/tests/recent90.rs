@@ -3,6 +3,7 @@
 
 use crate::catalog;
 use crate::card::{CounterType, Keyword};
+use crate::game::effects::EntityRef;
 use crate::game::two_player_game;
 use crate::game::types::Target;
 use crate::game::*;
@@ -473,4 +474,46 @@ fn goblin_taskmaster_pumps_a_goblin() {
     }).expect("pump a Goblin");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(other).unwrap().power, 2, "+1/+0 to a Goblin");
+}
+
+#[test]
+fn fireslinger_pings_target_and_self() {
+    let mut g = two_player_game();
+    let fs = g.add_card_to_battlefield(0, catalog::fireslinger());
+    g.clear_sickness(fs);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fs, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 1, "1 to target");
+    assert_eq!(g.players[0].life, l0 - 1, "1 to you");
+}
+
+#[test]
+fn jackal_pup_reflects_damage_to_you() {
+    let mut g = two_player_game();
+    let pup = g.add_card_to_battlefield(0, catalog::jackal_pup());
+    let life = g.players[0].life;
+    let mut ev = vec![];
+    g.deal_damage_to_from(EntityRef::Permanent(pup), 1, None, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "reflects the damage to its controller");
+}
+
+#[test]
+fn rummaging_goblin_loots() {
+    let mut g = two_player_game();
+    let rg = g.add_card_to_battlefield(0, catalog::rummaging_goblin());
+    g.clear_sickness(rg);
+    let pitch = g.add_card_to_hand(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("loot");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded a card");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "drew a card");
 }
