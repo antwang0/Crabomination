@@ -3368,7 +3368,6 @@ static DECKS: &[Factory] = &[
     super::decks::the_wandering_rescuer,
     super::decks::light_up_the_night,
     super::decks::tyrants_scorn,
-    super::decks::fang_of_shigeki,
     super::decks::lifecraft_cavalry,
     super::decks::workshop_warchief,
     super::decks::prosperous_innkeeper,
@@ -3705,6 +3704,7 @@ static DECKS: &[Factory] = &[
     super::decks::shefet_archfiend,
     super::decks::lotusguard_disciple,
     super::decks::fang_guardian,
+    super::decks::fang_of_shigeki,
     super::decks::regal_imperiosaur,
     super::decks::guidelight_synergist,
     super::decks::cloudspire_captain,
@@ -5050,6 +5050,15 @@ static DECKS: &[Factory] = &[
     super::decks::selfless_samurai,
     super::decks::prosperous_thief,
     super::decks::bronzeplate_boar,
+    // recent96 — Kamigawa: Neon Dynasty batch 2
+    super::decks::jukai_naturalist,
+    super::decks::ironhoof_boar,
+    super::decks::reinforced_ronin,
+    super::decks::colossal_skyturtle,
+    super::decks::kami_of_transience,
+    super::decks::rabbit_battery,
+    super::decks::nezumi_prowler,
+    super::decks::invigorating_hot_spring,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

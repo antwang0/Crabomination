@@ -8,7 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`)
+## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`, `recent96`)
+
+recent96 approximations/deferrals: Kami of Transience's "return from graveyard
+if an enchantment died this turn" end-step recursion is dropped. Still needing
+primitives: Weaver of Harmony (copy an activated/triggered ability from an
+enchantment source), Kami of Celebration (impulse-on-modified-attack + cast-
+from-exile counter payoff), Moonsnare Prototype's "top or bottom of library"
+Channel, Kami of Bamboo Groves' Conjure, Careful Cultivation's conditional Aura
+rider.
+
 
 - **Prosperous Thief** — the printed trigger fires off any Ninja/Rogue you
   control dealing combat damage; modeled as this creature's own combat damage.
