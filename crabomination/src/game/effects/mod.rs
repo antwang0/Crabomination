@@ -12663,8 +12663,14 @@ impl GameState {
                     // resolves after the Aura is already in the graveyard, so
                     // read `attached_to` from the die-time snapshot when the
                     // source is no longer on the battlefield (Parallax Dementia).
+                    // `leaves_bf_lki` is the resolution-scoped snapshot that
+                    // survives event dispatch — needed for a `sac_cost`
+                    // activated ability whose body reads the enchanted creature
+                    // (Carapace's "Sacrifice this Aura: Regenerate enchanted
+                    // creature").
                     self.battlefield_find(cid)
                         .or_else(|| self.died_card_snapshots.get(&cid))
+                        .or_else(|| self.leaves_bf_lki.get(&cid))
                         .and_then(|c| c.attached_to)
                         .map(EntityRef::Permanent)
                 })

@@ -262,6 +262,9 @@ mod tests_recent75;
 #[path = "../tests/recent76.rs"]
 mod tests_recent76;
 #[cfg(test)]
+#[path = "../tests/recent77.rs"]
+mod tests_recent77;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -4372,6 +4375,50 @@ impl GameState {
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddKeyword(keyword.clone()),
+                });
+            }
+        }
+        // CR 700.9 / combat anthems — "attacking creatures you control get
+        // +X/+X" (Orcish Oriflamme) and modified-creature P/T lords. Mirrors
+        // the GrantKeyword loop above: `IsAttacking`/`IsModified` need the live
+        // battlefield, so `PumpPT` statics over them resolve here into a
+        // Specific id list per recompute; `affected_from_requirement` drops
+        // them on the static path, so there's no double application.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpPT { applies_to, power, toughness } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
+                if !requirement_mentions_modified(req) && !requirement_mentions_attacking(req) {
+                    continue;
+                }
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            req,
+                            &Target::Permanent(c.id),
+                            card.controller,
+                            Some(card.id),
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if ids.is_empty() {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(ids),
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(*power, *toughness),
                 });
             }
         }
