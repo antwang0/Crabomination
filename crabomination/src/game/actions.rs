@@ -865,22 +865,26 @@ pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -
 }
 
 /// CR 603-style "triggers an additional time" — extra fires a triggered
-/// ability gets because its `source` is an Ally controlled by a player who
-/// controls `DoubleControllerAllyTriggers` (Katara, the Fearless). 0 unless
-/// the source is currently an Ally controlled by `controller`.
+/// ability gets because its `source` is a creature controlled by a player who
+/// controls a subtype-keyed trigger doubler: `DoubleControllerAllyTriggers`
+/// (Katara, the Fearless — Allies) or the general
+/// `DoubleControllerTriggersOfType` (Harmonic Prodigy — Shaman / another
+/// Wizard). 0 unless the source is a matching creature `controller` controls.
 pub(crate) fn ally_trigger_extra_fires(
     state: &crate::game::GameState,
     controller: usize,
     source: crate::card::CardId,
 ) -> usize {
     use crate::effect::StaticEffect;
-    let source_is_your_ally = state
-        .computed_permanent(source)
-        .is_some_and(|cp| cp.subtypes.creature_types.contains(&crate::card::CreatureType::Ally))
-        && state.battlefield_find(source).is_some_and(|c| c.controller == controller);
-    if !source_is_your_ally {
-        return 0;
-    }
+    // The triggering source's current creature types (read live off the
+    // battlefield; a source no longer in play or not `controller`'s → 0).
+    let source_types = match state.computed_permanent(source) {
+        Some(cp) if state.battlefield_find(source).is_some_and(|c| c.controller == controller) => {
+            cp.subtypes.creature_types.clone()
+        }
+        _ => return 0,
+    };
+    let is_ally = source_types.contains(&crate::card::CreatureType::Ally);
     state
         .battlefield
         .iter()
@@ -889,7 +893,14 @@ pub(crate) fn ally_trigger_extra_fires(
             c.definition
                 .static_abilities
                 .iter()
-                .filter(|sa| matches!(sa.effect, StaticEffect::DoubleControllerAllyTriggers))
+                .filter(|sa| match &sa.effect {
+                    StaticEffect::DoubleControllerAllyTriggers => is_ally,
+                    StaticEffect::DoubleControllerTriggersOfType { types, exclude_source } => {
+                        (!*exclude_source || c.id != source)
+                            && types.iter().any(|t| source_types.contains(t))
+                    }
+                    _ => false,
+                })
                 .count()
         })
         .sum()
@@ -7237,21 +7248,27 @@ impl GameState {
                     _ => None,
                 })
                 .unwrap_or(0);
-            self.stack.push(
-                TriggerPush::new(source, listener_controller, effect)
-                    .target(auto_target)
-                    .mode(mode)
-                    // The cast spell's converge count, so per-cast
-                    // `Value::ConvergedValue` reads the iterated spell
-                    // (Magmablood / Wildgrowth Archaic).
-                    .converged_value(converged_value)
-                    // Preserve the cast spell's id for Effect::CopySpell /
-                    // Selector::CastSpellTarget.
-                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
-                    .mana_spent(mana_spent)
-                    .event_amount(spell_mv)
-                    .build(),
-            );
+            // CR 603.x — Harmonic Prodigy / Veyran / Katara: a SpellCast
+            // (Magecraft) trigger of a matching-subtype permanent fires an
+            // additional time per doubler the controller controls.
+            let fires = 1 + ally_trigger_extra_fires(self, listener_controller, source);
+            for _ in 0..fires {
+                self.stack.push(
+                    TriggerPush::new(source, listener_controller, effect.clone())
+                        .target(auto_target.clone())
+                        .mode(mode)
+                        // The cast spell's converge count, so per-cast
+                        // `Value::ConvergedValue` reads the iterated spell
+                        // (Magmablood / Wildgrowth Archaic).
+                        .converged_value(converged_value)
+                        // Preserve the cast spell's id for Effect::CopySpell /
+                        // Selector::CastSpellTarget.
+                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                        .mana_spent(mana_spent)
+                        .event_amount(spell_mv)
+                        .build(),
+                );
+            }
         }
     }
 

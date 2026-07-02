@@ -648,6 +648,20 @@ pub enum StaticEffect {
     /// any non-ETB or ETB trigger whose source is an Ally the controller
     /// controls.
     DoubleControllerAllyTriggers,
+    /// CR 603.x — "If a triggered ability of a [type] you control triggers,
+    /// that ability triggers an additional time." The generalization of
+    /// `DoubleControllerAllyTriggers` to an arbitrary set of creature types.
+    /// Read at trigger dispatch via `subtype_trigger_extra_fires`; adds one
+    /// fire per copy for any trigger whose source is a creature the
+    /// controller controls of one of `types`. When `exclude_source` is set,
+    /// the doubler never doubles its own triggers (Harmonic Prodigy's
+    /// "Shaman or *another* Wizard" — the source Wizard is itself, so its
+    /// own prowess isn't doubled by the Wizard clause).
+    DoubleControllerTriggersOfType {
+        types: Vec<crate::card::CreatureType>,
+        #[serde(default)]
+        exclude_source: bool,
+    },
     /// CR 614.x — "Creatures entering the battlefield don't cause triggered
     /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
     /// permanent with this static is in play, an entering **creature**

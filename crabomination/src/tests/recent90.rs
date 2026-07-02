@@ -1,0 +1,172 @@
+//! Functionality tests for `catalog::sets::decks::recent90` (Izzet
+//! spells-matter batch + the `DoubleControllerTriggersOfType` static).
+
+use crate::catalog;
+use crate::card::{CounterType, Keyword};
+use crate::game::two_player_game;
+use crate::game::types::Target;
+use crate::game::*;
+use crate::mana::Color;
+
+/// Cast a Lightning Bolt from P0 at P1's face (a red instant/sorcery cast).
+fn p0_bolt_face(g: &mut GameState) {
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(g);
+}
+
+#[test]
+fn adeliz_pumps_wizards_on_instant_cast() {
+    let mut g = two_player_game();
+    let adeliz = g.add_card_to_battlefield(0, catalog::adeliz_the_cinder_wind());
+    p0_bolt_face(&mut g);
+    // Adeliz is a Wizard, so it pumps itself +1/+1 → 3/3.
+    let cp = g.computed_permanent(adeliz).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "Adeliz pumps Wizards +1/+1 on I/S cast");
+}
+
+#[test]
+fn balmor_pumps_team_and_grants_trample() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::balmor_battlemage_captain());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    p0_bolt_face(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "team gets +1/+0");
+    assert!(cp.keywords.contains(&Keyword::Trample), "team gains trample");
+}
+
+#[test]
+fn bloodwater_entity_bottoms_gy_spell_to_library_top() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let ent = g.add_card_to_battlefield(0, catalog::bloodwater_entity());
+    // Opt into the optional "may put target …".
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.fire_self_etb_triggers(ent, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bolt), "bolt left the graveyard");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bolt), "bolt is on top of library");
+}
+
+#[test]
+fn improbable_alliance_mints_faerie_on_second_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::improbable_alliance());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Faerie").count(), 0);
+    let mut ev2 = vec![];
+    g.draw_one(0, &mut ev2);
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Faerie").count(), 1,
+        "second draw mints a Faerie");
+}
+
+#[test]
+fn runaway_steam_kin_gains_counters_capped_at_three_then_taps_for_mana() {
+    let mut g = two_player_game();
+    let kin = g.add_card_to_battlefield(0, catalog::runaway_steam_kin());
+    // Four red spells; the counter clause stops at three.
+    for _ in 0..4 { p0_bolt_face(&mut g); }
+    assert_eq!(
+        g.battlefield_find(kin).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        3, "capped at three +1/+1 counters");
+    // Remove three counters → add {R}{R}{R}.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kin, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activation");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "activation adds RRR");
+    assert_eq!(
+        g.battlefield_find(kin).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        0, "three counters removed as a cost");
+}
+
+#[test]
+fn harmonic_prodigy_doubles_a_shamans_trigger() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::young_pyromancer()); // Human Shaman
+    g.add_card_to_battlefield(0, catalog::harmonic_prodigy());
+    p0_bolt_face(&mut g);
+    // Young Pyromancer's Shaman trigger fires twice → two Elementals.
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elemental").count(), 2,
+        "Harmonic Prodigy doubles the Shaman's token trigger");
+}
+
+#[test]
+fn spellheart_chimera_power_scales_with_instants_in_graveyard() {
+    let mut g = two_player_game();
+    let chimera = g.add_card_to_battlefield(0, catalog::spellheart_chimera());
+    assert_eq!(g.computed_permanent(chimera).unwrap().power, 0, "empty gy → 0 power");
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let cp = g.computed_permanent(chimera).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "power = I/S in gy, toughness fixed 3");
+}
+
+#[test]
+fn roil_eruption_deals_three_unkicked() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::roil_eruption());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "unkicked Roil Eruption deals 3");
+}
+
+#[test]
+fn naru_meha_anthems_other_wizards() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::naru_meha_master_wizard());
+    let other = g.add_card_to_battlefield(0, catalog::adeliz_the_cinder_wind()); // Wizard
+    let cp = g.computed_permanent(other).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "other Wizard gets +1/+1 from Naru Meha");
+}
+
+#[test]
+fn docent_transforms_at_three_wizards() {
+    let mut g = two_player_game();
+    // Two Wizards already down (Dualcaster Mage is a Human Wizard).
+    g.add_card_to_battlefield(0, catalog::dualcaster_mage());
+    g.add_card_to_battlefield(0, catalog::dualcaster_mage());
+    let docent = g.add_card_to_battlefield(0, catalog::docent_of_perfection());
+    p0_bolt_face(&mut g);
+    // Cast made a 3rd Wizard token → Docent transforms to Final Iteration.
+    assert_eq!(g.battlefield_find(docent).unwrap().definition.name, "Final Iteration",
+        "three Wizards flips Docent");
+}
+
+#[test]
+fn beacon_bolt_scales_with_instants_in_graveyard_and_exile() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_exile(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::beacon_bolt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // 1 in gy + 1 in exile = 2 damage on a 4/4 → survives with 2 damage marked.
+    let cp = g.battlefield_find(victim).expect("survives 2 damage");
+    assert_eq!(cp.damage, 2, "Beacon Bolt deals gy+exile I/S count");
+}

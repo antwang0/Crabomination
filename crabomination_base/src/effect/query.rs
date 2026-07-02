@@ -777,6 +777,10 @@ impl Effect {
                 sel_filter(what).or_else(|| implicit_player_if_controlled_by_target(what))
             }
             Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
+            // "You may [targeted effect]" — surface the body's target filter
+            // so the trigger auto-targeter finds the (optional) target when
+            // the ability is put on the stack (Bloodwater Entity's gy → top).
+            Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
             | Effect::RemoveAllCounters { what }

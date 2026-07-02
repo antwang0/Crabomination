@@ -307,6 +307,9 @@ mod tests_recent88;
 #[path = "../tests/recent89.rs"]
 mod tests_recent89;
 #[cfg(test)]
+#[path = "../tests/recent90.rs"]
+mod tests_recent90;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -11234,8 +11237,10 @@ fn static_effect_to_effects(
             // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
             | StaticEffect::DoubleControllerEtbTriggers
-            // Katara — read at trigger dispatch via `ally_trigger_extra_fires`.
+            // Katara / Harmonic Prodigy — read at trigger dispatch via
+            // `ally_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerAllyTriggers
+            | StaticEffect::DoubleControllerTriggersOfType { .. }
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).
