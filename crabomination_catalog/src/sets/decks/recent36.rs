@@ -236,8 +236,7 @@ pub fn brindle_shoat() -> CardDefinition {
 }
 
 /// Goblin Assault — {2}{R} Enchantment. At the beginning of your upkeep, create
-/// a 1/1 red Goblin with haste. (The "Goblins attack each combat" rider is
-/// dropped.)
+/// a 1/1 red Goblin with haste. Goblin creatures attack each combat if able.
 pub fn goblin_assault() -> CardDefinition {
     let mut hasty = red_goblin_token();
     hasty.keywords = vec![Keyword::Haste];
@@ -251,6 +250,15 @@ pub fn goblin_assault() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: hasty },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Goblin creatures attack each combat if able.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(SelectionRequirement::HasCreatureType(
+                    CreatureType::Goblin,
+                )),
+                keyword: Keyword::MustAttack,
+            },
         }],
         ..Default::default()
     }

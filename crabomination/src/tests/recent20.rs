@@ -115,6 +115,43 @@ fn magda_crime_makes_treasure() {
     assert!(t.unwrap().tapped, "the Treasure is tapped");
 }
 
+/// Magda sacrifices three Treasures to make a 4/4 flying, hasty Scorpion Dragon.
+#[test]
+fn magda_sacs_three_treasures_for_scorpion_dragon() {
+    let mut g = two_player_game();
+    let magda = g.add_card_to_battlefield(0, catalog::magda_the_hoardmaster());
+    g.clear_sickness(magda);
+    let treasure = crate::game::effects::treasure_token();
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &treasure);
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: magda,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("sac three Treasures");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count(),
+        0,
+        "all three Treasures sacrificed"
+    );
+    let dragon = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Scorpion Dragon")
+        .expect("4/4 Scorpion Dragon minted");
+    assert_eq!((dragon.definition.power, dragon.definition.toughness), (4, 4));
+    assert!(dragon.definition.keywords.contains(&Keyword::Flying));
+    assert!(dragon.definition.keywords.contains(&Keyword::Haste));
+}
+
 /// Marchesa digs two when you commit a crime and pay {1}.
 #[test]
 fn marchesa_crime_digs() {

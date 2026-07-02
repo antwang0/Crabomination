@@ -181,3 +181,23 @@ fn bottomless_pit_discards_at_each_upkeep() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before - 1, "active player discarded one");
 }
+
+/// Goblin Assault grants MustAttack to Goblin creatures: a Goblin that can
+/// attack must be declared.
+#[test]
+fn goblin_assault_forces_goblins_to_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_assault());
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_recruiter()); // a Goblin
+    g.clear_sickness(gob);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // Declaring no attackers is illegal while a Goblin can attack.
+    assert!(g.declare_attackers(vec![]).is_err(), "the Goblin must attack under Goblin Assault");
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: gob, target: AttackTarget::Player(1) }]).is_ok(),
+        "declaring the Goblin as an attacker is legal"
+    );
+}

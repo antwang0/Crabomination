@@ -111,6 +111,27 @@ fn sea_serpent_needs_defender_island_to_attack() {
 }
 
 #[test]
+fn goblin_recruiter_stacks_goblins_on_top() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // A non-Goblin on top, then a Goblin deeper in the library.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let goblin = g.add_card_to_library(0, catalog::goblin_recruiter());
+    let rec = g.add_card_to_hand(0, catalog::goblin_recruiter());
+    // Search picks the Goblin, then stops.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(goblin)),
+        DecisionAnswer::Search(None),
+    ]));
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, rec);
+    // ETB tutors the Goblin to the top of the library.
+    let top = g.players[0].library.first().expect("library non-empty");
+    assert_eq!(top.id, goblin, "the searched-up Goblin sits on top");
+}
+
+#[test]
 fn sea_serpent_sacrificed_when_you_control_no_island() {
     let mut g = two_player_game();
     let serp = g.add_card_to_battlefield(0, catalog::sea_serpent());

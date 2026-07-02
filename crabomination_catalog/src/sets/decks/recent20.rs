@@ -168,8 +168,9 @@ pub fn gisa_the_hellraiser() -> CardDefinition {
 }
 
 /// Magda, the Hoardmaster — {1}{R} 2/2 Legendary Dwarf Berserker. Whenever you
-/// commit a crime, create a tapped Treasure (once each turn). (The sac-three-
-/// Treasures Dragon ability is approximated away.)
+/// commit a crime, create a tapped Treasure (once each turn). Sacrifice three
+/// Treasures (sorcery-speed): create a 4/4 red Scorpion Dragon with flying and
+/// haste.
 pub fn magda_the_hoardmaster() -> CardDefinition {
     CardDefinition {
         name: "Magda, the Hoardmaster",
@@ -192,6 +193,31 @@ pub fn magda_the_hoardmaster() -> CardDefinition {
                     ..treasure_token()
                 },
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure),
+                3,
+            )),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Scorpion Dragon".into(),
+                    power: 4,
+                    toughness: 4,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    keywords: vec![Keyword::Flying, Keyword::Haste],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Scorpion, CreatureType::Dragon],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

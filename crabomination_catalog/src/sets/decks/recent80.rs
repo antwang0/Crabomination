@@ -9,9 +9,9 @@ use crate::card::{
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, u, x, Color};
+use crate::mana::{b, cost, generic, r, u, x, Color};
 
 /// Bonehoard — {4} Artifact — Equipment. Living weapon. Equipped creature gets
 /// +X/+X, where X is the number of creature cards in all graveyards. Equip {2}.
@@ -75,6 +75,27 @@ pub fn necropolis_fiend() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Recruiter — {1}{R} 1/1 Goblin. When this creature enters, search your
+/// library for any number of Goblin cards, reveal them, then shuffle and put
+/// those cards on top in any order. ("Any number" is modeled as up to 10.)
+pub fn goblin_recruiter() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Recruiter",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: R::HasCreatureType(CreatureType::Goblin),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            count: Value::Const(10),
+        })],
         ..Default::default()
     }
 }
