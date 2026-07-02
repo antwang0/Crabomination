@@ -42,6 +42,20 @@ fn heralds_horn_reduces_by_one_only() {
     }).is_err(), "off-type spell isn't reduced, so one green alone is insufficient");
 }
 
+/// CR 601.2f / 117.7c — a cost reduction only removes generic mana; colored
+/// pips survive. Urza's Incubator naming Elf can't waive Llanowar Elves' {G}.
+#[test]
+fn cr_601_2f_reduction_is_generic_only() {
+    let mut g = two_player_game();
+    let inc = g.add_card_to_battlefield(0, catalog::urzas_incubator());
+    enter_choosing(&mut g, inc, CreatureType::Elf);
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves()); // {G}, an Elf
+    g.players[0].mana_pool.add_colorless(5); // only generic mana
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "the {{G}} pip can't be paid with generic even under a {{2}} reduction");
+}
+
 #[test]
 fn seismic_assault_discards_land_for_two_damage() {
     let mut g = two_player_game();

@@ -44,6 +44,26 @@ fn cover_of_darkness_grants_fear() {
         .keywords.contains(&Keyword::Fear), "chosen-type Bear has fear");
 }
 
+/// CR 702.36 — Fear granted by Cover of Darkness restricts blockers through the
+/// computed-keyword combat path (a green blocker can't block; an artifact can).
+#[test]
+fn cr_702_36_granted_fear_restricts_blockers() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green Bear
+    let cd = g.add_card_to_battlefield(0, catalog::cover_of_darkness());
+    enter_choosing(&mut g, cd, CreatureType::Bear);
+    let atk_kws = g.computed_permanent(attacker).unwrap().keywords.clone();
+    assert!(atk_kws.contains(&Keyword::Fear), "the Bear was granted Fear");
+    let check = |g: &mut GameState, def: crate::card::CardDefinition| -> bool {
+        let blk = g.add_card_to_battlefield(1, def);
+        let inst = g.battlefield_find(blk).unwrap().clone();
+        let cp = g.computed_permanent(blk).unwrap();
+        crate::game::can_block_attacker_computed(&inst, &cp, &atk_kws, &[], 2)
+    };
+    assert!(!check(&mut g, catalog::grizzly_bears()), "green creature can't block granted Fear");
+    assert!(check(&mut g, catalog::ornithopter()), "artifact creature still can");
+}
+
 #[test]
 fn elvish_clancaller_anthems_other_elves() {
     let mut g = two_player_game();

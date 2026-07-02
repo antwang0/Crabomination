@@ -68,6 +68,26 @@ fn kindred_discovery_draws_on_enter_and_attack() {
     assert_eq!(g.players[0].hand.len(), before + 1, "Bear attacking drew a card");
 }
 
+/// CR 702.73 — a Changeling has every creature type, so it satisfies a
+/// chosen-type trigger regardless of the named type (Kindred Discovery draws
+/// when a Changeling enters even though "Bear" was chosen).
+#[test]
+fn cr_702_73_changeling_satisfies_chosen_type_trigger() {
+    let mut g = two_player_game();
+    let kd = g.add_card_to_battlefield(0, catalog::kindred_discovery());
+    enter_choosing(&mut g, kd, CreatureType::Bear);
+    g.add_card_to_library(0, catalog::plains());
+    let auto = g.add_card_to_hand(0, catalog::universal_automaton()); // {2} 1/1 Changeling
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: auto, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the Changeling");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "Changeling entering drew a card");
+}
+
 #[test]
 fn door_of_destinies_scales_with_charge_counters() {
     let mut g = two_player_game();
