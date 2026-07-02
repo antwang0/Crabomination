@@ -1062,6 +1062,28 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     have to be threaded through all 84 `ApplyToTargets` construction sites.)
   - **Goblin Recruiter** "any number" is capped at 10 via `SearchUpToN`; a true
     unbounded search-to-top would need an "any number" search count.
+- ⏳ **Noticed this run (recent81–83 batches):**
+  - **Auto-targeter ignores target slots embedded in a `Value`.** A trigger
+    whose only target lives inside `Value::PowerOf(Selector::TargetFiltered{..})`
+    (e.g. Wall of Reverence's "gain life equal to the power of target creature
+    you control") isn't auto-targeted, so it resolves as 0. Wall of Reverence is
+    modeled with `Value::GreatestPowerControlledMatching` to sidestep this;
+    the general fix is to walk `Value` trees for target slots in the auto-target
+    candidate scan. Would also make Ballista Squad's "attacking or blocking"
+    restriction expressible once an `IsAttacking`/`IsBlocking` requirement exists.
+  - **`AutoDecider` declines every `Effect::MayDo`/`OptionalTrigger`,** so
+    pure-upside "you may draw / gain / untap" triggers must be modeled as direct
+    effects to fire under the bot-less test decider (the *bot* decider already
+    accepts beneficial ones via `optional_trigger_beneficial`). Snake Umbra /
+    Curious Obsession / Renewed Faith / Fecundity all use direct effects for this
+    reason. A test-friendly "accept clearly-beneficial MayDo" AutoDecider policy
+    would let those cards keep the printed "may" without breaking tests.
+  - **No chosen-type *event* predicate.** `StaticEffect::AnthemForChosenType` +
+    `Effect::NameCreatureType` cover chosen-type anthems, but "whenever you cast
+    a spell of the chosen type" (Door of Destinies) and "whenever a creature you
+    control of the chosen type enters/attacks" (Kindred Discovery) need a
+    `Predicate` that matches an event subject against the source's
+    `chosen_creature_type`. Herald's Horn's chosen-type upkeep reveal wants it too.
 - ⏳ **Auto-targeter doesn't see `SelectionRequirement::Not(Land)`.** A
   `target_filtered(Not(Box::new(Land)).and(ControlledByOpponent))` ETB exile
   silently fizzles under the bot/auto-target path, while the canonical
