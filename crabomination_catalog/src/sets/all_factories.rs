@@ -4613,6 +4613,8 @@ static DECKS: &[Factory] = &[
     super::decks::mystic_retrieval,
     super::decks::deprive,
     super::decks::cerebral_vortex,
+    super::decks::flamewave_invoker,
+    super::decks::goblin_taskmaster,
     super::decks::ghost_ship,
     super::decks::serpent_assassin,
     super::decks::sea_monster,

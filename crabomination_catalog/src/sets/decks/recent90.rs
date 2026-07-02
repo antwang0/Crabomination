@@ -755,3 +755,56 @@ pub fn cerebral_vortex() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flamewave Invoker — {2}{R} 2/2 Goblin Mutant. {7}{R}: deals 5 damage to
+/// target player or planeswalker.
+pub fn flamewave_invoker() -> CardDefinition {
+    CardDefinition {
+        name: "Flamewave Invoker",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7), r()]),
+            effect: Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 0, filter: R::Player.or(R::Planeswalker) },
+                amount: Value::Const(5),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Taskmaster — {R} 1/1 Goblin. {1}{R}: target Goblin creature gets
+/// +1/+0 until end of turn. Morph {R}.
+pub fn goblin_taskmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Taskmaster",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Morph(cost(&[r()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Goblin)),
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

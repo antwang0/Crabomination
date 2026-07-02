@@ -442,3 +442,35 @@ fn cerebral_vortex_draws_then_burns_by_draw_count() {
     // Target drew 2 this turn → takes 2 damage.
     assert_eq!(g.players[1].life, life - 2, "damage = cards drawn this turn (2)");
 }
+
+#[test]
+fn flamewave_invoker_burns_a_player_for_five() {
+    let mut g = two_player_game();
+    let inv = g.add_card_to_battlefield(0, catalog::flamewave_invoker());
+    g.clear_sickness(inv);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(7);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: inv, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 5, "5 damage to the player");
+}
+
+#[test]
+fn goblin_taskmaster_pumps_a_goblin() {
+    let mut g = two_player_game();
+    let tm = g.add_card_to_battlefield(0, catalog::goblin_taskmaster());
+    let other = g.add_card_to_battlefield(0, catalog::goblin_taskmaster());
+    g.clear_sickness(tm);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tm, ability_index: 0, target: Some(Target::Permanent(other)),
+        additional_targets: vec![], x_value: None,
+    }).expect("pump a Goblin");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(other).unwrap().power, 2, "+1/+0 to a Goblin");
+}
