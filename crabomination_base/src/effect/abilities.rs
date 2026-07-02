@@ -830,6 +830,17 @@ pub enum StaticEffect {
     /// both ETB-counter sites (`stack.rs` spell-resolve and `movement.rs`
     /// move-to-battlefield) via `chosen_type_etb_counter_specs`.
     ChosenTypeEntersWithCounter { kind: CounterType },
+    /// "Creatures you control of the chosen type have [keyword]" — a keyword
+    /// grant keyed to the source permanent's `chosen_creature_type` (set at ETB
+    /// via `Effect::NameCreatureType`). Sibling of `AnthemForChosenType`,
+    /// emitting a layer-6 `AddKeyword` over the controller's matching creatures.
+    /// Steely Resolve (shroud), Kindred Boon (indestructible). `opponents: true`
+    /// applies to each opponent's matching creatures instead.
+    GrantKeywordToChosenType {
+        keyword: crate::card::Keyword,
+        #[serde(default)]
+        opponents: bool,
+    },
     /// "Each other [creature_type] creature you control enters with an
     /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
     /// `ChosenTypeEntersWithCounter`; Changeling entrants count.

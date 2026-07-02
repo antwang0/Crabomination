@@ -286,6 +286,10 @@ mod tests_recent83;
 #[cfg(test)]
 #[path = "../tests/recent84.rs"]
 mod tests_recent84;
+
+#[cfg(test)]
+#[path = "../tests/recent85.rs"]
+mod tests_recent85;
 #[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
@@ -4907,6 +4911,39 @@ impl GameState {
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::ModifyPowerToughness(power, toughness),
+                    });
+                }
+            }
+        }
+        // Chosen-type keyword grant (`StaticEffect::GrantKeywordToChosenType`) —
+        // grants a keyword to the controller's (or each opponent's) creatures of
+        // the type named at the source's ETB. Steely Resolve, Kindred Boon.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::GrantKeywordToChosenType { keyword, opponents } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let Some(ct) = card.chosen_creature_type else { continue };
+                let seats: Vec<usize> = if *opponents {
+                    self.opponents_of(card.controller)
+                } else {
+                    vec![card.controller]
+                };
+                for seat in seats {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::AllWithCreatureType {
+                            controller: Some(seat),
+                            creature_type: ct,
+                            exclude_source: false,
+                        },
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
                     });
                 }
             }
@@ -11260,6 +11297,9 @@ fn static_effect_to_effects(
             // AnthemForChosenType — reads the source's live chosen creature
             // type; resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForChosenType { .. }
+            // GrantKeywordToChosenType — reads the source's live chosen type;
+            // resolved in `gather_continuous_effects`.
+            | StaticEffect::GrantKeywordToChosenType { .. }
             // ChosenTypeEntersWithCounter — read at ETB-counter time via
             // `chosen_type_etb_counter_specs`; no continuous-layer effect.
             | StaticEffect::ChosenTypeEntersWithCounter { .. }
