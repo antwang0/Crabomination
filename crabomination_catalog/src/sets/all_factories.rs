@@ -4808,6 +4808,7 @@ static DECKS: &[Factory] = &[
     super::decks::muck_rats,
     super::decks::giant_strength,
     super::decks::web,
+    super::decks::firebreathing,
     super::decks::blanchwood_armor,
     super::decks::wall_of_brambles,
     super::decks::ironclaw_orcs,

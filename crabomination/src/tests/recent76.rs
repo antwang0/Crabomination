@@ -39,6 +39,48 @@ fn web_grants_toughness_and_reach() {
 }
 
 #[test]
+fn firebreathing_grants_pump_ability_to_host() {
+    // CR 604.3 — the Aura grants the enchanted creature an activated ability.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_aura_on(&mut g, catalog::firebreathing(), bear, &[(Color::Red, 1)]);
+    let granted = g.granted_abilities_for(bear);
+    assert_eq!(granted.len(), 1, "host gained the firebreathing ability");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate granted {R}: +1/+0");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(bear).unwrap();
+    assert_eq!((p.power, p.toughness), (3, 2), "2/2 → 3/2");
+}
+
+#[test]
+fn lure_forces_all_blockers() {
+    // CR 509.1c — every creature able to block the enchanted creature must.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_aura_on(&mut g, catalog::lure(), bear, &[(Color::Green, 3)]);
+    g.clear_sickness(bear);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(blocker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // Declaring no blocks is illegal — the able blocker must block the lured creature.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![])).is_err(),
+        "an able blocker must block the lured attacker");
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("forced block legal");
+}
+
+#[test]
 fn blanchwood_armor_scales_with_forests() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

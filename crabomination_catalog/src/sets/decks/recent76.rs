@@ -7,7 +7,7 @@ use crate::card::SelectionRequirement as R;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
-    Subtypes, TriggeredAbility,
+    StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{deal, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, Value};
@@ -55,6 +55,36 @@ pub fn blanchwood_armor() -> CardDefinition {
             }),
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+/// Firebreathing — {R} Aura. Enchanted creature has "{R}: +1/+0 until end of
+/// turn" (CR 604.3 — the Aura grants the host an activated ability, Splinter
+/// Twin shape).
+pub fn firebreathing() -> CardDefinition {
+    CardDefinition {
+        name: "Firebreathing",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has \"{R}: This creature gets +1/+0 until end of turn.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[r()]),
+                    effect: Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
         ..Default::default()
     }
 }
