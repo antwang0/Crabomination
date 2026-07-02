@@ -4486,7 +4486,6 @@ static DECKS: &[Factory] = &[
     super::decks::fire_snake,
     super::decks::elven_cache,
     super::decks::talas_warrior,
-    super::decks::mountain_yeti,
     super::decks::giant_crab,
     super::decks::dwarven_soldier,
     super::decks::erg_raiders,

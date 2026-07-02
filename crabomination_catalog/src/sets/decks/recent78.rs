@@ -5,11 +5,11 @@
 use crate::card::SelectionRequirement as R;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventScope, EventSpec, Keyword, LandType, Predicate, Subtypes, TriggeredAbility,
+    EventScope, EventSpec, Keyword, Predicate, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, EventKind, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, r, u, ManaCost};
 
 /// Vanilla / French-vanilla creature helper.
 fn vanilla(
@@ -123,12 +123,6 @@ pub fn talas_warrior() -> CardDefinition {
 }
 
 
-
-/// Mountain Yeti — {2}{R}{R} 3/3 Yeti. Mountainwalk, protection from white.
-pub fn mountain_yeti() -> CardDefinition {
-    vanilla("Mountain Yeti", cost(&[generic(2), r(), r()]), vec![CreatureType::Yeti], 3, 3,
-        vec![Keyword::Landwalk(LandType::Mountain), Keyword::Protection(Color::White)])
-}
 
 /// Giant Crab — {4}{U} 3/3 Crab. {U}: gains shroud until end of turn.
 pub fn giant_crab() -> CardDefinition {

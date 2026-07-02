@@ -196,9 +196,10 @@ Each unblocks a large swath of cards.
   devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion
   bonuses (`StaticEffect::DevotionBonus` — Altar of the Pantheon, CR 700.5);
   keyword loss (`LoseKeyword` — Nowhere to Run); live-recompute `GrantKeyword`
-  statics over combat state (`IsAttacking` — Bone-Cairn Butcher's "attacking
-  tokens you control have deathtouch"). Remaining: broader "you may play",
-  devotion-gated non-type states.
+  **and `PumpPT`** statics over combat state (`IsAttacking`/`IsModified` —
+  Bone-Cairn Butcher's "attacking tokens have deathtouch" and Orcish
+  Oriflamme's "attacking creatures you control get +1/+0"). Remaining: broader
+  "you may play", devotion-gated non-type states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1). Life-loss
   doubling (`OpponentLifeLossDoubledDuringYourTurn` — Bloodletter) and scoped
   unpreventable combat damage (`ControllerCreaturesCombatDamageCantBePrevented`

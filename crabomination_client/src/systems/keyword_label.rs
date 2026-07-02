@@ -172,17 +172,36 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
     })
 }
 
+/// The numeric magnitude worth appending to a count-carrying keyword's tag —
+/// the N in Rampage N / Toxic N / Annihilator N etc. materially changes how the
+/// creature reads in combat, so surface it ("Rmp2", "Tox3") rather than dropping
+/// it. Cost-carrying keywords (Ward, Crew) aren't plain integers, so skip them.
+fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
+    use Keyword::*;
+    let n = match kw {
+        Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
+        | Poisonous(n) | CantBeBlockedExceptByN(n) => *n,
+        _ => return None,
+    };
+    Some(n.to_string())
+}
+
 /// Build the displayed strip for a permanent's keyword list: each displayable
-/// keyword's tag, first-occurrence order, de-duplicated, space-joined. Empty
-/// string when nothing is worth showing.
+/// keyword's tag (with its count suffix where one applies), first-occurrence
+/// order, de-duplicated, space-joined. Empty string when nothing is worth
+/// showing.
 fn keyword_strip(keywords: &[Keyword]) -> String {
-    let mut seen: HashSet<&'static str> = HashSet::new();
-    let mut tags: Vec<&'static str> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut tags: Vec<String> = Vec::new();
     for kw in keywords {
-        if let Some(tag) = keyword_tag(kw)
-            && seen.insert(tag)
-        {
-            tags.push(tag);
+        if let Some(tag) = keyword_tag(kw) {
+            let full = match keyword_value_suffix(kw) {
+                Some(sfx) => format!("{tag}{sfx}"),
+                None => tag.to_string(),
+            };
+            if seen.insert(full.clone()) {
+                tags.push(full);
+            }
         }
     }
     tags.join(" ")
@@ -321,7 +340,7 @@ mod tests {
     fn strip_surfaces_resilience_and_status_keywords() {
         assert_eq!(keyword_strip(&[Keyword::Persist]), "Per");
         assert_eq!(keyword_strip(&[Keyword::Undying]), "Und");
-        assert_eq!(keyword_strip(&[Keyword::Annihilator(2)]), "Ann");
+        assert_eq!(keyword_strip(&[Keyword::Annihilator(2)]), "Ann2");
         assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
         assert_eq!(keyword_strip(&[Keyword::Prowess]), "Prw");
         assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
@@ -334,7 +353,7 @@ mod tests {
 
     #[test]
     fn strip_surfaces_generalized_menace_and_lure() {
-        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedExceptByN(3)]), "Men+");
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedExceptByN(3)]), "Men+3");
         assert_eq!(keyword_strip(&[Keyword::MustBeBlocked]), "Lure");
     }
 
@@ -365,10 +384,21 @@ mod tests {
 
     #[test]
     fn strip_surfaces_combat_pump_statics() {
-        assert_eq!(keyword_strip(&[Keyword::Bushido(2)]), "Bsd");
-        assert_eq!(keyword_strip(&[Keyword::Rampage(1)]), "Rmp");
+        assert_eq!(keyword_strip(&[Keyword::Bushido(2)]), "Bsd2");
+        assert_eq!(keyword_strip(&[Keyword::Rampage(1)]), "Rmp1");
         assert_eq!(keyword_strip(&[Keyword::Banding]), "Bnd");
-        assert_eq!(keyword_strip(&[Keyword::Absorb(1)]), "Abs");
+        assert_eq!(keyword_strip(&[Keyword::Absorb(1)]), "Abs1");
+    }
+
+    #[test]
+    fn strip_surfaces_count_suffix_for_scaling_keywords() {
+        // The N in Rampage/Toxic/Poisonous/Annihilator changes the combat read,
+        // so it rides along with the tag instead of being dropped.
+        assert_eq!(keyword_strip(&[Keyword::Rampage(2)]), "Rmp2");
+        assert_eq!(keyword_strip(&[Keyword::Toxic(3)]), "Tox3");
+        assert_eq!(keyword_strip(&[Keyword::Poisonous(1)]), "Psn1");
+        // Two different Rampage magnitudes are distinct chips, not deduped.
+        assert_eq!(keyword_strip(&[Keyword::Rampage(1), Keyword::Rampage(2)]), "Rmp1 Rmp2");
     }
 
     #[test]

@@ -3191,6 +3191,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // unless they bring deathtouch / first strike.
     let mut attacker_damage_taken: std::collections::HashMap<CardId, i32> =
         std::collections::HashMap::new();
+    // Blockers already committed to each attacker — folds Rampage (CR 702.23)
+    // into the trade math for the second-and-later blocker.
+    let mut attacker_block_count: std::collections::HashMap<CardId, i32> =
+        std::collections::HashMap::new();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
 
     for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
@@ -3211,7 +3215,32 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // Skip attackers that already have at least their toughness
             // worth of damage queued unless we have deathtouch.
             let queued = attacker_damage_taken.get(a_id).copied().unwrap_or(0);
-            if !b_dt && queued >= *a_tough {
+            // Rampage N (CR 702.23): every blocker beyond the first pumps the
+            // attacker +N/+N. When this would be an additional blocker, fold
+            // that bonus into the effective P/T so the bot doesn't gang-block
+            // into a pump that saves the attacker and kills the extra blocker.
+            let bcount = attacker_block_count.get(a_id).copied().unwrap_or(0);
+            let rampage = state
+                .battlefield
+                .iter()
+                .find(|c| c.id == *a_id)
+                .map(|a| {
+                    a.definition
+                        .keywords
+                        .iter()
+                        .chain(a.granted_keywords_eot.iter())
+                        .filter_map(|k| match k {
+                            Keyword::Rampage(n) => Some(*n as i32),
+                            _ => None,
+                        })
+                        .max()
+                        .unwrap_or(0)
+                })
+                .unwrap_or(0);
+            let ramp_bonus = rampage * bcount;
+            let eff_a_tough = *a_tough + ramp_bonus;
+            let eff_a_pow = *a_pow + ramp_bonus;
+            if !b_dt && queued >= eff_a_tough {
                 continue;
             }
             // First-strike awareness (CR 702.7): if the attacker strikes
@@ -3249,15 +3278,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 && !blk_first_strike
                 && !blocker_takes_no_dmg
                 && !blocker_indestructible
-                && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
+                && (eff_a_pow >= b_tough || (*a_dt && eff_a_pow >= 1));
             let kills_attacker = !attacker_takes_no_dmg
                 && !attacker_indestructible
                 && !dies_before_striking
-                && (b_dt || b_pow >= (a_tough - queued));
+                && (b_dt || b_pow >= (eff_a_tough - queued));
             // A deathtouch attacker kills the blocker on any damage.
             let dies_to_attacker = !blocker_takes_no_dmg
                 && !blocker_indestructible
-                && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
+                && (eff_a_pow >= b_tough || (*a_dt && eff_a_pow >= 1));
             // Scoring: clean trade (kill, don't die) > kill-and-die >
             // chump (don't kill, die). Higher attacker power adds value.
             let score = if kills_attacker && !dies_to_attacker {
@@ -3303,6 +3332,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // Mark the damage queued so subsequent blockers can pile on
             // attackers that aren't fully covered yet.
             *attacker_damage_taken.entry(a_id).or_insert(0) += b_tough;
+            *attacker_block_count.entry(a_id).or_insert(0) += 1;
         }
     }
     // Gang-block-to-kill when our life is threatened. The greedy single-
@@ -3338,6 +3368,26 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             .collect();
         uncovered.sort_by_key(|(_, p, _, _, _)| -*p);
         for (a_id, _a_pow, a_tough, a_flying, _a_dt) in uncovered {
+            // Rampage N (CR 702.23): each blocker beyond the first raises the
+            // attacker's toughness by N, so a gang must out-damage the pumped
+            // total — otherwise the chumps die and the attacker survives.
+            let rampage = state
+                .battlefield
+                .iter()
+                .find(|c| c.id == a_id)
+                .map(|a| {
+                    a.definition
+                        .keywords
+                        .iter()
+                        .chain(a.granted_keywords_eot.iter())
+                        .filter_map(|k| match k {
+                            Keyword::Rampage(n) => Some(*n as i32),
+                            _ => None,
+                        })
+                        .max()
+                        .unwrap_or(0)
+                })
+                .unwrap_or(0);
             // Collect a gang of legal idle blockers that together kill it.
             let mut gang: Vec<CardId> = Vec::new();
             let mut dmg = 0i32;
@@ -3348,7 +3398,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 }
                 gang.push(*b_id);
                 dmg += *b_pow;
-                if *b_dt || dmg >= a_tough {
+                let eff_tough = a_tough + rampage * (gang.len() as i32 - 1);
+                if *b_dt || dmg >= eff_tough {
                     kills = true;
                     break;
                 }
@@ -4658,6 +4709,29 @@ mod tests {
         }])).expect("declare attacker");
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(wall, atk)], "indestructible 1/1 walls the 5/5 for free");
+    }
+
+    /// CR 702.23 — the bot won't pile a second blocker onto a Rampage attacker:
+    /// the +N/+N pump means the extra body dies without helping kill it. A lone
+    /// deathtouch blocker already kills it, so the 3/3 stays home.
+    #[test]
+    fn bot_wont_gang_block_a_rampage_attacker() {
+        let mut g = two_player_game();
+        let giant = g.add_card_to_battlefield(0, catalog::frost_giant()); // 4/4 rampage 2
+        g.clear_sickness(giant);
+        let rats = g.add_card_to_battlefield(1, catalog::typhoid_rats()); // 1/1 deathtouch
+        let mut big = catalog::grizzly_bears();
+        big.name = "Ogre"; big.power = 3; big.toughness = 3;
+        g.add_card_to_battlefield(1, big);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: giant, target: AttackTarget::Player(1),
+        }])).expect("declare attacker");
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(rats, giant)],
+            "deathtouch alone kills it; no second blocker into the Rampage pump");
     }
 
     /// The bot won't declare a CanAttackOnlyIfDefenderControls attacker

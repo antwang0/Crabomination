@@ -8,14 +8,32 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Discovered follow-ups — retro commons sweep (`decks::recent71`–`recent75`)
+## Discovered follow-ups — retro commons sweep (`decks::recent71`–`recent78`)
 
-Shipped: 53 classic-frame cards + `DynamicPt::EnchantmentsInPlay` (Yavimaya
-Enchantress CDA), the `Nomad` + `Nightstalker` creature subtypes, and a Hellrider
-faithfulness fix (`Attacks/YourControl` + `DealDamage { DefendingPlayer }`, was
-`SelfSource` + `EachOpponent`). Server affordance labels for `Regenerate` /
-`SacrificePermanent` / `LoseKeywordThisTurn` (were falling through to the generic
-"Activate").
+Shipped (recent77–78): 43 classic-frame cards; `PumpPT` statics now
+live-recompute over `IsAttacking`/`IsModified` (Orcish Oriflamme); `AttachedTo`
+LKI now consults `leaves_bf_lki` so a `sac_cost` ability reads the enchanted
+creature (Carapace); the bot's block heuristic folds Rampage (CR 702.23) into its
+gang-block / second-blocker math; the client keyword strip surfaces the N on
+count-scaling keywords (Rmp2 / Tox3 / Ann2).
+
+Still deferred / noticed but not tackled (recent77–78):
+- **Warp Artifact / Cursed Land / Wanderlust** — "at the upkeep of enchanted
+  [permanent]'s controller, deal 1 damage to that player" needs a new
+  `EventScope` (or an AnyPlayer-upkeep + "the step's player controls the
+  enchanted permanent" gate) binding that controller as the target. Clean
+  3-card cluster once the scope lands.
+- **Meekstone / Winter Orb family** — "creatures with power ≥3 don't untap"
+  needs a filtered untap-skip static (only `LandsDontUntapNextUntapStep` exists).
+- **Dragon Whelp** — firebreathing with "if activated 4+ times this turn,
+  sacrifice at next end step" needs a per-turn activation counter + self-sac.
+- **Balduvian Horde / Bull Elephant** — ETB "sacrifice unless you {discard at
+  random / return two Forests}" needs an ETB sacrifice-unless-alt-cost rider.
+- **Sea Serpent** — "when you control no Islands, sacrifice this" needs a
+  board-state sacrifice trigger (the can't-attack-without-Island half is fine).
+- **Kormus Bell / Living Lands** — animate-all-lands-of-type continuous effect.
+- **Scavenging Ghoul** — corpse counters per creature died + remove-to-regen.
+
 Still deferred / noticed but not tackled:
 - **Sea Drake** ("ETB return two target lands you control") needs an exactly-N
   own-permanent bounce with cast-time targeting; skipped.
