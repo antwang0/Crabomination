@@ -127,9 +127,8 @@ pub fn phyrexian_vault() -> CardDefinition {
 }
 
 /// Vanquisher's Banner — {5} Artifact. As it enters, choose a creature type.
-/// Creatures you control of the chosen type get +1/+1. (The "whenever you cast a
-/// creature spell of the chosen type, draw a card" rider is dropped — no
-/// chosen-type cast-trigger primitive yet.)
+/// Creatures you control of the chosen type get +1/+1; whenever you cast a
+/// spell of the chosen type, draw a card.
 pub fn vanquishers_banner() -> CardDefinition {
     CardDefinition {
         name: "Vanquisher's Banner",
