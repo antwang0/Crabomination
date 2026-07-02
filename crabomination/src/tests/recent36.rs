@@ -201,3 +201,28 @@ fn goblin_assault_forces_goblins_to_attack() {
         "declaring the Goblin as an attacker is legal"
     );
 }
+
+/// Hour of Promise makes two Zombies when you control three or more Deserts.
+#[test]
+fn hour_of_promise_makes_zombies_with_three_deserts() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::conduit_pylons()); // a Desert land
+    }
+    let hp = g.add_card_to_hand(0, catalog::hour_of_promise());
+    // Decline the land search; the Deserts already in play trigger the rider.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(None)]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hour of Promise castable");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Zombie").count(),
+        2,
+        "two 2/2 Zombies with 3+ Deserts"
+    );
+}

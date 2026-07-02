@@ -4,11 +4,11 @@
 
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    LandType, SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::mint_treasures;
-use crate::effect::{PlayerRef, ZoneDest};
+use crate::effect::{PlayerRef, Predicate, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 fn red_goblin_token() -> TokenDefinition {
@@ -24,19 +24,43 @@ fn red_goblin_token() -> TokenDefinition {
 }
 
 /// Hour of Promise — {4}{G} Sorcery. Search your library for up to two land
-/// cards and put them onto the battlefield tapped. (The 3+ Deserts Zombie
-/// rider is dropped.)
+/// cards, put them onto the battlefield tapped; then if you control three or
+/// more Deserts, create two 2/2 black Zombie tokens.
 pub fn hour_of_promise() -> CardDefinition {
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    let deserts = Value::CountOf(Box::new(Selector::ControlledBy {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::HasLandType(LandType::Desert),
+    }));
     CardDefinition {
         name: "Hour of Promise",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::SearchUpToN {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::Land,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-            count: Value::Const(2),
-        },
+        effect: Effect::Seq(vec![
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::Const(2),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(deserts, Value::Const(3)),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: zombie,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }
