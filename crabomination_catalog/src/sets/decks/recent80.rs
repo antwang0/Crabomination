@@ -8,10 +8,10 @@ use crate::card::{
     EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{drain, etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, r, u, x, Color};
+use crate::mana::{b, cost, g, generic, r, u, x, Color};
 
 /// Bonehoard — {4} Artifact — Equipment. Living weapon. Equipped creature gets
 /// +X/+X, where X is the number of creature cards in all graveyards. Equip {2}.
@@ -75,6 +75,66 @@ pub fn necropolis_fiend() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Blaze — {X}{R} Sorcery. Deals X damage to any target.
+pub fn blaze() -> CardDefinition {
+    CardDefinition {
+        name: "Blaze",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+        ..Default::default()
+    }
+}
+
+/// Fugitive Wizard — {U} 1/1 Human Wizard.
+pub fn fugitive_wizard() -> CardDefinition {
+    CardDefinition {
+        name: "Fugitive Wizard",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Highway Robber — {2}{B}{B} 2/2 Human Mercenary. When it enters, target
+/// opponent loses 2 life and you gain 2 life. (Drain hits each opponent —
+/// 1v1-faithful.)
+pub fn highway_robber() -> CardDefinition {
+    CardDefinition {
+        name: "Highway Robber",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(drain(2))],
+        ..Default::default()
+    }
+}
+
+/// Warthog — {1}{G}{G} 3/2 Boar. Swampwalk.
+pub fn warthog() -> CardDefinition {
+    CardDefinition {
+        name: "Warthog",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Landwalk(LandType::Swamp)],
         ..Default::default()
     }
 }

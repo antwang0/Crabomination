@@ -83,6 +83,47 @@ fn charmed_sleep_taps_and_locks_untap() {
 }
 
 #[test]
+fn blaze_deals_x_damage_to_any_target() {
+    let mut g = two_player_game();
+    let blaze = g.add_card_to_hand(0, catalog::blaze());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: blaze,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Blaze castable for X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 3, "X=3 damage to face");
+}
+
+#[test]
+fn highway_robber_drains_two_on_etb() {
+    let mut g = two_player_game();
+    let hr = g.add_card_to_hand(0, catalog::highway_robber());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    cast(&mut g, hr);
+    assert_eq!(g.players[1].life, opp_life - 2, "opponent loses 2");
+    assert_eq!(g.players[0].life, my_life + 2, "you gain 2");
+}
+
+#[test]
+fn warthog_has_swampwalk() {
+    use crate::card::{Keyword, LandType};
+    let g = two_player_game();
+    let def = catalog::warthog();
+    assert!(def.keywords.contains(&Keyword::Landwalk(LandType::Swamp)), "Warthog has swampwalk");
+    let _ = g;
+}
+
+#[test]
 fn ghost_ship_regenerates() {
     let mut g = two_player_game();
     let ship = g.add_card_to_battlefield(0, catalog::ghost_ship());
