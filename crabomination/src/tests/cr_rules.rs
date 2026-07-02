@@ -5983,3 +5983,63 @@ fn cr_601_2h_sac_cost_paid_before_effect_resolves() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "the 3 damage still resolves from the stack");
 }
+
+// ── CR 701.34 — Proliferate over player resource counters ──────────────────────
+
+/// CR 701.34a — proliferate may add a counter to a *player* who has one. The
+/// controller proliferates their own experience counter.
+#[test]
+fn cr_701_34_proliferate_adds_experience_counter() {
+    use crate::effect::Effect;
+    let mut g = two_player_game();
+    g.players[0].experience = 2;
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::Proliferate, &ctx).unwrap();
+    assert_eq!(g.players[0].experience, 3, "proliferated one more experience counter");
+    // A player without any experience gets none (nothing to proliferate).
+    assert_eq!(g.players[1].experience, 0, "no experience → nothing added");
+}
+
+// ── CR 122 / 614.16 — Winding Constrictor boosts experience counters ───────────
+
+/// The player half of Winding Constrictor's additive replacement (CR 614.16)
+/// applies to experience counters, like energy: "you get that many plus one".
+#[test]
+fn cr_614_16_winding_constrictor_boosts_experience() {
+    use crate::effect::{Effect, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winding_constrictor());
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::AddExperience(Value::Const(1)), &ctx).unwrap();
+    assert_eq!(g.players[0].experience, 2, "got one experience plus one");
+}
+
+// ── CR 115 — an activated ability can target a spell on the stack ──────────────
+
+/// CR 115.4 / 706 — a "copy target spell you control" activated ability
+/// validates a spell-on-the-stack target through `evaluate_requirement_static`.
+#[test]
+fn cr_115_activated_ability_targets_a_stack_spell() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::izzet_guildmage());
+    for c in g.battlefield.iter_mut() { c.summoning_sick = false; }
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt on stack");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(bolt)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("the ability accepts the stack-spell target");
+    drain_stack(&mut g);
+    let dealt = (20 - g.players[0].life) + (20 - g.players[1].life);
+    assert_eq!(dealt, 6, "the copied bolt resolved alongside the original");
+}

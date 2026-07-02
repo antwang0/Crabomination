@@ -2337,9 +2337,12 @@ impl GameState {
             }
 
             Effect::AddExperience(amount) => {
-                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
-                if amt == 0 { return Ok(()); }
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
+                if base == 0 { return Ok(()); }
                 let p = ctx.controller;
+                // CR 122 / 614.16 — Winding Constrictor's player half boosts the
+                // experience counters a player gets, like energy.
+                let amt = base.saturating_add(self.extra_any_kind_adders_for(p));
                 self.players[p].experience = self.players[p].experience.saturating_add(amt);
                 Ok(())
             }
@@ -6095,6 +6098,17 @@ impl GameState {
                         self.players[i].poison_counters += 1;
                         events.push(GameEvent::PoisonAdded { player: i, amount: 1 });
                     }
+                }
+                // CR 701.34a — the proliferating player may also add a counter
+                // to *players* who have one. The auto-decider proliferates the
+                // controller's own beneficial resource counters (experience,
+                // energy) and declines opponents' (as with +1/+1 vs enemies).
+                if self.players[proliferating].experience > 0 {
+                    self.players[proliferating].experience += 1;
+                }
+                if self.players[proliferating].energy > 0 {
+                    self.players[proliferating].energy += 1;
+                    events.push(GameEvent::EnergyGained { player: proliferating, amount: 1 });
                 }
                 Ok(())
             }
