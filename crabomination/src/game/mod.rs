@@ -290,6 +290,10 @@ mod tests_recent84;
 #[cfg(test)]
 #[path = "../tests/recent85.rs"]
 mod tests_recent85;
+
+#[cfg(test)]
+#[path = "../tests/recent86.rs"]
+mod tests_recent86;
 #[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
@@ -11300,6 +11304,9 @@ fn static_effect_to_effects(
             // GrantKeywordToChosenType — reads the source's live chosen type;
             // resolved in `gather_continuous_effects`.
             | StaticEffect::GrantKeywordToChosenType { .. }
+            // ChosenTypeSpellCostReduction — read at cast time in
+            // `cost_reduction_for_spell_zoned`; no continuous-layer effect.
+            | StaticEffect::ChosenTypeSpellCostReduction { .. }
             // ChosenTypeEntersWithCounter — read at ETB-counter time via
             // `chosen_type_etb_counter_specs`; no continuous-layer effect.
             | StaticEffect::ChosenTypeEntersWithCounter { .. }

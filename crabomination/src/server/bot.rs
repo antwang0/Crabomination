@@ -110,6 +110,14 @@ impl Bot for RandomBot {
                             description,
                         ))
                     }
+                    // AutoDecider always names Demon; the bot instead names the
+                    // creature type it has the most of across its battlefield +
+                    // hand, so tribal payoffs (Cavern of Souls, Kindred
+                    // Discovery, Door of Destinies, the chosen-type lords) land
+                    // on a type it can actually exploit.
+                    crate::decision::Decision::ChooseCreatureType { suggestions, .. } => {
+                        decide_creature_type(state, seat, suggestions)
+                    }
                     // AutoDecider chooses nothing; the bot exiles opponents'
                     // graveyard cards (deny graveyard value) up to the cap.
                     crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
@@ -978,6 +986,48 @@ fn decide_choose_target(
         return DecisionAnswer::Target(t.clone());
     }
     DecisionAnswer::Target(legal[0].clone())
+}
+
+/// Bot heuristic for `Decision::ChooseCreatureType` (Cavern of Souls, the
+/// chosen-type tribal payoffs). Name the creature type the bot controls / holds
+/// the most of — counting battlefield creatures first (already in play, so the
+/// payoff is live) and hand creatures as a tiebreak. A Changeling counts for
+/// every type. Falls back to the first suggestion, then Demon, when the bot has
+/// no creatures at all.
+fn decide_creature_type(
+    state: &GameState,
+    seat: usize,
+    suggestions: &[crate::card::CreatureType],
+) -> crate::decision::DecisionAnswer {
+    use crate::card::{CreatureType, Keyword};
+    use std::collections::HashMap;
+    // Weight battlefield presence over hand presence (2:1).
+    let mut tally: HashMap<CreatureType, i32> = HashMap::new();
+    let mut count = |types: &[CreatureType], changeling: bool, weight: i32| {
+        if changeling {
+            // A Changeling bumps every type it could enable; give the current
+            // leaders a small nudge rather than flooding the tally.
+            for t in tally.clone().keys() {
+                *tally.entry(*t).or_insert(0) += weight;
+            }
+        }
+        for t in types {
+            *tally.entry(*t).or_insert(0) += weight;
+        }
+    };
+    for c in state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_creature()) {
+        count(&c.definition.subtypes.creature_types,
+            c.definition.keywords.contains(&Keyword::Changeling), 2);
+    }
+    for c in state.players[seat].hand.iter().filter(|c| c.definition.is_creature()) {
+        count(&c.definition.subtypes.creature_types,
+            c.definition.keywords.contains(&Keyword::Changeling), 1);
+    }
+    let best = tally.into_iter().max_by_key(|(_, n)| *n).map(|(t, _)| t);
+    let choice = best
+        .or_else(|| suggestions.first().copied())
+        .unwrap_or(CreatureType::Demon);
+    crate::decision::DecisionAnswer::CreatureType(choice)
 }
 
 fn decide_library_search(
@@ -3903,6 +3953,22 @@ mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    /// The bot names the creature type it controls the most of (not the stock
+    /// AutoDecider "Demon"), so tribal chosen-type payoffs are useful under bot
+    /// play.
+    #[test]
+    fn bot_names_its_most_common_creature_type() {
+        use crate::card::CreatureType;
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears()); // Bear
+        g.add_card_to_battlefield(0, catalog::llanowar_elves()); // Elf
+        g.add_card_to_battlefield(0, catalog::elvish_clancaller()); // Elf
+        let ans = decide_creature_type(&g, 0, &[]);
+        assert!(matches!(ans, DecisionAnswer::CreatureType(CreatureType::Elf)),
+            "two Elves vs one Bear → names Elf, got {ans:?}");
     }
 
     #[test]

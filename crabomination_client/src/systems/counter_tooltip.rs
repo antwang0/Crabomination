@@ -747,6 +747,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
         K::CantBeBlockedIfControllerCastSpells(_) => "Can't be blocked if you've cast that many or more spells this turn.",
         K::Sneak(_) => "You may cast it for its sneak cost by returning an unblocked attacker you control to its owner's hand.",
+        K::Frenzy(_) => "Whenever this attacks and isn't blocked, it gets +N/+0 until end of turn.",
+        K::CantBlockPowerAtLeast(_) => "Can't block creatures with power that high or greater.",
         K::CantAttackOrBlockUnlessCreatureDiedThisTurn => "Can't attack or block unless a creature died this turn.",
         _ => return None,
     })
@@ -873,6 +875,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Delve => "Delve".into(),
         K::Cascade => "Cascade".into(),
         K::Annihilator(n) => format!("Annihilator {n}"),
+        K::Frenzy(n) => format!("Frenzy {n}"),
+        K::Sneak(c) => format!("Sneak {}", c.summary()),
+        K::CantBlockPowerAtLeast(n) => format!("Can't block power {n}+"),
         K::Firebending(n) => format!("Firebending {n}"),
         K::FirebendingPower | K::FirebendingCreaturesYouControl => "Firebending X".into(),
         K::Dredge(n) => format!("Dredge {n}"),

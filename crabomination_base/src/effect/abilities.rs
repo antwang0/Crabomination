@@ -841,6 +841,12 @@ pub enum StaticEffect {
         #[serde(default)]
         opponents: bool,
     },
+    /// "Creature spells you cast of the chosen type cost {amount} less" — a
+    /// generic-only cost reduction keyed to the source permanent's
+    /// `chosen_creature_type` (set at ETB via `Effect::NameCreatureType`).
+    /// Applied in `cost_reduction_for_spell_zoned`; Changeling spells qualify.
+    /// Urza's Incubator ({2}), Herald's Horn ({1}).
+    ChosenTypeSpellCostReduction { amount: u32 },
     /// "Each other [creature_type] creature you control enters with an
     /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
     /// `ChosenTypeEntersWithCounter`; Changeling entrants count.

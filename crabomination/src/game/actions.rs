@@ -362,6 +362,16 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                         reduction += amount;
                     }
                 }
+                StaticEffect::ChosenTypeSpellCostReduction { amount }
+                    if src.controller == caster
+                        && card.definition.is_creature()
+                        && src.chosen_creature_type.is_some_and(|ct| {
+                            card.has_keyword(&crate::card::Keyword::Changeling)
+                                || card.definition.subtypes.creature_types.contains(&ct)
+                        }) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::GrantAffinityToISSpells { permanent_filter } => {
                     // "Instant and sorcery spells you cast have Affinity for
                     // [permanent_filter]" — only fires on the controller's
