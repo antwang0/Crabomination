@@ -8,6 +8,41 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Izzet spells-matter sweep (`decks::recent90`)
+
+Shipped: 22 cards (Adeliz, Balmor, Bloodwater Entity, Improbable Alliance,
+Runaway Steam-Kin, Harmonic Prodigy, Spellheart Chimera, Roil Eruption,
+Dualcaster Mage, Naru Meha, Docent of Perfection, Beacon Bolt, Archaeomancer,
+Magmatic Insight, Niv-Mizzet the Firemind, Cloud Sprite, Cinder Elemental,
+Living Lightning, Needle Drop, Rise from the Tides, Storm Fleet Aerialist,
+Chandra's Spitfire). New primitives: `DoubleControllerTriggersOfType`,
+`PlayerDealtNoncombatDamage` event + `DamageDealt.combat`,
+`AdditionalCastCost::Discard.filter`; `PermanentView.dealt_damage_this_turn`
+for precise client targeting; server `damage_wins` stat.
+
+Still deferred / noticed but not tackled:
+- **Player experience counters** — `CounterType::Experience` exists but no
+  player-side storage or `AddCounter`-to-player path, and no
+  experience-scaled cost reduction. Blocks Mizzix of the Izmagnus, Elsha,
+  Kess, and the experience-counter cycle. Needs a player-counters framework
+  (mirror `energy`/`poison`) + a `CostReductionPerControllerCounter` static.
+- **Pyromancer Ascension** — needs a `CastSpellMatches`-style predicate for
+  "the cast spell shares a name with a card in your graveyard" (quest-counter
+  trigger) plus the 2+-counter copy trigger.
+- **Zada, Hedron Grinder / Wort, the Raidmother** — Zada needs
+  "copy target spell for each other creature it could target, each copy a
+  different target"; Wort needs a "your R/G I/S spells have Conspire" granted
+  static (the `Conspire` keyword itself already ships).
+- **Deputy of Detention** — `ExileUntilSourceLeaves` doesn't do the "and all
+  other permanents that player controls with the same name" sweep (Detention
+  Sphere is modeled the same single-target way).
+- **Doubled ETB triggers pick the same target** — two fires of a single-target
+  ETB (e.g. an Archaeomancer doubled by Harmonic Prodigy) auto-target the same
+  graveyard card, so the second fizzles. The trigger auto-targeter should avoid
+  targets already claimed by sibling copies in the same batch.
+- **Charmbreaker Devils** — needs a "return a random `[filter]` card from your
+  graveyard to hand" effect (no random-graveyard-return primitive yet).
+
 ## Discovered follow-ups — retro commons sweep (`decks::recent71`–`recent78`)
 
 Shipped (recent77–78): 43 classic-frame cards; `PumpPT` statics now

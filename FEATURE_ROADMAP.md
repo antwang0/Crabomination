@@ -60,6 +60,14 @@ exercising each) was elided in a compaction pass; recover it from
   `OneNonartifactSpellPerTurn` — Rule of Law / Deafening Silence / Ethersworn
   Canonist, surfaced via `PlayerView.spell_cast_lock`); off-turn spell tax
   (`SpellsCostMoreExceptOnControllerTurn` — Defense Grid).
+- **Trigger / damage-event primitives (recent90):**
+  `StaticEffect::DoubleControllerTriggersOfType` (Harmonic Prodigy —
+  "a triggered ability of a Shaman or another Wizard triggers an additional
+  time"; generalizes Katara's Ally doubler and applies on both the Magecraft
+  and general dispatch paths); `GameEvent::DamageDealt.combat` flag +
+  `EventKind::PlayerDealtNoncombatDamage` (Chandra's Spitfire — "whenever an
+  opponent is dealt noncombat damage"); `AdditionalCastCost::Discard.filter`
+  ("discard a land card" — Magmatic Insight).
 - **CDA / cost / predicate primitives (recent52):**
   `DynamicPt::CardTypesInControllerGraveyard` (Nethergoyf */1+*),
   `SpendRestriction::AbilitiesOnly` (Omen Hawker — abilities-only mana, surfaced
