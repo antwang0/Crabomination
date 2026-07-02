@@ -364,3 +364,81 @@ fn chandras_spitfire_ignores_combat_damage() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(spitfire).unwrap().power, 1, "combat damage doesn't pump");
 }
+
+#[test]
+fn cinder_pyromancer_pings_and_untaps_on_red_spell() {
+    let mut g = two_player_game();
+    let cp = g.add_card_to_battlefield(0, catalog::cinder_pyromancer());
+    g.clear_sickness(cp);
+    // {T}: 1 damage to a player.
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cp, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap for 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+    assert!(g.battlefield_find(cp).unwrap().tapped, "tapped by its own cost");
+    // Casting a red spell may untap it.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        vec![crate::decision::DecisionAnswer::Bool(true)],
+    ));
+    p0_bolt_face(&mut g);
+    assert!(!g.battlefield_find(cp).unwrap().tapped, "untapped after a red spell");
+}
+
+#[test]
+fn mystic_retrieval_returns_instant_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::mystic_retrieval());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "bolt back in hand");
+}
+
+#[test]
+fn deprive_counters_and_bounces_a_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    // A spell on the stack to counter (P0's own bolt, left unresolved).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt on stack");
+    let dep = g.add_card_to_hand(0, catalog::deprive());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dep, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Deprive castable with a land to bounce");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "the land was bounced");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "the bolt was countered");
+}
+
+#[test]
+fn cerebral_vortex_draws_then_burns_by_draw_count() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::forest()); }
+    g.players[1].cards_drawn_this_turn = 0;
+    let id = g.add_card_to_hand(0, catalog::cerebral_vortex());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Target drew 2 this turn → takes 2 damage.
+    assert_eq!(g.players[1].life, life - 2, "damage = cards drawn this turn (2)");
+}

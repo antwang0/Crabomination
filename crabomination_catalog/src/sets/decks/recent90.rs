@@ -665,3 +665,93 @@ pub fn chandras_spitfire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cinder Pyromancer — {2}{R} 0/1 Elemental Shaman. {T}: deals 1 damage to
+/// target player or planeswalker. Whenever you cast a red spell, you may untap
+/// this creature.
+pub fn cinder_pyromancer() -> CardDefinition {
+    CardDefinition {
+        name: "Cinder Pyromancer",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 0, filter: R::Player.or(R::Planeswalker) },
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::HasColor(Color::Red))),
+            effect: Effect::MayDo {
+                description: "untap Cinder Pyromancer".into(),
+                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mystic Retrieval — {3}{U} Sorcery. Return target I/S card from your
+/// graveyard to your hand. Flashback {2}{R}.
+pub fn mystic_retrieval() -> CardDefinition {
+    CardDefinition {
+        name: "Mystic Retrieval",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), r()]))],
+        effect: Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::InYourGraveyard.and(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                ),
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Deprive — {U}{U} Instant. Additional cost: return a land you control to its
+/// owner's hand. Counter target spell.
+pub fn deprive() -> CardDefinition {
+    CardDefinition {
+        name: "Deprive",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::ReturnToHand {
+            filter: R::Land,
+            count: 1,
+        }],
+        effect: crate::effect::shortcut::counter_target_spell(),
+        ..Default::default()
+    }
+}
+
+/// Cerebral Vortex — {1}{U}{R} Instant. Target player draws two cards, then this
+/// deals damage to that player equal to the number of cards they've drawn this
+/// turn.
+pub fn cerebral_vortex() -> CardDefinition {
+    CardDefinition {
+        name: "Cerebral Vortex",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::CardsDrawnThisTurn(PlayerRef::Target(0)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
