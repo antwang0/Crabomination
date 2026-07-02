@@ -325,6 +325,9 @@ mod tests_recent93;
 #[path = "../tests/recent94.rs"]
 mod tests_recent94;
 #[cfg(test)]
+#[path = "../tests/recent95.rs"]
+mod tests_recent95;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]

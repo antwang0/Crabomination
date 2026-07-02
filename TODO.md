@@ -8,6 +8,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`)
+
+- **Prosperous Thief** — the printed trigger fires off any Ninja/Rogue you
+  control dealing combat damage; modeled as this creature's own combat damage.
+- **Jukai Preserver channel** — "up to two target creatures" modeled as a single
+  target (no up-to-N multi-target AddCounter yet).
+- **Selfless Samurai** — the "another" clause on the sac ability isn't enforced.
+- **Not yet done (need primitives):** Ao, the Dawn Sky (dies-modal: deploy ≤4-mv
+  permanents vs. mass +1/+1) and Kami of Restless Shadows (ETB modal) want a
+  modal triggered-ability picker; Kami of Industry wants reanimate-with-
+  haste-then-sac-EOT; Peerless Samurai's "next spell costs {1} less after a solo
+  Samurai/Warrior attack" wants a delayed cost reducer; Kappa Tech-Wrecker wants
+  a remove-counter reflexive exile; Kaito Shizuki / Kaito, Bane of Nightmares are
+  planeswalkers.
+
 ## Discovered follow-ups — Equipment / Voltron (`decks::recent94`)
 
 - **Stonehewer Giant / Nazahn ETB tutor auto-attach.** Both search an Equipment

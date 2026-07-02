@@ -5038,6 +5038,18 @@ static DECKS: &[Factory] = &[
     super::decks::sylvia_brightspear,
     super::decks::kwende_pride_of_femeref,
     super::decks::kembas_skyguard,
+    // recent95 — Kamigawa: Neon Dynasty batch
+    super::decks::golden_tail_disciple,
+    super::decks::automated_artificer,
+    super::decks::network_disruptor,
+    super::decks::enthusiastic_mechanaut,
+    super::decks::imperial_oath,
+    super::decks::twinshot_sniper,
+    super::decks::moonfolk_puzzlemaker,
+    super::decks::jukai_preserver,
+    super::decks::selfless_samurai,
+    super::decks::prosperous_thief,
+    super::decks::bronzeplate_boar,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
