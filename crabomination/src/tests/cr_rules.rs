@@ -35,8 +35,9 @@
 //! lifecycle (CR 701.66a — becomes a 0/0 haste land creature, returns tapped on
 //! death), and lethal-damage / 0-toughness SBAs measured against the *computed*
 //! type so animated lands die like creatures (CR 704.5f/g), combat damage to a
-//! planeswalker removing loyalty (CR 306.9 / 508.4), and the Flying/Reach block
-//! restriction (CR 702.4c / 702.9c).
+//! planeswalker removing loyalty (CR 306.9 / 508.4), the Flying/Reach block
+//! restriction (CR 702.4c / 702.9c), and Equip timing/control restrictions
+//! (CR 702.6c/d) plus re-equip move semantics (CR 301.5c).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -6042,4 +6043,70 @@ fn cr_115_activated_ability_targets_a_stack_spell() {
     drain_stack(&mut g);
     let dealt = (20 - g.players[0].life) + (20 - g.players[1].life);
     assert_eq!(dealt, 6, "the copied bolt resolved alongside the original");
+}
+
+// ── CR 702.6 — Equip (timing & control) ──────────────────────────────────────
+
+/// CR 702.6d — "Equip is a special action ... any time [the controller] could
+/// cast a sorcery." Activating it with a non-empty stack / outside a main phase
+/// is illegal.
+#[test]
+fn cr_702_6d_equip_is_sorcery_speed_only() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let axe = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareBlockers; // not a main phase
+    assert!(matches!(
+        g.perform_action(GameAction::Equip { equipment: axe, target: bear }),
+        Err(GameError::SorcerySpeedOnly)
+    ));
+}
+
+/// CR 702.6c — the equip target must be a creature the activating player
+/// controls. Equipping an opponent's creature is illegal.
+#[test]
+fn cr_702_6c_equip_target_must_be_your_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let axe = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    assert!(matches!(
+        g.perform_action(GameAction::Equip { equipment: axe, target: foe }),
+        Err(GameError::InvalidTarget)
+    ));
+}
+
+/// CR 301.5c — an Equipment can be attached to only one creature at a time;
+/// re-equipping moves it off the previous host.
+#[test]
+fn cr_301_5c_reequip_moves_the_equipment() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let axe = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: axe, target: bear1 }).expect("equip bear1");
+    assert_eq!(g.computed_permanent(bear1).unwrap().power, 4, "bear1 buffed");
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: axe, target: bear2 }).expect("re-equip bear2");
+    assert_eq!(g.computed_permanent(bear1).unwrap().power, 2, "bear1 no longer equipped");
+    assert_eq!(g.computed_permanent(bear2).unwrap().power, 4, "bear2 now equipped");
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(bear2));
+}
+
+/// CR 604.3 — a characteristic-defining ability that reads the battlefield
+/// recomputes live (Akiri's power tracks the artifact count).
+#[test]
+fn cr_604_3_artifact_count_cda_recomputes() {
+    let mut g = two_player_game();
+    let akiri = g.add_card_to_battlefield(0, catalog::akiri_line_slinger());
+    assert_eq!(g.computed_permanent(akiri).unwrap().power, 0);
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    assert_eq!(g.computed_permanent(akiri).unwrap().power, 1, "recomputed after an artifact entered");
 }

@@ -8,6 +8,29 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Equipment / Voltron (`decks::recent94`)
+
+- **Stonehewer Giant / Nazahn ETB tutor auto-attach.** Both search an Equipment
+  onto the battlefield/hand but drop the "attach it to a creature you control"
+  rider (the searched card isn't a target, so it lands unattached). Needs a
+  `Search`-then-`Attach` variant that threads the found card into a follow-up
+  attach.
+- **Grafted Wargear unattach → sacrifice.** The "whenever this becomes unattached,
+  sacrifice that permanent" rider is dropped — no unattach-event trigger yet.
+- **Nazahn "Hammer of Nazahn to battlefield" branch.** Modeled as a plain tutor to
+  hand; the named-card-to-battlefield special case is elided.
+- **O-Naginata attach restriction.** "Attach only to a creature with power 3+" is
+  dropped (no equip-target power gate).
+- **Bigger Voltron cards not yet done:** Halvar, God of Battle // Sword of the
+  Realms (DFC God + combat move-an-Aura/Equipment + Equipment back face),
+  Ardenn (attach any number at combat), Champion of Lambholt (global
+  "power-less creatures can't block yours" static), Bruenor Battlehammer
+  (per-attached-Equipment team pump + first-equip-free), Armored Skyhunter
+  (look-top-6, put an Aura/Equipment onto the battlefield + attach).
+- **Client compile-verify.** `crabomination_client` can't build in the headless
+  cloud env (`wayland-sys`); the `attached_to_name` tooltip line was reviewed by
+  hand — re-verify on a GUI host.
+
 ## Discovered follow-ups — experience + Izzet legends (`decks::experience`, `decks::recent91`)
 
 Shipped: the experience-counter framework (`Player.experience`,
@@ -44,8 +67,6 @@ Still deferred / noticed:
 - **Veyran / Mizzix runaway gate / Daxos live token** — Veyran's magecraft
   trigger-doubling half, Mizzix's "mv > experience" gate, and a live-CDA token
   P/T are all approximated (see the card docs).
-- **Niv-Mizzet, Parun uncounterable** — no card-level "this spell can't be
-  countered" flag yet (only mana-provenance / turn-scoped grants).
 - **Meren of Clan Nel Toth** — end-step "reanimate if mv ≤ experience, else to
   hand" wants a targeted graveyard-reanimate with a per-target mv branch.
 

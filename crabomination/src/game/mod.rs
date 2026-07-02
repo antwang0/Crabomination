@@ -322,6 +322,9 @@ mod tests_recent92;
 #[path = "../tests/recent93.rs"]
 mod tests_recent93;
 #[cfg(test)]
+#[path = "../tests/recent94.rs"]
+mod tests_recent94;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -5256,6 +5259,12 @@ impl GameState {
                         c.controller == card.controller && c.definition.is_artifact()
                     }).count() as i32;
                     (base + n, base + n)
+                }
+                crate::card::DynamicPt::ArtifactsControlledPower { base_p, base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && c.definition.is_artifact()
+                    }).count() as i32;
+                    (base_p + n, base_t)
                 }
                 crate::card::DynamicPt::EnchantmentsInPlay { base_p, base_t } => {
                     let n = self.battlefield.iter()

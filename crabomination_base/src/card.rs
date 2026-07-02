@@ -57,7 +57,7 @@ pub enum CreatureType {
     Sheep,
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
-    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
+    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
     Ooze, Plant, Saproling,
@@ -2601,6 +2601,10 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of artifacts the controller
     /// controls (counting the source). Broodstar (base 0/0, CR 604.3 CDA).
     ArtifactsControlled { base: i32 },
+    /// Power = `base_p` + the number of artifacts the controller controls;
+    /// toughness fixed at `base_t` (Akiri, Line-Slinger — "+1/+0 for each
+    /// artifact you control").
+    ArtifactsControlledPower { base_p: i32, base_t: i32 },
     /// Power = `base_p` + the number of enchantments on the battlefield,
     /// toughness = `base_t` + that count. Yavimaya Enchantress (2/2 + one per
     /// enchantment in play, any controller; CR 604.3 CDA).

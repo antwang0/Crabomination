@@ -73,6 +73,11 @@ exercising each) was elided in a compaction pass; recover it from
   `SpendRestriction::AbilitiesOnly` (Omen Hawker — abilities-only mana, surfaced
   as a mana ability in the view), `Predicate::ValueIsPrime` (Zimone's prime-land
   end-step check).
+- **CDA / UI primitives (recent94 — Equipment/Voltron):**
+  `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
+  toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
+  Aura/Equipment's host so the client tooltip shows "Equipping/Enchanting: …"
+  without a battlefield scan.
 - **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
   the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
   (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),

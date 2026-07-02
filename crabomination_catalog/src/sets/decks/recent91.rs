@@ -64,9 +64,9 @@ pub fn kykar_winds_fury() -> CardDefinition {
     }
 }
 
-/// Niv-Mizzet, Parun — {U}{U}{U}{R}{R}{R} 5/5 Dragon Wizard, flying. Draw a card
-/// → deal 1 to any target. Any player casts an I/S → you draw. (The "can't be
-/// countered" clause is dropped — no card-level uncounterable flag yet.)
+/// Niv-Mizzet, Parun — {U}{U}{U}{R}{R}{R} 5/5 Dragon Wizard, flying, can't be
+/// countered. Draw a card → deal 1 to any target. Any player casts an I/S → you
+/// draw.
 pub fn nivmizzet_parun() -> CardDefinition {
     CardDefinition {
         name: "Niv-Mizzet, Parun",
@@ -79,7 +79,7 @@ pub fn nivmizzet_parun() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::CantBeCountered],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),

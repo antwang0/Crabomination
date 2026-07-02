@@ -1085,6 +1085,13 @@ fn project_permanent(
             .filter(|o| o.attached_to == Some(card.id))
             .map(|o| o.definition.name.to_string())
             .collect(),
+        // CR 301.5 / 303 — the host this permanent is attached to, by name.
+        attached_to_name: card.attached_to.and_then(|host| {
+            battlefield
+                .iter()
+                .find(|o| o.id == host)
+                .map(|o| o.definition.name.to_string())
+        }),
         // CR 702.95 — Soulbond partner (only while still on the battlefield).
         soulbond_partner: card
             .soulbond_partner

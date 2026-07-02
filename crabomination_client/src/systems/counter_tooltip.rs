@@ -183,6 +183,13 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Attached: {}", p.attachments.join(", ")));
     }
 
+    // For an Aura/Equipment, the host it's attached to (CR 301.5 / 303) — so a
+    // player hovering the attachment itself sees what it's buffing.
+    if let Some(host) = &p.attached_to_name {
+        let verb = if p.card_types.contains(&CardType::Enchantment) { "Enchanting" } else { "Equipping" };
+        lines.push(format!("{verb}: {host}"));
+    }
+
     // Soulbond pairing (CR 702.95): flag the pair so the player sees the
     // creature is sharing its partner's bonus.
     if p.soulbond_partner.is_some() {
@@ -1170,6 +1177,7 @@ mod tests {
             chosen_color: None,
             chosen_creature_type: None,
             attachments: vec![],
+            attached_to_name: None,
             soulbond_partner: None,
             saga_final_chapter: None,
             has_other_face: false,
@@ -1290,6 +1298,15 @@ mod tests {
         p.attachments = vec!["Gift of Orzhova".into(), "Shuko".into()];
         let body = build_tooltip_body(&p).expect("body should render");
         assert!(body.contains("Attached: Gift of Orzhova, Shuko"), "got: {body}");
+    }
+
+    #[test]
+    fn equipment_host_renders_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.card_types = vec![CardType::Artifact];
+        p.attached_to_name = Some("Grizzly Bears".into());
+        let body = build_tooltip_body(&p).expect("body should render");
+        assert!(body.contains("Equipping: Grizzly Bears"), "got: {body}");
     }
 
     #[test]
