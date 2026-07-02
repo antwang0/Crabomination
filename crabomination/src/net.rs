@@ -1979,7 +1979,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PermanentExiled { card_id } => {
                 GameEventWire::PermanentExiled { card_id: *card_id }
             }
-            GameEvent::DamageDealt { amount, to_player, to_card } => GameEventWire::DamageDealt {
+            GameEvent::DamageDealt { amount, to_player, to_card, .. } => GameEventWire::DamageDealt {
                 amount: *amount,
                 to_player: *to_player,
                 to_card: *to_card,

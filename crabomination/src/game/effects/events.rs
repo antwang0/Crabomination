@@ -42,6 +42,11 @@ pub(crate) fn event_matches_spec(
         // Enrage (CR 702.130): keyed on the damaged permanent, so we only
         // match `DamageDealt` events that hit a card (not a player).
         (EventKind::DealtDamage, GameEvent::DamageDealt { to_card: Some(_), .. }) => true,
+        // Chandra's Spitfire — keyed on a player dealt *noncombat* damage.
+        (
+            EventKind::PlayerDealtNoncombatDamage,
+            GameEvent::DamageDealt { to_player: Some(_), combat: false, .. },
+        ) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
@@ -414,6 +419,9 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::RingTempted { player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
+        // Player-directed damage: the damaged player is the event actor
+        // (a card-directed DamageDealt has to_player: None → falls through).
+        GameEvent::DamageDealt { to_player: Some(p), .. } => Some(*p),
         // For BecameTarget the "actor" is the caster of the spell or
         // ability that picked the target. This drives YourControl /
         // OpponentControl scope checks (Tenured Concocter wants

@@ -1421,6 +1421,12 @@ pub enum EventKind {
     /// enrage creatures; `AnyPlayer`/`YourControl` scopes also work for
     /// "whenever a creature you control is dealt damage" payoffs.
     DealtDamage,
+    /// CR 510 / 119 — a **player** was dealt noncombat damage (a spell,
+    /// ability, or Fight — not combat damage). Keyed on the damaged player,
+    /// so `EventScope::OpponentControl` fires "whenever an opponent is dealt
+    /// noncombat damage" (Chandra's Spitfire). The amount rides in via
+    /// `Value::TriggerEventAmount`.
+    PlayerDealtNoncombatDamage,
     /// A player gained life.
     LifeGained,
     /// CR 701.54 — the Ring tempted a player (and they chose a Ring-bearer).

@@ -1400,7 +1400,15 @@ pub enum GameEvent {
     ColorlessManaAdded { player: usize, source: Option<CardId> },
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
-    DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
+    /// `combat` is true for combat damage (CR 510), false for damage from
+    /// spells/abilities (burn, pingers, Fight). Read by "whenever … is dealt
+    /// *noncombat* damage" triggers (Chandra's Spitfire).
+    DamageDealt {
+        amount: u32,
+        to_player: Option<usize>,
+        to_card: Option<CardId>,
+        combat: bool,
+    },
     /// Some or all of a damage event was prevented by a shield (CR 615.13).
     /// `amount` is the prevented portion.
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },

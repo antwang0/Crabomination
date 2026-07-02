@@ -1854,6 +1854,7 @@ impl GameState {
                             amount: dealt as u32,
                             to_player: None,
                             to_card: Some(blocker_id),
+                            combat: true,
                         });
                         creature_damage.push((atk.id, blocker_id, dealt as u32));
                     }
@@ -1965,6 +1966,7 @@ impl GameState {
                                     amount: dmg,
                                     to_player: None,
                                     to_card: Some(atk.id),
+                                    combat: true,
                                 });
                             }
                         }
@@ -2162,6 +2164,7 @@ impl GameState {
                         amount,
                         to_player: None,
                         to_card: Some(redirect),
+                        combat: true,
                     });
                     return;
                 }
@@ -2177,6 +2180,7 @@ impl GameState {
                         amount,
                         to_player: Some(p),
                         to_card: None,
+                        combat: true,
                     });
                     let amount = (-applied).max(0) as u32;
                     events.push(GameEvent::LifeLost {
@@ -2250,6 +2254,7 @@ impl GameState {
                         amount,
                         to_player: None,
                         to_card: Some(pw_id),
+                        combat: true,
                     });
                     events.push(GameEvent::LoyaltyChanged {
                         card_id: pw_id,
@@ -2270,6 +2275,7 @@ impl GameState {
                         amount,
                         to_player: None,
                         to_card: Some(b_id),
+                        combat: true,
                     });
                 }
             }

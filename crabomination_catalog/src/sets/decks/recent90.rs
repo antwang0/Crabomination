@@ -638,3 +638,30 @@ pub fn storm_fleet_aerialist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Chandra's Spitfire — {2}{R} 1/3 Elemental, flying. Whenever an opponent is
+/// dealt noncombat damage, this creature gets +3/+0 until end of turn.
+pub fn chandras_spitfire() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra's Spitfire",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PlayerDealtNoncombatDamage,
+                EventScope::OpponentControl,
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

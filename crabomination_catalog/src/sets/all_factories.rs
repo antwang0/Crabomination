@@ -4608,6 +4608,7 @@ static DECKS: &[Factory] = &[
     super::decks::rise_from_the_tides,
     super::decks::storm_fleet_aerialist,
     super::decks::azure_drake,
+    super::decks::chandras_spitfire,
     super::decks::ghost_ship,
     super::decks::serpent_assassin,
     super::decks::sea_monster,

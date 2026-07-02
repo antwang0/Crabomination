@@ -378,10 +378,11 @@ impl GameState {
                         amount,
                         to_player: Some(p),
                         to_card: None,
+                        combat: false,
                     });
                 } else {
                     let applied = self.adjust_life_applied(p, -(amount as i32));
-                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None });
+                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false });
                     let lost = (-applied).max(0) as u32;
                     if lost > 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: lost });
@@ -439,6 +440,7 @@ impl GameState {
                             amount,
                             to_player: None,
                             to_card: Some(cid),
+                            combat: false,
                         });
                         events.push(GameEvent::LoyaltyChanged {
                             card_id: cid,
@@ -487,6 +489,7 @@ impl GameState {
                         amount,
                         to_player: None,
                         to_card: Some(cid),
+                        combat: false,
                     });
                     let is_creature = c.definition.is_creature();
                     if source_exiles_damaged && is_creature {

@@ -63,7 +63,7 @@ fn snapping_sailback_enrages() {
     let mut g = two_player_game();
     let sb = g.add_card_to_battlefield(0, catalog::snapping_sailback());
     g.dispatch_triggers_for_events(&[GameEvent::DamageDealt {
-        amount: 2, to_card: Some(sb), to_player: None,
+        amount: 2, to_card: Some(sb), to_player: None, combat: false,
     }]);
     drain_stack(&mut g);
     let c = g.compute_battlefield();

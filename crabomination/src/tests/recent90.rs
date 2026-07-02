@@ -103,6 +103,23 @@ fn harmonic_prodigy_doubles_a_shamans_trigger() {
         "Harmonic Prodigy doubles the Shaman's token trigger");
 }
 
+/// CR 603.x — the subtype trigger doubler fires a matching Wizard's *non-cast*
+/// trigger an additional time (the general dispatch path, not the Magecraft
+/// one). Niv-Mizzet (a Wizard) pings on each draw; doubled → 2 damage per draw.
+#[test]
+fn cr_603_x_subtype_doubler_doubles_a_wizard_draw_trigger() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::harmonic_prodigy());
+    g.add_card_to_battlefield(0, catalog::niv_mizzet_the_firemind());
+    g.add_card_to_library(0, catalog::forest());
+    let life = g.players[1].life;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "Niv-Mizzet's draw trigger fires twice");
+}
+
 #[test]
 fn spellheart_chimera_power_scales_with_instants_in_graveyard() {
     let mut g = two_player_game();
@@ -312,4 +329,38 @@ fn storm_fleet_aerialist_raid_counter() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(a).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 3), "Raid → enters 2/3");
+}
+
+/// CR 510/119 — a player dealt *noncombat* damage fires the new
+/// `PlayerDealtNoncombatDamage` trigger; combat damage does not.
+#[test]
+fn chandras_spitfire_pumps_on_opponent_noncombat_damage() {
+    let mut g = two_player_game();
+    let spitfire = g.add_card_to_battlefield(0, catalog::chandras_spitfire());
+    // A Lightning Bolt (noncombat) to the opponent's face.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(spitfire).unwrap().power, 4, "+3/+0 on opponent noncombat damage");
+}
+
+/// Combat damage to a player must NOT fire Chandra's Spitfire (CR 510).
+#[test]
+fn chandras_spitfire_ignores_combat_damage() {
+    let mut g = two_player_game();
+    let spitfire = g.add_card_to_battlefield(0, catalog::chandras_spitfire());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(spitfire).unwrap().power, 1, "combat damage doesn't pump");
 }
