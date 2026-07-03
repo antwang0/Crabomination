@@ -5516,7 +5516,7 @@ static FIN: &[Factory] = &[
     super::fin::judge_magister_gabranth,
     super::fin::graha_tia,
     super::fin::diamond_weapon,
-    super::fin::hecteyes,
+    super::fin::light_of_judgment,
     super::fin::judgment_bolt,
     super::fin::mysidian_elder,
     super::fin::ultimecia_temporal_threat,

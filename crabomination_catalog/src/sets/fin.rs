@@ -2729,23 +2729,25 @@ pub fn diamond_weapon() -> CardDefinition {
     }
 }
 
-/// Hecteyes — {1}{B} 1/1 Ooze Horror. ETB: each opponent discards a card.
-pub fn hecteyes() -> CardDefinition {
+/// Light of Judgment — {4}{R} Instant. Deals 6 damage to target creature, then
+/// destroys up to one Equipment attached to that creature.
+pub fn light_of_judgment() -> CardDefinition {
     CardDefinition {
-        name: "Hecteyes",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Ooze, CreatureType::Horror],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        triggered_abilities: vec![etb(crate::effect::shortcut::discard(
-            crate::effect::shortcut::each_opponent(),
-            1,
-            false,
-        ))],
+        name: "Light of Judgment",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(6),
+            },
+            Effect::Destroy {
+                what: Selector::Take {
+                    inner: Box::new(Selector::AttachedToMe(Box::new(Selector::Target(0)))),
+                    count: Box::new(Value::ONE),
+                },
+            },
+        ]),
         ..Default::default()
     }
 }

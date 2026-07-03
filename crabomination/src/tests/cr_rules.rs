@@ -6377,3 +6377,62 @@ fn cr_604_3_xande_grows_with_graveyard_cda() {
     let cp = g.computed_permanent(xande).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "creature card excluded");
 }
+
+// ── CR 700.4 / 603.10 — "dies" and last-known info for the new
+//    `EventKind::CreatureOrArtifactDied` rail (Judge Magister Gabranth) ────────
+
+/// CR 700.4 — "dies" means *put into a graveyard from the battlefield*. When a
+/// death is replaced by exile (Rest in Peace), no `CreatureOrArtifactDied`
+/// event fires, so Gabranth doesn't grow.
+#[test]
+fn cr_700_4_creature_or_artifact_died_not_fired_on_exile_replacement() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rest_in_peace()); // graveyard → exile
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(ally);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        0,
+        "a creature exiled instead of dying is not a death"
+    );
+}
+
+/// CR 603.10 / 111.7 — a token creature's death is captured before the token
+/// ceases to exist, so a "creature or artifact you control dies" watcher still
+/// sees it.
+#[test]
+fn cr_603_10_token_death_still_triggers_creature_or_artifact_died() {
+    let mut g = two_player_game();
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let evs = g.remove_to_graveyard_with_triggers(token);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "a friendly token dying still grows Gabranth"
+    );
+}
+
+/// The `CreatureOrArtifactDied` type filter: a non-creature, non-artifact
+/// permanent (a land) dying is a death, but neither a creature nor an artifact,
+/// so Gabranth ignores it.
+#[test]
+fn creature_or_artifact_died_ignores_noncreature_nonartifact() {
+    let mut g = two_player_game();
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let evs = g.remove_to_graveyard_with_triggers(land);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        0,
+        "a land dying is neither a creature nor an artifact"
+    );
+}

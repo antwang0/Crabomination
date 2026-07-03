@@ -1891,15 +1891,24 @@ fn diamond_weapon_affinity_and_immune() {
     assert!(g.permanent_prevents_all_combat_damage_to_self(dw), "Immune to combat damage");
 }
 
-/// Hecteyes makes each opponent discard on ETB.
+/// Light of Judgment deals 6 to a creature and destroys the Equipment on it.
 #[test]
-fn hecteyes_makes_opponent_discard() {
+fn light_of_judgment_burns_and_strips_equipment() {
     let mut g = two_player_game();
-    g.add_card_to_hand(1, catalog::grizzly_bears());
-    let before = g.players[1].hand.len();
-    g.move_card_to_battlefield_for_test(0, catalog::hecteyes());
+    let foe = g.add_card_to_battlefield(1, catalog::iron_giant()); // 6/6
+    g.battlefield_find_mut(foe).unwrap().add_counters(CounterType::PlusOnePlusOne, 5); // 11/11
+    let sword = g.add_card_to_battlefield(1, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(foe);
+    let spell = g.add_card_to_hand(0, catalog::light_of_judgment());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Light of Judgment");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), before - 1, "opponent discarded one");
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 6, "6 damage to the creature");
+    assert!(g.battlefield_find(sword).is_none(), "attached Equipment destroyed");
 }
 
 /// Judgment Bolt deals 5 to a creature and X to its controller (X = Equipment).

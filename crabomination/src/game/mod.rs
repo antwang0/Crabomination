@@ -7875,8 +7875,13 @@ impl GameState {
         // recorded at the raw removal chokepoint since the last dispatch, so
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
-        let synthesized: Vec<GameEvent> = std::mem::take(&mut self.pending_permanent_deaths)
+        let deaths = std::mem::take(&mut self.pending_permanent_deaths);
+        let synthesized: Vec<GameEvent> = deaths
             .into_iter()
+            // CR 700.4 — a death redirected to exile (Rest in Peace, void
+            // counters, Kalitas) never happened; skip it, mirroring the
+            // `CreatureDied` exile guard below.
+            .filter(|(card_id, ..)| !self.exile.iter().any(|c| c.id == *card_id))
             .map(|(card_id, controller, is_creature, is_artifact)| GameEvent::PermanentDied {
                 card_id,
                 controller,
