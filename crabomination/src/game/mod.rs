@@ -5398,6 +5398,12 @@ impl GameState {
                         .count() as i32;
                     (n, base_t)
                 }
+                crate::card::DynamicPt::BasePlusNoncreatureNonlandInControllerGraveyard { base_p, base_t } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| !c.definition.is_creature() && !c.definition.is_land())
+                        .count() as i32;
+                    (base_p + n, base_t + n)
+                }
                 crate::card::DynamicPt::ColorsAmongAlliesControlledPower { base_p, base_t } => {
                     let mut colors: std::collections::HashSet<crate::mana::Color> =
                         std::collections::HashSet::new();
@@ -9649,11 +9655,14 @@ impl GameState {
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
-                Ok(vec![GameEvent::ScryPerformed {
-                    player,
-                    looked_at: count,
-                    bottomed,
-                }])
+                Ok(vec![
+                    GameEvent::ScryPerformed { player, looked_at: count, bottomed },
+                    // CR 701.22 — fires "whenever you scry or surveil" payoffs
+                    // (Matoya). Emitted here so both the synchronous and the
+                    // suspended (human) resolution paths report it; RearrangeTop
+                    // (Index/Spire Owl) is deliberately excluded.
+                    GameEvent::ScriedOrSurveiled { player, surveil: false },
+                ])
             }
             PendingEffectState::RearrangePeeked { count, player } => {
                 // Index / Spire Owl — every peeked card returns to the top in
@@ -9709,11 +9718,10 @@ impl GameState {
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
-                Ok(vec![GameEvent::SurveilPerformed {
-                    player,
-                    looked_at: count,
-                    graveyarded,
-                }])
+                Ok(vec![
+                    GameEvent::SurveilPerformed { player, looked_at: count, graveyarded },
+                    GameEvent::ScriedOrSurveiled { player, surveil: true },
+                ])
             }
             PendingEffectState::LearnPending { player } => {
                 let DecisionAnswer::Learn(choice) = answer else {

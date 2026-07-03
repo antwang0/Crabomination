@@ -1764,3 +1764,482 @@ pub fn cloud_ex_soldier() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Undercity Dire Rat — {1}{B} 2/2 Rat. When it dies, create a Treasure.
+pub fn undercity_dire_rat() -> CardDefinition {
+    CardDefinition {
+        name: "Undercity Dire Rat",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: crate::effect::shortcut::mint_treasures(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Magic Pot — {3} 1/4 Artifact Goblin Construct. When it dies, create a
+/// Treasure. {2}, {T}: Exile target card from a graveyard.
+pub fn magic_pot() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Magic Pot",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: crate::effect::shortcut::mint_treasures(1),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Exile {
+                what: target_filtered(SelectionRequirement::InGraveyard),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shinra Reinforcements — {2}{B} 2/3 Human Soldier. When it enters, mill three
+/// cards and you gain 3 life.
+pub fn shinra_reinforcements() -> CardDefinition {
+    CardDefinition {
+        name: "Shinra Reinforcements",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Minwu, White Mage — {3}{W}{W} 3/3 Legendary Human Cleric with vigilance and
+/// lifelink. Whenever you gain life, put a +1/+1 counter on each Cleric you
+/// control.
+pub fn minwu_white_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Minwu, White Mage",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Cleric)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Il Mheg Pixie — {1}{U} 2/1 Faerie with flying. Whenever it attacks,
+/// surveil 1.
+pub fn il_mheg_pixie() -> CardDefinition {
+    CardDefinition {
+        name: "Il Mheg Pixie",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sabotender — {1}{R} 2/1 Plant with reach. Landfall — Whenever a land you
+/// control enters, it deals 1 damage to each opponent.
+pub fn sabotender() -> CardDefinition {
+    CardDefinition {
+        name: "Sabotender",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+                },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Black Waltz No. 3 — {2}{B}{R} 2/2 Legendary Wizard with flying and
+/// deathtouch. Whenever you cast a noncreature spell, it deals 2 damage to
+/// each opponent.
+pub fn black_waltz_no_3() -> CardDefinition {
+    CardDefinition {
+        name: "Black Waltz No. 3",
+        cost: cost(&[generic(2), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+                },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Xande, Dark Mage — {2}{U}{B} 3/3 Legendary Human Wizard with menace. Gets
+/// +1/+1 for each noncreature, nonland card in your graveyard.
+pub fn xande_dark_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Xande, Dark Mage",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        dynamic_pt: Some(
+            crate::card::DynamicPt::BasePlusNoncreatureNonlandInControllerGraveyard {
+                base_p: 3,
+                base_t: 3,
+            },
+        ),
+        ..Default::default()
+    }
+}
+
+/// Overkill — {2}{B} Instant. Target creature gets -0/-9999 until end of turn.
+pub fn overkill() -> CardDefinition {
+    CardDefinition {
+        name: "Overkill",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(0),
+            toughness: Value::Const(-9999),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Blitzball Shot — {1}{G} Instant. Target creature gets +3/+3 and gains
+/// trample until end of turn.
+pub fn blitzball_shot() -> CardDefinition {
+    CardDefinition {
+        name: "Blitzball Shot",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fight On! — {2}{B} Instant. Return up to two target creature cards from your
+/// graveyard to your hand.
+pub fn fight_on() -> CardDefinition {
+    CardDefinition {
+        name: "Fight On!",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ReturnGraveyardCardsToHand {
+            filter: SelectionRequirement::Creature,
+            max: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Evil Reawakened — {4}{B} Sorcery. Return target creature card from your
+/// graveyard to the battlefield with two additional +1/+1 counters on it.
+pub fn evil_reawakened() -> CardDefinition {
+    CardDefinition {
+        name: "Evil Reawakened",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter {
+                what: Selector::LastMoved,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fate of the Sun-Cryst — {4}{W} Instant. Costs {2} less to cast if it targets
+/// a tapped creature. Destroy target nonland permanent.
+pub fn fate_of_the_sun_cryst() -> CardDefinition {
+    CardDefinition {
+        name: "Fate of the Sun-Cryst",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            2,
+        )),
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// You're Not Alone — {W} Instant. Target creature gets +2/+2 until end of turn.
+/// If you control three or more creatures, it gets +4/+4 instead.
+pub fn youre_not_alone() -> CardDefinition {
+    CardDefinition {
+        name: "You're Not Alone",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(3),
+                },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Auron's Inspiration — {2}{W} Instant with Flashback {2}{W}{W}. Attacking
+/// creatures get +2/+0 until end of turn.
+pub fn aurons_inspiration() -> CardDefinition {
+    CardDefinition {
+        name: "Auron's Inspiration",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), w(), w()]))],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::IsAttacking),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Magic Damper — {U} Instant. Target creature you control gets +1/+1 and gains
+/// hexproof until end of turn. Untap it.
+pub fn magic_damper() -> CardDefinition {
+    CardDefinition {
+        name: "Magic Damper",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Instant Ramen — {2} Artifact — Food with flash. When it enters, draw a card.
+/// {2}, {T}, Sacrifice this artifact: You gain 3 life.
+pub fn instant_ramen() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype};
+    CardDefinition {
+        name: "Instant Ramen",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sahagin — {1}{U} 1/3 Merfolk Warrior. Whenever you cast a noncreature spell,
+/// if at least four mana was spent to cast it, put a +1/+1 counter on it.
+pub fn sahagin() -> CardDefinition {
+    CardDefinition {
+        name: "Sahagin",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+                    Predicate::CastSpellMatches(SelectionRequirement::ManaValueAtLeast(4)),
+                ]),
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Qiqirn Merchant — {2}{U} 1/4 Beast Citizen. {1}, {T}: Draw a card, then
+/// discard a card. {7}, {T}, Sacrifice this creature: Draw three cards.
+pub fn qiqirn_merchant() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Qiqirn Merchant",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(7)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Matoya, Archon Elder — {2}{U} 1/4 Legendary Human Warlock. Whenever you scry
+/// or surveil, draw a card.
+pub fn matoya_archon_elder() -> CardDefinition {
+    CardDefinition {
+        name: "Matoya, Archon Elder",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}

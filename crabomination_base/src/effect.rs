@@ -1437,6 +1437,10 @@ pub enum EventKind {
     PlayerDealtNoncombatDamage,
     /// A player gained life.
     LifeGained,
+    /// CR 701.22/701.42 — a player scried or surveiled (a nonzero peek that
+    /// actually happened). Fires once per scry/surveil resolution; the acting
+    /// player rides in as the subject. Matoya, Archon Elder.
+    ScriedOrSurveiled,
     /// CR 701.54 — the Ring tempted a player (and they chose a Ring-bearer).
     /// Matched to `GameEvent::RingTempted`; the chosen bearer rides in as the
     /// trigger subject. Powers "whenever you choose a creature as your

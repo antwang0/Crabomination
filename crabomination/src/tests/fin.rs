@@ -1050,3 +1050,420 @@ fn battle_menu_item_gains_life() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 24, "Item mode gained 4 life");
 }
+
+// ── modern_decks FIN batch ───────────────────────────────────────────────
+
+use crate::card::ArtifactSubtype;
+use crate::game::types::Target;
+
+fn kill_perm(g: &mut GameState, id: CardId) {
+    let ctl = g.battlefield_find(id).unwrap().controller;
+    let ctx = crate::game::effects::EffectContext::for_ability(id, ctl, Some(Target::Permanent(id)));
+    g.resolve_effect(
+        &crate::effect::Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &ctx,
+    )
+    .unwrap();
+    drain_stack(g);
+}
+
+fn treasure_count(g: &GameState, seat: usize) -> usize {
+    g.battlefield
+        .iter()
+        .filter(|c| {
+            c.controller == seat
+                && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Treasure)
+        })
+        .count()
+}
+
+/// Undercity Dire Rat mints a Treasure when it dies.
+#[test]
+fn undercity_dire_rat_dies_makes_treasure() {
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::undercity_dire_rat());
+    kill_perm(&mut g, rat);
+    assert_eq!(treasure_count(&g, 0), 1, "death made a Treasure");
+}
+
+/// Magic Pot mints a Treasure when it dies.
+#[test]
+fn magic_pot_dies_makes_treasure() {
+    let mut g = two_player_game();
+    let pot = g.add_card_to_battlefield(0, catalog::magic_pot());
+    kill_perm(&mut g, pot);
+    assert_eq!(treasure_count(&g, 0), 1, "death made a Treasure");
+}
+
+/// Shinra Reinforcements mills three and gains 3 on ETB.
+#[test]
+fn shinra_reinforcements_mills_and_gains() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let gy_before = g.players[0].graveyard.len();
+    g.move_card_to_battlefield_for_test(0, catalog::shinra_reinforcements());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3 life");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3, "milled three");
+}
+
+/// Minwu grows every Cleric with a +1/+1 counter when you gain life.
+#[test]
+fn minwu_lifegain_grows_clerics() {
+    let mut g = two_player_game();
+    let minwu = g.add_card_to_battlefield(0, catalog::minwu_white_mage());
+    g.clear_sickness(minwu);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    // Lifelink attack → one lifegain → +1/+1 on each Cleric (Minwu is a Cleric).
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: minwu,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(
+        g.battlefield_find(minwu).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "lifegain grew the Cleric"
+    );
+}
+
+/// Il Mheg Pixie flies and surveils on attack without error.
+#[test]
+fn il_mheg_pixie_flies_and_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let pixie = g.add_card_to_battlefield(0, catalog::il_mheg_pixie());
+    assert!(g.battlefield_find(pixie).unwrap().definition.keywords.contains(&Keyword::Flying));
+    g.clear_sickness(pixie);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: pixie,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pixie).is_some(), "pixie survived its surveil");
+}
+
+/// Sabotender pings each opponent on landfall.
+#[test]
+fn sabotender_landfall_pings() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sabotender());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "landfall pinged the opponent");
+}
+
+/// Black Waltz No. 3 pings each opponent when you cast a noncreature spell.
+#[test]
+fn black_waltz_pings_on_noncreature_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::black_waltz_no_3());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::concentrate());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Concentrate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "noncreature cast pinged for 2");
+}
+
+/// Xande grows with noncreature, nonland cards in your graveyard.
+#[test]
+fn xande_grows_with_graveyard() {
+    let mut g = two_player_game();
+    let xande = g.add_card_to_battlefield(0, catalog::xande_dark_mage());
+    let cp = g.computed_permanent(xande).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "empty graveyard → base 3/3");
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::concentrate());
+    let cp = g.computed_permanent(xande).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "two noncreature cards → 5/5");
+}
+
+/// Overkill drops a creature's toughness to lethal.
+#[test]
+fn overkill_shrinks_toughness() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::overkill());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Overkill");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "toughness ≤ 0 killed it");
+}
+
+/// Blitzball Shot pumps +3/+3 and grants trample.
+#[test]
+fn blitzball_shot_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::blitzball_shot());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Blitzball Shot");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (5, 5), "+3/+3");
+    assert!(b.keywords.contains(&Keyword::Trample), "gained trample");
+}
+
+/// Fight On! returns two creature cards from the graveyard to hand.
+#[test]
+fn fight_on_returns_two_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::fight_on());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Fight On!");
+    drain_stack(&mut g);
+    // Spell leaves hand (-1), two creatures returned (+2) → net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "spell left, two creatures returned");
+    assert_eq!(
+        g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2
+    );
+}
+
+/// Evil Reawakened reanimates a creature with two extra +1/+1 counters.
+#[test]
+fn evil_reawakened_reanimates_with_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::evil_reawakened());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Evil Reawakened");
+    drain_stack(&mut g);
+    let bear = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("reanimated");
+    assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 2, "two +1/+1 counters");
+}
+
+/// You're Not Alone gives +4/+4 when you control three or more creatures.
+#[test]
+fn youre_not_alone_scales_with_board() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::youre_not_alone());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast You're Not Alone");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(a).unwrap();
+    assert_eq!((b.power, b.toughness), (6, 6), "+4/+4 with three creatures");
+}
+
+/// Auron's Inspiration pumps attacking creatures.
+#[test]
+fn aurons_inspiration_pumps_attackers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let spell = g.add_card_to_hand(0, catalog::aurons_inspiration());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Auron's Inspiration");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 2), "attacking bear got +2/+0");
+}
+
+/// Magic Damper untaps a creature you control and shields it.
+#[test]
+fn magic_damper_untaps_and_protects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::magic_damper());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Magic Damper");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+    let b = g.computed_permanent(bear).unwrap();
+    assert!(b.keywords.contains(&Keyword::Hexproof), "gained hexproof");
+    assert_eq!((b.power, b.toughness), (3, 3), "+1/+1");
+}
+
+/// Instant Ramen draws on ETB and can be sacrificed for life.
+#[test]
+fn instant_ramen_draws_and_gains() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::instant_ramen());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB drew a card");
+}
+
+/// Sahagin grows when you cast a noncreature spell with four or more mana.
+#[test]
+fn sahagin_grows_on_big_spell() {
+    let mut g = two_player_game();
+    let sahagin = g.add_card_to_battlefield(0, catalog::sahagin());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::concentrate());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Concentrate");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(sahagin).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "four-mana noncreature spell grew Sahagin"
+    );
+}
+
+/// Qiqirn Merchant loots with its {1}, {T} ability.
+#[test]
+fn qiqirn_merchant_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let qiqirn = g.add_card_to_battlefield(0, catalog::qiqirn_merchant());
+    g.clear_sickness(qiqirn);
+    let discard = g.add_card_to_hand(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: qiqirn,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("activate loot");
+    drain_stack(&mut g);
+    let _ = discard;
+    // Draw +1, discard -1 → net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before, "loot drew then discarded");
+}
+
+/// Matoya draws whenever you scry or surveil.
+#[test]
+fn matoya_draws_on_scry() {
+    let mut g = two_player_game();
+    let matoya = g.add_card_to_battlefield(0, catalog::matoya_archon_elder());
+    let _ = matoya;
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand_before = g.players[0].hand.len();
+    // Resolve a Scry 1 for player 0 directly.
+    let ctx = crate::game::effects::EffectContext::for_ability(matoya, 0, None);
+    let events = g
+        .resolve_effect(
+            &crate::effect::Effect::Scry { who: crate::effect::PlayerRef::You, amount: crate::effect::Value::ONE },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "scry triggered a draw");
+}
+
+/// Matoya also triggers on surveil.
+#[test]
+fn matoya_draws_on_surveil() {
+    let mut g = two_player_game();
+    let matoya = g.add_card_to_battlefield(0, catalog::matoya_archon_elder());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand_before = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(matoya, 0, None);
+    let events = g
+        .resolve_effect(
+            &crate::effect::Effect::Surveil { who: crate::effect::PlayerRef::You, amount: crate::effect::Value::ONE },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "surveil triggered a draw");
+}

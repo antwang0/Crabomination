@@ -2633,6 +2633,10 @@ pub enum DynamicPt {
     /// Power = number of noncreature, nonland cards in the controller's
     /// graveyard; toughness = `base_t`. Dragonfly Swarm (*/3).
     NoncreatureNonlandCardsInControllerGraveyard { base_t: i32 },
+    /// P/T = `base_p`/`base_t`, each raised by the number of noncreature,
+    /// nonland cards in the controller's graveyard (the +N/+N sibling of
+    /// `NoncreatureNonlandCardsInControllerGraveyard`). Xande, Dark Mage.
+    BasePlusNoncreatureNonlandInControllerGraveyard { base_p: i32, base_t: i32 },
     /// Power = `base_p` + the number of distinct colors among Ally creatures
     /// the controller controls; toughness = `base_t`. Earthen Ally (`*`/2).
     ColorsAmongAlliesControlledPower { base_p: i32, base_t: i32 },

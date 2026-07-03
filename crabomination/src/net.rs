@@ -1873,6 +1873,8 @@ pub enum GameEventWire {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::ScriedOrSurveiled`.
+    ScriedOrSurveiled { player: usize, surveil: bool },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::CommittedCrime` (CR 700.13).
@@ -2024,6 +2026,9 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
+            GameEvent::ScriedOrSurveiled { player, surveil } => {
+                GameEventWire::ScriedOrSurveiled { player: *player, surveil: *surveil }
+            }
             GameEvent::EnergyGained { player, amount } => GameEventWire::EnergyGained {
                 player: *player,
                 amount: *amount,
@@ -2280,6 +2285,10 @@ impl GameEventWire {
             },
             E::LifeLost { player, amount } => format!("{} loses {amount} life", pn(*player)),
             E::LifeGained { player, amount } => format!("{} gains {amount} life", pn(*player)),
+            // Internal "you scried/surveiled" trigger event — the concrete
+            // ScryPerformed/SurveilPerformed line already covers the log, so
+            // this one renders blank (and the client skips blank rows).
+            E::ScriedOrSurveiled { .. } => String::new(),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
             E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),

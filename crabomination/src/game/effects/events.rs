@@ -48,6 +48,7 @@ pub(crate) fn event_matches_spec(
             GameEvent::DamageDealt { to_player: Some(_), combat: false, .. },
         ) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
+        (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
@@ -404,6 +405,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
+        | GameEvent::ScriedOrSurveiled { player, .. }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
         | GameEvent::ManaAdded { player, .. }

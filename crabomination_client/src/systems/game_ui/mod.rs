@@ -3382,6 +3382,12 @@ pub fn handle_game_input(
             log.push_divider(format!("──  Turn {turn} · {who}  ──"));
             continue;
         }
+        // Internal/no-display events format to an empty body — skip them
+        // rather than emitting a blank log row.
+        let body = format_event(ev, card_names, view_ref);
+        if body.is_empty() {
+            continue;
+        }
         let card_art = event_primary_card(ev)
             .map(|id| card_names.get(id))
             // "#N" placeholders mean the id never resolved to a real name
@@ -3389,7 +3395,7 @@ pub fn handle_game_input(
             .filter(|n| !n.starts_with('#'))
             .map(|n| crate::scryfall::card_asset_path(&n));
         log.push_event_with_art(
-            format!("{}{}", event_glyph(ev), format_event(ev, card_names, view_ref)),
+            format!("{}{}", event_glyph(ev), body),
             event_color(ev),
             card_art,
         );

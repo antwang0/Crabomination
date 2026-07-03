@@ -73,6 +73,13 @@ exercising each) was elided in a compaction pass; recover it from
   `SpendRestriction::AbilitiesOnly` (Omen Hawker — abilities-only mana, surfaced
   as a mana ability in the view), `Predicate::ValueIsPrime` (Zimone's prime-land
   end-step check).
+- **Scry/Surveil-matters + graveyard CDA (modern_decks — FIN):**
+  `EventKind::ScriedOrSurveiled` (CR 701.22/701.42 — "whenever you scry or
+  surveil"; emitted from the scry/surveil resolution alongside
+  ScryPerformed/SurveilPerformed, excludes RearrangeTop; Matoya, Archon Elder),
+  and `DynamicPt::BasePlusNoncreatureNonlandInControllerGraveyard` (+N/+N per
+  noncreature-nonland card in your graveyard — Xande, Dark Mage). Client log now
+  skips blank-body events so internal trigger events don't emit empty rows.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

@@ -10,12 +10,18 @@ state-corrupting in ordinary play.
 
 ## Discovered follow-ups — Final Fantasy (`sets::fin`)
 
-Shipped this run (20 cards + primitives): `EventKind::AnyCounterAdded` +
-`EventSpec::with_per_subject_cap` (Stalwart Successor), `DynamicPt::
-CreaturesYouControl` (Snow Villiers), plus Tifa, Feather of Flight, Vivi,
-Barret, Squall, White Mage's Staff, Tidus, Zidane, Hope, Sazh, Vanille,
-Y'shtola, Tonberry, Zell, Angel of Mercy, Rydia, and Surrak / Effortless Master
-(`decks::recent102`).
+The `fin` set is a live, growing catalog (~218 real cards remain unimplemented
+— enumerate with a `set:fin` Scryfall search against the catalog). Primitives
+shipped for it include `EventKind::AnyCounterAdded`, `DynamicPt::
+CreaturesYouControl`, `EventKind::ScriedOrSurveiled` (scry/surveil-matters —
+Matoya), and `DynamicPt::BasePlusNoncreatureNonlandInControllerGraveyard`
+(Xande).
+
+Follow-up primitives:
+- **Scry-only / surveil-only triggers** — `GameEvent::ScriedOrSurveiled` carries
+  a `surveil` bool, but only the combined `EventKind::ScriedOrSurveiled` exists.
+  Add scry-only / surveil-only `EventKind`s (gated on the bool) if a card wants
+  just one half.
 
 Documented per-card approximations: Zidane (the "opponent gains control from
 you → Treasure" rider dropped), Vanille (meld half omitted), Y'shtola (the

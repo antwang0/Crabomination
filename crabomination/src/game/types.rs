@@ -1414,6 +1414,9 @@ pub enum GameEvent {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// CR 701.22/701.42 — `player` scried or surveiled (a nonzero peek).
+    /// `surveil` distinguishes the two for surveil-only / scry-only payoffs.
+    ScriedOrSurveiled { player: usize, surveil: bool },
     /// CR 700.14 — `player` paid a spell cost, bringing their running
     /// total of mana spent to cast spells this turn to `total`. "Whenever
     /// you expend N" triggers (`EventKind::Expend` + `Predicate::

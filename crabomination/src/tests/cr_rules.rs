@@ -6309,3 +6309,71 @@ fn cr_613_7_dynamic_anthem_stacks_with_counters() {
     g.add_card_to_battlefield(0, catalog::edgar_king_of_figaro());
     assert_eq!(g.computed_permanent(wol).unwrap().power, 8, "anthem re-scales with the board");
 }
+
+// ── CR 701.22 / 701.42 — "whenever you scry or surveil" ────────────────────
+
+/// A scry and a surveil each fire a "whenever you scry or surveil" trigger,
+/// but "look at and rearrange the top N" (RearrangeTop — Index / Spire Owl)
+/// is neither a scry nor a surveil (CR 701.22 / 701.42) and does not.
+#[test]
+fn cr_701_22_scry_and_surveil_trigger_but_rearrange_does_not() {
+    use crate::effect::{Effect, PlayerRef, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let matoya = g.add_card_to_battlefield(0, catalog::matoya_archon_elder());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let run = |g: &mut GameState, eff: Effect| {
+        let ctx = EffectContext::for_ability(matoya, 0, None);
+        let events = g.resolve_effect(&eff, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(g);
+    };
+    let before = g.players[0].hand.len();
+    run(&mut g, Effect::Scry { who: PlayerRef::You, amount: Value::ONE });
+    assert_eq!(g.players[0].hand.len(), before + 1, "scry drew via Matoya");
+    run(&mut g, Effect::Surveil { who: PlayerRef::You, amount: Value::ONE });
+    assert_eq!(g.players[0].hand.len(), before + 2, "surveil drew via Matoya");
+    // RearrangeTop is not a scry/surveil → no draw.
+    run(&mut g, Effect::RearrangeTop { who: PlayerRef::You, amount: Value::ONE });
+    assert_eq!(g.players[0].hand.len(), before + 2, "rearrange did not trigger Matoya");
+}
+
+/// CR 701.22b — a scry 0 is not a scry, so "whenever you scry" triggers stay
+/// silent (no draw off Matoya).
+#[test]
+fn cr_701_22b_scry_zero_does_not_trigger() {
+    use crate::effect::{Effect, PlayerRef, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let matoya = g.add_card_to_battlefield(0, catalog::matoya_archon_elder());
+    g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    let ctx = EffectContext::for_ability(matoya, 0, None);
+    let events = g
+        .resolve_effect(&Effect::Scry { who: PlayerRef::You, amount: Value::Const(0) }, &ctx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "scry 0 did not trigger");
+}
+
+// ── CR 604.3 — characteristic-defining P/T recomputes live ─────────────────
+
+/// Xande, Dark Mage is a 3/3 that grows by +1/+1 for each noncreature,
+/// nonland card in its controller's graveyard, recomputed continuously.
+#[test]
+fn cr_604_3_xande_grows_with_graveyard_cda() {
+    let mut g = two_player_game();
+    let xande = g.add_card_to_battlefield(0, catalog::xande_dark_mage());
+    let cp = g.computed_permanent(xande).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let cp = g.computed_permanent(xande).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "one noncreature card → 4/4");
+    // A creature card in the graveyard does not count.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(xande).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "creature card excluded");
+}
