@@ -246,3 +246,65 @@ fn vivi_grows_and_pings_on_noncreature_spell() {
     );
     assert!(g.players[1].life < life1, "each opponent took at least Vivi's ping");
 }
+
+/// Barret pings the defending player for each equipped creature he controls.
+#[test]
+fn barret_wallace_pings_per_equipped_creature() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let barret = g.add_card_to_battlefield(0, catalog::barret_wallace());
+    // Give a second creature an Equipment so it counts as equipped.
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(ally);
+    g.clear_sickness(barret);
+    let life1 = g.players[1].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: barret,
+        target: AttackTarget::Player(1),
+    }])).expect("Barret attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1, "one equipped creature → 1 damage on attack");
+}
+
+/// Squall grants double strike when a creature attacks alone and reanimates on
+/// combat damage.
+#[test]
+fn squall_attacks_alone_and_reanimates() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let squall = g.add_card_to_battlefield(0, catalog::squall_seed_mercenary());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2 permanent
+    g.clear_sickness(squall);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: squall,
+        target: AttackTarget::Player(1),
+    }])).expect("Squall attacks alone");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(squall).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "attacks-alone granted double strike"
+    );
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.battlefield_find(dead).is_some(), "combat damage reanimated the graveyard permanent");
+}
+
+/// White Mage's Staff mints a Hero and equips it, granting +1/+1.
+#[test]
+fn white_mages_staff_job_select() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::white_mages_staff());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero token minted");
+    let hid = hero.id;
+    let cp = g.computed_permanent(hid).unwrap();
+    assert_eq!(cp.power, 2, "Hero is 1/1 + equip +1/+1");
+    assert!(
+        cp.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric),
+        "equipped creature is a Cleric"
+    );
+}

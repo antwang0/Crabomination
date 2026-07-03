@@ -2,12 +2,12 @@
 //! Each card has a functionality test in `crabomination/src/tests/fin.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector,
-    Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, etb_mint_token, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
@@ -409,6 +409,122 @@ pub fn vivi_ornitier() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Barret Wallace — {3}{R} 4/4 Human Rebel, reach. When it attacks, it deals
+/// damage equal to the number of equipped creatures you control to the
+/// defending player.
+pub fn barret_wallace() -> CardDefinition {
+    CardDefinition {
+        name: "Barret Wallace",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rebel],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachMatching {
+                        zone: ZoneRef::Battlefield,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::IsEquipped),
+                    }),
+                    filter: SelectionRequirement::Any,
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Squall, SeeD Mercenary — {2}{W}{B} 3/4 Human Knight Mercenary. When a
+/// creature you control attacks alone, it gains double strike. Combat damage to
+/// a player → return a permanent card (mana value ≤ 3) from your graveyard to
+/// the battlefield.
+pub fn squall_seed_mercenary() -> CardDefinition {
+    CardDefinition {
+        name: "Squall, SeeD Mercenary",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(Predicate::AttackingAlone),
+                effect: Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::InYourGraveyard)
+                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// White Mage's Staff — {1}{W} Equipment. Job select: mint a 1/1 Hero and equip
+/// it. Equipped creature gets +1/+1, is a Cleric, and gains 1 life on attack.
+/// Equip {3}.
+pub fn white_mages_staff() -> CardDefinition {
+    let hero = TokenDefinition {
+        name: "Hero".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "White Mage's Staff",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: hero },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            add_creature_types: vec![CreatureType::Cleric],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
