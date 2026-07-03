@@ -3474,3 +3474,203 @@ pub fn moogles_valor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks batch 3: FIN spells + artifacts ──────────────────────────────
+
+/// World Map — {1} Artifact. {1}, {T}, Sacrifice: search for a basic land to
+/// hand. {3}, {T}, Sacrifice: search for any land to hand.
+pub fn world_map() -> CardDefinition {
+    CardDefinition {
+        name: "World Map",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Retrieve the Esper — {3}{U} Sorcery. Create a 3/3 blue Robot Warrior artifact
+/// creature token; if this was cast from a graveyard, put two +1/+1 counters on
+/// it. Flashback {5}{U}.
+pub fn retrieve_the_esper() -> CardDefinition {
+    let robot = TokenDefinition {
+        name: "Robot".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Warrior],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Retrieve the Esper",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: robot },
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Seq(vec![])),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Circle of Power — {3}{B} Sorcery. Draw two cards and lose 2 life; create a
+/// 0/1 Wizard token that pings on your noncreature casts; Wizards you control
+/// get +1/+0 and gain lifelink until end of turn.
+pub fn circle_of_power() -> CardDefinition {
+    let wizard = TokenDefinition {
+        name: "Wizard".into(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    };
+    let wizards = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Wizard)
+                .and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Circle of Power",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: wizard },
+            Effect::PumpPT {
+                what: wizards(),
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: wizards(),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Unexpected Request — {2}{R} Sorcery. Gain control of target creature until end
+/// of turn, untap it, and it gains haste. (The optional Equipment-attach rider
+/// is omitted.)
+pub fn unexpected_request() -> CardDefinition {
+    CardDefinition {
+        name: "Unexpected Request",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Resentful Revelation — {1}{B} Sorcery. Look at the top three cards of your
+/// library; put one into your hand and the rest into your graveyard.
+/// Flashback {6}{B}.
+pub fn resentful_revelation() -> CardDefinition {
+    CardDefinition {
+        name: "Resentful Revelation",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), b()]))],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: true,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Gaius van Baelsar — {2}{B}{B} 3/2 Legendary Human Soldier. ETB: choose one —
+/// each player sacrifices a creature token, a nontoken creature, or an
+/// enchantment (their choice).
+pub fn gaius_van_baelsar() -> CardDefinition {
+    let edict = |filter: SelectionRequirement| Effect::Sacrifice {
+        who: Selector::Player(PlayerRef::EachPlayer),
+        count: Value::ONE,
+        filter,
+    };
+    CardDefinition {
+        name: "Gaius van Baelsar",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            edict(SelectionRequirement::Creature.and(SelectionRequirement::IsToken)),
+            edict(SelectionRequirement::Creature.and(SelectionRequirement::NotToken)),
+            edict(SelectionRequirement::Enchantment),
+        ]))],
+        ..Default::default()
+    }
+}

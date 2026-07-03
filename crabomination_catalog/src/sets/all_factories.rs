@@ -5540,6 +5540,12 @@ static FIN: &[Factory] = &[
     super::fin::pupu_ufo,
     super::fin::magitek_infantry,
     super::fin::moogles_valor,
+    super::fin::world_map,
+    super::fin::retrieve_the_esper,
+    super::fin::circle_of_power,
+    super::fin::unexpected_request,
+    super::fin::resentful_revelation,
+    super::fin::gaius_van_baelsar,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

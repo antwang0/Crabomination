@@ -2284,3 +2284,126 @@ fn moogles_valor_mass_tokens_and_indestructible() {
     assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Indestructible),
         "creatures gained indestructible");
 }
+
+// ── modern_decks batch 3 tests ────────────────────────────────────────────────
+
+/// World Map sacrifices to fetch a basic land to hand.
+#[test]
+fn world_map_fetches_basic_to_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let map = g.add_card_to_battlefield(0, catalog::world_map());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: map, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate basic fetch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(map).is_none(), "World Map sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "fetched a basic to hand");
+}
+
+/// Retrieve the Esper makes a 3/3 Robot token (no counters when cast from hand).
+#[test]
+fn retrieve_the_esper_makes_robot() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::retrieve_the_esper());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Retrieve the Esper");
+    drain_stack(&mut g);
+    let robot = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Robot").unwrap();
+    assert_eq!((robot.power(), robot.toughness()), (3, 3), "3/3 from hand cast (no counters)");
+}
+
+/// Circle of Power draws two, loses 2 life, mints a Wizard, and pumps Wizards.
+#[test]
+fn circle_of_power_draws_and_pumps_wizards() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let life0 = g.players[0].life;
+    let hand0 = g.players[0].hand.len();
+    let spell = g.add_card_to_hand(0, catalog::circle_of_power());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Circle of Power");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 2, "lost 2 life");
+    // hand0 (pre-spell) + spell added - cast + 2 draw = hand0 + 2.
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two");
+    let wiz = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Wizard").unwrap();
+    // The Wizard token is itself a Wizard → gets +1/+0.
+    assert_eq!(g.computed_permanent(wiz.id).unwrap().power, 1, "Wizard pumped to 1 power");
+}
+
+/// Unexpected Request steals a creature, untapping it and granting haste.
+#[test]
+fn unexpected_request_steals_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::unexpected_request());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unexpected Request");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(foe).unwrap();
+    assert_eq!(c.controller, 0, "gained control");
+    assert!(!c.tapped, "untapped");
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Resentful Revelation puts one of the top three into hand and the rest in the
+/// graveyard.
+#[test]
+fn resentful_revelation_digs_three() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    let hand0 = g.players[0].hand.len();
+    let gy0 = g.players[0].graveyard.len();
+    let spell = g.add_card_to_hand(0, catalog::resentful_revelation());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(a))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Resentful Revelation");
+    drain_stack(&mut g);
+    // hand0 (pre-spell) + spell added - cast + 1 to hand = hand0 + 1.
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "one card to hand");
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 3, "the spell + the two unpicked cards");
+}
+
+/// Gaius van Baelsar's ETB edicts each player.
+#[test]
+fn gaius_van_baelsar_edicts() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Pick mode 1 — each player sacrifices a nontoken creature. Player 0's only
+    // nontoken creature is Gaius itself; player 1 sacrifices their bear.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Mode(1),
+    ]));
+    let gaius = g.add_card_to_hand(0, catalog::gaius_van_baelsar());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gaius, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gaius");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gaius).is_none(), "you sacrificed Gaius (only nontoken creature)");
+    assert!(g.battlefield_find(theirs).is_none(), "opponent sacrificed theirs");
+}
