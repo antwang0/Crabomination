@@ -37,7 +37,11 @@
 //! type so animated lands die like creatures (CR 704.5f/g), combat damage to a
 //! planeswalker removing loyalty (CR 306.9 / 508.4), the Flying/Reach block
 //! restriction (CR 702.4c / 702.9c), and Equip timing/control restrictions
-//! (CR 702.6c/d) plus re-equip move semantics (CR 301.5c).
+//! (CR 702.6c/d) plus re-equip move semantics (CR 301.5c), last-known
+//! information for a source sacrificed as a cost (CR 608.2h — Blazing Bomb),
+//! Landcycling fetching a basic of the named type (CR 702.28e), and layer-7
+//! P/T ordering where a dynamic anthem stacks with +1/+1 counters and
+//! re-scales live to the board (CR 613.7 — Warrior of Light).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -6249,4 +6253,59 @@ fn cr_702_6e_equipment_grants_attack_trigger() {
     }])).expect("equipped Hero attacks");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "the granted attack trigger gained 1 life");
+}
+
+// ── CR 608.2h — last-known information for a source that left the battlefield ──
+
+/// A "Sacrifice this: deals damage equal to its power" ability uses the source's
+/// last-known power, not 0, because the source is already gone when the ability
+/// resolves (Blazing Bomb).
+#[test]
+fn cr_608_2h_sacrificed_source_deals_last_known_power() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::blazing_bomb());
+    g.battlefield_find_mut(bomb).unwrap().add_counters(CounterType::PlusOnePlusOne, 2); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Blow Up");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bomb).is_none(), "source sacrificed as a cost");
+    assert!(g.battlefield_find(foe).is_none(), "dealt its last-known power (3) — 2/2 destroyed");
+}
+
+// ── CR 702.28e — Landcycling fetches a basic land of the named type ────────────
+
+/// Mountaincycling discards the card and searches for a Mountain (Hill Gigas).
+#[test]
+fn cr_702_28e_mountaincycling_fetches_a_mountain() {
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::hill_gigas());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Landcycle { card_id: id }).expect("mountaincycle");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mtn), "Mountain fetched to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Hill Gigas discarded");
+}
+
+// ── CR 613.7 — layer 7 P/T: dynamic anthem + counters combine ─────────────────
+
+/// A team anthem (layer 7c ModifyPT) stacks with +1/+1 counters (layer 7d), and
+/// the anthem's scaling count reacts live to the board (Warrior of Light).
+#[test]
+fn cr_613_7_dynamic_anthem_stacks_with_counters() {
+    let mut g = two_player_game();
+    let wol = g.add_card_to_battlefield(0, catalog::warrior_of_light()); // 5/5 legendary
+    // One legendary → anthem +1/+1 → 6/6.
+    assert_eq!(g.computed_permanent(wol).unwrap().power, 6);
+    // A +1/+1 counter stacks on top of the anthem (7 total power).
+    g.battlefield_find_mut(wol).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!(g.computed_permanent(wol).unwrap().power, 7, "counter (7d) adds to anthem (7c)");
+    // A second legendary raises the anthem to +2/+2 live: 5 + 2 + 1 = 8.
+    g.add_card_to_battlefield(0, catalog::edgar_king_of_figaro());
+    assert_eq!(g.computed_permanent(wol).unwrap().power, 8, "anthem re-scales with the board");
 }
