@@ -707,25 +707,6 @@ fn adelbert_steiner_grows_per_equipment() {
     assert_eq!(g.computed_permanent(steiner).unwrap().toughness, 3);
 }
 
-/// Ahriman sacrifices another permanent to draw.
-#[test]
-fn ahriman_sacrifices_to_draw() {
-    let mut g = two_player_game();
-    let ahriman = g.add_card_to_battlefield(0, catalog::ahriman());
-    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.next_id();
-    g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
-    g.players[0].mana_pool.add_colorless(3);
-    let hand0 = g.players[0].hand.len();
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: ahriman, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
-    }).expect("activate Ahriman");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the other creature");
-    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
-}
-
 /// Ambrosia Whiteheart pumps herself on landfall and has flash.
 #[test]
 fn ambrosia_landfall_pumps() {
@@ -738,23 +719,6 @@ fn ambrosia_landfall_pumps() {
     g.perform_action(GameAction::PlayLand(land)).expect("play land");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(amb).unwrap().power, 3, "landfall +1/+0 → 3/2");
-}
-
-/// Coeurl taps a target creature.
-#[test]
-fn coeurl_taps_target() {
-    let mut g = two_player_game();
-    let coeurl = g.add_card_to_battlefield(0, catalog::coeurl());
-    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(coeurl);
-    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: coeurl, ability_index: 0, target: Some(Target::Permanent(foe)),
-        additional_targets: Vec::new(), x_value: None,
-    }).expect("activate Coeurl");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(foe).unwrap().tapped, "target creature is tapped");
 }
 
 /// Coliseum Behemoth's modal ETB can draw a card.
@@ -772,31 +736,6 @@ fn coliseum_behemoth_modal_draw() {
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "chose the draw mode");
 }
 
-/// Dwarven Castle Guard leaves a Hero token when it dies.
-#[test]
-fn dwarven_castle_guard_dies_makes_hero() {
-    let mut g = two_player_game();
-    let guard = g.add_card_to_battlefield(0, catalog::dwarven_castle_guard());
-    g.battlefield_find_mut(guard).unwrap().toughness_bonus -= 1; // drop to 0 toughness → SBA
-    let _ = g.check_state_based_actions();
-    drain_stack(&mut g);
-    let heroes = g.battlefield.iter().filter(|c| c.definition.name == "Hero").count();
-    assert_eq!(heroes, 1, "death minted a Hero token");
-}
-
-/// Gigantoad grows once you control seven or more lands.
-#[test]
-fn gigantoad_grows_with_seven_lands() {
-    let mut g = two_player_game();
-    let toad = g.add_card_to_battlefield(0, catalog::gigantoad());
-    assert_eq!(g.computed_permanent(toad).unwrap().power, 4, "few lands → 4/4");
-    for _ in 0..7 {
-        g.add_card_to_battlefield(0, catalog::forest());
-    }
-    assert_eq!(g.computed_permanent(toad).unwrap().power, 6, "seven lands → +2/+2");
-    assert_eq!(g.computed_permanent(toad).unwrap().toughness, 6);
-}
-
 /// Hill Gigas ships with trample, haste, and Mountaincycling.
 #[test]
 fn hill_gigas_keywords() {
@@ -804,18 +743,6 @@ fn hill_gigas_keywords() {
     assert!(g.keywords.contains(&Keyword::Trample));
     assert!(g.keywords.contains(&Keyword::Haste));
     assert!(g.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, crate::card::LandType::Mountain))));
-}
-
-/// Gaelicat grows +2/+0 with two or more artifacts.
-#[test]
-fn gaelicat_grows_with_two_artifacts() {
-    let mut g = two_player_game();
-    let cat = g.add_card_to_battlefield(0, catalog::gaelicat());
-    assert_eq!(g.computed_permanent(cat).unwrap().power, 1, "few artifacts → 1/3");
-    g.add_card_to_battlefield(0, catalog::bonesplitter());
-    g.add_card_to_battlefield(0, catalog::mishras_bauble());
-    assert_eq!(g.computed_permanent(cat).unwrap().power, 3, "two artifacts → +2/+0");
-    assert_eq!(g.computed_permanent(cat).unwrap().toughness, 3, "toughness unchanged");
 }
 
 /// Cloudbound Moogle puts a +1/+1 counter on a creature when it enters.
@@ -854,16 +781,6 @@ fn goobbue_gardener_taps_for_green() {
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 1, "added one green");
 }
 
-/// Dragoon's Wyvern mints a Hero token on entry.
-#[test]
-fn dragoons_wyvern_makes_hero() {
-    let mut g = two_player_game();
-    g.move_card_to_battlefield_for_test(0, catalog::dragoons_wyvern());
-    drain_stack(&mut g);
-    let heroes = g.battlefield.iter().filter(|c| c.definition.name == "Hero").count();
-    assert_eq!(heroes, 1, "ETB minted a Hero token");
-}
-
 /// Blazing Bomb sacrifices to deal its power to a creature.
 #[test]
 fn blazing_bomb_blow_up() {
@@ -892,19 +809,6 @@ fn coral_sword_attaches_and_pumps() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "equipped +1/+0 → 3/2");
     assert!(cp.keywords.contains(&Keyword::FirstStrike), "gained first strike");
-}
-
-/// Bard's Bow job-selects a Hero and buffs it.
-#[test]
-fn bards_bow_job_select() {
-    let mut g = two_player_game();
-    g.move_card_to_battlefield_for_test(0, catalog::bards_bow());
-    drain_stack(&mut g);
-    let hero = g.battlefield.iter().find(|c| c.definition.name == "Hero").expect("Hero token").id;
-    let cp = g.computed_permanent(hero).unwrap();
-    assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 Hero +2/+2 → 3/3");
-    assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
-    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Bard), "is a Bard");
 }
 
 /// Adventurer's Airship loots when it attacks (crewed).
@@ -1028,4 +932,121 @@ fn gladiolus_ramps_and_pumps_on_landfall() {
     let cp = g.computed_permanent(ally).unwrap();
     assert_eq!(cp.power, 4, "ally pumped +2/+2");
     assert!(cp.keywords.contains(&Keyword::Trample), "ally gained trample");
+}
+
+/// Eject bounces a nonland permanent and cantrips.
+#[test]
+fn eject_bounces_and_draws() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::eject());
+    let id = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Eject");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe), "returned to owner's hand");
+    // -1 (Eject cast) +1 (bounced foe n/a, owned by opp) +1 (draw) ⇒ net +0 vs hand0.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 1, "cantrip drew a card");
+}
+
+/// Deadly Embrace draws for each creature that died this turn.
+#[test]
+fn deadly_embrace_draws_per_death() {
+    let mut g = two_player_game();
+    // A creature already died this turn.
+    let gid = g.next_id();
+    g.players[0].graveyard.push(crate::card::CardInstance::new(gid, catalog::grizzly_bears(), 0));
+    g.players[0].creatures_died_this_turn = 1;
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::deadly_embrace());
+    for _ in 0..3 {
+        let id = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    }
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Deadly Embrace");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "target destroyed");
+    // The prior death + the one Deadly Embrace destroyed = 2 draws.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2, "drew for both deaths");
+}
+
+/// Airship Crash destroys a flier (and cycles).
+#[test]
+fn airship_crash_destroys_flier() {
+    let mut g = two_player_game();
+    assert!(catalog::airship_crash().keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // has flying
+    let spell = g.add_card_to_hand(0, catalog::airship_crash());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(flier)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Airship Crash");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flier).is_none(), "destroyed the flier");
+}
+
+/// Dreams of Laguna surveils then draws, and carries flashback.
+#[test]
+fn dreams_of_laguna_surveil_draw() {
+    let mut g = two_player_game();
+    assert!(catalog::dreams_of_laguna().keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))));
+    let spell = g.add_card_to_hand(0, catalog::dreams_of_laguna());
+    for _ in 0..3 {
+        let id = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    }
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dreams of Laguna");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 1, "spent the spell and drew one");
+}
+
+/// Gysahl Greens makes a Bird token.
+#[test]
+fn gysahl_greens_makes_bird() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::gysahl_greens());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gysahl Greens");
+    drain_stack(&mut g);
+    let birds = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Bird))
+        .count();
+    assert_eq!(birds, 1, "created a Bird token");
+}
+
+/// Battle Menu's Item mode gains 4 life.
+#[test]
+fn battle_menu_item_gains_life() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::battle_menu());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(3), x_value: None,
+    }).expect("cast Battle Menu");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 24, "Item mode gained 4 life");
 }

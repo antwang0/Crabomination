@@ -31,6 +31,19 @@ Deferred FIN cards wanting primitives not yet built:
   reflexive attach.
 - **Jenova / Sin / Summon Sagas** — Mutant-type riders, random-exile-copy loops,
   and stun-gated saga chapters with draw-per-tapped counts.
+- **Turn-gated conditional equip bonus** — Dragoon's Lance's "During your turn,
+  equipped creature has flying." `ConditionalEquipBonus` gates on a host
+  *filter*, not a turn/predicate; needs a predicate-gated variant (would also
+  cover Cloud, Planet's Champion's "during your turn, while equipped, double
+  strike + indestructible").
+- **Excalibur II / Aettir and Priwen** — equip bonuses scaled by counters on the
+  Equipment / by a player's life total; `EquipScale` only counts controlled
+  permanents. Add counter-on-source and dynamic-value equip scaling.
+- **Dual-zone tutor** — Delivery Moogle searches library *and/or* graveyard for
+  an artifact; `Effect::Search` is single-zone.
+- **Optional "up to one target"** — Cloud, Ex-SOLDIER / Ambrosia Whiteheart model
+  their "up to one target" ETB as a required target (per-slot optional-target
+  marker still unbuilt — also blocks Explosive Entry, Jukai Preserver).
 
 Shipped since: Cid, Timeless Artificer + Warrior of Light (anthem) ride the new
 `StaticEffect::PumpTeamByControlledPermanents` (team anthem scaled by a

@@ -1051,6 +1051,157 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
     }
 }
 
+/// A 2/2 green Bird token that gets +1/+0 until end of turn on landfall (the
+/// Chocobo token shared by Gysahl Greens / Chocobo Racetrack).
+fn racetrack_bird_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Bird".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eject — {3}{U} Instant that can't be countered. Return target nonland
+/// permanent to its owner's hand, then draw a card.
+pub fn eject() -> CardDefinition {
+    CardDefinition {
+        name: "Eject",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Land.negate()),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Deadly Embrace — {3}{B}{B} Sorcery. Destroy target creature an opponent
+/// controls, then draw a card for each creature that died this turn.
+pub fn deadly_embrace() -> CardDefinition {
+    CardDefinition {
+        name: "Deadly Embrace",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::CreaturesDiedThisTurnTotal },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Airship Crash — {2}{G} Instant. Destroy target artifact, enchantment, or
+/// creature with flying. Cycling {2}.
+pub fn airship_crash() -> CardDefinition {
+    CardDefinition {
+        name: "Airship Crash",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Dreams of Laguna — {1}{U} Instant. Surveil 1, then draw a card.
+/// Flashback {3}{U}.
+pub fn dreams_of_laguna() -> CardDefinition {
+    CardDefinition {
+        name: "Dreams of Laguna",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gysahl Greens — {1}{G} Sorcery. Create a 2/2 green Bird token that grows on
+/// landfall. Flashback {6}{G}.
+pub fn gysahl_greens() -> CardDefinition {
+    CardDefinition {
+        name: "Gysahl Greens",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), g()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: racetrack_bird_token(),
+        },
+        ..Default::default()
+    }
+}
+
+/// Battle Menu — {1}{W} Instant. Choose one — make a 2/2 Knight; give a creature
+/// +0/+4; destroy a creature with power 4+; or gain 4 life.
+pub fn battle_menu() -> CardDefinition {
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Battle Menu",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: knight },
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::ZERO,
+                toughness: Value::Const(4),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Coral Sword — {R} Equipment with flash. ETB: attach to target creature you
 /// control; it gains first strike until end of turn. Equipped creature gets
 /// +1/+0. Equip {1}.
@@ -1078,33 +1229,6 @@ pub fn coral_sword() -> CardDefinition {
             },
         ]))],
         equipped_bonus: Some(EquipBonus { power: 1, ..Default::default() }),
-        ..Default::default()
-    }
-}
-
-/// Bard's Bow — {2}{G} Equipment. Job select (create a 1/1 Hero and attach).
-/// Equipped creature gets +2/+2, has reach, and is a Bard. Equip {6}.
-pub fn bards_bow() -> CardDefinition {
-    CardDefinition {
-        name: "Bard's Bow",
-        cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Artifact],
-        subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Equipment],
-            ..Default::default()
-        },
-        keywords: vec![Keyword::Equip(cost(&[generic(6)]))],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: hero_token() },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
-        ]))],
-        equipped_bonus: Some(EquipBonus {
-            power: 2,
-            toughness: 2,
-            keywords: vec![Keyword::Reach],
-            add_creature_types: vec![CreatureType::Bard],
-            ..Default::default()
-        }),
         ..Default::default()
     }
 }
@@ -1329,22 +1453,6 @@ pub fn goobbue_gardener() -> CardDefinition {
     }
 }
 
-/// Dragoon's Wyvern — {2}{U} 2/1 Drake with flying. ETB: create a 1/1 colorless
-/// Hero creature token.
-pub fn dragoons_wyvern() -> CardDefinition {
-    CardDefinition {
-        name: "Dragoon's Wyvern",
-        cost: cost(&[generic(2), u()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
-        power: 2,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb_mint_token(hero_token(), 1)],
-        ..Default::default()
-    }
-}
-
 /// Blazing Bomb — {R} 1/1 Elemental. Whenever you cast an expensive noncreature
 /// spell, grow. Blow Up — {T}, Sacrifice this: deal damage equal to its power to
 /// target creature. (The "four mana spent" gate is modeled as mana value ≥ 4.)
@@ -1424,36 +1532,6 @@ pub fn adelbert_steiner() -> CardDefinition {
     }
 }
 
-/// Ahriman — {2}{B} 2/2 Eye Horror with flying and deathtouch. {3}, Sacrifice
-/// another creature or artifact: Draw a card.
-pub fn ahriman() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    CardDefinition {
-        name: "Ahriman",
-        cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Eye, CreatureType::Horror],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3)]),
-            sac_other_filter: Some((
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Artifact)
-                    .and(SelectionRequirement::OtherThanSource),
-                1,
-            )),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Ambrosia Whiteheart — {1}{W} 2/2 Legendary Bird with flash. ETB: you may
 /// return another permanent you control to hand. Landfall: +1/+0 until EOT.
 pub fn ambrosia_whiteheart() -> CardDefinition {
@@ -1492,35 +1570,6 @@ pub fn ambrosia_whiteheart() -> CardDefinition {
     }
 }
 
-/// Coeurl — {1}{W} 2/2 Cat Beast. {1}{W}, {T}: Tap target nonenchantment
-/// creature.
-pub fn coeurl() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    CardDefinition {
-        name: "Coeurl",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: cost(&[generic(1), w()]),
-            effect: Effect::Tap {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::Enchantment.negate()),
-                ),
-            },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Coliseum Behemoth — {5}{G}{G} 7/7 Beast with trample. ETB: destroy target
 /// artifact or enchantment, or draw a card.
 pub fn coliseum_behemoth() -> CardDefinition {
@@ -1544,52 +1593,6 @@ pub fn coliseum_behemoth() -> CardDefinition {
     }
 }
 
-/// Dwarven Castle Guard — {1}{W} 2/1 Dwarf Soldier. When it dies, create a 1/1
-/// colorless Hero creature token.
-pub fn dwarven_castle_guard() -> CardDefinition {
-    CardDefinition {
-        name: "Dwarven Castle Guard",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::dies_mint_token(hero_token(), 1)],
-        ..Default::default()
-    }
-}
-
-/// Gigantoad — {3}{G} 4/4 Frog. As long as you control seven or more lands, it
-/// gets +2/+2.
-pub fn gigantoad() -> CardDefinition {
-    CardDefinition {
-        name: "Gigantoad",
-        cost: cost(&[generic(3), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Frog], ..Default::default() },
-        power: 4,
-        toughness: 4,
-        static_abilities: vec![StaticAbility {
-            description: "As long as you control seven or more lands, this creature gets +2/+2.",
-            effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    n: Value::Const(7),
-                },
-                power: 2,
-                toughness: 2,
-                keywords: vec![],
-            },
-        }],
-        ..Default::default()
-    }
-}
-
 /// Hill Gigas — {4}{R}{R} 5/4 Giant with trample and haste. Mountaincycling {2}.
 pub fn hill_gigas() -> CardDefinition {
     use crate::card::LandType;
@@ -1605,35 +1608,6 @@ pub fn hill_gigas() -> CardDefinition {
             Keyword::Haste,
             Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain),
         ],
-        ..Default::default()
-    }
-}
-
-/// Gaelicat — {2}{W} 1/3 Cat with flying and vigilance. As long as you control
-/// two or more artifacts, it gets +2/+0.
-pub fn gaelicat() -> CardDefinition {
-    CardDefinition {
-        name: "Gaelicat",
-        cost: cost(&[generic(2), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
-        power: 1,
-        toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        static_abilities: vec![StaticAbility {
-            description: "As long as you control two or more artifacts, this creature gets +2/+0.",
-            effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    n: Value::Const(2),
-                },
-                power: 2,
-                toughness: 0,
-                keywords: vec![],
-            },
-        }],
         ..Default::default()
     }
 }

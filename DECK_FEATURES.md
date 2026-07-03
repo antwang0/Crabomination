@@ -86,12 +86,15 @@ ability lock), and `Effect::DestroyLandOfEachBasicType` (Sundering Titan). The
 bot's `pick_reach_burn` now recognises each-opponent drain nested in
 `Seq`/`ChooseMode` activations.
 
-`catalog::sets::fin` is a new Final Fantasy (FIN) set module (tests in
-`tests/fin.rs`): Iron Giant, Sazh's Chocobo, Sephiroth's Intervention, Cactuar,
-Magitek Armor, Chocobo Racetrack, Malboro, Sephiroth Planet's Heir, Aerith
-Gainsborough, Phoenix Down. All ride existing primitives (landfall, ETB,
-end-step self-bounce, Vehicle/Crew, Landcycling, mass −X/−X, lifegain/death
-counter-distribution, modal reanimate).
+`catalog::sets::fin` is the Final Fantasy (FIN) set module (tests in
+`tests/fin.rs`), ~55 cards and growing. Most ride existing primitives (landfall,
+ETB, Vehicle/Crew, Landcycling, mass −X/−X, Job-Select equipment, aristocrats
+drain). New engine work this batch: `StaticEffect::PumpTeamByControlledPermanents`
+(team anthem scaled by a controlled/graveyard count — Cid, Timeless Artificer;
+Warrior of Light), Warrior's legendary-cast impulse via `RevealUntilFind` +
+`ManaValueLessThanEventAmount`, and `DealDamageEqualToPower` now reads
+last-known power when the source was sacrificed as a cost (CR 608.2h — Blazing
+Bomb). Deferred FIN cards needing more primitives are logged in TODO.md.
 
 `catalog::sets::decks::recent8` is an eighth staples wave (tests in
 `tests/recent8.rs`) built around three brand-new keyword actions:

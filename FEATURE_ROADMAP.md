@@ -112,7 +112,10 @@ exercising each) was elided in a compaction pass; recover it from
   cast/trigger-time target walk, auto-targets at resolution; composes with
   `MayPay`/`MaySacrifice` — Itzquinth, Glorifier of Suffering, Inti);
   counter-added triggers bind `Selector::TriggerSource` to the counter-receiving
-  permanent (CR 122/603.6 — Auntie Ool's Ward—Blight drain off an opponent).
+  permanent (CR 122/603.6 — Auntie Ool's Ward—Blight drain off an opponent);
+  team anthem scaled by a controlled/graveyard count
+  (`StaticEffect::PumpTeamByControlledPermanents` — Warrior of Light's legendary
+  anthem, Cid, Timeless Artificer's graveyard-aware Artificer count).
 - **Protection / locks / piles (THB batch):** protection from each mana value
   other than N (`Keyword::ProtectionFromManaValueExcept`, all DEBT facets —
   Haktos); permanent opponents-can't-cast-named lock + linked counter-exile
