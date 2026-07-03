@@ -882,6 +882,59 @@ fn blazing_bomb_blow_up() {
     assert!(g.battlefield_find(foe).is_none(), "dealt 2 to the 2/2, destroying it");
 }
 
+/// Coral Sword attaches on entry, granting +1/+0 and first strike.
+#[test]
+fn coral_sword_attaches_and_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::coral_sword());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "equipped +1/+0 → 3/2");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "gained first strike");
+}
+
+/// Bard's Bow job-selects a Hero and buffs it.
+#[test]
+fn bards_bow_job_select() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::bards_bow());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.definition.name == "Hero").expect("Hero token").id;
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 Hero +2/+2 → 3/3");
+    assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Bard), "is a Bard");
+}
+
+/// Adventurer's Airship loots when it attacks (crewed).
+#[test]
+fn adventurers_airship_loots_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::adventurers_airship());
+    let crew = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 crews it
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // something to discard
+    for _ in 0..2 {
+        let id = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    }
+    g.clear_sickness(ship);
+    g.clear_sickness(crew);
+    advance_to(&mut g, TurnStep::PreCombatMain);
+    g.perform_action(GameAction::Crew { vehicle: ship, crew_creatures: vec![crew] }).expect("crew the ship");
+    let hand0 = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ship, target: AttackTarget::Player(1),
+    }])).expect("airship attacks");
+    drain_stack(&mut g);
+    // Loot = draw then discard → net zero hand size, but a card was drawn & pitched.
+    assert_eq!(g.players[0].hand.len(), hand0, "drew one and discarded one");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "discarded a card to the graveyard");
+}
+
 /// Al Bhed Salvagers drains when a creature you control dies.
 #[test]
 fn al_bhed_salvagers_drains_on_death() {

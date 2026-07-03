@@ -5434,6 +5434,9 @@ static FIN: &[Factory] = &[
     super::fin::demon_wall,
     super::fin::ashe_princess_of_dalmasca,
     super::fin::gladiolus_amicitia,
+    super::fin::coral_sword,
+    super::fin::bards_bow,
+    super::fin::adventurers_airship,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

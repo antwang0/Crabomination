@@ -1051,6 +1051,89 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
     }
 }
 
+/// Coral Sword — {R} Equipment with flash. ETB: attach to target creature you
+/// control; it gains first strike until end of turn. Equipped creature gets
+/// +1/+0. Equip {1}.
+pub fn coral_sword() -> CardDefinition {
+    CardDefinition {
+        name: "Coral Sword",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(1)]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        equipped_bonus: Some(EquipBonus { power: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Bard's Bow — {2}{G} Equipment. Job select (create a 1/1 Hero and attach).
+/// Equipped creature gets +2/+2, has reach, and is a Bard. Equip {6}.
+pub fn bards_bow() -> CardDefinition {
+    CardDefinition {
+        name: "Bard's Bow",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(6)]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: hero_token() },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Reach],
+            add_creature_types: vec![CreatureType::Bard],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Adventurer's Airship — {3} 3/2 Vehicle with flying. Whenever it attacks, draw
+/// then discard. Crew 2.
+pub fn adventurers_airship() -> CardDefinition {
+    CardDefinition {
+        name: "Adventurer's Airship",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Al Bhed Salvagers — {2}{B} 2/3 Human Artificer Warrior. Whenever this or
 /// another creature you control dies, target opponent loses 1 life, you gain 1.
 /// (Modeled on creature deaths; the printed "or artifact" clause covers
