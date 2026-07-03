@@ -53,3 +53,6 @@ crabomination_client/assets/cards/
 
 # Session scratch files (oracle dumps, set diffs) — never tracked.
 scratch_*
+
+# Scratch gap-analysis dumps from scripts/fin_gaps.py.
+scripts/.fin_*.json

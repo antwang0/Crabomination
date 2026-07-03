@@ -83,6 +83,13 @@ exercising each) was elided in a compaction pass; recover it from
   `LandType::Town` (the FIN "Land — Town" cycle — ten enters-tapped duals +
   Adventurer's Inn) with an Affinity-for-Towns payoff (Travel the Overworld via
   `affinity_filter: HasLandType(Town)`).
+  `EventKind::CreatureOrArtifactDied` (CR 700.4 — "whenever a creature or
+  artifact you control dies") backed by a `GameEvent::PermanentDied` synthesized
+  from the single battlefield→graveyard chokepoint, so non-creature deaths that
+  emit no `CreatureDied` still reach the payoff; exile-replaced "deaths" are
+  filtered at dispatch (Judge Magister Gabranth, G'raha Tia). Diamond Weapon
+  rides the existing `PreventAllCombatDamageToThis` ("Immune") + a graveyard
+  Affinity (`affinity_graveyard_filter: PermanentCard`).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
