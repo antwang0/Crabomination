@@ -222,6 +222,15 @@ powers Fog Bank and Guard Gomazoa; Wall of Denial is Defender/Flying/Shroud.
 > work, not a stat tweak. Run `audit_catalog_stats.py` for the live list. Customs
 > (Cosmogoyf, Crabomination) are excluded — no Scryfall truth.
 
+`catalog::sets::c21` is the Strixhaven Commander (C21) module (tests in
+`tests/c21.rs`) — precon staples not covered by their original printings. Mostly
+lands on existing primitives: the Theros scrylands, Onslaught cycling lands,
+Karoo-free utility lands (Radiant Fountain, Rogue's Passage, Mikokoro, High
+Market, Temple of the False God, Blighted Woodland / Myriad Landscape sac-fetch,
+Phyrexia's Core), plus Boros Locket, Zetalpa, Verdant Sun's Avatar, Sanctum
+Gargoyle, Sculpting Steel, and the spells Chain Reaction, Gaze of Granite,
+Biomass Mutation, Perplexing Test, Taste of Death, Brass's Bounty, Oblation.
+
 ## Engine features
 
 | Feature | Status | Notes |

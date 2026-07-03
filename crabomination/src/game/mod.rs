@@ -31,6 +31,9 @@ mod tests;
 #[path = "../tests/modern.rs"]
 mod tests_modern;
 #[cfg(test)]
+#[path = "../tests/c21.rs"]
+mod tests_c21;
+#[cfg(test)]
 #[path = "../tests/recent.rs"]
 mod tests_recent;
 #[cfg(test)]
