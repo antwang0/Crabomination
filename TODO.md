@@ -8,7 +8,7 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`–`recent100`)
+## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`–`recent101`)
 
 - **Prosperous Thief** — the printed trigger fires off any Ninja/Rogue you
   control dealing combat damage; modeled as this creature's own combat damage.
@@ -40,6 +40,12 @@ state-corrupting in ordinary play.
   Steelbreaker, Atsushi, Junji, Chishiro, Unstoppable Ogre, You Are Already
   Dead. Selfless Samurai's "another" clause and Moon-Circuit Hacker's
   discard-unless-entered rider are now wired.
+- **recent101 batch (7 new cards):** Coiling Stalker, Sunblade Samurai, Moonsnare
+  Specialist, Undercity Scrounger (`ActivatedAbility.condition` on
+  `CreaturesDiedThisTurnTotalAtLeast`), Season of Renewal, Assassin's Ink
+  (stacked `SelfCostReducedIfControlEach`), Mnemonic Sphere. Naga Vitalist's
+  "any type your lands could produce" mana is still the AKH-era any-color
+  approximation.
 
 ## Discovered follow-ups — Equipment / Voltron (`decks::recent94`)
 

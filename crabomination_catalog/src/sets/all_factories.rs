@@ -5109,6 +5109,14 @@ static DECKS: &[Factory] = &[
     super::decks::traproot_kami,
     super::decks::unstoppable_ogre,
     super::decks::you_are_already_dead,
+    // recent101 — Kamigawa: Neon Dynasty batch 7
+    super::decks::coiling_stalker,
+    super::decks::sunblade_samurai,
+    super::decks::moonsnare_specialist,
+    super::decks::undercity_scrounger,
+    super::decks::season_of_renewal,
+    super::decks::assassins_ink,
+    super::decks::mnemonic_sphere,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
