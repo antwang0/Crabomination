@@ -419,7 +419,11 @@ Each a small targeted feature; sweep batch by batch.
   safe). Board-state / per-turn-counter scaling reductions ship too
   (`self_cost_reduction_if_control` — Pearl of Wisdom;
   `StaticEffect::SelfCostReducedPer{Discard,CreatureAttacked}ThisTurn` — Hollow
-  One, Search Party Captain). Remaining: per-mode Spree costs.
+  One, Search Party Captain). Source-power-scaled reduction of *other* spells
+  ships (`StaticEffect::CostReductionBySourcePower` — Golden-Tail Trainer), and
+  affinity-style `SelfCostReducedPerPermanentMatching` now honors board-state
+  filters (Walking Skyscraper "per modified creature"). Remaining: per-mode
+  Spree costs.
 - ⏳ **{X} in activated abilities** generalized; **delve/convoke colored**
   contribution.
 - ⏳ **Snow-mana-only** and **mana-value-X** cost gates.

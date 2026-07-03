@@ -1411,6 +1411,11 @@ pub enum EventKind {
     AttacksAndIsntBlocked,
     /// Combat damage was dealt to a player by a creature.
     DealsCombatDamageToPlayer,
+    /// The listening permanent's controller was dealt combat damage (keyed on
+    /// the *recipient*, not the dealer). Pair with `EventScope::SelfSource` for
+    /// "whenever combat damage is dealt to you" downsides (Risona removes an
+    /// indestructible counter). The amount rides in via `Value::TriggerEventAmount`.
+    ControllerDealtCombatDamage,
     /// Combat damage was dealt to a creature by a creature.
     DealsCombatDamageToCreature,
     /// CR 702.130 — **Enrage**: a permanent was dealt damage (combat or

@@ -68,17 +68,22 @@ fn dragonfly_suit_is_a_crewable_flyer() {
     assert!(def.keywords.contains(&Keyword::Crew(1)));
 }
 
-/// Moon-Circuit Hacker draws on combat damage (may).
-#[test]
-fn moon_circuit_hacker_draws_on_damage() {
+/// Moon-Circuit Hacker attacks and deals combat damage; helper returns the
+/// hand-size delta. `entered_this_turn` toggles the "discard unless it entered
+/// this turn" rider.
+fn moon_circuit_hacker_hand_delta(entered_this_turn: bool) -> i64 {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard, if forced
     let hacker = g.add_card_to_battlefield(0, catalog::moon_circuit_hacker());
+    if entered_this_turn {
+        g.battlefield_find_mut(hacker).unwrap().entered_turn = Some(g.turn_number);
+    }
     g.clear_sickness(hacker);
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    let hand_before = g.players[0].hand.len();
+    let hand_before = g.players[0].hand.len() as i64;
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).unwrap();
     }
@@ -89,7 +94,19 @@ fn moon_circuit_hacker_draws_on_damage() {
     .expect("hacker attacks");
     drain_stack(&mut g);
     pass_through_combat(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on combat damage");
+    g.players[0].hand.len() as i64 - hand_before
+}
+
+/// Draws (net +1) when it entered this turn — the discard rider is skipped.
+#[test]
+fn moon_circuit_hacker_no_discard_when_fresh() {
+    assert_eq!(moon_circuit_hacker_hand_delta(true), 1);
+}
+
+/// Draws then discards (net 0) when it's been around since a prior turn.
+#[test]
+fn moon_circuit_hacker_discards_when_established() {
+    assert_eq!(moon_circuit_hacker_hand_delta(false), 0);
 }
 
 /// Kaito's Pursuit makes the opponent discard two and gives your Ninjas menace.

@@ -115,6 +115,39 @@ fn selfless_samurai_lifelink_on_solo_attack() {
         "lone Samurai gained lifelink");
 }
 
+/// Selfless Samurai's sac ability grants indestructible to *another* creature —
+/// it can't target itself.
+#[test]
+fn selfless_samurai_sac_targets_another() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let samurai = g.add_card_to_battlefield(0, catalog::selfless_samurai());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Self-target is illegal ("another target creature").
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: samurai,
+        ability_index: 0,
+        target: Some(Target::Permanent(samurai)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .is_err(), "can't target itself");
+    // Targeting the bear works and sacrifices the Samurai.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: samurai,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("target another creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(samurai).is_none(), "Samurai sacrificed");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
 /// Prosperous Thief mints a Treasure on combat damage.
 #[test]
 fn prosperous_thief_makes_treasure() {

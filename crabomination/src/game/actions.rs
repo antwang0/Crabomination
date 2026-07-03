@@ -326,6 +326,13 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 {
                     reduction += state.players[caster].experience;
                 }
+                StaticEffect::CostReductionBySourcePower { filter }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction +=
+                        state.computed_permanent(src.id).map(|c| c.power.max(0)).unwrap_or(0) as u32;
+                }
                 StaticEffect::CostReductionWhile { filter, amount, condition }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -517,10 +524,21 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     // — Affinity for [type] (Allies at Last). Generic-only, clamped by caller.
     for sa in &card.definition.static_abilities {
         if let StaticEffect::SelfCostReducedPerPermanentMatching { filter, per } = &sa.effect {
+            // Evaluate through the battlefield-aware path so board-state filters
+            // (IsModified, Tapped, …) resolve — `evaluate_requirement_on_card`
+            // treats those as false. Walking Skyscraper counts modified creatures.
             let n = state
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == caster && state.evaluate_requirement_on_card(filter, c, caster))
+                .filter(|c| {
+                    c.controller == caster
+                        && state.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(c.id),
+                            caster,
+                            Some(card.id),
+                        )
+                })
                 .count() as u32;
             reduction = reduction.saturating_add(n.saturating_mul(*per));
         }

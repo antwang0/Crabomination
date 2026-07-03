@@ -2316,6 +2316,33 @@ impl GameState {
             Target::Player(damaged_player),
             damage_amount,
         );
+        // CR 510 — "whenever combat damage is dealt to you" listeners fire off
+        // the *recipient's* own permanents (SelfSource on a permanent the
+        // damaged player controls). Risona sheds an indestructible counter.
+        let listeners: Vec<(CardId, Effect, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == damaged_player)
+            .flat_map(|c| {
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|ta| {
+                        ta.event.kind == EventKind::ControllerDealtCombatDamage
+                            && ta.event.scope == crate::effect::EventScope::SelfSource
+                    })
+                    .map(move |ta| (c.id, ta.effect.clone(), c.controller))
+            })
+            .collect();
+        for (listener, effect, controller) in listeners {
+            let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
+            self.stack.push(
+                TriggerPush::new(listener, controller, effect)
+                    .target(auto_target)
+                    .event_amount(damage_amount)
+                    .build(),
+            );
+        }
     }
 
     /// Push triggered abilities of `source` whose event spec is

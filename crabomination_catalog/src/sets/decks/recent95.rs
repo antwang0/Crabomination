@@ -210,7 +210,7 @@ pub fn jukai_preserver() -> CardDefinition {
 /// Selfless Samurai — {1}{W} 2/2 Fox Samurai. Whenever a Samurai or Warrior you
 /// control attacks alone, it gains lifelink until end of turn. Sacrifice this
 /// creature: another target creature you control gains indestructible until end
-/// of turn. (The "another" restriction is not enforced.)
+/// of turn.
 pub fn selfless_samurai() -> CardDefinition {
     CardDefinition {
         name: "Selfless Samurai",
@@ -242,7 +242,9 @@ pub fn selfless_samurai() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::GrantKeyword {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                what: target_filtered(
+                    R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
                 keyword: Keyword::Indestructible,
                 duration: Duration::EndOfTurn,
             },

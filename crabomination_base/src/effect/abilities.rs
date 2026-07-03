@@ -202,6 +202,11 @@ pub enum StaticEffect {
     /// and sorcery spells you cast cost {X} less, where X is the number of
     /// experience counters you have"). Generic-only; clamped at the generic pip.
     CostReductionPerControllerExperience { filter: SelectionRequirement },
+    /// Generic cost reduction equal to the source permanent's computed power,
+    /// for spells matching `filter` (Golden-Tail Trainer — "Aura and Equipment
+    /// spells you cast cost {X} less, where X is this creature's power").
+    /// Generic-only; clamped at the generic pip.
+    CostReductionBySourcePower { filter: SelectionRequirement },
     /// Like `CostReduction`, but applies only while `condition` holds for the
     /// controller (Gran-Gran — "Noncreature spells you cast cost {1} less as
     /// long as there are three or more Lesson cards in your graveyard"). The

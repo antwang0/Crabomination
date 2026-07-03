@@ -2535,6 +2535,11 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     Value::PowerOf(s) if matches!(**s, Selector::Target(_)) => {
                         *foe_pow >= cp.toughness
                     }
+                    // "Deals damage equal to its own power" pingers (firebreather-
+                    // style {T} abilities) read the source's computed power.
+                    Value::PowerOf(s) if matches!(**s, Selector::This) => state
+                        .computed_permanent(card.id)
+                        .is_some_and(|p| p.power >= cp.toughness),
                     _ => false,
                 };
                 if !lethal {
@@ -4392,6 +4397,40 @@ mod tests {
         g.battlefield.retain(|c| c.id != frostling);
         g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
         assert!(pick_removal_ping(&g, 0).is_none(), "won't waste a ping on a survivor");
+    }
+
+    /// The bot fires a self-power ping ("{T}: deals damage equal to its power to
+    /// target creature") to kill a foe whose toughness it can beat.
+    #[test]
+    fn bot_pings_with_self_power() {
+        use crate::card::{ActivatedAbility, CardType};
+        use crate::effect::{Selector, Value};
+        let pinger = CardDefinition {
+            name: "Self-Power Pinger",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamage {
+                    to: Selector::TargetFiltered { slot: 0, filter: crate::card::SelectionRequirement::Creature },
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let p = g.add_card_to_battlefield(0, pinger);
+        g.clear_sickness(p);
+        let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, dies to 3
+        match pick_removal_ping(&g, 0).expect("bot pings with its own power") {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, p);
+                assert_eq!(target, Some(Target::Permanent(foe)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
     }
 
     /// The bot points a ping at the opponent's face when it's exactly lethal

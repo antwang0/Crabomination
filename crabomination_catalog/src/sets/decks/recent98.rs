@@ -102,8 +102,8 @@ pub fn dragonfly_suit() -> CardDefinition {
 }
 
 /// Moon-Circuit Hacker — {1}{U} 2/1 Human Ninja enchantment creature. Ninjutsu
-/// {U}. Combat damage: you may draw a card. (The "discard unless it entered this
-/// turn" clause is omitted — Ninjutsu'd copies would skip it anyway.)
+/// {U}. Combat damage: you may draw a card; if you do, discard a card unless it
+/// entered this turn (so a Ninjutsu'd copy skips the discard).
 pub fn moon_circuit_hacker() -> CardDefinition {
     CardDefinition {
         name: "Moon-Circuit Hacker",
@@ -120,7 +120,21 @@ pub fn moon_circuit_hacker() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description: "Draw a card?".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::If {
+                        cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: R::EnteredThisTurn,
+                        })),
+                        then: Box::new(Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
             },
         }],
         ..Default::default()

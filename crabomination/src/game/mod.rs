@@ -340,6 +340,9 @@ mod tests_recent98;
 #[path = "../tests/recent99.rs"]
 mod tests_recent99;
 #[cfg(test)]
+#[path = "../tests/recent100.rs"]
+mod tests_recent100;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -5286,6 +5289,12 @@ impl GameState {
                         .filter(|c| c.definition.is_enchantment())
                         .count() as i32;
                     (base_p + n, base_t + n)
+                }
+                crate::card::DynamicPt::ForestsInPlay { base_p } => {
+                    let n = self.battlefield.iter()
+                        .filter(|c| c.definition.subtypes.land_types.contains(&crate::card::LandType::Forest))
+                        .count() as i32;
+                    (base_p, n)
                 }
                 crate::card::DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t } => {
                     let gy = &self.players[card.controller].graveyard;
@@ -11229,6 +11238,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
             | StaticEffect::CostReductionPerControllerExperience { .. }
+            | StaticEffect::CostReductionBySourcePower { .. }
             | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
