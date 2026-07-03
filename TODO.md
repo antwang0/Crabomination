@@ -27,15 +27,18 @@ Deferred FIN cards wanting primitives not yet built:
 - **Transform DFCs** — Kefka, Cecil (Dark Knight), Terra (Trance Saga), Clive
   (Ifrit), Garland (Chaos), Bahamut/Dion. Need the "exile-and-return-transformed
   from an activated/triggered source" DFC pattern wired per-card.
-- **Cid, Timeless Artificer** — a dynamic anthem scaling by Artificers in play
-  *and* in the graveyard (needs a graveyard-aware anthem count).
-- **Warrior of Light** — legendary-count anthem + cast-legendary impulse-cascade.
 - **Gilgamesh, Master-at-Arms** — dig top-6, put Equipment onto the battlefield,
   reflexive attach.
-- **Cloud, Ex-SOLDIER** — draw per equipped attacking creature (a Value counting
-  equipped attackers).
 - **Jenova / Sin / Summon Sagas** — Mutant-type riders, random-exile-copy loops,
   and stun-gated saga chapters with draw-per-tapped counts.
+
+Shipped since: Cid, Timeless Artificer + Warrior of Light (anthem) ride the new
+`StaticEffect::PumpTeamByControlledPermanents` (team anthem scaled by a
+controlled/graveyard count); Warrior's impulse rides `RevealUntilFind` +
+`ManaValueLessThanEventAmount` (a SpellCast trigger's event amount is the cast
+spell's mana value); Cloud, Ex-SOLDIER rides `Effect::Attach` + `CountMatching`
+over equipped attackers. Cloud's "up to one target Equipment" ETB is a required
+target (fizzles with no Equipment).
 
 ## Environment note
 

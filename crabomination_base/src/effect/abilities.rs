@@ -166,6 +166,24 @@ pub enum StaticEffect {
         per_toughness: i32,
         max: u32,
     },
+    /// "[applies_to] you control get +per/+per for each [count_filter] you
+    /// control." A team anthem whose bonus scales with a controlled-permanent
+    /// count. `applies_to` and `count_filter` are controller-relative card
+    /// filters (the "you control" is implied). Warrior of Light — legendary
+    /// creatures you control get +X/+X where X is the number of legendary
+    /// creatures you control (`applies_to == count_filter`). With
+    /// `count_graveyard`, matching cards in the controller's graveyard are
+    /// added to the count (Cid, Timeless Artificer — Artificers on the
+    /// battlefield *and* in the graveyard). Resolved live in
+    /// `gather_continuous_effects_inner`.
+    PumpTeamByControlledPermanents {
+        applies_to: SelectionRequirement,
+        count_filter: SelectionRequirement,
+        per_power: i32,
+        per_toughness: i32,
+        #[serde(default)]
+        count_graveyard: bool,
+    },
     /// "As long as this has `n` or more `kind` counters on it, it's an
     /// (artifact) creature." War Balloon (3+ fire counters). Emits a layer-4
     /// `AddCardType(Creature)` self-effect while the count holds; the printed

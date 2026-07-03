@@ -607,3 +607,89 @@ fn edgar_draws_per_artifact() {
     // Two artifacts on board (Edgar itself isn't one) → draw 2.
     assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew one per artifact controlled");
 }
+
+/// Cid buffs artifact creatures by the number of Artificers you control plus
+/// Artificer cards in your graveyard.
+#[test]
+fn cid_scales_anthem_with_artificers_and_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cid_timeless_artificer()); // an Artificer
+    let giant = g.add_card_to_battlefield(0, catalog::iron_giant()); // 6/6 artifact creature
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 7, "one Artificer (Cid) → +1/+1");
+    g.add_card_to_battlefield(0, catalog::edgar_king_of_figaro()); // Human Artificer
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 8, "two Artificers → +2/+2");
+    g.add_card_to_graveyard(0, catalog::edgar_king_of_figaro()); // Artificer card in gy
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 9, "graveyard Artificer counts too");
+}
+
+/// Warrior of Light's anthem scales with the number of legendary creatures you
+/// control and touches only legendaries.
+#[test]
+fn warrior_of_light_legendary_anthem() {
+    let mut g = two_player_game();
+    let wol = g.add_card_to_battlefield(0, catalog::warrior_of_light()); // 5/5 legendary
+    assert_eq!(g.computed_permanent(wol).unwrap().power, 6, "one legendary → +1/+1");
+    let edgar = g.add_card_to_battlefield(0, catalog::edgar_king_of_figaro()); // legendary
+    assert_eq!(g.computed_permanent(wol).unwrap().power, 7, "two legendaries → +2/+2");
+    assert_eq!(g.computed_permanent(edgar).unwrap().power, 6, "Edgar 4/5 gets +2/+2 too");
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // nonlegendary
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 2, "nonlegendaries unaffected");
+}
+
+/// Casting a legendary spell from hand impulse-digs for a cheaper legendary.
+#[test]
+fn warrior_of_light_impulse_on_legendary_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::warrior_of_light());
+    // Tifa (legendary, MV 2) on top of the library — lesser MV than Cid (MV 4).
+    let tifa = g.next_id();
+    g.players[0]
+        .library
+        .insert(0, crate::card::CardInstance::new(tifa, catalog::tifa_lockhart(), 0));
+    let cid = g.add_card_to_hand(0, catalog::cid_timeless_artificer());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cid, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cid");
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == tifa),
+        "the cheaper legendary was impulse-exiled"
+    );
+    assert!(!g.players[0].library.iter().any(|c| c.id == tifa), "it left the library");
+}
+
+/// Cloud attaches an Equipment on entry, then draws per equipped attacker and
+/// makes Treasures when big enough on attack.
+#[test]
+fn cloud_ex_soldier_attaches_and_draws_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter()); // +2/+0 Equipment
+    for _ in 0..3 {
+        let id = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    }
+    let cloud = g.move_card_to_battlefield_for_test(0, catalog::cloud_ex_soldier());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(sword).unwrap().attached_to,
+        Some(cloud),
+        "ETB attached the Equipment to Cloud"
+    );
+    // Cloud is 4/4 + Bonesplitter's +2/+0 = 6/6 — under 7 power, no Treasures.
+    g.clear_sickness(cloud);
+    let hand0 = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cloud, target: AttackTarget::Player(1),
+    }])).expect("Cloud attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew one for the equipped attacker");
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 0, "power 6 (<7) → no Treasures");
+}

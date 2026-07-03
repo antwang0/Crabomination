@@ -1050,3 +1050,168 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cid, Timeless Artificer — {2}{W}{U} 4/4 Legendary Human Artificer. Artifact
+/// creatures and Heroes you control get +1/+1 for each Artificer you control
+/// and each Artificer card in your graveyard. Cycling {W}{U}. (The "any number
+/// of copies in a deck" clause is a deck-construction rule, not modeled.)
+pub fn cid_timeless_artificer() -> CardDefinition {
+    CardDefinition {
+        name: "Cid, Timeless Artificer",
+        cost: cost(&[generic(2), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[w(), u()]))],
+        static_abilities: vec![StaticAbility {
+            description: "Artifact creatures and Heroes you control get +1/+1 for each \
+                          Artificer you control and each Artificer card in your graveyard.",
+            effect: StaticEffect::PumpTeamByControlledPermanents {
+                applies_to: SelectionRequirement::Artifact
+                    .and(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Hero)),
+                count_filter: SelectionRequirement::HasCreatureType(CreatureType::Artificer),
+                per_power: 1,
+                per_toughness: 1,
+                count_graveyard: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warrior of Light — {W}{U}{B}{R}{G} 5/5 Legendary Human Wizard. Legendary
+/// creatures you control get +X/+X where X is the number of legendary creatures
+/// you control. Whenever you cast a legendary spell from your hand, exile from
+/// the top of your library until a legendary nonland card of lesser mana value;
+/// you may cast it without paying its mana cost, rest to the bottom.
+pub fn warrior_of_light() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    use crate::effect::RevealMissDest;
+    CardDefinition {
+        name: "Warrior of Light",
+        cost: cost(&[w(), u(), b(), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Legendary creatures you control get +X/+X, where X is the number \
+                          of legendary creatures you control.",
+            effect: StaticEffect::PumpTeamByControlledPermanents {
+                applies_to: SelectionRequirement::HasSupertype(Supertype::Legendary)
+                    .and(SelectionRequirement::Creature),
+                count_filter: SelectionRequirement::HasSupertype(Supertype::Legendary)
+                    .and(SelectionRequirement::Creature),
+                per_power: 1,
+                per_toughness: 1,
+                count_graveyard: false,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::CastFromHand,
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasSupertype(Supertype::Legendary),
+                    },
+                ]),
+            ),
+            effect: Effect::Seq(vec![
+                Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    // "lesser mana value" — `trigger_event_amount_scratch` is the
+                    // cast legendary spell's mana value on a SpellCast trigger.
+                    find: SelectionRequirement::HasSupertype(Supertype::Legendary)
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ManaValueLessThanEventAmount),
+                    to: ZoneDest::Exile,
+                    cap: Value::Const(60),
+                    life_per_revealed: 0,
+                    miss_dest: RevealMissDest::BottomRandom,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: false,
+                    any_color: false,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cloud, Ex-SOLDIER — {2}{R}{G}{W} 4/4 Legendary Human Soldier Mercenary with
+/// haste. When it enters, attach a target Equipment you control to it. Whenever
+/// it attacks, draw a card for each equipped attacking creature you control,
+/// then create two Treasures if it has power 7 or greater.
+pub fn cloud_ex_soldier() -> CardDefinition {
+    CardDefinition {
+        name: "Cloud, Ex-SOLDIER",
+        cost: cost(&[generic(2), r(), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Mercenary,
+            ],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            // "up to one target Equipment" is modeled as a required target
+            // (fizzles if you control no Equipment).
+            etb(Effect::Attach {
+                what: target_filtered(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                to: Selector::This,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::CountMatching {
+                            sel: Box::new(Selector::EachMatching {
+                                zone: ZoneRef::Battlefield,
+                                filter: SelectionRequirement::Creature
+                                    .and(SelectionRequirement::ControlledByYou)
+                                    .and(SelectionRequirement::IsAttacking)
+                                    .and(SelectionRequirement::IsEquipped),
+                            }),
+                            filter: SelectionRequirement::Any,
+                        },
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: SelectionRequirement::PowerAtLeast(7),
+                        },
+                        then: Box::new(crate::effect::shortcut::mint_treasures(2)),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}

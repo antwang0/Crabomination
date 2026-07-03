@@ -4796,6 +4796,75 @@ impl GameState {
                 });
             }
         }
+        // "[applies_to] you control get +P/+T for each [count_filter] you
+        // control" (`StaticEffect::PumpTeamByControlledPermanents`) — count the
+        // controller's matching permanents (plus graveyard cards when
+        // `count_graveyard`), then emit a per-affected layer-7 pump. Warrior of
+        // Light (legendary anthem) and Cid, Timeless Artificer (graveyard-aware
+        // Artificer count) ride this.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpTeamByControlledPermanents {
+                    applies_to,
+                    count_filter,
+                    per_power,
+                    per_toughness,
+                    count_graveyard,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let mut count = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == card.controller
+                            && self.evaluate_requirement_static(
+                                count_filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                card.controller,
+                                Some(card.id),
+                            )
+                    })
+                    .count() as i32;
+                if *count_graveyard {
+                    count += self.players[card.controller]
+                        .graveyard
+                        .iter()
+                        .filter(|c| {
+                            self.evaluate_requirement_on_card(count_filter, c, card.controller)
+                        })
+                        .count() as i32;
+                }
+                if count == 0 {
+                    continue;
+                }
+                for target in &self.battlefield {
+                    if target.controller != card.controller
+                        || !self.evaluate_requirement_static(
+                            applies_to,
+                            &crate::game::types::Target::Permanent(target.id),
+                            card.controller,
+                            Some(card.id),
+                        )
+                    {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target.id]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            count * per_power,
+                            count * per_toughness,
+                        ),
+                    });
+                }
+            }
+        }
         // "As long as [condition], this creature gets +P/+T and has [keyword]."
         // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
         // against the source and, while it holds, emit a layer-7 pump plus an
@@ -11412,6 +11481,9 @@ fn static_effect_to_effects(
             // PumpSelfByControlledPermanents — needs a live battlefield
             // count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpSelfByControlledPermanents { .. }
+            // PumpTeamByControlledPermanents — team anthem scaled by a live
+            // controlled/graveyard count; resolved in `gather_continuous_effects`.
+            | StaticEffect::PumpTeamByControlledPermanents { .. }
             // PumpPTPerOtherOfType — needs the live type count; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpPTPerOtherOfType { .. }
