@@ -6192,3 +6192,61 @@ fn cr_702_2e_deathtouch_counter_is_lethal_in_combat() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(blocker).is_none(), "1 deathtouch damage killed the 2/2");
 }
+
+/// CR 122 — an `AnyCounterAdded` trigger fires on the first counter placed on a
+/// given permanent each turn and no more (Stalwart Successor, `with_per_subject_cap`).
+#[test]
+fn cr_122_any_counter_added_first_time_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stalwart_successor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bump = |g: &mut GameState, id| {
+        g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+        g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+            card_id: id,
+            counter_type: CounterType::PlusOnePlusOne,
+            count: 1,
+        }]);
+        drain_stack(g);
+    };
+    bump(&mut g, bear);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    bump(&mut g, bear); // second placement same turn → no bonus
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// CR 604.3 — a characteristic-defining ability sets power continuously: Snow
+/// Villiers's power equals the number of creatures its controller controls.
+#[test]
+fn cr_604_3_creature_count_cda() {
+    let mut g = two_player_game();
+    let snow = g.add_card_to_battlefield(0, catalog::snow_villiers());
+    assert_eq!(g.computed_permanent(snow).unwrap().power, 1);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(snow).unwrap().power, 2, "power recomputes as creatures change");
+    // An opponent's creature doesn't count.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(snow).unwrap().power, 2, "only your creatures count");
+}
+
+/// CR 702.6e — an Equipment's granted triggered ability fires off the equipped
+/// creature (White Mage's Staff grants "attacks → gain 1 life").
+#[test]
+fn cr_702_6e_equipment_grants_attack_trigger() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::white_mages_staff());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero").unwrap().id;
+    g.clear_sickness(hero);
+    let life = g.players[0].life;
+    while g.step != crate::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero,
+        target: AttackTarget::Player(1),
+    }])).expect("equipped Hero attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "the granted attack trigger gained 1 life");
+}

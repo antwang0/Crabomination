@@ -2528,18 +2528,23 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
             }
             for (foe, foe_pow) in &foes {
                 let Some(cp) = state.computed_permanent(*foe) else { continue };
+                // Remaining toughness after damage already marked this turn
+                // (CR 120.6) — a ping that wouldn't kill a fresh creature can
+                // still finish one that's been chipped in combat.
+                let marked = state.battlefield_find(*foe).map(|c| c.damage as i32).unwrap_or(0);
+                let remaining = cp.toughness - marked;
                 // Lethal check: a constant amount, or "equal to its own power"
-                // (Kiku) where the creature dies if power ≥ toughness.
+                // (Kiku) where the creature dies if power ≥ remaining toughness.
                 let lethal = match amount {
-                    Value::Const(n) => *n >= cp.toughness,
+                    Value::Const(n) => *n >= remaining,
                     Value::PowerOf(s) if matches!(**s, Selector::Target(_)) => {
-                        *foe_pow >= cp.toughness
+                        *foe_pow >= remaining
                     }
                     // "Deals damage equal to its own power" pingers (firebreather-
                     // style {T} abilities) read the source's computed power.
                     Value::PowerOf(s) if matches!(**s, Selector::This) => state
                         .computed_permanent(card.id)
-                        .is_some_and(|p| p.power >= cp.toughness),
+                        .is_some_and(|p| p.power >= remaining),
                     _ => false,
                 };
                 if !lethal {
