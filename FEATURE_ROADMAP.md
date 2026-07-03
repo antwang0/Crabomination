@@ -80,6 +80,9 @@ exercising each) was elided in a compaction pass; recover it from
   and `DynamicPt::BasePlusNoncreatureNonlandInControllerGraveyard` (+N/+N per
   noncreature-nonland card in your graveyard — Xande, Dark Mage). Client log now
   skips blank-body events so internal trigger events don't emit empty rows.
+  `LandType::Town` (the FIN "Land — Town" cycle — ten enters-tapped duals +
+  Adventurer's Inn) with an Affinity-for-Towns payoff (Travel the Overworld via
+  `affinity_filter: HasLandType(Town)`).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

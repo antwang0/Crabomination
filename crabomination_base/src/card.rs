@@ -202,6 +202,8 @@ pub enum LandType {
     Planet,
     // Lost Caverns of Ixalan — "Land — Cave" (Caves-matter payoffs).
     Cave,
+    // Final Fantasy — "Land — Town" (Towns-matter: Affinity for Towns, etc.).
+    Town,
 }
 
 /// Artifact subtypes.

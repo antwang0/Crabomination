@@ -2594,3 +2594,60 @@ pub fn choco_comet() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks FIN Town lands ──────────────────────────────────────────
+
+/// A Final Fantasy "Land — Town" dual: enters tapped, taps for either of two
+/// colors. Powers the Towns-matter theme (Affinity for Towns, etc.).
+fn town_dual(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        activated_abilities: vec![super::tap_add(color_a), super::tap_add(color_b)],
+        triggered_abilities: vec![super::etb_tap()],
+        ..Default::default()
+    }
+}
+
+pub fn baron_airship_kingdom() -> CardDefinition { town_dual("Baron, Airship Kingdom", Color::Blue, Color::Red) }
+pub fn gohn_town_of_ruin() -> CardDefinition { town_dual("Gohn, Town of Ruin", Color::Black, Color::Green) }
+pub fn gongaga_reactor_town() -> CardDefinition { town_dual("Gongaga, Reactor Town", Color::Red, Color::Green) }
+pub fn guadosalam_farplane_gateway() -> CardDefinition { town_dual("Guadosalam, Farplane Gateway", Color::Green, Color::Blue) }
+pub fn insomnia_crown_city() -> CardDefinition { town_dual("Insomnia, Crown City", Color::White, Color::Black) }
+pub fn rabanastre_royal_city() -> CardDefinition { town_dual("Rabanastre, Royal City", Color::Red, Color::White) }
+pub fn sharlayan_nation_of_scholars() -> CardDefinition { town_dual("Sharlayan, Nation of Scholars", Color::White, Color::Blue) }
+pub fn treno_dark_city() -> CardDefinition { town_dual("Treno, Dark City", Color::Blue, Color::Black) }
+pub fn vector_imperial_capital() -> CardDefinition { town_dual("Vector, Imperial Capital", Color::Black, Color::Red) }
+pub fn windurst_federation_center() -> CardDefinition { town_dual("Windurst, Federation Center", Color::Green, Color::White) }
+
+/// Adventurer's Inn — untapped "Land — Town". ETB gain 2 life; {T}: Add {C}.
+pub fn adventurers_inn() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Adventurer's Inn",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        activated_abilities: vec![super::tap_add_colorless()],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Travel the Overworld — {5}{U}{U} Sorcery with Affinity for Towns (costs {1}
+/// less to cast for each Town you control). Draw four cards.
+pub fn travel_the_overworld() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Travel the Overworld",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        affinity_filter: Some(
+            SelectionRequirement::HasLandType(LandType::Town)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+        ..Default::default()
+    }
+}

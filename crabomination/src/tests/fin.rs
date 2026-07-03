@@ -1746,3 +1746,52 @@ fn choco_comet_burns_and_makes_a_bird() {
     assert_eq!(g.players[1].life, 17, "X=3 damage to the opponent");
     assert_eq!(is_creature_token_named(&g, 0, "Bird"), 1, "created a Bird token");
 }
+
+// ── modern_decks FIN Town lands tests ─────────────────────────────────────
+
+/// A Town dual is typed "Land — Town", enters tapped, and taps for two colors.
+#[test]
+fn town_dual_is_typed_and_taps_for_two_colors() {
+    use crate::card::LandType;
+    let g = catalog::treno_dark_city();
+    assert!(g.subtypes.land_types.contains(&LandType::Town), "typed as a Town");
+    assert_eq!(g.activated_abilities.len(), 2, "two mana abilities");
+    // Enters tapped via its ETB trigger.
+    assert!(!g.triggered_abilities.is_empty(), "has an enters-tapped trigger");
+}
+
+/// Adventurer's Inn is a Town that gains 2 life on entry.
+#[test]
+fn adventurers_inn_gains_life() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::adventurers_inn());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22, "ETB gained 2 life");
+}
+
+/// Travel the Overworld's Affinity for Towns discounts it per Town you control.
+#[test]
+fn travel_the_overworld_affinity_for_towns() {
+    let mut g = two_player_game();
+    // Two Towns on the battlefield → {2} off the {5}{U}{U}, so {3}{U}{U}.
+    g.add_card_to_battlefield(0, catalog::treno_dark_city());
+    g.add_card_to_battlefield(0, catalog::vector_imperial_capital());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::travel_the_overworld());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Travel the Overworld castable for {3}{U}{U} with two Towns");
+    drain_stack(&mut g);
+    // -1 cast, +4 draw = net +3.
+    assert_eq!(g.players[0].hand.len(), hand_before + 3, "drew four");
+}
