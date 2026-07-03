@@ -2951,8 +2951,7 @@ impl GameState {
     /// arms should use `remove_to_graveyard_with_triggers` or
     /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
     pub(crate) fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
-        if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
-            let mut card = self.battlefield.remove(pos);
+        if let Some(mut card) = Self::take_card(&mut self.battlefield, id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
@@ -3051,8 +3050,7 @@ impl GameState {
     }
 
     pub(crate) fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
-        if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
-            let card = self.battlefield.remove(pos);
+        if let Some(card) = Self::take_card(&mut self.battlefield, id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
@@ -3380,8 +3378,7 @@ impl GameState {
         } else {
             return;
         };
-        if let Some(pos) = self.players[owner].graveyard.iter().position(|c| c.id == id) {
-            let mut returned = self.players[owner].graveyard.remove(pos);
+        if let Some(mut returned) = Self::take_card(&mut self.players[owner].graveyard, id) {
             self.players[owner].cards_left_graveyard_this_turn =
                 self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
             returned.damage = 0;

@@ -1811,13 +1811,28 @@ fn is_mana_ability(effect: &Effect) -> bool {
     }
 }
 
-fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> StackItemView {
+fn project_stack(item: &StackItem, state: &GameState, viewer_seat: usize) -> StackItemView {
     match item {
         StackItem::Spell { card, caster, target, additional_targets, .. } => {
+            // CR 708.1 — a face-down spell reveals only to its caster.
+            // Opponents and spectators get the `Hidden` view; the caster sees
+            // the real name stashed in `face_up_def` (the live definition is
+            // already the nameless 2/2 for Morph casts).
+            if card.face_down && *caster != viewer_seat {
+                return StackItemView::Hidden { source: card.id, controller: *caster };
+            }
+            let name = if card.face_down {
+                card.face_up_def
+                    .as_ref()
+                    .map(|d| d.name.to_string())
+                    .unwrap_or_else(|| card.definition.name.to_string())
+            } else {
+                card.definition.name.to_string()
+            };
             StackItemView::Known(KnownStackItem {
                 source: card.id,
                 controller: *caster,
-                name: card.definition.name.to_string(),
+                name,
                 target: target.clone(),
                 additional_targets: additional_targets.clone(),
                 kind: StackItemKind::Spell,
@@ -2101,6 +2116,41 @@ mod tests {
         assert!(theirs.face_down);
         assert_eq!(theirs.name, "");
         assert!(theirs.face_down_name.is_none(), "opponent can't peek");
+    }
+
+    #[test]
+    fn face_down_spell_on_stack_hidden_from_opponent_named_for_caster() {
+        let mut state = two_player_game();
+        let id = state.next_id();
+        let mut card = crate::card::CardInstance::new(id, catalog::grizzly_bears(), 0);
+        card.turn_face_down();
+        state.stack.push(crate::game::StackItem::Spell {
+            card: Box::new(card),
+            caster: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            mana_spent: 0,
+            uncounterable: false,
+        });
+
+        // Caster (seat 0) sees the real name of their own face-down spell.
+        let own = project(&state, 0);
+        match &own.stack[0] {
+            StackItemView::Known(k) => assert_eq!(k.name, "Grizzly Bears"),
+            other => panic!("caster should see a Known item, got {other:?}"),
+        }
+
+        // Opponent (seat 1) and spectators get the Hidden view.
+        let opp = project(&state, 1);
+        assert!(
+            matches!(opp.stack[0], StackItemView::Hidden { source, controller } if source == id && controller == 0),
+            "opponent must not see face-down spell identity"
+        );
+        let spec = super::project_spectator(&state);
+        assert!(matches!(spec.stack[0], StackItemView::Hidden { .. }));
     }
 
     #[test]

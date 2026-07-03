@@ -1431,20 +1431,23 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        let Some(idx) = self.players[p]
+        if !self.players[p]
             .sideboard
             .iter()
-            .position(|c| c.id == card_id && c.definition.keywords.contains(&Keyword::Companion))
-        else {
+            .any(|c| c.id == card_id && c.definition.keywords.contains(&Keyword::Companion))
+        {
             return Err(GameError::CardNotInHand(card_id));
-        };
+        }
         let cost = crate::mana::cost(&[crate::mana::generic(3)]);
         let snapshot = self.snapshot_payment_state(p);
         let forced_only = self.players[p].wants_ui;
         let receipt =
             self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &crate::mana::SpellKind::default(), None)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        let card = self.players[p].sideboard.remove(idx);
+        // Re-locate by id at removal time: payment ran between the scan
+        // above and this remove and could touch the sideboard.
+        let card = Self::take_card(&mut self.players[p].sideboard, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         let cid = card.id;
         self.players[p].hand.push(card);
         Ok(vec![GameEvent::CardDrawn { player: p, card_id: cid }])
@@ -1464,14 +1467,15 @@ impl GameState {
         if !self.player_may_play_lands_from_graveyard(p) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        let Some(idx) = self.players[p]
+        if !self.players[p]
             .graveyard
             .iter()
-            .position(|c| c.id == card_id && c.definition.is_land())
-        else {
+            .any(|c| c.id == card_id && c.definition.is_land())
+        {
             return Err(GameError::NotALand(card_id));
-        };
-        let card = self.players[p].graveyard.remove(idx);
+        }
+        let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+            .ok_or(GameError::NotALand(card_id))?;
         self.entered_from_graveyard_this_turn.insert(card_id);
         self.place_land_card(p, card)
     }
@@ -1766,15 +1770,15 @@ impl GameState {
                     && c.may_cast_back_from_graveyard
                     && c.definition.back_face.is_some()
             });
-            if let Some(pos) = gy_pos {
-                let mut card = self.players[p].graveyard.remove(pos);
+            if gy_pos.is_some()
+                && let Some(mut card) = Self::take_card(&mut self.players[p].graveyard, card_id)
+            {
                 card.may_cast_back_from_graveyard = false; // one-shot
                 self.players[p].hand.push(card);
                 let r = self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value);
                 if r.is_err()
-                    && let Some(hand_pos) = self.players[p].hand.iter().position(|c| c.id == card_id)
+                    && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
                 {
-                    let card = self.players[p].hand.remove(hand_pos);
                     self.players[p].send_to_graveyard(card);
                 }
                 return r;
@@ -2032,18 +2036,15 @@ impl GameState {
             })
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
-            let pos = self.players[p].graveyard.iter().position(|c| c.id == card_id).unwrap();
-            let card = self.players[p].graveyard.remove(pos);
+            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             match &r {
                 Err(_) => {
-                    if let Some(pos) =
-                        self.players[p].hand.iter().position(|c| c.id == card_id)
-                    {
-                        let card = self.players[p].hand.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                         self.players[p].send_to_graveyard(card);
                     }
                 }
@@ -2069,9 +2070,8 @@ impl GameState {
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             if r.is_err()
-                && let Some(pos) = self.players[p].hand.iter().position(|c| c.id == card_id)
+                && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
             {
-                let card = self.players[p].hand.remove(pos);
                 self.players[p].library.insert(0, card);
             }
             return r;
@@ -3102,7 +3102,9 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.exile.remove(pos);
+        // Re-locate by id: payment ran after `pos` was captured.
+        let mut card = Self::take_card(&mut self.exile, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         card.face_down = false;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast {
@@ -3291,7 +3293,9 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.exile.remove(pos);
+        // Re-locate by id: payment ran after `pos` was captured.
+        let mut card = Self::take_card(&mut self.exile, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         card.on_adventure = false;
         card.adventuring = false;
         card.cast_from_hand = false;
@@ -3459,7 +3463,9 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.players[p].graveyard.remove(pos);
+        // Re-locate by id: payment ran after `pos` was captured.
+        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
+            .ok_or(GameError::CardNotInGraveyard(card_id))?;
         card.cast_from_hand = false;
         card.split_cast = Some(1);
         let mut events = receipt.auto_events;
@@ -3533,7 +3539,9 @@ impl GameState {
         if let Some(ref tgt) = target {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
         }
-        let card = self.exile.remove(pos);
+        // Re-locate by id at removal time (target checks ran in between).
+        let card = Self::take_card(&mut self.exile, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         self.plotted_cards.remove(&card_id);
         let events = vec![GameEvent::SpellCast { player: p, card_id, face: CastFace::Front }];
         self.finalize_cast(
@@ -4329,8 +4337,7 @@ impl GameState {
         // per-turn exile tally so "if cards were exiled this turn" payoffs see
         // them.
         for cid in delve_cards {
-            if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid) {
-                let exiled = self.players[p].graveyard.remove(pos);
+            if let Some(exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
                 self.exile.push(exiled);
                 self.players[p].cards_exiled_this_turn += 1;
             }
@@ -4705,10 +4712,7 @@ impl GameState {
                         .min_by_key(|c| c.definition.cost.cmc())
                         .map(|c| (c.id, c.definition.cost.cmc()));
                     if let Some((id, mv)) = pick {
-                        if let Some(pos) =
-                            self.players[p].graveyard.iter().position(|c| c.id == id)
-                        {
-                            let card = self.players[p].graveyard.remove(pos);
+                        if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: id });
                         }
@@ -4751,9 +4755,8 @@ impl GameState {
                         .min_by_key(|c| c.definition.cost.cmc())
                         .map(|c| c.id);
                     if let Some(id) = pick
-                        && let Some(pos) = self.exile.iter().position(|c| c.id == id)
+                        && let Some(card) = Self::take_card(&mut self.exile, id)
                     {
-                        let card = self.exile.remove(pos);
                         self.route_to_graveyard(card, &mut events);
                     }
                 }
@@ -5302,12 +5305,16 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.players[p].graveyard.remove(graveyard_pos);
+        // Re-locate by id: `graveyard_pos` was captured before payment ran,
+        // and payment side effects may have reshuffled the graveyard.
+        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         self.entered_from_graveyard_this_turn.insert(card_id);
         // Flip to the back face — the transformed spell goes on the stack
-        // (CR 702.146a) and resolves as the back-face permanent.
+        // (CR 702.146a) and resolves as the back-face permanent; presence was
+        // checked before payment above.
         let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
         card.front_face = Some(card.definition.clone());
         card.definition = std::sync::Arc::new(back);
@@ -5492,7 +5499,7 @@ impl GameState {
 
         // Pay the flashback-only additional cost(s) now (CR 601.2h). A
         // sacrifice can drop cards into this player's graveyard, shifting
-        // indices, so recompute the flashback card's position afterward.
+        // indices; `finalize_flashback_cast` re-locates the card by id.
         let mut cost_events = Vec::new();
         if !flashback_additional.is_empty() {
             // Flashback sac costs (Lava Dart, Dread Return) keep the auto-pick
@@ -5500,16 +5507,9 @@ impl GameState {
             let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional, None, None);
             cost_events.append(&mut e);
         }
-        let graveyard_pos = self.players[p]
-            .graveyard
-            .iter()
-            .position(|c| c.id == card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?;
-
         let mut events = self.finalize_flashback_cast(
             p,
             card_id,
-            graveyard_pos,
             target,
             additional_targets,
             mode,
@@ -5608,15 +5608,9 @@ impl GameState {
             c.tapped = true;
         }
 
-        let graveyard_pos = self.players[p]
-            .graveyard
-            .iter()
-            .position(|c| c.id == card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?;
         self.finalize_flashback_cast(
             p,
             card_id,
-            graveyard_pos,
             target,
             additional_targets,
             mode,
@@ -5636,7 +5630,6 @@ impl GameState {
         &mut self,
         p: usize,
         card_id: CardId,
-        graveyard_pos: usize,
         target: Option<Target>,
         additional_targets: Vec<Target>,
         mode: Option<usize>,
@@ -5644,7 +5637,10 @@ impl GameState {
         mana_spent: u32,
         via_mayhem: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let mut card = self.players[p].graveyard.remove(graveyard_pos);
+        // Re-locate by id at removal time: cost payments run before this and
+        // can reshuffle the graveyard, so a stored index would be stale.
+        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         self.entered_from_graveyard_this_turn.insert(card_id);
@@ -5677,12 +5673,12 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let graveyard_pos = self.players[p]
+        let card = self.players[p]
             .graveyard
             .iter()
-            .position(|c| c.id == card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?;
-        let card = self.players[p].graveyard[graveyard_pos].clone();
+            .find(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?
+            .clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
         if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
@@ -5753,7 +5749,10 @@ impl GameState {
         // Lift the card from the graveyard and cast it normally — no
         // `cast_via_flashback`, so it returns to the graveyard on
         // resolution and can be retraced again.
-        let card = self.players[p].graveyard.remove(graveyard_pos);
+        // Re-locate by id: payment + the land discard above ran after the
+        // initial scan and can reshuffle the graveyard.
+        let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
@@ -5856,8 +5855,7 @@ impl GameState {
         // Pay the additional cost: exile the chosen graveyard cards.
         let mut events = Vec::new();
         for cid in exile_cards {
-            if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid) {
-                let exiled = self.players[p].graveyard.remove(pos);
+            if let Some(exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: *cid });
                 self.exile.push(exiled);
             }
@@ -5865,12 +5863,8 @@ impl GameState {
         // Lift the escaping card from the graveyard and cast it normally —
         // no `cast_via_flashback`, so an instant/sorcery returns to the
         // graveyard on resolution and can be escaped again.
-        let pos = self.players[p]
-            .graveyard
-            .iter()
-            .position(|c| c.id == card_id)
+        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let mut card = self.players[p].graveyard.remove(pos);
         // Stamp the escape-cast flag so the "sacrifice unless it escaped"
         // ETB rider on Kroxa/Uro sees this entered via Escape.
         card.cast_from_escape = true;
@@ -5900,12 +5894,12 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let graveyard_pos = self.players[p]
+        let card = self.players[p]
             .graveyard
             .iter()
-            .position(|c| c.id == card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?;
-        let card = self.players[p].graveyard[graveyard_pos].clone();
+            .find(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?
+            .clone();
         let required_taps = card
             .definition
             .has_flashback_tap()
@@ -5964,7 +5958,6 @@ impl GameState {
         self.finalize_flashback_cast(
             p,
             card_id,
-            graveyard_pos,
             target,
             additional_targets,
             mode,
@@ -6022,19 +6015,13 @@ impl GameState {
         // Lift the card out of the named zone. Owner-based zones
         // (graveyard, hand, library) walk all players to locate it.
         let mut card = match source_zone {
-            Zone::Exile => {
-                let pos = self
-                    .exile
-                    .iter()
-                    .position(|c| c.id == card_id)
-                    .ok_or(GameError::CardNotInHand(card_id))?;
-                self.exile.remove(pos)
-            }
+            Zone::Exile => Self::take_card(&mut self.exile, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?,
             Zone::Graveyard => {
                 let mut found: Option<crate::card::CardInstance> = None;
                 for player in self.players.iter_mut() {
-                    if let Some(pos) = player.graveyard.iter().position(|c| c.id == card_id) {
-                        found = Some(player.graveyard.remove(pos));
+                    if let Some(card) = Self::take_card(&mut player.graveyard, card_id) {
+                        found = Some(card);
                         break;
                     }
                 }
@@ -6044,8 +6031,8 @@ impl GameState {
                 // Omniscience-style free cast straight from hand.
                 let mut found: Option<crate::card::CardInstance> = None;
                 for player in self.players.iter_mut() {
-                    if let Some(pos) = player.hand.iter().position(|c| c.id == card_id) {
-                        found = Some(player.hand.remove(pos));
+                    if let Some(card) = Self::take_card(&mut player.hand, card_id) {
+                        found = Some(card);
                         break;
                     }
                 }
@@ -6055,8 +6042,8 @@ impl GameState {
                 // Cast off the top of a library (Jadzi's magecraft impulse).
                 let mut found: Option<crate::card::CardInstance> = None;
                 for player in self.players.iter_mut() {
-                    if let Some(pos) = player.library.iter().position(|c| c.id == card_id) {
-                        found = Some(player.library.remove(pos));
+                    if let Some(card) = Self::take_card(&mut player.library, card_id) {
+                        found = Some(card);
                         break;
                     }
                 }
@@ -6224,12 +6211,8 @@ impl GameState {
         let p = self.priority.player_with_priority;
 
         // Locate + remove the commander from the caster's command zone.
-        let pos = self.players[p]
-            .command
-            .iter()
-            .position(|c| c.id == card_id)
+        let mut card = Self::take_card(&mut self.players[p].command, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let mut card = self.players[p].command.remove(pos);
         card.cast_from_hand = false;
 
         // Sorcery-speed gate (commanders are creatures by definition,
@@ -6757,8 +6740,7 @@ impl GameState {
         // leaving the graveyard (Ark of Hunger, Wilt in the Heat) see
         // the event stream.
         for gy_cid in &exile_gy_picks {
-            if let Some(idx) = self.players[p].graveyard.iter().position(|c| c.id == *gy_cid) {
-                let exiled = self.players[p].graveyard.remove(idx);
+            if let Some(exiled) = Self::take_card(&mut self.players[p].graveyard, *gy_cid) {
                 self.exile.push(exiled);
                 self.players[p].cards_exiled_this_turn =
                     self.players[p].cards_exiled_this_turn.saturating_add(1);
@@ -8438,8 +8420,12 @@ impl GameState {
                 return Err(GameError::NotYourPriority);
             }
         } else {
-            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
-            let controller = self.battlefield[pos].controller;
+            let controller = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == card_id)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?
+                .controller;
             if ability.opponents_only {
                 if self.same_team(controller, p) {
                     return Err(GameError::NotYourPriority);
@@ -8602,8 +8588,12 @@ impl GameState {
         // (Graveyard activations don't track per-card once-per-turn state
         // since the card may move between zones; the gate is no-op.)
         if !source_in_gy && !source_in_hand && ability.once_per_turn {
-            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
-            if self.battlefield[pos].once_per_turn_used.contains(&ability_index) {
+            let perm = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == card_id)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            if perm.once_per_turn_used.contains(&ability_index) {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
@@ -8622,8 +8612,12 @@ impl GameState {
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.
         if !source_in_gy && !source_in_hand && ability.exhaust {
-            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
-            if self.battlefield[pos].exhausted_abilities.contains(&ability_index) {
+            let perm = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == card_id)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            if perm.exhausted_abilities.contains(&ability_index) {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
@@ -9233,11 +9227,15 @@ impl GameState {
             if source_in_gy || source_in_hand {
                 return Err(GameError::CardIsTapped(card_id));
             }
-            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
-            if self.battlefield[pos].tapped {
+            let perm = self
+                .battlefield
+                .iter_mut()
+                .find(|c| c.id == card_id)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            if perm.tapped {
                 return Err(GameError::CardIsTapped(card_id));
             }
-            self.battlefield[pos].tapped = true;
+            perm.tapped = true;
         }
 
         let mut auto_mana_events = Vec::new();
@@ -9536,8 +9534,7 @@ impl GameState {
         // `craft_exile_picks` gate.
         for (other_cid, in_gy) in craft_exile_picks {
             if in_gy {
-                if let Some(idx) = self.players[p].graveyard.iter().position(|c| c.id == other_cid) {
-                    let card = self.players[p].graveyard.remove(idx);
+                if let Some(card) = Self::take_card(&mut self.players[p].graveyard, other_cid) {
                     self.exile.push(card);
                     events.push(GameEvent::CardLeftGraveyard { player: p, card_id: other_cid });
                     self.players[p].cards_left_graveyard_this_turn =
@@ -9564,12 +9561,7 @@ impl GameState {
         // (count 1), and Grim Lavamancer's `{R}, {T}, Exile two cards
         // from your graveyard` (count 2).
         for other_cid in exile_other_picks {
-            if let Some(idx) = self.players[p]
-                .graveyard
-                .iter()
-                .position(|c| c.id == other_cid)
-            {
-                let card = self.players[p].graveyard.remove(idx);
+            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, other_cid) {
                 self.exile.push(card);
                 self.players[p].cards_exiled_this_turn = self.players[p]
                     .cards_exiled_this_turn
@@ -9592,8 +9584,7 @@ impl GameState {
         // for battlefield sources.
         if ability.exile_self_cost && source_in_gy {
             let owner = source_owner.unwrap();
-            if let Some(idx) = self.players[owner].graveyard.iter().position(|c| c.id == card_id) {
-                let mut card = self.players[owner].graveyard.remove(idx);
+            if let Some(mut card) = Self::take_card(&mut self.players[owner].graveyard, card_id) {
                 card.controller = owner;
                 self.exile.push(card);
                 self.players[owner].cards_exiled_this_turn = self.players[owner]
@@ -9613,8 +9604,7 @@ impl GameState {
         // resolves.
         if ability.exile_self_cost && source_in_hand {
             let owner = source_owner.unwrap();
-            if let Some(idx) = self.players[owner].hand.iter().position(|c| c.id == card_id) {
-                let mut card = self.players[owner].hand.remove(idx);
+            if let Some(mut card) = Self::take_card(&mut self.players[owner].hand, card_id) {
                 card.controller = owner;
                 self.exile.push(card);
                 self.players[owner].cards_exiled_this_turn = self.players[owner]

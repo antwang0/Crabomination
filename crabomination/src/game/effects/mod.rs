@@ -1453,8 +1453,7 @@ impl GameState {
                     return Ok(());
                 }
                 for id in eligible {
-                    if let Some(pos) = self.exile.iter().position(|c| c.id == id) {
-                        let card = self.exile.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.exile, id) {
                         // CR 614.6 — graveyard-hate redirects apply.
                         self.route_to_graveyard(card, events);
                     }
@@ -2810,9 +2809,8 @@ impl GameState {
                 });
                 if let DecisionAnswer::Cards(picked) = answer
                     && let Some(cid) = picked.first()
-                    && let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid)
+                    && let Some(card) = Self::take_card(&mut self.players[p].graveyard, *cid)
                 {
-                    let card = self.players[p].graveyard.remove(pos);
                     self.players[p].hand.push(card);
                 }
                 Ok(())
@@ -2862,10 +2860,7 @@ impl GameState {
                 });
                 if let DecisionAnswer::Cards(picked) = answer {
                     for cid in picked.into_iter().take(take as usize) {
-                        if let Some(pos) =
-                            self.players[p].graveyard.iter().position(|c| c.id == cid)
-                        {
-                            let card = self.players[p].graveyard.remove(pos);
+                        if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid) {
                             self.players[p].hand.push(card);
                         }
                     }
@@ -3154,8 +3149,7 @@ impl GameState {
                 });
                 if let DecisionAnswer::Cards(to_bottom) = answer {
                     for cid in to_bottom {
-                        if let Some(pos) = self.players[opp].library.iter().position(|c| c.id == cid) {
-                            let card = self.players[opp].library.remove(pos);
+                        if let Some(card) = Self::take_card(&mut self.players[opp].library, cid) {
                             self.players[opp].library.push(card);
                         }
                     }
@@ -3198,13 +3192,11 @@ impl GameState {
                 // the leftovers honor graveyard replacements (CR 614.6).
                 for (cid, _) in &top {
                     if chosen.contains(cid) {
-                        if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
-                            let card = self.players[p].library.remove(pos);
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, *cid) {
                             self.players[p].hand.push(card);
                             taken += 1;
                         }
-                    } else if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
-                        let card = self.players[p].library.remove(pos);
+                    } else if let Some(card) = Self::take_card(&mut self.players[p].library, *cid) {
                         self.route_to_graveyard(card, events);
                     }
                 }
@@ -3940,8 +3932,8 @@ impl GameState {
                     .iter()
                     .position(|p| p.graveyard.iter().any(|c| c.id == src));
                 if let Some(p) = in_gy {
-                    let pos = self.players[p].graveyard.iter().position(|c| c.id == src).unwrap();
-                    let card = self.players[p].graveyard.remove(pos);
+                    let card = Self::take_card(&mut self.players[p].graveyard, src)
+                        .expect("in_gy located src in this graveyard just above");
                     self.exile.push(card);
                     events.push(GameEvent::PermanentExiled { card_id: src });
                     self.delayed_triggers.push(DelayedTrigger {
@@ -4087,8 +4079,7 @@ impl GameState {
                 }
                 // …then puts the exiled cards onto the battlefield.
                 for id in returning {
-                    if let Some(pos) = self.exile.iter().position(|c| c.id == id) {
-                        let card = self.exile.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.exile, id) {
                         let owner = card.owner;
                         self.place_card_in_dest(
                             card,
@@ -5231,10 +5222,9 @@ impl GameState {
                 // then stash them inside the new melded object.
                 let mut parts = Vec::new();
                 for id in [source, partner_id] {
-                    let Some(pos) = self.battlefield.iter().position(|c| c.id == id) else {
+                    let Some(card) = Self::take_card(&mut self.battlefield, id) else {
                         continue;
                     };
-                    let card = self.battlefield.remove(pos);
                     self.remove_effects_from_source(id);
                     self.remove_from_combat(id);
                     events.push(GameEvent::PermanentExiled { card_id: id });
@@ -7987,9 +7977,8 @@ impl GameState {
                         .map(|c| c.id)
                         .collect();
                     let Some(&pick) = ids.choose(&mut rand::rng()) else { break };
-                    let Some(idx) = self.players[p].library.iter().position(|c| c.id == pick)
+                    let Some(card) = Self::take_card(&mut self.players[p].library, pick)
                     else { break };
-                    let card = self.players[p].library.remove(idx);
                     self.place_card_in_dest(card, p, to, events);
                     self.last_moved_cards.push(pick);
                 }
@@ -8009,9 +7998,8 @@ impl GameState {
                         .map(|c| c.id)
                         .collect();
                     let Some(&pick) = ids.choose(&mut rand::rng()) else { break };
-                    let Some(idx) = self.players[p].graveyard.iter().position(|c| c.id == pick)
+                    let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick)
                     else { break };
-                    let card = self.players[p].graveyard.remove(idx);
                     self.players[p].hand.push(card);
                     self.last_moved_cards.push(pick);
                 }
@@ -8160,8 +8148,8 @@ impl GameState {
                 let n_chosen = (*opponent_picks as usize).min(picked.len());
                 let revealed: Vec<(crate::card::CardId, String)> = picked
                     .iter()
-                    .map(|id| {
-                        (*id, candidates.iter().find(|(c, _)| c == id).unwrap().1.clone())
+                    .filter_map(|id| {
+                        candidates.iter().find(|(c, _)| c == id).map(|(_, n)| (*id, n.clone()))
                     })
                     .collect();
                 let answer = self.decider.decide(&Decision::ChooseCards {
@@ -8355,8 +8343,7 @@ impl GameState {
                 }
                 self.clear_answer_log();
                 for cid in &top {
-                    let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) else { continue };
-                    let card = self.players[p].library.remove(pos);
+                    let Some(card) = Self::take_card(&mut self.players[p].library, *cid) else { continue };
                     if denied.contains(cid) {
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
@@ -8390,8 +8377,7 @@ impl GameState {
                             .unwrap_or(0)
                     })
                     .unwrap();
-                if let Some(pos) = self.players[p].library.iter().position(|c| c.id == pick) {
-                    let mut card = self.players[p].library.remove(pos);
+                if let Some(mut card) = Self::take_card(&mut self.players[p].library, pick) {
                     card.face_down = true;
                     card.exiled_with = Some(src);
                     self.exile.push(card);
@@ -8403,8 +8389,7 @@ impl GameState {
                     top.iter().copied().filter(|id| *id != pick).collect();
                 rest.shuffle(&mut rand::rng());
                 for id in rest {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
-                        let card = self.players[p].library.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
                     }
                 }
@@ -8607,8 +8592,8 @@ impl GameState {
                             .unwrap_or(0)
                     })
                     .unwrap();
-                let pos = self.players[opp].library.iter().position(|c| c.id == pick).unwrap();
-                let mut card = self.players[opp].library.remove(pos);
+                let mut card = Self::take_card(&mut self.players[opp].library, pick)
+                    .expect("pick chosen from the top of this library just above");
                 card.exiled_with = ctx.source;
                 card.face_down = true;
                 card.may_play_until = Some(crate::card::MayPlayPermission {
@@ -8631,8 +8616,7 @@ impl GameState {
                     top.into_iter().filter(|id| *id != pick).collect();
                 rest.shuffle(&mut rand::rng());
                 for id in rest {
-                    if let Some(pos) = self.players[opp].library.iter().position(|c| c.id == id) {
-                        let card = self.players[opp].library.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.players[opp].library, id) {
                         self.players[opp].library.push(card);
                     }
                 }
@@ -8839,8 +8823,7 @@ impl GameState {
                     self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
                 }).collect();
                 for id in &taken {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *id) {
-                        let card = self.players[p].library.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
                         self.players[p].hand.push(card);
                     }
                 }
@@ -8850,8 +8833,7 @@ impl GameState {
                     revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
                 rest.shuffle(&mut rand::rng());
                 for id in rest {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
-                        let card = self.players[p].library.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
                     }
                 }
@@ -8916,8 +8898,7 @@ impl GameState {
                     revealed.iter().copied().filter(|id| Some(*id) != pick).collect();
                 rest.shuffle(&mut rand::rng());
                 for id in rest {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
-                        let card = self.players[p].library.remove(pos);
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
                     }
                 }
@@ -10303,9 +10284,8 @@ impl GameState {
                     .map(|(id, _, _)| *id);
                 let mut removed: Option<CardId> = None;
                 if let (Some(eid), Some(opp)) = (candidate, opp)
-                    && let Some(pos) = self.players[p].library.iter().position(|c| c.id == eid)
+                    && let Some(mut card) = Self::take_card(&mut self.players[p].library, eid)
                 {
-                    let mut card = self.players[p].library.remove(pos);
                     card.exiled_with = ctx.source;
                     // "That opponent may cast it without paying its mana cost" —
                     // a free may-play for the opponent while it stays exiled.
@@ -11396,13 +11376,17 @@ impl GameState {
                 // `place_card_in_dest` so new-object state (counters clear,
                 // summoning sickness) and the back face's ETB fire normally.
                 let Some(id) = ctx.source else { return Ok(()); };
-                let Some(pos) = self.battlefield.iter().position(|c| c.id == id) else {
-                    return Ok(());
-                };
-                if self.battlefield[pos].definition.back_face.is_none() {
+                if self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == id)
+                    .is_none_or(|c| c.definition.back_face.is_none())
+                {
                     return Ok(());
                 }
-                let mut card = self.battlefield.remove(pos);
+                let Some(mut card) = Self::take_card(&mut self.battlefield, id) else {
+                    return Ok(());
+                };
                 events.push(GameEvent::PermanentExiled { card_id: id });
                 let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
                 card.front_face = Some(card.definition.clone());
@@ -12474,8 +12458,8 @@ impl GameState {
         // Remove chosen cards from hand (in reverse order to preserve indices).
         let mut cards_to_insert: Vec<crate::card::CardInstance> = Vec::new();
         for &id in chosen {
-            if let Some(pos) = self.players[player].hand.iter().position(|c| c.id == id) {
-                cards_to_insert.push(self.players[player].hand.remove(pos));
+            if let Some(card) = Self::take_card(&mut self.players[player].hand, id) {
+                cards_to_insert.push(card);
             }
         }
         // Insert in reverse so that chosen[0] ends up on top.
@@ -13039,8 +13023,7 @@ impl GameState {
         use crate::decision::LearnChoice;
         match choice {
             LearnChoice::FetchLesson(cid) => {
-                if let Some(pos) = self.players[p].sideboard.iter().position(|c| c.id == cid) {
-                    let card = self.players[p].sideboard.remove(pos);
+                if let Some(card) = Self::take_card(&mut self.players[p].sideboard, cid) {
                     self.players[p].hand.push(card);
                 }
             }
@@ -13751,16 +13734,8 @@ impl GameState {
                 } else {
                     first
                 };
-                let card = if let Some(pos) =
-                    self.players[p].sideboard.iter().position(|c| c.id == chosen)
-                {
-                    Some(self.players[p].sideboard.remove(pos))
-                } else {
-                    self.exile
-                        .iter()
-                        .position(|c| c.id == chosen)
-                        .map(|pos| self.exile.remove(pos))
-                };
+                let card = Self::take_card(&mut self.players[p].sideboard, chosen)
+                    .or_else(|| Self::take_card(&mut self.exile, chosen));
                 if let Some(card) = card {
                     let cid = card.id;
                     self.players[p].hand.push(card);

@@ -282,6 +282,11 @@ impl LobbyManager {
             });
             return out;
         }
+        // Lobby names are broadcast to every browsing connection; clamp them
+        // like display names (:237) so a hostile client can't amplify a huge
+        // payload through the lobby list.
+        let name: String = name.trim().chars().take(48).collect();
+        let name = if name.is_empty() { format!("Lobby {}", self.next_id) } else { name };
         let id = self.next_id;
         self.next_id += 1;
         let lobby = Lobby {
