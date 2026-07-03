@@ -64,6 +64,16 @@ spell's mana value); Cloud, Ex-SOLDIER rides `Effect::Attach` + `CountMatching`
 over equipped attackers. Cloud's "up to one target Equipment" ETB is a required
 target (fizzles with no Equipment).
 
+Remaining short FIN cards blocked on one primitive each (build the primitive to
+unblock a card + a roadmap item at once):
+- **Combat Tutorial** — needs the per-slot *optional* "up to one target creature
+  you control" alongside a required player target (the multi-kind-slot spell).
+- **A Realm Reborn** — needs a "other permanents you control gain '{T}: Add one
+  mana of any color'" grant-an-activated-mana-ability-to-others static.
+- **Aettir and Priwen / Excalibur II** — equip bonus scaled by life total /
+  charge counters on the Equipment (`EquipScale` only counts controlled
+  permanents; add counter-on-source + dynamic-value equip scaling).
+
 ## Environment note
 
 The `crabomination_client` (Bevy GUI) cannot be built in the headless routine
