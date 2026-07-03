@@ -5402,6 +5402,11 @@ static FIN: &[Factory] = &[
     super::fin::hope_estheim,
     super::fin::sazh_katzroy,
     super::fin::vanille_cheerful_lcie,
+    super::fin::yshtola_nights_blessed,
+    super::fin::tonberry,
+    super::fin::zell_dincht,
+    super::fin::angel_of_mercy,
+    super::fin::rydia_summoner_of_mist,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

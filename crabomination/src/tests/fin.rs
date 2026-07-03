@@ -417,3 +417,89 @@ fn vanille_mills_and_returns_permanent() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the graveyard permanent to hand");
 }
+
+/// Y'shtola pings each opponent and gains life on a big noncreature spell.
+#[test]
+fn yshtola_triggers_on_expensive_noncreature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::yshtola_nights_blessed());
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    // Divination is a {2}{U} sorcery (MV 3, noncreature).
+    let spell = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(spell, None, vec![], None, None).expect("cast Divination");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 2, "each opponent took 2");
+    assert_eq!(g.players[0].life, life0 + 2, "gained 2");
+}
+
+/// Tonberry enters tapped with a stun counter and gains combat keywords on your turn.
+#[test]
+fn tonberry_enters_stunned_and_conditional_keywords() {
+    let mut g = two_player_game();
+    let tonberry = g.move_card_to_battlefield_for_test(0, catalog::tonberry());
+    drain_stack(&mut g);
+    let t = g.battlefield_find(tonberry).unwrap();
+    assert!(t.tapped, "enters tapped");
+    assert_eq!(t.counter_count(CounterType::Stun), 1, "with a stun counter");
+    // Active player is 0 (your turn) → first strike + deathtouch.
+    g.active_player_idx = 0;
+    let cp = g.computed_permanent(tonberry).unwrap();
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
+    assert!(cp.keywords.contains(&Keyword::Deathtouch), "deathtouch on your turn");
+    // Opponent's turn → neither.
+    g.active_player_idx = 1;
+    let cp = g.computed_permanent(tonberry).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::FirstStrike), "not on opponent's turn");
+}
+
+/// Zell's power tracks lands you control and he gets an extra land drop.
+#[test]
+fn zell_dincht_power_tracks_lands() {
+    let mut g = two_player_game();
+    let zell = g.add_card_to_battlefield(0, catalog::zell_dincht());
+    assert_eq!(g.computed_permanent(zell).unwrap().power, 0, "no lands → 0 power");
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let cp = g.computed_permanent(zell).unwrap();
+    assert_eq!(cp.power, 2, "two lands → +2 power");
+    assert_eq!(cp.toughness, 3, "fixed 3 toughness");
+}
+
+/// Angel of Mercy gains 3 life on entry.
+#[test]
+fn angel_of_mercy_gains_life() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::angel_of_mercy());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "gained 3 life on ETB");
+}
+
+/// Rydia loots on landfall (discard then draw).
+#[test]
+fn rydia_landfall_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rydia_summoner_of_mist());
+    let discardable = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let drawable = g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    // Force the optional loot (the bot otherwise declines to pitch a card).
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(discardable)),
+    ]));
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == discardable),
+        "landfall discarded a card"
+    );
+    assert!(g.players[0].hand.iter().any(|c| c.id == drawable), "and drew a fresh card");
+}

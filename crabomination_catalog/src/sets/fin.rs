@@ -4,10 +4,11 @@
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    SelectionRequirement, Selector, StaticAbility, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, etb_mint_token, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest, ZoneRef};
+use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
@@ -723,6 +724,144 @@ pub fn vanille_cheerful_lcie() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Y'shtola, Night's Blessed — {1}{W}{U}{B} 2/4 Cat Warlock, vigilance. Whenever
+/// you cast a noncreature spell with mana value 3 or greater, deal 2 damage to
+/// each opponent and gain 2 life. (The lost-4-life end-step draw is omitted.)
+pub fn yshtola_nights_blessed() -> CardDefinition {
+    CardDefinition {
+        name: "Y'shtola, Night's Blessed",
+        cost: cost(&[generic(1), w(), crate::mana::u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(
+                    SelectionRequirement::Noncreature
+                        .and(SelectionRequirement::ManaValueAtLeast(3)),
+                ),
+            ),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tonberry — {B} 2/1 Salamander Horror. Enters tapped with a stun counter.
+/// During your turn it has first strike and deathtouch.
+pub fn tonberry() -> CardDefinition {
+    CardDefinition {
+        name: "Tonberry",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Salamander, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::Stun, Value::ONE)),
+        triggered_abilities: vec![etb(Effect::Tap { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Tonberry has first strike and deathtouch during your turn.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zell Dincht — {2}{R} 0/3 Human Monk. Play an extra land each turn; gets +1/+0
+/// per land you control; at your end step, return a land you control to hand.
+pub fn zell_dincht() -> CardDefinition {
+    CardDefinition {
+        name: "Zell Dincht",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        dynamic_pt: Some(crate::card::DynamicPt::LandsControlledPower { base_p: 0, base_t: 3 }),
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Angel of Mercy — {4}{W} 3/3 Angel with flying. ETB: gain 3 life.
+pub fn angel_of_mercy() -> CardDefinition {
+    CardDefinition {
+        name: "Angel of Mercy",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        ..Default::default()
+    }
+}
+
+/// Rydia, Summoner of Mist — {R}{G} 1/2 Human Shaman. Landfall — whenever a land
+/// you control enters, you may discard a card; if you do, draw a card. (The
+/// "Summon" Saga-reanimation activated ability is omitted.)
+pub fn rydia_summoner_of_mist() -> CardDefinition {
+    CardDefinition {
+        name: "Rydia, Summoner of Mist",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::MayDiscard {
+                description: "Discard a card to draw a card?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
+            },
+        }],
         ..Default::default()
     }
 }
