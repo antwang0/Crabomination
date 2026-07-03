@@ -1492,18 +1492,6 @@ pub fn blazing_bomb() -> CardDefinition {
     }
 }
 
-/// A 1/1 colorless Hero creature token (Final Fantasy's Job Select payoff).
-fn hero_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Hero".into(),
-        power: 1,
-        toughness: 1,
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
-        ..Default::default()
-    }
-}
-
 /// Adelbert Steiner — {1}{W} 2/1 Legendary Human Knight with lifelink that gets
 /// +1/+1 for each Equipment you control.
 pub fn adelbert_steiner() -> CardDefinition {
