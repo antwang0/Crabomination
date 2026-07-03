@@ -578,3 +578,32 @@ fn aerith_raise_scales_with_lifegain() {
     drain_stack(&mut g2);
     assert!(g2.battlefield_find(dead2).is_some(), "big lifegain reanimated it");
 }
+
+/// Barret, Avalanche Leader mints a Rebel when an Equipment you control enters.
+#[test]
+fn barret_avalanche_makes_rebel_on_equipment() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::barret_avalanche_leader());
+    let art = g.move_card_to_battlefield_for_test(0, catalog::bonesplitter());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    let rebels = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Rebel").count();
+    assert_eq!(rebels, 1, "an Equipment ETB minted one Rebel token");
+}
+
+/// Edgar draws a card for each artifact he controls on entry.
+#[test]
+fn edgar_draws_per_artifact() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.add_card_to_battlefield(0, catalog::mishras_bauble());
+    for _ in 0..4 {
+        let id = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    }
+    let hand0 = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::edgar_king_of_figaro());
+    drain_stack(&mut g);
+    // Two artifacts on board (Edgar itself isn't one) → draw 2.
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew one per artifact controlled");
+}

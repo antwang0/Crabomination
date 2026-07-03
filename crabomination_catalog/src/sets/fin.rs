@@ -988,3 +988,65 @@ pub fn aerith_last_ancient() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Barret, Avalanche Leader — {2}{R}{G} 4/4 Human Rebel with reach. Whenever an
+/// Equipment you control enters, create a 2/2 red Rebel token. (The begin-combat
+/// auto-attach is omitted.)
+pub fn barret_avalanche_leader() -> CardDefinition {
+    let rebel = TokenDefinition {
+        name: "Rebel".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rebel], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Barret, Avalanche Leader",
+        cost: cost(&[generic(2), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Rebel], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                }),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: rebel },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Edgar, King of Figaro — {4}{U}{U} 4/5 Human Artificer Noble. ETB: draw a card
+/// for each artifact you control. (The two-headed-coin rider is omitted.)
+pub fn edgar_king_of_figaro() -> CardDefinition {
+    CardDefinition {
+        name: "Edgar, King of Figaro",
+        cost: cost(&[generic(4), crate::mana::u(), crate::mana::u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::CountMatching {
+                sel: Box::new(Selector::EachMatching {
+                    zone: ZoneRef::Battlefield,
+                    filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                }),
+                filter: SelectionRequirement::Any,
+            },
+        })],
+        ..Default::default()
+    }
+}

@@ -5411,6 +5411,8 @@ static FIN: &[Factory] = &[
     super::fin::ultima_weapon,
     super::fin::cloud_midgar_mercenary,
     super::fin::aerith_last_ancient,
+    super::fin::barret_avalanche_leader,
+    super::fin::edgar_king_of_figaro,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
