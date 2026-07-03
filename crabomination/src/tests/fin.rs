@@ -503,3 +503,43 @@ fn rydia_landfall_loots() {
     );
     assert!(g.players[0].hand.iter().any(|c| c.id == drawable), "and drew a fresh card");
 }
+
+/// Locke Cole loots (draw then discard) on combat damage to a player.
+#[test]
+fn locke_cole_loots_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let locke = g.add_card_to_battlefield(0, catalog::locke_cole());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card the loot can pitch
+    g.clear_sickness(locke);
+    let gy0 = g.players[0].graveyard.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: locke,
+        target: AttackTarget::Player(1),
+    }])).expect("Locke attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 1, "looted: drew then discarded one to the graveyard");
+}
+
+/// Ultima Weapon grants +7/+7 and destroys a creature when the wearer attacks.
+#[test]
+fn ultima_weapon_pumps_and_kills_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let wearer = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let weapon = g.add_card_to_battlefield(0, catalog::ultima_weapon());
+    g.battlefield_find_mut(weapon).unwrap().attached_to = Some(wearer);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(wearer);
+    assert_eq!(g.computed_permanent(wearer).unwrap().power, 9, "2/2 + 7/7");
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: wearer,
+        target: AttackTarget::Player(1),
+    }])).expect("wearer attacks");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "attack destroyed the opposing creature");
+}

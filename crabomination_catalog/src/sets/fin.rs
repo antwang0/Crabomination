@@ -865,3 +865,59 @@ pub fn rydia_summoner_of_mist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Locke Cole — {1}{U}{B} 2/3 Human Rogue with deathtouch and lifelink.
+/// Whenever he deals combat damage to a player, draw a card, then discard a card.
+pub fn locke_cole() -> CardDefinition {
+    CardDefinition {
+        name: "Locke Cole",
+        cost: cost(&[generic(1), crate::mana::u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ultima Weapon — {7} Legendary Equipment. Equipped creature gets +7/+7; when
+/// it attacks, destroy target creature an opponent controls. Equip {7}.
+pub fn ultima_weapon() -> CardDefinition {
+    CardDefinition {
+        name: "Ultima Weapon",
+        cost: cost(&[generic(7)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(7)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 7,
+            toughness: 7,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
