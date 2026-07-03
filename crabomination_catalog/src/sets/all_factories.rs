@@ -5086,6 +5086,11 @@ static DECKS: &[Factory] = &[
     super::decks::dokuchi_shadow_walker,
     super::decks::reito_sentinel,
     super::decks::akki_ronin,
+    // recent99 — Kamigawa: Neon Dynasty batch 5
+    super::decks::guardian_kirin,
+    super::decks::silver_fur_master,
+    super::decks::generous_visitor,
+    super::decks::boon_of_boseiju,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
