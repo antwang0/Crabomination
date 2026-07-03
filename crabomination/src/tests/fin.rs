@@ -817,3 +817,67 @@ fn gaelicat_grows_with_two_artifacts() {
     assert_eq!(g.computed_permanent(cat).unwrap().power, 3, "two artifacts → +2/+0");
     assert_eq!(g.computed_permanent(cat).unwrap().toughness, 3, "toughness unchanged");
 }
+
+/// Cloudbound Moogle puts a +1/+1 counter on a creature when it enters.
+#[test]
+fn cloudbound_moogle_etb_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::cloudbound_moogle());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "ETB dropped a +1/+1 counter on the bear"
+    );
+}
+
+/// Balamb T-Rexaur gains 3 life on entry.
+#[test]
+fn balamb_t_rexaur_gains_life() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::balamb_t_rexaur());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "ETB gained 3 life");
+}
+
+/// Goobbue Gardener taps for green.
+#[test]
+fn goobbue_gardener_taps_for_green() {
+    let mut g = two_player_game();
+    let dork = g.add_card_to_battlefield(0, catalog::goobbue_gardener());
+    g.clear_sickness(dork);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 1, "added one green");
+}
+
+/// Dragoon's Wyvern mints a Hero token on entry.
+#[test]
+fn dragoons_wyvern_makes_hero() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::dragoons_wyvern());
+    drain_stack(&mut g);
+    let heroes = g.battlefield.iter().filter(|c| c.definition.name == "Hero").count();
+    assert_eq!(heroes, 1, "ETB minted a Hero token");
+}
+
+/// Blazing Bomb sacrifices to deal its power to a creature.
+#[test]
+fn blazing_bomb_blow_up() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::blazing_bomb());
+    g.battlefield_find_mut(bomb).unwrap().add_counters(CounterType::PlusOnePlusOne, 1); // → 2/2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Blow Up");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bomb).is_none(), "Blazing Bomb sacrificed itself");
+    assert!(g.battlefield_find(foe).is_none(), "dealt 2 to the 2/2, destroying it");
+}

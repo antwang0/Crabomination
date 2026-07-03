@@ -1984,7 +1984,15 @@ impl GameState {
                 let (Some(src_id), Some(tgt_id)) = (src_id, tgt_id) else {
                     return Ok(());
                 };
-                let power = self.computed_permanent(src_id).map(|cp| cp.power).unwrap_or(0);
+                // CR 608.2h — when the source left the battlefield as a cost
+                // ("Sacrifice this: it deals damage equal to its power…"),
+                // read its last-known power rather than 0 (Blazing Bomb).
+                let power = self
+                    .computed_permanent(src_id)
+                    .map(|cp| cp.power)
+                    .or_else(|| self.leaves_bf_lki.get(&src_id).map(|s| s.power()))
+                    .or(self.sacrificed_power)
+                    .unwrap_or(0);
                 if power > 0 {
                     self.deal_damage_to_from(
                         EntityRef::Permanent(tgt_id),

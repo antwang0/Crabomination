@@ -1051,6 +1051,122 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
     }
 }
 
+/// Cloudbound Moogle — {3}{W}{W} 2/3 Moogle with flying. ETB: put a +1/+1
+/// counter on target creature. Plainscycling {2}.
+pub fn cloudbound_moogle() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Cloudbound Moogle",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moogle], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains),
+        ],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Balamb T-Rexaur — {4}{G}{G} 6/6 Dinosaur with trample. ETB: gain 3 life.
+/// Forestcycling {2}.
+pub fn balamb_t_rexaur() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Balamb T-Rexaur",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Forest),
+        ],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        ..Default::default()
+    }
+}
+
+/// Goobbue Gardener — {1}{G} 1/3 Plant Beast. {T}: Add {G}.
+pub fn goobbue_gardener() -> CardDefinition {
+    CardDefinition {
+        name: "Goobbue Gardener",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![super::tap_add(Color::Green)],
+        ..Default::default()
+    }
+}
+
+/// Dragoon's Wyvern — {2}{U} 2/1 Drake with flying. ETB: create a 1/1 colorless
+/// Hero creature token.
+pub fn dragoons_wyvern() -> CardDefinition {
+    CardDefinition {
+        name: "Dragoon's Wyvern",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb_mint_token(hero_token(), 1)],
+        ..Default::default()
+    }
+}
+
+/// Blazing Bomb — {R} 1/1 Elemental. Whenever you cast an expensive noncreature
+/// spell, grow. Blow Up — {T}, Sacrifice this: deal damage equal to its power to
+/// target creature. (The "four mana spent" gate is modeled as mana value ≥ 4.)
+pub fn blazing_bomb() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Blazing Bomb",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+                    Predicate::CastSpellMatches(SelectionRequirement::ManaValueAtLeast(4)),
+                ]),
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::DealDamageEqualToPower {
+                source: Selector::This,
+                target: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// A 1/1 colorless Hero creature token (Final Fantasy's Job Select payoff).
 fn hero_token() -> TokenDefinition {
     TokenDefinition {

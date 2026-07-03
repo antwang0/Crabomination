@@ -175,6 +175,8 @@ pub enum CreatureType {
     Tyranid,
     // Final Fantasy Job Select Hero token (CR 702.182).
     Hero,
+    // Final Fantasy Moogle tribe.
+    Moogle,
     // TLA — Ember Island Production's 2/2 Coward token.
     Coward,
     // Tarkir: Dragonstorm (Cunning Coyote).

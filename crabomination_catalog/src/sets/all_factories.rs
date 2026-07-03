@@ -5425,6 +5425,11 @@ static FIN: &[Factory] = &[
     super::fin::gigantoad,
     super::fin::hill_gigas,
     super::fin::gaelicat,
+    super::fin::cloudbound_moogle,
+    super::fin::balamb_t_rexaur,
+    super::fin::goobbue_gardener,
+    super::fin::dragoons_wyvern,
+    super::fin::blazing_bomb,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
