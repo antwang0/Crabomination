@@ -53,6 +53,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
         (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
+        (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. }) => true,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,

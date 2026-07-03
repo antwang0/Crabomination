@@ -1530,6 +1530,34 @@ fn laid_to_rest_death_payoffs() {
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew when a Human died");
 }
 
+/// Laid to Rest's Human death payoff fires for a token Human too: token deaths
+/// leave no graveyard card, so the type filter must read the die-snapshot (LKI).
+#[test]
+fn laid_to_rest_fires_on_human_token_death() {
+    use crate::card::{CardType, Subtypes, TokenDefinition};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::laid_to_rest());
+    g.add_card_to_library(0, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let tok = g.add_token_to_battlefield(0, &human);
+    g.battlefield_find_mut(tok).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew when a Human token died");
+}
+
 /// Rise of the Ants makes two 3/3 Insects and gains 2 life.
 #[test]
 fn rise_of_the_ants_makes_insects() {

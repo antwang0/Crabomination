@@ -346,6 +346,9 @@ mod tests_recent100;
 #[path = "../tests/recent101.rs"]
 mod tests_recent101;
 #[cfg(test)]
+#[path = "../tests/recent102.rs"]
+mod tests_recent102;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -8029,6 +8032,7 @@ impl GameState {
                         | crate::effect::EventKind::CardDiscarded
                         | crate::effect::EventKind::CardLeftGraveyard
                         | crate::effect::EventKind::CounterAdded(_)
+                        | crate::effect::EventKind::AnyCounterAdded
                         | crate::effect::EventKind::Blocks
                         | crate::effect::EventKind::BecomesBlocked
                         | crate::effect::EventKind::AttacksAndIsntBlocked

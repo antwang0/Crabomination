@@ -250,13 +250,6 @@ Still deferred for want of a primitive:
   the source's creature types + base P/T.
 - **Sanctum Prelate** UI number-choice — the ETB choose-a-number currently uses
   the AutoDecider default for bots; UI suspend is a follow-up.
-- **Death-trigger creature-type filters (LKI).** A `CreatureDied` trigger whose
-  `EntityMatches { TriggerSource, HasCreatureType(X) }` filter is evaluated at
-  resolution fails, because the dead creature's types aren't read from
-  `died_card_snapshots` (only `event_actor`'s controller lookup is). Blocks
-  Bishop of Wings' "when an Angel you control dies" half; `NotToken` filters work
-  today because they don't need the type. Fix: route the deferred filter's
-  `TriggerSource` through the die-snapshot for graveyard/dead subjects.
 
 ## Discovered follow-ups — counters / artifacts sweep (`decks::recent54`–`recent55`)
 
@@ -454,13 +447,12 @@ gains the missing piece):
 
 Deferred TDM/DFT cards needing new engine primitives:
 - **Sidisi, Regent of the Mire** — sac MV X → reanimate MV X+1 (cost-linked X).
-- **Stalwart Successor** — "first time counters are put on a creature you
-  control each turn" (a counters-placed event + once-per-turn gate).
-- **Surrak, Elusive Hunter** — "becomes the target of an opponent's spell/
-  ability" trigger (a becomes-targeted event).
-- **Effortless Master** — conditional enters-with-counters (needs a
-  `Value::SpellsCastThisTurn`).
 - DFT "Mount that saddles/crews as though power greater" rider; bot saddle AI.
+
+Shipped (`decks::recent102`): Stalwart Successor (`EventKind::AnyCounterAdded`
++ `with_per_subject_cap(1)`), Surrak, Elusive Hunter (BecameTarget +
+`YourPermanentTargetedByOpponent`, creature-spell half dropped), Effortless
+Master (cast-count-gated ETB counters).
 
 ## Discovered follow-ups — "becomes"/blink batch (modern_decks)
 

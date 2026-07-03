@@ -1455,6 +1455,10 @@ pub enum EventKind {
     TurnBegins,
     /// A counter was added to a permanent/player.
     CounterAdded(CounterType),
+    /// A counter of *any* kind was added to a permanent (CR 122). Fires once
+    /// per `CounterAdded` event regardless of counter type — "whenever one or
+    /// more counters are put on a creature you control" (Stalwart Successor).
+    AnyCounterAdded,
     /// An ability was activated.
     AbilityActivated,
     /// One or more cards left a player's graveyard (returned to hand /
@@ -1706,6 +1710,12 @@ impl EventSpec {
     /// Mark this trigger "only once each turn" (CR 603.3d).
     pub fn once_per_turn(mut self) -> Self {
         self.once_per_turn = true;
+        self
+    }
+    /// Cap how many times this trigger fires per distinct subject per turn
+    /// ("the first time … each turn" — Stalwart Successor at cap 1; Nadu at 2).
+    pub fn with_per_subject_cap(mut self, cap: u8) -> Self {
+        self.per_subject_cap = Some(cap);
         self
     }
 }
