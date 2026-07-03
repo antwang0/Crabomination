@@ -543,3 +543,38 @@ fn ultima_weapon_pumps_and_kills_on_attack() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "attack destroyed the opposing creature");
 }
+
+/// Cloud tutors an Equipment to hand on entry.
+#[test]
+fn cloud_midgar_tutors_equipment() {
+    let mut g = two_player_game();
+    let sword = g.add_card_to_library(0, catalog::bonesplitter()); // an Equipment
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(sword)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::cloud_midgar_mercenary());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == sword), "found an Equipment for hand");
+}
+
+/// Aerith returns a creature to hand on a small lifegain, or to the battlefield
+/// after gaining 7+.
+#[test]
+fn aerith_raise_scales_with_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aerith_last_ancient());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life_gained_this_turn = 3; // < 7 → to hand
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "small lifegain returned it to hand");
+
+    let mut g2 = two_player_game();
+    g2.add_card_to_battlefield(0, catalog::aerith_last_ancient());
+    let dead2 = g2.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g2.players[0].life_gained_this_turn = 8; // >= 7 → to battlefield
+    advance_to(&mut g2, TurnStep::End);
+    drain_stack(&mut g2);
+    assert!(g2.battlefield_find(dead2).is_some(), "big lifegain reanimated it");
+}

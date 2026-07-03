@@ -5409,6 +5409,8 @@ static FIN: &[Factory] = &[
     super::fin::rydia_summoner_of_mist,
     super::fin::locke_cole,
     super::fin::ultima_weapon,
+    super::fin::cloud_midgar_mercenary,
+    super::fin::aerith_last_ancient,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

@@ -921,3 +921,70 @@ pub fn ultima_weapon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cloud, Midgar Mercenary — {W}{W} 2/1 Human Soldier Mercenary. ETB: search
+/// your library for an Equipment card and put it into your hand. (The "Cloud's
+/// triggered abilities trigger an additional time" rider is omitted.)
+pub fn cloud_midgar_mercenary() -> CardDefinition {
+    CardDefinition {
+        name: "Cloud, Midgar Mercenary",
+        cost: cost(&[w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Aerith, Last Ancient — {2}{G}{W} 3/5 Human Cleric Druid with lifelink. At
+/// your end step, if you gained life this turn, return a creature card from your
+/// graveyard to your hand — or to the battlefield if you gained 7 or more life.
+pub fn aerith_last_ancient() -> CardDefinition {
+    CardDefinition {
+        name: "Aerith, Last Ancient",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                }),
+            effect: Effect::If {
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(7),
+                },
+                then: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+                else_: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
