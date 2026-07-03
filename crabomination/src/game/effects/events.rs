@@ -18,6 +18,10 @@ pub(crate) fn event_matches_spec(
     let kind_ok = match (&spec.kind, event) {
         (EventKind::EntersBattlefield, GameEvent::PermanentEntered { .. }) => true,
         (EventKind::CreatureDied, GameEvent::CreatureDied { .. }) => true,
+        (
+            EventKind::CreatureOrArtifactDied,
+            GameEvent::PermanentDied { is_creature, is_artifact, .. },
+        ) => *is_creature || *is_artifact,
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
         (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
@@ -302,6 +306,9 @@ pub(crate) fn event_matches_spec(
                 // its last controller rides the event (Dour Port-Mage).
                 .or(match event {
                     GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+                    // The dead permanent's authoritative last controller (a
+                    // stolen permanent that dies fires the thief's watcher).
+                    GameEvent::PermanentDied { controller, .. } => Some(*controller),
                     _ => None,
                 });
             subject_controller == Some(source.controller)
@@ -442,6 +449,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // its last controller travels in the event (drives YourControl /
         // OpponentControl scope for Three Tree Scribe).
         GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+        // The dead permanent's last controller drives "a … you control dies".
+        GameEvent::PermanentDied { controller, .. } => Some(*controller),
         // DSK Eerie — the unlocking player drives "whenever you fully unlock
         // a Room" (YourControl scope).
         GameEvent::RoomFullyUnlocked { controller, .. } => Some(*controller),
@@ -466,6 +475,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
+        GameEvent::PermanentDied { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureLeftWithoutDying { card_id, .. } => Some(EntityRef::Card(*card_id)),
@@ -596,6 +606,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         GameEvent::PermanentEntered { card_id }
         | GameEvent::PermanentExiled { card_id }
         | GameEvent::CreatureDied { card_id }
+        | GameEvent::PermanentDied { card_id, .. }
         | GameEvent::CreatureSacrificed { card_id, .. }
         | GameEvent::CardCycled { card_id, .. }
         | GameEvent::CardMilled { card_id, .. }

@@ -1795,3 +1795,363 @@ fn travel_the_overworld_affinity_for_towns() {
     // -1 cast, +4 draw = net +3.
     assert_eq!(g.players[0].hand.len(), hand_before + 3, "drew four");
 }
+
+// ── modern_decks batch: creature-or-artifact death event + FIN wave ───────────
+
+/// Judge Magister Gabranth grows when another creature you control dies.
+#[test]
+fn gabranth_grows_on_your_creature_death() {
+    let mut g = two_player_game();
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(ally);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "a friendly creature dying adds a counter"
+    );
+}
+
+/// Gabranth also grows on a *non-creature artifact* you control dying — the new
+/// `PermanentDied` rail that no `CreatureDied` event covers.
+#[test]
+fn gabranth_grows_on_your_artifact_death() {
+    let mut g = two_player_game();
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let equip = g.add_card_to_battlefield(0, catalog::bonesplitter()); // noncreature artifact
+    assert!(!g.battlefield_find(equip).unwrap().definition.is_creature());
+    let evs = g.remove_to_graveyard_with_triggers(equip);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "a friendly artifact dying adds a counter"
+    );
+}
+
+/// Gabranth ignores an opponent's creature dying (AnotherOfYours scope).
+#[test]
+fn gabranth_ignores_opponent_death() {
+    let mut g = two_player_game();
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(foe);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        0,
+        "an opponent's creature dying does nothing"
+    );
+}
+
+/// G'raha Tia draws once per turn no matter how many creatures/artifacts die.
+#[test]
+fn graha_tia_draws_once_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::graha_tia());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    // Two deaths in one batch → one draw.
+    let mut evs = g.remove_to_graveyard_with_triggers(a);
+    evs.append(&mut g.remove_to_graveyard_with_triggers(b));
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "one draw for the batch (once each turn)");
+    // A later death this turn draws nothing more.
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(c);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "no second draw this turn");
+}
+
+/// Diamond Weapon costs {1} less per permanent card in your graveyard and can't
+/// take combat damage.
+#[test]
+fn diamond_weapon_affinity_and_immune() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears()); // permanent cards
+    }
+    let spell = g.add_card_to_hand(0, catalog::diamond_weapon());
+    // {7}{G}{G} − {3} = {4}{G}{G}.
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Diamond Weapon castable for {4}{G}{G} with 3 permanent cards in graveyard");
+    drain_stack(&mut g);
+    let dw = g.battlefield.iter().find(|c| c.definition.name == "Diamond Weapon").unwrap().id;
+    assert!(g.permanent_prevents_all_combat_damage_to_self(dw), "Immune to combat damage");
+}
+
+/// Hecteyes makes each opponent discard on ETB.
+#[test]
+fn hecteyes_makes_opponent_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let before = g.players[1].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::hecteyes());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 1, "opponent discarded one");
+}
+
+/// Judgment Bolt deals 5 to a creature and X to its controller (X = Equipment).
+#[test]
+fn judgment_bolt_burns_creature_and_controller() {
+    let mut g = two_player_game();
+    // Two Equipment on our side → X = 2.
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let foe = g.add_card_to_battlefield(1, catalog::iron_giant()); // 6/6
+    let life1 = g.players[1].life;
+    let spell = g.add_card_to_hand(0, catalog::judgment_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Judgment Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 5, "5 damage to the creature");
+    assert_eq!(g.players[1].life, life1 - 2, "X=2 damage to its controller");
+}
+
+/// Mysidian Elder mints a Wizard token that pings on your noncreature casts.
+#[test]
+fn mysidian_elder_token_pings_on_noncreature_cast() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::mysidian_elder());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Wizard"),
+        "made a Wizard token");
+    let life1 = g.players[1].life;
+    let spell = g.add_card_to_hand(0, catalog::reach_the_horizon());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a noncreature spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1, "token pinged each opponent for 1");
+}
+
+/// Ultimecia taps all opposing creatures on ETB.
+#[test]
+fn ultimecia_taps_opponents() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::ultimecia_temporal_threat());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature tapped");
+}
+
+/// Rook Turret loots when another artifact you control enters.
+#[test]
+fn rook_turret_loots_on_artifact_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rook_turret());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // something to discard
+    let hand_before = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::forest()); // something to draw
+    let art = g.add_card_to_battlefield(0, catalog::bonesplitter()); // another artifact
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    // Draw 1, discard 1 → net hand size unchanged, but a loot happened (library shrank).
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew then discarded");
+    assert!(g.players[0].library.is_empty(), "drew the library card");
+}
+
+/// Gran Pulse Ochu pumps by permanent cards in your graveyard.
+#[test]
+fn gran_pulse_ochu_pumps_from_graveyard() {
+    let mut g = two_player_game();
+    let ochu = g.add_card_to_battlefield(0, catalog::gran_pulse_ochu());
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ochu, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Ochu pump");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ochu).unwrap().power(), 1 + 3, "+3/+3 from 3 permanent cards");
+}
+
+/// Relm's Sketching mints a token copy of a target permanent.
+#[test]
+fn relms_sketching_copies_a_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::relms_sketching());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Relm's Sketching");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(copies, 1, "one token copy of Grizzly Bears");
+}
+
+/// Reach the Horizon fetches two basic lands onto the battlefield tapped.
+#[test]
+fn reach_the_horizon_fetches_two_basics() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let i1 = g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::reach_the_horizon());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(i1)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reach the Horizon");
+    drain_stack(&mut g);
+    let lands = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands, 2, "two lands entered");
+    assert!(g.battlefield.iter().filter(|c| c.definition.is_land()).all(|c| c.tapped),
+        "they entered tapped");
+}
+
+/// Fang draws and loses 1 life when cards leave your graveyard (once per turn).
+#[test]
+fn fang_triggers_on_graveyard_exit() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fang_fearless_lcie());
+    g.add_card_to_library(0, catalog::forest()); // Fang's draw
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let raise = g.add_card_to_hand(0, catalog::raise_dead());
+    let hand_before = g.players[0].hand.len(); // includes Raise Dead
+    let life_before = g.players[0].life;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: raise, target: Some(Target::Permanent(corpse)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise Dead");
+    drain_stack(&mut g);
+    // Raise Dead cast (−1), returns the bear (+1), Fang draws (+1) → net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "bear returned + Fang draw − Raise Dead");
+    assert_eq!(g.players[0].life, life_before - 1, "lost 1 life");
+}
+
+/// Prompto makes a Treasure when you cast a noncreature spell paying 4+ mana.
+#[test]
+fn prompto_makes_treasure_on_big_noncreature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prompto_argentum());
+    let spell = g.add_card_to_hand(0, catalog::reach_the_horizon()); // {3}{G} = 4 mana
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a 4-mana noncreature");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure"),
+        "made a Treasure");
+}
+
+/// Shantotto grows by the mana spent on your noncreature spell and draws at 4+.
+#[test]
+fn shantotto_grows_and_draws() {
+    let mut g = two_player_game();
+    let shan = g.add_card_to_battlefield(0, catalog::shantotto_tactician_magician());
+    g.add_card_to_library(0, catalog::forest()); // Shantotto's draw at X>=4
+    let hand_before = g.players[0].hand.len();
+    let spell = g.add_card_to_hand(0, catalog::reach_the_horizon()); // 4 mana
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a 4-mana noncreature");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(shan).unwrap().power(), 4, "+4/+0 from 4 mana spent");
+    // hand_before + spell added − spell cast + draw trigger = hand_before + 1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on X>=4");
+}
+
+/// Rufus makes a Darkstar token when he attacks without one.
+#[test]
+fn rufus_makes_darkstar_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let rufus = g.add_card_to_battlefield(0, catalog::rufus_shinra());
+    g.clear_sickness(rufus);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rufus, target: AttackTarget::Player(1),
+    }])).expect("Rufus attacks");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Darkstar"),
+        "made a Darkstar token");
+}
+
+/// Shambling Cie'th enters tapped.
+#[test]
+fn shambling_cieth_enters_tapped() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::shambling_cieth());
+    drain_stack(&mut g);
+    let cieth = g.battlefield.iter().find(|c| c.definition.name == "Shambling Cie'th").unwrap();
+    assert!(cieth.tapped, "enters tapped");
+}
+
+/// Lion Heart deals 2 on ETB and grants +2/+1 when equipped.
+#[test]
+fn lion_heart_pings_and_buffs() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::iron_giant());
+    let life1 = g.players[1].life;
+    // ETB deals 2 to any target; the auto-decider picks one (opponent or foe).
+    g.move_card_to_battlefield_for_test(0, catalog::lion_heart());
+    drain_stack(&mut g);
+    let pinged = g.players[1].life < life1
+        || g.battlefield_find(foe).map(|c| c.damage > 0).unwrap_or(false);
+    assert!(pinged, "Lion Heart's ETB dealt 2 damage");
+    let bonus = catalog::lion_heart().equipped_bonus.unwrap();
+    assert_eq!((bonus.power, bonus.toughness), (2, 1), "equip bonus +2/+1");
+}
+
+/// Ring of the Lucii is a mana rock plus a life-cost tapper.
+#[test]
+fn ring_of_the_lucii_taps_a_permanent() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(0, catalog::ring_of_the_lucii());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life0 = g.players[0].life;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring, ability_index: 1, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Ring tap ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
+    assert_eq!(g.players[0].life, life0 - 1, "paid 1 life");
+}
+
+/// Sandworm destroys a target land on ETB.
+#[test]
+fn sandworm_destroys_a_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let sand = g.add_card_to_hand(0, catalog::sandworm());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sand, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sandworm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "target land destroyed");
+}

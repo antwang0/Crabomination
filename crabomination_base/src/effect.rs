@@ -1354,6 +1354,14 @@ pub enum EventKind {
     EntersBattlefield,
     /// A creature died (hit a graveyard from the battlefield).
     CreatureDied,
+    /// CR 700.4 — a creature *or* artifact hit a graveyard from the
+    /// battlefield. Matches `GameEvent::PermanentDied` whose `is_creature`
+    /// or `is_artifact` flag is set (an artifact creature counts once).
+    /// "Whenever another creature or artifact you control dies" (Judge Magister
+    /// Gabranth); pair with `once_per_turn` for "one or more … die … only once
+    /// each turn" (G'raha Tia). Scope by `YourControl`; exclude the source with
+    /// a `Predicate` filter for the "another" rider.
+    CreatureOrArtifactDied,
     /// A creature was sacrificed. Per CR 701.16, "sacrifice" is a distinct
     /// game event from "die" — Mortician Beetle / Yahenni / Bone Picker
     /// ("Whenever a player sacrifices a creature") want this specific

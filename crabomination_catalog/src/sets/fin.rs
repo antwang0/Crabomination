@@ -2651,3 +2651,591 @@ pub fn travel_the_overworld() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks batch: FIN wave (creature-or-artifact death event + 19 more) ──
+
+/// Judge Magister Gabranth — {W}{B} 2/2 Legendary Human Advisor Knight with
+/// menace. Whenever another creature or artifact you control dies, put a +1/+1
+/// counter on it.
+pub fn judge_magister_gabranth() -> CardDefinition {
+    CardDefinition {
+        name: "Judge Magister Gabranth",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureOrArtifactDied, EventScope::AnotherOfYours),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// G'raha Tia — {4}{W} 3/5 Legendary Cat Archer with reach. Whenever one or
+/// more other creatures and/or artifacts you control die, draw a card. Once
+/// each turn.
+pub fn graha_tia() -> CardDefinition {
+    CardDefinition {
+        name: "G'raha Tia",
+        cost: cost(&[generic(4), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureOrArtifactDied, EventScope::AnotherOfYours)
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Diamond Weapon — {7}{G}{G} 8/8 Legendary Artifact Creature — Elemental.
+/// Costs {1} less per permanent card in your graveyard; reach; prevents all
+/// combat damage that would be dealt to it (Immune).
+pub fn diamond_weapon() -> CardDefinition {
+    CardDefinition {
+        name: "Diamond Weapon",
+        cost: cost(&[generic(7), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Reach],
+        affinity_graveyard_filter: Some(SelectionRequirement::PermanentCard),
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all combat damage that would be dealt to Diamond Weapon.",
+            effect: StaticEffect::PreventAllCombatDamageToThis,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hecteyes — {1}{B} 1/1 Ooze Horror. ETB: each opponent discards a card.
+pub fn hecteyes() -> CardDefinition {
+    CardDefinition {
+        name: "Hecteyes",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(crate::effect::shortcut::discard(
+            crate::effect::shortcut::each_opponent(),
+            1,
+            false,
+        ))],
+        ..Default::default()
+    }
+}
+
+/// Judgment Bolt — {3}{R} Instant. Deals 5 damage to target creature and X
+/// damage to that creature's controller, where X is the number of Equipment
+/// you control.
+pub fn judgment_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Judgment Bolt",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(5),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mysidian Elder — {2}{R} 1/3 Human Wizard. ETB: create a 0/1 black Wizard
+/// token with "Whenever you cast a noncreature spell, this deals 1 damage to
+/// each opponent."
+pub fn mysidian_elder() -> CardDefinition {
+    let wizard = TokenDefinition {
+        name: "Wizard".into(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mysidian Elder",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb_mint_token(wizard, 1)],
+        ..Default::default()
+    }
+}
+
+/// Ultimecia, Temporal Threat — {4}{U}{U} 4/4 Legendary Human Warlock. ETB:
+/// tap all creatures your opponents control. Whenever a creature you control
+/// deals combat damage to a player, draw a card.
+pub fn ultimecia_temporal_threat() -> CardDefinition {
+    CardDefinition {
+        name: "Ultimecia, Temporal Threat",
+        cost: cost(&[generic(4), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::Tap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rook Turret — {3}{U} 3/3 Artifact Creature — Construct with flying. Whenever
+/// another artifact you control enters, draw a card, then discard a card.
+pub fn rook_turret() -> CardDefinition {
+    CardDefinition {
+        name: "Rook Turret",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gran Pulse Ochu — {G} 1/1 Plant Beast with deathtouch. {8}: it gets +1/+1
+/// until end of turn for each permanent card in your graveyard.
+pub fn gran_pulse_ochu() -> CardDefinition {
+    CardDefinition {
+        name: "Gran Pulse Ochu",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::PermanentCard,
+                },
+                toughness: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::PermanentCard,
+                },
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Item Shopkeep — {1}{R} 2/2 Human Citizen. Whenever you attack, target
+/// attacking equipped creature gains menace until end of turn.
+pub fn item_shopkeep() -> CardDefinition {
+    CardDefinition {
+        name: "Item Shopkeep",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::IsAttacking.and(SelectionRequirement::IsEquipped),
+                ),
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Relm's Sketching — {2}{U}{U} Sorcery. Create a token that's a copy of
+/// target artifact, creature, or land.
+pub fn relms_sketching() -> CardDefinition {
+    CardDefinition {
+        name: "Relm's Sketching",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            source: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Land),
+            ),
+            extra_creature_types: vec![],
+            extra_card_types: vec![],
+            override_pt: None,
+            non_legendary: false,
+            legendary: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Reach the Horizon — {3}{G} Sorcery. Search your library for up to two basic
+/// land and/or Town cards, put them onto the battlefield tapped, then shuffle.
+pub fn reach_the_horizon() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Reach the Horizon",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand
+                .or(SelectionRequirement::HasLandType(LandType::Town)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            count: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fang, Fearless l'Cie — {2}{B} 2/3 Legendary Human Warrior. Whenever one or
+/// more cards leave your graveyard, draw a card and lose 1 life. Once each turn.
+pub fn fang_fearless_lcie() -> CardDefinition {
+    CardDefinition {
+        name: "Fang, Fearless l'Cie",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_turn(),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Prompto Argentum — {1}{R} 2/2 Legendary Human Scout with haste. Whenever you
+/// cast a noncreature spell, if at least four mana was spent to cast it, create
+/// a Treasure token.
+pub fn prompto_argentum() -> CardDefinition {
+    CardDefinition {
+        name: "Prompto Argentum",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+                    Predicate::CastSpellManaSpentAtLeast(4),
+                ]),
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crabomination_base::tokens::treasure_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shantotto, Tactician Magician — {1}{U}{R} 0/4 Legendary Dwarf Wizard.
+/// Whenever you cast a noncreature spell, Shantotto gets +X/+0 until end of
+/// turn, where X is the mana spent to cast it; if X is 4 or more, draw a card.
+pub fn shantotto_tactician_magician() -> CardDefinition {
+    CardDefinition {
+        name: "Shantotto, Tactician Magician",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::CastSpellManaSpent,
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::If {
+                    cond: Predicate::CastSpellManaSpentAtLeast(4),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Box::new(Effect::Seq(vec![])),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rufus Shinra — {1}{W}{B} 2/4 Legendary Human Noble. Whenever he attacks, if
+/// you don't control a creature named Darkstar, create Darkstar, a legendary
+/// 2/2 white and black Dog creature token.
+pub fn rufus_shinra() -> CardDefinition {
+    let darkstar = TokenDefinition {
+        name: "Darkstar".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Black],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rufus Shinra",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                    Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::HasName("Darkstar".into())
+                                .and(SelectionRequirement::ControlledByYou),
+                        )),
+                        filter: SelectionRequirement::HasName("Darkstar".into())
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    Value::ONE,
+                ))),
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: darkstar,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shambling Cie'th — {2}{B} 3/2 Mutant Horror that enters tapped. Whenever you
+/// cast a noncreature spell, you may pay {B}; if you do, return this card from
+/// your graveyard to your hand.
+pub fn shambling_cieth() -> CardDefinition {
+    CardDefinition {
+        name: "Shambling Cie'th",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mutant, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Shambling Cie'th enters the battlefield tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::MayPay {
+                description: "Pay {B} to return Shambling Cie'th to your hand".into(),
+                mana_cost: cost(&[b()]),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lion Heart — {4} Artifact — Equipment. ETB: it deals 2 damage to any target.
+/// Equipped creature gets +2/+1. Equip {2}.
+pub fn lion_heart() -> CardDefinition {
+    CardDefinition {
+        name: "Lion Heart",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ring of the Lucii — {4} Legendary Artifact. {T}: Add {C}{C}. {2}, {T}, Pay 1
+/// life: Tap target nonland permanent.
+pub fn ring_of_the_lucii() -> CardDefinition {
+    CardDefinition {
+        name: "Ring of the Lucii",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[]),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(2)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                life_cost: 1,
+                effect: Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Permanent.and(
+                        SelectionRequirement::Land.negate(),
+                    )),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sandworm — {4}{R} 5/4 Worm with haste. ETB: destroy target land; its
+/// controller may search their library for a basic land, put it onto the
+/// battlefield tapped, then shuffle.
+pub fn sandworm() -> CardDefinition {
+    CardDefinition {
+        name: "Sandworm",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Worm], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            // Search first so `Target(0)` (the land) is still live for the
+            // controller lookup; the net board state matches the printed order.
+            Effect::SearchUpToN {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    tapped: true,
+                },
+                count: Value::ONE,
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+        ]))],
+        ..Default::default()
+    }
+}

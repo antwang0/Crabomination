@@ -1887,6 +1887,10 @@ pub enum GameEventWire {
     /// greatest result rolled, surfaced so the log can show what was rolled.
     DiceRolled { player: usize, count: u32, #[serde(default)] high: u8 },
     CreatureDied { card_id: CardId },
+    /// Wire mirror of `GameEvent::PermanentDied` (CR 700.4). An internal
+    /// trigger event (the concrete death/sacrifice lines already log it), so
+    /// its description renders blank.
+    PermanentDied { card_id: CardId },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
     /// natural death — useful for replay rewinds and aristocrats payoffs.
@@ -2043,6 +2047,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
+            }
+            GameEvent::PermanentDied { card_id, .. } => {
+                GameEventWire::PermanentDied { card_id: *card_id }
             }
             GameEvent::CreatureSacrificed { card_id, who } => {
                 GameEventWire::CreatureSacrificed { card_id: *card_id, who: *who }
@@ -2301,6 +2308,9 @@ impl GameEventWire {
                 }
             }
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
+            // Internal "creature or artifact died" trigger event — the concrete
+            // death/sacrifice line already logs it, so this renders blank.
+            E::PermanentDied { .. } => String::new(),
             E::CreatureSacrificed { card_id, who } => {
                 format!("{} sacrificed creature {}", pn(*who), name(*card_id))
             }

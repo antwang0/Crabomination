@@ -3006,6 +3006,16 @@ impl GameState {
             if resolved == crate::card::Zone::Graveyard {
                 self.permanents_to_graveyard_this_turn =
                     self.permanents_to_graveyard_this_turn.saturating_add(1);
+                // CR 700.4 — record the death for the batched `PermanentDied`
+                // synthesis (dispatch drains this into "creature or artifact
+                // you control dies" triggers). CreatureDied already covers
+                // creatures at every site; this backfills non-creature deaths.
+                self.pending_permanent_deaths.push((
+                    id,
+                    card.controller,
+                    card.definition.is_creature(),
+                    card.definition.card_types.contains(&crate::card::CardType::Artifact),
+                ));
             }
             // CR 702.139 — Revolt: a permanent left the battlefield under its
             // controller this turn.

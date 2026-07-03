@@ -1079,6 +1079,16 @@ pub struct GameState {
     /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
+    /// CR 700.4 — permanents that hit a graveyard from the battlefield since
+    /// the last trigger dispatch: `(card_id, last_controller, is_creature,
+    /// is_artifact)`. Populated at the single raw removal chokepoint
+    /// (`remove_from_battlefield_to_graveyard_raw`); drained by
+    /// `dispatch_triggers_for_events` into `GameEvent::PermanentDied` so
+    /// "whenever a creature or artifact you control dies" triggers
+    /// (Judge Magister Gabranth, G'raha Tia) fire on non-creature deaths that
+    /// no `CreatureDied` event covers.
+    #[serde(skip, default)]
+    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool)>,
     /// True when an effect has flagged "prevent all combat damage this turn"
     /// (CR 615 — damage prevention as a replacement effect). Wired by
     /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
@@ -1497,6 +1507,7 @@ impl Clone for GameState {
             stashed_resolution_answer: self.stashed_resolution_answer.clone(),
             resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
+            pending_permanent_deaths: self.pending_permanent_deaths.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             nonland_permanent_left_bf_this_turn: self.nonland_permanent_left_bf_this_turn,
             prevent_combat_damage_except: self.prevent_combat_damage_except.clone(),
@@ -1637,6 +1648,7 @@ impl GameState {
             stashed_resolution_answer: None,
             resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
+            pending_permanent_deaths: Vec::new(),
             prevent_combat_damage_this_turn: false,
             nonland_permanent_left_bf_this_turn: false,
             prevent_combat_damage_except: None,
@@ -7859,6 +7871,26 @@ impl GameState {
             let pending = std::mem::take(&mut self.pending_cost_events);
             self.dispatch_triggers_for_events(&pending);
         }
+        // CR 700.4 — fold in `PermanentDied` events synthesized from the deaths
+        // recorded at the raw removal chokepoint since the last dispatch, so
+        // non-creature deaths (which emit no `CreatureDied`) still reach
+        // "creature or artifact you control dies" triggers.
+        let synthesized: Vec<GameEvent> = std::mem::take(&mut self.pending_permanent_deaths)
+            .into_iter()
+            .map(|(card_id, controller, is_creature, is_artifact)| GameEvent::PermanentDied {
+                card_id,
+                controller,
+                is_creature,
+                is_artifact,
+            })
+            .collect();
+        let folded: Vec<GameEvent>;
+        let events: &[GameEvent] = if synthesized.is_empty() {
+            events
+        } else {
+            folded = events.iter().cloned().chain(synthesized).collect();
+            &folded
+        };
         if events.is_empty() {
             return;
         }
@@ -8109,6 +8141,7 @@ impl GameState {
                     ta.event.kind,
                     crate::effect::EventKind::Attacks
                         | crate::effect::EventKind::CreatureDied
+                        | crate::effect::EventKind::CreatureOrArtifactDied
                         | crate::effect::EventKind::CreatureSacrificed
                         | crate::effect::EventKind::PermanentSacrificed
                         | crate::effect::EventKind::PermanentLeavesBattlefield

@@ -1439,6 +1439,14 @@ pub enum GameEvent {
     /// "whenever you roll a 5 or higher" can filter on `event_amount`.
     DiceRolled { player: usize, count: u32, high: u8 },
     CreatureDied { card_id: CardId },
+    /// CR 700.4 — a permanent hit a graveyard from the battlefield (any card
+    /// type). Synthesized once per dispatch batch from the raw removal
+    /// chokepoint, carrying the dead permanent's last `controller` and its
+    /// `is_creature` / `is_artifact` flags. `EventKind::CreatureOrArtifactDied`
+    /// filters on those flags for "whenever a creature or artifact you control
+    /// dies" (Judge Magister Gabranth, G'raha Tia); creatures also emit
+    /// `CreatureDied`, so listeners pick exactly one rail.
+    PermanentDied { card_id: CardId, controller: usize, is_creature: bool, is_artifact: bool },
     /// A creature was sacrificed by `who` (CR 701.16). Fires before the
     /// corresponding `CreatureDied` event so order-sensitive sacrifice
     /// triggers (Mortician Beetle, Yahenni-class) see the
