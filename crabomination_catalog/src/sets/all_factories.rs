@@ -5117,6 +5117,8 @@ static DECKS: &[Factory] = &[
     super::decks::season_of_renewal,
     super::decks::assassins_ink,
     super::decks::mnemonic_sphere,
+    super::decks::suit_up,
+    super::decks::careful_consideration,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

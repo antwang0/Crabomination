@@ -202,3 +202,59 @@ pub fn mnemonic_sphere() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Suit Up — {2}{U} Instant. Until end of turn, target creature or Vehicle
+/// becomes a 4/5 artifact creature; draw a card.
+pub fn suit_up() -> CardDefinition {
+    CardDefinition {
+        name: "Suit Up",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::BecomeCreature {
+                what: target_filtered(R::Creature.or(R::HasArtifactSubtype(
+                    crate::card::ArtifactSubtype::Vehicle,
+                ))),
+                power: Value::Const(4),
+                toughness: Value::Const(5),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Careful Consideration — {2}{U}{U} Instant. You draw four cards, then discard
+/// three (two if cast in your main phase). (Printed "target player" is modeled as
+/// you — the standard self-cast; main-phase discount honored via the step check.)
+pub fn careful_consideration() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Careful Consideration",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+            Effect::If {
+                cond: Predicate::Any(vec![
+                    Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+                    Predicate::CurrentStepIs(TurnStep::PostCombatMain),
+                ]),
+                then: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                }),
+                else_: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                    random: false,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

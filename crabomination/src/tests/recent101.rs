@@ -181,3 +181,53 @@ fn mnemonic_sphere_draw_modes() {
     assert_eq!(g.players[0].hand.len(), before + 2, "drew two");
     assert!(g.battlefield_find(sphere).is_none(), "sphere sacrificed");
 }
+
+/// Suit Up turns a creature into a 4/5 and draws.
+#[test]
+fn suit_up_pumps_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::suit_up());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Suit Up");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5), "became a 4/5");
+    assert_eq!(g.players[0].hand.len(), before - 1 + 1, "spell left hand, drew one");
+}
+
+/// Careful Consideration draws four and discards two in the main phase.
+#[test]
+fn careful_consideration_main_phase_loot() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::careful_consideration());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let before = g.players[0].hand.len(); // spell still in hand
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Careful Consideration");
+    drain_stack(&mut g);
+    // -1 (spell) + 4 drawn - 2 discarded = +1 net.
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew four, discarded two (main phase)");
+}
