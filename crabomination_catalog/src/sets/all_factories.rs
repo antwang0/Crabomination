@@ -5059,6 +5059,22 @@ static DECKS: &[Factory] = &[
     super::decks::rabbit_battery,
     super::decks::nezumi_prowler,
     super::decks::invigorating_hot_spring,
+    // recent97 — Kamigawa: Neon Dynasty batch 3
+    super::decks::kappa_tech_wrecker,
+    super::decks::biting_palm_ninja,
+    super::decks::dokuchi_silencer,
+    super::decks::kami_of_restless_shadows,
+    super::decks::moonsnare_prototype,
+    super::decks::explosive_entry,
+    super::decks::norika_yamazaki_the_poet,
+    super::decks::kami_of_celebration,
+    super::decks::blade_of_the_oni,
+    super::decks::scrapwork_mutt,
+    super::decks::towashi_guide_bot,
+    super::decks::naomi_pillar_of_order,
+    super::decks::jukai_trainee,
+    super::decks::gloomshrieker,
+    super::decks::ecologists_terrarium,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
