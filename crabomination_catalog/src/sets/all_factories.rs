@@ -5416,6 +5416,15 @@ static FIN: &[Factory] = &[
     super::fin::cid_timeless_artificer,
     super::fin::warrior_of_light,
     super::fin::cloud_ex_soldier,
+    super::fin::adelbert_steiner,
+    super::fin::ahriman,
+    super::fin::ambrosia_whiteheart,
+    super::fin::coeurl,
+    super::fin::coliseum_behemoth,
+    super::fin::dwarven_castle_guard,
+    super::fin::gigantoad,
+    super::fin::hill_gigas,
+    super::fin::gaelicat,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

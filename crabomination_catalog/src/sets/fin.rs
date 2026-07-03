@@ -1051,6 +1051,260 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
     }
 }
 
+/// A 1/1 colorless Hero creature token (Final Fantasy's Job Select payoff).
+fn hero_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Hero".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Adelbert Steiner — {1}{W} 2/1 Legendary Human Knight with lifelink that gets
+/// +1/+1 for each Equipment you control.
+pub fn adelbert_steiner() -> CardDefinition {
+    CardDefinition {
+        name: "Adelbert Steiner",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +1/+1 for each Equipment you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                    .and(SelectionRequirement::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ahriman — {2}{B} 2/2 Eye Horror with flying and deathtouch. {3}, Sacrifice
+/// another creature or artifact: Draw a card.
+pub fn ahriman() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ahriman",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eye, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ambrosia Whiteheart — {1}{W} 2/2 Legendary Bird with flash. ETB: you may
+/// return another permanent you control to hand. Landfall: +1/+0 until EOT.
+pub fn ambrosia_whiteheart() -> CardDefinition {
+    CardDefinition {
+        name: "Ambrosia Whiteheart",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![
+            etb(Effect::MayDo {
+                description: "return another permanent you control to hand".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ONE,
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Coeurl — {1}{W} 2/2 Cat Beast. {1}{W}, {T}: Tap target nonenchantment
+/// creature.
+pub fn coeurl() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Coeurl",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Enchantment.negate()),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Coliseum Behemoth — {5}{G}{G} 7/7 Beast with trample. ETB: destroy target
+/// artifact or enchantment, or draw a card.
+pub fn coliseum_behemoth() -> CardDefinition {
+    CardDefinition {
+        name: "Coliseum Behemoth",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Dwarven Castle Guard — {1}{W} 2/1 Dwarf Soldier. When it dies, create a 1/1
+/// colorless Hero creature token.
+pub fn dwarven_castle_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Dwarven Castle Guard",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::dies_mint_token(hero_token(), 1)],
+        ..Default::default()
+    }
+}
+
+/// Gigantoad — {3}{G} 4/4 Frog. As long as you control seven or more lands, it
+/// gets +2/+2.
+pub fn gigantoad() -> CardDefinition {
+    CardDefinition {
+        name: "Gigantoad",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Frog], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control seven or more lands, this creature gets +2/+2.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(7),
+                },
+                power: 2,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hill Gigas — {4}{R}{R} 5/4 Giant with trample and haste. Mountaincycling {2}.
+pub fn hill_gigas() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Hill Gigas",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Haste,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gaelicat — {2}{W} 1/3 Cat with flying and vigilance. As long as you control
+/// two or more artifacts, it gets +2/+0.
+pub fn gaelicat() -> CardDefinition {
+    CardDefinition {
+        name: "Gaelicat",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control two or more artifacts, this creature gets +2/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(2),
+                },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Cid, Timeless Artificer — {2}{W}{U} 4/4 Legendary Human Artificer. Artifact
 /// creatures and Heroes you control get +1/+1 for each Artificer you control
 /// and each Artificer card in your graveyard. Cycling {W}{U}. (The "any number

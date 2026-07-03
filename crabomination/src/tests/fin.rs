@@ -693,3 +693,127 @@ fn cloud_ex_soldier_attaches_and_draws_on_attack() {
     let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
     assert_eq!(treasures, 0, "power 6 (<7) → no Treasures");
 }
+
+/// Adelbert Steiner grows +1/+1 for each Equipment you control.
+#[test]
+fn adelbert_steiner_grows_per_equipment() {
+    let mut g = two_player_game();
+    let steiner = g.add_card_to_battlefield(0, catalog::adelbert_steiner());
+    assert!(g.computed_permanent(steiner).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert_eq!(g.computed_permanent(steiner).unwrap().power, 2, "no Equipment → 2/1");
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    assert_eq!(g.computed_permanent(steiner).unwrap().power, 4, "two Equipment → 4/3");
+    assert_eq!(g.computed_permanent(steiner).unwrap().toughness, 3);
+}
+
+/// Ahriman sacrifices another permanent to draw.
+#[test]
+fn ahriman_sacrifices_to_draw() {
+    let mut g = two_player_game();
+    let ahriman = g.add_card_to_battlefield(0, catalog::ahriman());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    g.players[0].mana_pool.add_colorless(3);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ahriman, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Ahriman");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the other creature");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
+/// Ambrosia Whiteheart pumps herself on landfall and has flash.
+#[test]
+fn ambrosia_landfall_pumps() {
+    let mut g = two_player_game();
+    let amb = g.add_card_to_battlefield(0, catalog::ambrosia_whiteheart());
+    assert!(catalog::ambrosia_whiteheart().keywords.contains(&Keyword::Flash));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(amb).unwrap().power, 3, "landfall +1/+0 → 3/2");
+}
+
+/// Coeurl taps a target creature.
+#[test]
+fn coeurl_taps_target() {
+    let mut g = two_player_game();
+    let coeurl = g.add_card_to_battlefield(0, catalog::coeurl());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(coeurl);
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coeurl, ability_index: 0, target: Some(Target::Permanent(foe)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Coeurl");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target creature is tapped");
+}
+
+/// Coliseum Behemoth's modal ETB can draw a card.
+#[test]
+fn coliseum_behemoth_modal_draw() {
+    let mut g = two_player_game();
+    let id = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(id, catalog::island(), 0));
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Mode(1), // draw a card
+    ]));
+    let hand0 = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::coliseum_behemoth());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "chose the draw mode");
+}
+
+/// Dwarven Castle Guard leaves a Hero token when it dies.
+#[test]
+fn dwarven_castle_guard_dies_makes_hero() {
+    let mut g = two_player_game();
+    let guard = g.add_card_to_battlefield(0, catalog::dwarven_castle_guard());
+    g.battlefield_find_mut(guard).unwrap().toughness_bonus -= 1; // drop to 0 toughness → SBA
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    let heroes = g.battlefield.iter().filter(|c| c.definition.name == "Hero").count();
+    assert_eq!(heroes, 1, "death minted a Hero token");
+}
+
+/// Gigantoad grows once you control seven or more lands.
+#[test]
+fn gigantoad_grows_with_seven_lands() {
+    let mut g = two_player_game();
+    let toad = g.add_card_to_battlefield(0, catalog::gigantoad());
+    assert_eq!(g.computed_permanent(toad).unwrap().power, 4, "few lands → 4/4");
+    for _ in 0..7 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    assert_eq!(g.computed_permanent(toad).unwrap().power, 6, "seven lands → +2/+2");
+    assert_eq!(g.computed_permanent(toad).unwrap().toughness, 6);
+}
+
+/// Hill Gigas ships with trample, haste, and Mountaincycling.
+#[test]
+fn hill_gigas_keywords() {
+    let g = catalog::hill_gigas();
+    assert!(g.keywords.contains(&Keyword::Trample));
+    assert!(g.keywords.contains(&Keyword::Haste));
+    assert!(g.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, crate::card::LandType::Mountain))));
+}
+
+/// Gaelicat grows +2/+0 with two or more artifacts.
+#[test]
+fn gaelicat_grows_with_two_artifacts() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::gaelicat());
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 1, "few artifacts → 1/3");
+    g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.add_card_to_battlefield(0, catalog::mishras_bauble());
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 3, "two artifacts → +2/+0");
+    assert_eq!(g.computed_permanent(cat).unwrap().toughness, 3, "toughness unchanged");
+}
