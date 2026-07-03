@@ -8,28 +8,26 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`, `recent96`)
-
-recent96 approximations/deferrals: Kami of Transience's "return from graveyard
-if an enchantment died this turn" end-step recursion is dropped. Still needing
-primitives: Weaver of Harmony (copy an activated/triggered ability from an
-enchantment source), Kami of Celebration (impulse-on-modified-attack + cast-
-from-exile counter payoff), Moonsnare Prototype's "top or bottom of library"
-Channel, Kami of Bamboo Groves' Conjure, Careful Cultivation's conditional Aura
-rider.
-
+## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`–`recent98`)
 
 - **Prosperous Thief** — the printed trigger fires off any Ninja/Rogue you
   control dealing combat damage; modeled as this creature's own combat damage.
 - **Jukai Preserver channel** — "up to two target creatures" modeled as a single
   target (no up-to-N multi-target AddCounter yet).
 - **Selfless Samurai** — the "another" clause on the sac ability isn't enforced.
-- **Not yet done (need primitives):** Ao, the Dawn Sky (dies-modal: deploy ≤4-mv
-  permanents vs. mass +1/+1) and Kami of Restless Shadows (ETB modal) want a
-  modal triggered-ability picker; Kami of Industry wants reanimate-with-
-  haste-then-sac-EOT; Peerless Samurai's "next spell costs {1} less after a solo
-  Samurai/Warrior attack" wants a delayed cost reducer; Kappa Tech-Wrecker wants
-  a remove-counter reflexive exile; Kaito Shizuki / Kaito, Bane of Nightmares are
+- **Explosive Entry** — the printed "up to one" on each target is modeled as
+  required targets (no per-slot optional-target marker yet).
+- **Moon-Circuit Hacker** — the loot's "discard unless it entered this turn"
+  exemption is dropped (a `SourceEnteredThisTurn` predicate would restore it).
+- **Blade of the Oni** — grants the Demon type via `add_creature_types` but the
+  "black in addition to its colors" clause overwrites colors (no add-color rider).
+- **Still needing primitives:** Weaver of Harmony (copy an activated/triggered
+  ability from an enchantment source), Kami of Bamboo Groves' Conjure, Careful
+  Cultivation's conditional Aura rider, Kami of Industry (reanimate-with-haste-
+  then-sac-EOT from a graveyard target), Golden-Tail Trainer (cost reduction
+  scaled by the source's own power), Ninja's Kunai (Equipment granting an
+  activated ability), Tatsunari (named-token gating + unblockable-except-flying),
+  the NEO transform DFC Sagas (Fable, Michiko's Reign, …), and the Kaito
   planeswalkers.
 
 ## Discovered follow-ups — Equipment / Voltron (`decks::recent94`)
