@@ -351,3 +351,69 @@ fn zidane_steals_on_entry() {
         "granted haste"
     );
 }
+
+/// Snow Villiers's power tracks the number of creatures you control.
+#[test]
+fn snow_villiers_power_is_creature_count() {
+    let mut g = two_player_game();
+    let snow = g.add_card_to_battlefield(0, catalog::snow_villiers());
+    assert_eq!(g.computed_permanent(snow).unwrap().power, 1, "just Snow → power 1");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(snow).unwrap().power, 3, "three creatures → power 3");
+    assert_eq!(g.computed_permanent(snow).unwrap().toughness, 3, "fixed 3 toughness");
+}
+
+/// Hope Estheim mills each opponent for the life you gained this turn.
+#[test]
+fn hope_estheim_mills_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hope_estheim());
+    for _ in 0..5 {
+        let id = g.next_id();
+        g.players[1].library.push(crate::card::CardInstance::new(id, catalog::grizzly_bears(), 1));
+    }
+    g.players[0].life_gained_this_turn = 3;
+    let gy0 = g.players[1].graveyard.len();
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy0 + 3, "opponent milled 3 (life gained)");
+}
+
+/// Sazh doubles the +1/+1 counters on the creature he pumps when attacking.
+#[test]
+fn sazh_attack_doubles_counters() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let sazh = g.add_card_to_battlefield(0, catalog::sazh_katzroy());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(ally).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(sazh);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sazh,
+        target: AttackTarget::Player(1),
+    }])).expect("Sazh attacks");
+    // Auto-target the only other creature; resolve.
+    drain_stack(&mut g);
+    // 2 existing + 1 added = 3, then doubled = 6.
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        6,
+        "counter added then doubled (2→3→6)"
+    );
+}
+
+/// Vanille mills two and returns a permanent card from the graveyard.
+#[test]
+fn vanille_mills_and_returns_permanent() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        let id = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(id, catalog::forest(), 0));
+    }
+    g.move_card_to_battlefield_for_test(0, catalog::vanille_cheerful_lcie());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the graveyard permanent to hand");
+}

@@ -5117,6 +5117,12 @@ impl GameState {
                     }).count() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::CreaturesYouControl { base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && c.definition.is_creature()
+                    }).count() as i32;
+                    (n, base_t)
+                }
                 crate::card::DynamicPt::BasePlusOtherFlyersControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.id != card.id

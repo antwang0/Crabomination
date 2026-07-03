@@ -5398,6 +5398,10 @@ static FIN: &[Factory] = &[
     super::fin::white_mages_staff,
     super::fin::tidus_blitzball_star,
     super::fin::zidane_tantalus_thief,
+    super::fin::snow_villiers,
+    super::fin::hope_estheim,
+    super::fin::sazh_katzroy,
+    super::fin::vanille_cheerful_lcie,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

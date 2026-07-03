@@ -609,3 +609,120 @@ pub fn zidane_tantalus_thief() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Snow Villiers — {2}{W} */3 Human Rebel Monk with vigilance. His power equals
+/// the number of creatures you control.
+pub fn snow_villiers() -> CardDefinition {
+    CardDefinition {
+        name: "Snow Villiers",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        dynamic_pt: Some(crate::card::DynamicPt::CreaturesYouControl { base_t: 3 }),
+        ..Default::default()
+    }
+}
+
+/// Hope Estheim — {W}{U} 2/2 Human Wizard with lifelink. At the beginning of
+/// your end step, each opponent mills cards equal to the life you gained this turn.
+pub fn hope_estheim() -> CardDefinition {
+    CardDefinition {
+        name: "Hope Estheim",
+        cost: cost(&[w(), crate::mana::u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::LifeGainedThisTurn(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sazh Katzroy — {3}{G} 3/3 Human Pilot. ETB: you may search for a Bird or
+/// basic land card to hand. Whenever it attacks, put a +1/+1 counter on target
+/// creature, then double the number of +1/+1 counters on it.
+pub fn sazh_katzroy() -> CardDefinition {
+    CardDefinition {
+        name: "Sazh Katzroy",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::MayDo {
+                description: "search for a Bird or basic land".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Bird)
+                        .or(SelectionRequirement::IsBasicLand),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::DoubleCountersOnEach {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Vanille, Cheerful L'Cie — {3}{G} 3/2 Human Cleric. ETB: mill two, then return
+/// a permanent card from your graveyard to your hand. (Meld half omitted.)
+pub fn vanille_cheerful_lcie() -> CardDefinition {
+    CardDefinition {
+        name: "Vanille, Cheerful L'Cie",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

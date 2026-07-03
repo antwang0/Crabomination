@@ -2534,6 +2534,9 @@ pub enum DynamicPt {
     /// Power = toughness = the number of creatures the controller controls
     /// that have any of `types`. The Mycotyrant (Fungi and/or Saprolings).
     CreaturesYouControlWithTypes { types: Vec<CreatureType> },
+    /// Power = the number of creatures the controller controls (including
+    /// itself), with a fixed printed toughness. Snow Villiers (`*/3`).
+    CreaturesYouControl { base_t: i32 },
     /// Power = toughness = `base` + the number of *other* creatures the
     /// controller controls that have flying. Skycat Sovereign (base 1/1).
     /// Reads printed flying (granted flying isn't counted).
