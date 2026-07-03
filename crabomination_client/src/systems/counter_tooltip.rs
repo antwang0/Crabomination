@@ -1152,6 +1152,7 @@ mod tests {
             has_stun_counters: false,
             has_finality_counters: false,
             dies_to_exile: false,
+            dealt_damage_this_turn: false,
             has_shield_counters: false,
             has_prevention_shield: false,
             goaded: false,
