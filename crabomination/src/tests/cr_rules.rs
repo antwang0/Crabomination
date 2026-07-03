@@ -6110,3 +6110,85 @@ fn cr_604_3_artifact_count_cda_recomputes() {
     g.add_card_to_battlefield(0, catalog::bonesplitter());
     assert_eq!(g.computed_permanent(akiri).unwrap().power, 1, "recomputed after an artifact entered");
 }
+
+// ── CR 702.49 + 122.1b — a Ninjutsu'd creature's ETB fires (keyword counter) ──
+
+/// CR 702.49d — the ninja "enters the battlefield" via Ninjutsu, so its
+/// enters-with-a-deathtouch-counter clause (CR 122.1b) applies just like a
+/// normal ETB (Kappa Tech-Wrecker).
+#[test]
+fn cr_702_49_ninjutsu_entrant_gets_its_enter_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let kappa = g.add_card_to_hand(0, catalog::kappa_tech_wrecker());
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Ninjutsu { ninja: kappa, returning: bear })
+        .expect("Ninjutsu on an unblocked attacker");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(kappa).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "the Ninjutsu'd Kappa entered with its deathtouch counter"
+    );
+}
+
+// ── CR 509.1b — Menace requires two or more blockers ─────────────────────────
+
+/// CR 509.1b / 702.111 — a creature with menace (here granted by Nezumi
+/// Bladeblesser's "menace while you control an enchantment") can't be blocked by
+/// exactly one creature.
+#[test]
+fn cr_509_1b_menace_rejects_a_lone_blocker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::golden_tail_disciple()); // enchantment
+    let nezumi = g.add_card_to_battlefield(0, catalog::nezumi_bladeblesser());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(nezumi);
+    assert!(g.computed_permanent(nezumi).unwrap().keywords.contains(&Keyword::Menace));
+    g.attacking = vec![Attack { attacker: nezumi, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 0;
+    let res = g.perform_action(GameAction::DeclareBlockers(vec![(blocker, nezumi)]));
+    assert!(res.is_err(), "a single blocker can't block a menacing attacker (CR 509.1b)");
+}
+
+// ── CR 702.2e + 122.1b — a deathtouch counter makes combat damage lethal ─────
+
+/// CR 702.2e — any nonzero combat damage from a creature with deathtouch (here
+/// from a CR 122.1b deathtouch counter, not a printed keyword) is lethal.
+#[test]
+fn cr_702_2e_deathtouch_counter_is_lethal_in_combat() {
+    let mut g = two_player_game();
+    let kappa = g.add_card_to_battlefield(0, catalog::kappa_tech_wrecker());
+    g.fire_self_etb_triggers(kappa, 0);
+    drain_stack(&mut g);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(kappa);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: kappa,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Kappa attacks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, kappa)]))
+        .expect("grizzly blocks");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).is_none(), "1 deathtouch damage killed the 2/2");
+}

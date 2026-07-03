@@ -454,8 +454,8 @@ pub fn jukai_trainee() -> CardDefinition {
 }
 
 /// Gloomshrieker — {1}{B}{G} 2/1 Cat Beast enchantment creature, menace. ETB:
-/// return target permanent card from your graveyard to your hand. (The "if it
-/// would die, exile it instead" self-replacement is omitted.)
+/// return target permanent card from your graveyard to your hand. If it would
+/// die, exile it instead.
 pub fn gloomshrieker() -> CardDefinition {
     CardDefinition {
         name: "Gloomshrieker",
@@ -468,6 +468,7 @@ pub fn gloomshrieker() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Menace],
+        dies_to_exile: true,
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(R::InYourGraveyard),
             to: ZoneDest::Hand(PlayerRef::You),

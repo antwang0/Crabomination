@@ -2987,6 +2987,7 @@ impl GameState {
             };
             let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
                 || self.dies_to_exile_eot.contains(&id)
+                || card.definition.dies_to_exile
                 || valentin_redirect.is_some()
             {
                 crate::card::Zone::Exile

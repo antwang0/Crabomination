@@ -1178,6 +1178,13 @@ pub struct PermanentView {
     /// to the graveyard. Populated by `project_permanent`.
     #[serde(default)]
     pub has_finality_counters: bool,
+    /// True when this permanent carries a printed "if it would die, exile it
+    /// instead" self-replacement (CR 603-style — Gloomshrieker). Like
+    /// `has_finality_counters`, lets clients badge a "→ exile on death" hint,
+    /// but for the always-on printed clause rather than a counter. Populated
+    /// from `CardDefinition.dies_to_exile`.
+    #[serde(default)]
+    pub dies_to_exile: bool,
     /// True when the permanent has one or more shield counters
     /// (CR 122.1c). Clients can badge with a "🛡" icon — the shield
     /// counter creates a damage-prevention + destroy-replacement that

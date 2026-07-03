@@ -998,6 +998,7 @@ fn project_permanent(
         static_ability_labels: project_static_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
+        dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
         has_prevention_shield,
         goaded: !card.goaded_by.is_empty(),

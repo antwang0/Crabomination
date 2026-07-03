@@ -1882,6 +1882,13 @@ pub struct CardDefinition {
     /// `route_to_graveyard` funnel (Darksteel / Blightsteel Colossus).
     #[serde(default)]
     pub shuffles_into_library_instead: bool,
+    /// CR 603-style self-replacement — "If this permanent would die, exile it
+    /// instead." Scoped to battlefield deaths (checked in
+    /// `remove_from_battlefield_to_graveyard_raw`, alongside finality counters),
+    /// so a discard/mill from another zone still lands in the graveyard.
+    /// Gloomshrieker, and the escape/Titan self-exile clauses.
+    #[serde(default)]
+    pub dies_to_exile: bool,
     /// CR 704.5j exception — "If there are exactly two permanents with this
     /// name on the battlefield, the legend rule doesn't apply to them."
     /// (Brothers Yamazaki.) When the same-name legend group has exactly two

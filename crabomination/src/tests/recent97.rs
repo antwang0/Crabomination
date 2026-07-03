@@ -213,6 +213,17 @@ fn gloomshrieker_returns_from_graveyard() {
     );
 }
 
+/// Gloomshrieker exiles itself instead of dying (CR 603-style self-replacement).
+#[test]
+fn gloomshrieker_exiles_itself_on_death() {
+    let mut g = two_player_game();
+    let gloom = g.add_card_to_battlefield(0, catalog::gloomshrieker());
+    g.remove_to_graveyard_with_triggers(gloom);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != gloom), "not in graveyard");
+    assert!(g.exile.iter().any(|c| c.id == gloom), "exiled instead");
+}
+
 /// Ecologist's Terrarium tutors a basic land to hand on entry.
 #[test]
 fn ecologists_terrarium_fetches_basic() {

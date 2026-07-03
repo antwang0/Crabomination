@@ -387,6 +387,8 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     }
     if p.finality_counter_count > 0 || p.has_finality_counters {
         lines.push(String::from("(finality: exiles instead of going to graveyard)"));
+    } else if p.dies_to_exile {
+        lines.push(String::from("(exiles instead of dying)"));
     }
     // CR 701.15 regeneration shields: each replaces the next destruction
     // this turn with a tap + heal + remove-from-combat. Surface the count
@@ -448,15 +450,16 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     } else if p.has_minus_one_counters {
         lines.push(String::from("(weakened: -1/-1 counters)"));
     }
-    // Surface CR 122.1b keyword counters — one line per active counter
-    // type (flying, first strike, deathtouch, trample, lifelink, haste,
-    // vigilance, reach). Push (modern_decks batch 187): added.
+    // Surface CR 122.1b keyword counters — one line per active counter type
+    // (flying, first strike, deathtouch, menace, trample, …). Uses the shared
+    // `keyword_label` (with its cost/argument formatting) rather than the raw
+    // debug form, so parameterized keywords read cleanly.
     for (kw, n) in &p.keyword_counters {
-        let label = format!("{:?}", kw);
+        let label = keyword_label(kw);
         if *n == 1 {
-            lines.push(format!("({} counter granting {})", label.to_lowercase(), label));
+            lines.push(format!("({label} counter)"));
         } else {
-            lines.push(format!("({n} {} counters)", label.to_lowercase()));
+            lines.push(format!("({n} {label} counters)"));
         }
     }
 
@@ -1148,6 +1151,7 @@ mod tests {
             loyalty_abilities: vec![],
             has_stun_counters: false,
             has_finality_counters: false,
+            dies_to_exile: false,
             has_shield_counters: false,
             has_prevention_shield: false,
             goaded: false,
