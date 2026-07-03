@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, etb_mint_token, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
 /// Iron Giant — {7} 6/6 artifact creature with vigilance, reach, and trample.
 pub fn iron_giant() -> CardDefinition {
@@ -2240,6 +2240,357 @@ pub fn matoya_archon_elder() -> CardDefinition {
             event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
         }],
+        ..Default::default()
+    }
+}
+
+// ── modern_decks FIN batch 2 ─────────────────────────────────────────────
+
+/// A 0/1 black Wizard token that pings each opponent when you cast a
+/// noncreature spell (Queen Brahne, Cornered by Black Mages, Mysidian Elder).
+fn black_wizard_ping_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Wizard".into(),
+        power: 0,
+        toughness: 1,
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Queen Brahne — {2}{R} 2/1 Legendary Human Noble with prowess. Whenever she
+/// attacks, create a 0/1 black Wizard token that pings on your noncreature casts.
+pub fn queen_brahne() -> CardDefinition {
+    CardDefinition {
+        name: "Queen Brahne",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: crate::effect::shortcut::mint_token(black_wizard_ping_token(), 1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rosa, Resolute White Mage — {3}{W} 2/3 Legendary Human Noble Cleric with
+/// reach. At the beginning of combat on your turn, put a +1/+1 counter on
+/// target creature you control; it gains lifelink until end of turn.
+pub fn rosa_resolute_white_mage() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Rosa, Resolute White Mage",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Slash of Light — {1}{W} Instant. Deals damage equal to the number of
+/// creatures you control plus the number of Equipment you control to target
+/// creature.
+pub fn slash_of_light() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Slash of Light",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Sum(vec![
+                Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::Any,
+                },
+                Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::Any,
+                },
+            ]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Rydia's Return — {3}{G}{G} Sorcery. Choose one — creatures you control get
+/// +3/+3 until end of turn; or return up to two target permanent cards from
+/// your graveyard to your hand.
+pub fn rydias_return() -> CardDefinition {
+    CardDefinition {
+        name: "Rydia's Return",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::Permanent,
+                max: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Crystal's Chosen — {5}{W}{W} Sorcery. Create four 1/1 colorless Hero
+/// tokens, then put a +1/+1 counter on each creature you control.
+pub fn the_crystals_chosen() -> CardDefinition {
+    let hero = TokenDefinition {
+        name: "Hero".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Crystal's Chosen",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            crate::effect::shortcut::mint_token(hero, 4),
+            Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Commune with Beavers — {G} Sorcery. Look at the top three cards; put an
+/// artifact, creature, or land card among them into your hand and the rest on
+/// the bottom.
+pub fn commune_with_beavers() -> CardDefinition {
+    CardDefinition {
+        name: "Commune with Beavers",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Land),
+            ),
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Prishe's Wanderings — {2}{G} Instant. Search your library for a basic land
+/// card, put it onto the battlefield tapped, then shuffle. (Town lands are
+/// approximated by the basic-land search.)
+pub fn prishes_wanderings() -> CardDefinition {
+    CardDefinition {
+        name: "Prishe's Wanderings",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        ..Default::default()
+    }
+}
+
+/// Laughing Mad — {2}{R} Instant with Flashback {3}{R}. As an additional cost,
+/// discard a card. Draw two cards.
+pub fn laughing_mad() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Laughing Mad",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// White Auracite — {2}{W}{W} Artifact. When it enters, exile target nonland
+/// permanent an opponent controls until it leaves the battlefield.
+pub fn white_auracite() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "White Auracite",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::ControlledByOpponent.and(SelectionRequirement::Nonland),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ride the Shoopuf — {1}{G} Enchantment. Landfall — Whenever a land you
+/// control enters, put a +1/+1 counter on target creature you control.
+pub fn ride_the_shoopuf() -> CardDefinition {
+    CardDefinition {
+        name: "Ride the Shoopuf",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cornered by Black Mages — {1}{B}{B} Sorcery. Target opponent sacrifices a
+/// creature of their choice; create a 0/1 black Wizard token.
+pub fn cornered_by_black_mages() -> CardDefinition {
+    CardDefinition {
+        name: "Cornered by Black Mages",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature,
+            },
+            crate::effect::shortcut::mint_token(black_wizard_ping_token(), 1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sleep Magic — {U} Aura. Enchant creature; tap it on enter. It doesn't untap
+/// during its controller's untap step. When it's dealt damage, sacrifice this.
+pub fn sleep_magic() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Sleep Magic",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        triggered_abilities: vec![
+            etb(Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),
+                effect: Effect::SacrificePermanent { what: Selector::This },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Choco-Comet — {X}{R}{R} Sorcery. Deals X damage to any target; create a 2/2
+/// green Bird token that gets +1/+0 until end of turn on each of your landfalls.
+pub fn choco_comet() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Bird".into(),
+        power: 2,
+        toughness: 2,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Choco-Comet",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+            crate::effect::shortcut::mint_token(bird, 1),
+        ]),
         ..Default::default()
     }
 }

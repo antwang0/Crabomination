@@ -22,6 +22,15 @@ Follow-up primitives:
   a `surveil` bool, but only the combined `EventKind::ScriedOrSurveiled` exists.
   Add scry-only / surveil-only `EventKind`s (gated on the bool) if a card wants
   just one half.
+- **"Creature or artifact you control dies" trigger** — CreatureDied fires only
+  for creatures; a noncreature artifact hitting the graveyard from the
+  battlefield isn't caught. Add a battlefield-scoped "permanent died" event with
+  a creature-or-artifact filter (blocks Judge Magister Gabranth, G'raha Tia).
+- **Prevent all combat damage to a specific permanent** ("Immune") — no
+  source-bound combat-damage prevention on the *recipient* side yet (blocks
+  Diamond Weapon).
+- **Optional player-target edicts / control-swap combat riders** — Reno and Rude
+  (exile top + sac-to-play), Kain (combat-damage control swap).
 
 Documented per-card approximations: Zidane (the "opponent gains control from
 you → Treasure" rider dropped), Vanille (meld half omitted), Y'shtola (the

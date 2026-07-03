@@ -1467,3 +1467,282 @@ fn matoya_draws_on_surveil() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "surveil triggered a draw");
 }
+
+// ── modern_decks FIN batch 2 tests ────────────────────────────────────────
+
+fn is_creature_token_named(g: &GameState, seat: usize, name: &str) -> usize {
+    g.battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.is_token && c.definition.name == name)
+        .count()
+}
+
+/// Queen Brahne has prowess and mints a Wizard token when she attacks.
+#[test]
+fn queen_brahne_mints_wizard_on_attack() {
+    let mut g = two_player_game();
+    let q = g.add_card_to_battlefield(0, catalog::queen_brahne());
+    assert!(g.battlefield_find(q).unwrap().definition.keywords.contains(&Keyword::Prowess));
+    g.clear_sickness(q);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: q,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(is_creature_token_named(&g, 0, "Wizard"), 1, "attack minted a Wizard");
+}
+
+/// Rosa grows a creature and grants lifelink at the beginning of your combat.
+#[test]
+fn rosa_pumps_and_grants_lifelink_at_combat() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rosa_resolute_white_mage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "+1/+1 counter");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Slash of Light deals damage equal to your creature + Equipment count.
+#[test]
+fn slash_of_light_scales_with_board() {
+    let mut g = two_player_game();
+    // Two creatures you control (incl. the target's controller separate).
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::slash_of_light());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Slash of Light");
+    drain_stack(&mut g);
+    // 2 creatures + 0 Equipment = 2 damage → kills the 2/2.
+    assert!(g.battlefield_find(victim).is_none(), "2 damage killed the 2/2");
+}
+
+/// Rydia's Return mode 1 pumps your team +3/+3.
+#[test]
+fn rydias_return_pump_mode() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::rydias_return());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast Rydia's Return mode 0");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (5, 5), "+3/+3");
+}
+
+/// The Crystal's Chosen makes four Heroes and counters up your board.
+#[test]
+fn the_crystals_chosen_makes_heroes_and_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::the_crystals_chosen());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast The Crystal's Chosen");
+    drain_stack(&mut g);
+    assert_eq!(is_creature_token_named(&g, 0, "Hero"), 4, "four Hero tokens");
+    // The pre-existing bear got a counter (tokens too, but check the bear).
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Commune with Beavers digs three and takes a creature card to hand.
+#[test]
+fn commune_with_beavers_digs_for_a_creature() {
+    let mut g = two_player_game();
+    let want = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::commune_with_beavers());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(want)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Commune with Beavers");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == want), "picked creature went to hand");
+}
+
+/// Prishe's Wanderings ramps a basic onto the battlefield tapped.
+#[test]
+fn prishes_wanderings_ramps_tapped() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::prishes_wanderings());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Prishe's Wanderings");
+    drain_stack(&mut g);
+    let f = g.battlefield.iter().find(|c| c.id == forest).expect("forest fetched");
+    assert!(f.tapped, "entered tapped");
+}
+
+/// Laughing Mad discards one and draws two.
+#[test]
+fn laughing_mad_discards_one_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::laughing_mad());
+    g.add_card_to_hand(0, catalog::forest()); // the discard fodder
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Laughing Mad");
+    drain_stack(&mut g);
+    // -1 cast, -1 discard cost, +2 draw = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before, "discard one, draw two");
+}
+
+/// White Auracite exiles an opponent's permanent until it leaves.
+#[test]
+fn white_auracite_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(victim)),
+    ]));
+    let auracite = g.move_card_to_battlefield_for_test(0, catalog::white_auracite());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim exiled");
+    // Auracite leaving returns the creature.
+    kill_perm(&mut g, auracite);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "victim returned when Auracite left"
+    );
+}
+
+/// Ride the Shoopuf grows a creature on each landfall.
+#[test]
+fn ride_the_shoopuf_landfall_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ride_the_shoopuf());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Cornered by Black Mages edicts and mints a Wizard.
+#[test]
+fn cornered_by_black_mages_edicts_and_mints() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::cornered_by_black_mages());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Cornered by Black Mages");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed its only creature");
+    assert_eq!(is_creature_token_named(&g, 0, "Wizard"), 1, "minted a Wizard");
+}
+
+/// Sleep Magic taps its target and keeps it from untapping.
+#[test]
+fn sleep_magic_taps_and_locks() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    let spell = g.add_card_to_hand(0, catalog::sleep_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Sleep Magic");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "enchanted creature tapped on ETB");
+}
+
+/// Choco-Comet burns for X and leaves a Bird behind.
+#[test]
+fn choco_comet_burns_and_makes_a_bird() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::choco_comet());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast Choco-Comet for X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "X=3 damage to the opponent");
+    assert_eq!(is_creature_token_named(&g, 0, "Bird"), 1, "created a Bird token");
+}
