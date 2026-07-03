@@ -8,6 +8,43 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — Final Fantasy (`sets::fin`)
+
+Shipped this run (20 cards + primitives): `EventKind::AnyCounterAdded` +
+`EventSpec::with_per_subject_cap` (Stalwart Successor), `DynamicPt::
+CreaturesYouControl` (Snow Villiers), plus Tifa, Feather of Flight, Vivi,
+Barret, Squall, White Mage's Staff, Tidus, Zidane, Hope, Sazh, Vanille,
+Y'shtola, Tonberry, Zell, Angel of Mercy, Rydia, and Surrak / Effortless Master
+(`decks::recent102`).
+
+Documented per-card approximations: Zidane (the "opponent gains control from
+you → Treasure" rider dropped), Vanille (meld half omitted), Y'shtola (the
+"a player lost ≥4 life → draw" end-step half omitted), Rydia (Summon Saga-
+reanimation activated ability omitted), Squall (the "creature *spell* you
+control targeted" half dropped).
+
+Deferred FIN cards wanting primitives not yet built:
+- **Transform DFCs** — Kefka, Cecil (Dark Knight), Terra (Trance Saga), Clive
+  (Ifrit), Garland (Chaos), Bahamut/Dion. Need the "exile-and-return-transformed
+  from an activated/triggered source" DFC pattern wired per-card.
+- **Cid, Timeless Artificer** — a dynamic anthem scaling by Artificers in play
+  *and* in the graveyard (needs a graveyard-aware anthem count).
+- **Warrior of Light** — legendary-count anthem + cast-legendary impulse-cascade.
+- **Gilgamesh, Master-at-Arms** — dig top-6, put Equipment onto the battlefield,
+  reflexive attach.
+- **Cloud, Ex-SOLDIER** — draw per equipped attacking creature (a Value counting
+  equipped attackers).
+- **Jenova / Sin / Summon Sagas** — Mutant-type riders, random-exile-copy loops,
+  and stun-gated saga chapters with draw-per-tapped counts.
+
+## Environment note
+
+The `crabomination_client` (Bevy GUI) cannot be built in the headless routine
+environment: `wayland-sys`'s build script fails (`wayland-client.pc` absent, no
+`PKG_CONFIG_PATH`). Client-only changes therefore can't be compiled/tested here
+— keep them to string/label edits verifiable by inspection, or defer to a
+desktop session (see the `verifier-client` skill).
+
 ## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`–`recent101`)
 
 - **Prosperous Thief** — the printed trigger fires off any Ninja/Rogue you
