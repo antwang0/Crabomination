@@ -2164,3 +2164,123 @@ fn sandworm_destroys_a_land() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "target land destroyed");
 }
+
+// ── modern_decks batch 2 tests ────────────────────────────────────────────────
+
+/// Syncopate counters an unpaid spell and exiles it.
+#[test]
+fn syncopate_counters_and_exiles() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    let syn = g.add_card_to_hand(0, catalog::syncopate());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3); // X = 3 (opponent can't pay)
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: syn, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Syncopate castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt countered");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "countered spell exiled, not in graveyard");
+}
+
+/// Crossroads Village enters tapped and taps for the color chosen on entry.
+#[test]
+fn crossroads_village_taps_for_chosen_color() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(crate::mana::Color::Blue)]));
+    let land = g.move_card_to_battlefield_for_test(0, catalog::crossroads_village());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped");
+    // Untap it so we can tap for mana.
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("tap for chosen color");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Blue), 1, "added blue (chosen)");
+}
+
+/// Capital City has cycling and taps for colorless.
+#[test]
+fn capital_city_cycles_and_taps() {
+    let c = catalog::capital_city();
+    assert!(c.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))), "has Cycling");
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::capital_city());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("tap for colorless");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless");
+}
+
+/// Lunatic Pandora sacrifices to destroy a nonland permanent.
+#[test]
+fn lunatic_pandora_sacs_to_destroy() {
+    let mut g = two_player_game();
+    let pandora = g.add_card_to_battlefield(0, catalog::lunatic_pandora());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pandora, ability_index: 1, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate sac-destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "target destroyed");
+    assert!(g.battlefield_find(pandora).is_none(), "Pandora sacrificed");
+}
+
+/// PuPu UFO's base power becomes the number of Towns you control.
+#[test]
+fn pupu_ufo_base_power_from_towns() {
+    let mut g = two_player_game();
+    let ufo = g.add_card_to_battlefield(0, catalog::pupu_ufo());
+    g.add_card_to_battlefield(0, catalog::treno_dark_city()); // Town
+    g.add_card_to_battlefield(0, catalog::vector_imperial_capital()); // Town
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ufo, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate base-power set");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ufo).unwrap().power, 2, "base power = 2 Towns");
+}
+
+/// Magitek Infantry gets +1/+0 while you control another artifact.
+#[test]
+fn magitek_infantry_pumps_with_another_artifact() {
+    let mut g = two_player_game();
+    let inf = g.add_card_to_battlefield(0, catalog::magitek_infantry());
+    assert_eq!(g.computed_permanent(inf).unwrap().power, 1, "1/1 alone");
+    g.add_card_to_battlefield(0, catalog::bonesplitter()); // another artifact
+    assert_eq!(g.computed_permanent(inf).unwrap().power, 2, "+1/+0 with another artifact");
+}
+
+/// Moogles' Valor mints a Moogle per creature and grants indestructible.
+#[test]
+fn moogles_valor_mass_tokens_and_indestructible() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::moogles_valor());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Moogles' Valor");
+    drain_stack(&mut g);
+    let moogles = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Moogle").count();
+    assert_eq!(moogles, 2, "one Moogle per pre-existing creature");
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Indestructible),
+        "creatures gained indestructible");
+}

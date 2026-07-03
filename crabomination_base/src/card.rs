@@ -41,7 +41,7 @@ pub enum Supertype {
 pub enum CreatureType {
     Human, Elf, Goblin, Merfolk, Moonfolk, Zombie, Vampire, Angel, Demon, Dragon,
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari, Dauthi,
-    Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm, Worm,
+    Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm, Worm, Alien,
     Armadillo, Nautilus,
     Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,

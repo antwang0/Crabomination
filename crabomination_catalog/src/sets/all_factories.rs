@@ -5533,6 +5533,13 @@ static FIN: &[Factory] = &[
     super::fin::lion_heart,
     super::fin::ring_of_the_lucii,
     super::fin::sandworm,
+    super::fin::syncopate,
+    super::fin::crossroads_village,
+    super::fin::capital_city,
+    super::fin::lunatic_pandora,
+    super::fin::pupu_ufo,
+    super::fin::magitek_infantry,
+    super::fin::moogles_valor,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

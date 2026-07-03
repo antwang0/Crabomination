@@ -3241,3 +3241,236 @@ pub fn sandworm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks batch 2: FIN counterspell, Towns, artifacts, mass token ──────
+
+/// Syncopate — {X}{U} Instant. Counter target spell unless its controller pays
+/// {X}; if countered this way, exile it instead.
+pub fn syncopate() -> CardDefinition {
+    CardDefinition {
+        name: "Syncopate",
+        cost: cost(&[x(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[]),
+            exile: true,
+            extra_generic: Some(Value::XFromCost),
+        },
+        ..Default::default()
+    }
+}
+
+/// Crossroads Village — "Land — Town" that enters tapped; as it enters, choose a
+/// color; {T}: Add one mana of the chosen color.
+pub fn crossroads_village() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Crossroads Village",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "Crossroads Village enters the battlefield tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Capital City — "Land — Town". {T}: Add {C}. {1}, {T}: Add one mana of any
+/// color. Cycling {2}.
+pub fn capital_city() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Capital City",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lunatic Pandora — {1} Legendary Artifact. {2}, {T}: Surveil 1. {6}, {T},
+/// Sacrifice it: Destroy target nonland permanent.
+pub fn lunatic_pandora() -> CardDefinition {
+    CardDefinition {
+        name: "Lunatic Pandora",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(6)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Permanent.and(
+                        SelectionRequirement::Land.negate(),
+                    )),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// PuPu UFO — {2} 0/4 Artifact Creature — Construct Alien with flying. {T}: put
+/// a land from your hand onto the battlefield. {3}: base power becomes the
+/// number of Towns you control until end of turn.
+pub fn pupu_ufo() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "PuPu UFO",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct, CreatureType::Alien],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::SetBasePower {
+                    what: Selector::This,
+                    power: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::HasLandType(LandType::Town)
+                                .and(SelectionRequirement::ControlledByYou),
+                        )),
+                        filter: SelectionRequirement::HasLandType(LandType::Town)
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Magitek Infantry — {W} 1/1 Artifact Creature — Robot Soldier. Gets +1/+0
+/// while you control another artifact. {2}{W}: search your library for a card
+/// named Magitek Infantry, put it onto the battlefield tapped, then shuffle.
+pub fn magitek_infantry() -> CardDefinition {
+    CardDefinition {
+        name: "Magitek Infantry",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Magitek Infantry gets +1/+0 while you control another artifact.",
+            effect: StaticEffect::PumpSelfIf {
+                // At least two artifacts you control (itself + one other).
+                condition: Predicate::ValueAtLeast(
+                    Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                        )),
+                        filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    },
+                    Value::Const(2),
+                ),
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasName("Magitek Infantry".into()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Moogles' Valor — {3}{W}{W} Instant. For each creature you control, create a
+/// 1/2 white Moogle with lifelink; then creatures you control gain
+/// indestructible until end of turn.
+pub fn moogles_valor() -> CardDefinition {
+    let moogle = TokenDefinition {
+        name: "Moogle".into(),
+        power: 1,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moogle], ..Default::default() },
+        keywords: vec![Keyword::Lifelink],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Moogles' Valor",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                definition: moogle,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
