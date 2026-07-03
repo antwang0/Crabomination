@@ -504,6 +504,14 @@ impl MatchStats {
         let resolved = self.wins + self.draws;
         self.wins.saturating_mul(100).checked_div(resolved).unwrap_or(0)
     }
+    /// Matches that ended without a recorded winner or draw — a channel
+    /// disconnect or the watchdog tearing down a wedged game (`observe_winner`
+    /// saw `None`). `total - wins - draws`, saturating so it never underflows
+    /// if the winner counters ever outpace the match counter. A nonzero,
+    /// rising value flags a hang/crash regression the win/draw split hides.
+    pub(crate) fn unresolved(&self) -> u64 {
+        self.total_matches().saturating_sub(self.wins + self.draws)
+    }
     /// Percent of wins that closed via something other than lethal face
     /// damage (deckout / poison / mill / win-the-game). Returns 0 when no
     /// wins have been recorded. A rising share flags a stall regression
@@ -813,6 +821,12 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         // resolved-only `decisive_pct` can't show. Only when draws exist.
         if s.draws > 0 {
             out.push_str(&format!(" draw_rate={}%", s.draw_pct()));
+        }
+        // Unresolved (disconnect / watchdog) matches — surfaced explicitly so a
+        // hang regression is visible instead of hiding in `total - wins - draws`.
+        let stuck = s.unresolved();
+        if stuck > 0 {
+            out.push_str(&format!(" stuck={stuck}"));
         }
         // Alternate-win split: how many of those wins closed via
         // something other than lethal face damage (deckout / poison /

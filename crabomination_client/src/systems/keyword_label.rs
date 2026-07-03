@@ -158,6 +158,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // attack or block into this creature — the mirror side of MustAttack.
         MustBlock | AllMustBlock => "MBlk",
         AttacksAlone => "Solo",
+        // Pack-tactics restrictions — the creature can't be declared alone, so
+        // an opponent reads that it needs a companion to attack/block.
+        CantAttackAlone | CantAttackOrBlockAlone => "Pack",
         // "Assigns no combat damage" (Illusionist's Gambit-style) — a real
         // combat read: it can chump/soak without dealing back.
         DealsNoCombatDamage => "0dmg",
@@ -353,6 +356,8 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Regenerate(0)]), "Rgn");
         assert_eq!(keyword_strip(&[Keyword::UmbraArmor]), "TArm");
         assert_eq!(keyword_strip(&[Keyword::ProtectionFromCreatures]), "ProCr");
+        assert_eq!(keyword_strip(&[Keyword::CantAttackAlone]), "Pack");
+        assert_eq!(keyword_strip(&[Keyword::CantAttackOrBlockAlone]), "Pack");
     }
 
     #[test]

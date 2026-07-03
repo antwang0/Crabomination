@@ -1120,6 +1120,18 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn format_match_stats_reports_stuck_matches() {
+        let mut s = MatchStats::default();
+        // One resolved win, one bare match with no recorded outcome (stuck).
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        assert_eq!(s.unresolved(), 1);
+        let line = format_match_stats(&s);
+        assert!(line.contains("stuck=1"), "summary surfaces stuck count: {line}");
+    }
+
+    #[test]
     pub(crate) fn format_match_stats_pluralizes_at_two() {
         let mut s = MatchStats::default();
         s.record_bot(Duration::from_secs(60), Format::Demo);
