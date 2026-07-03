@@ -308,3 +308,46 @@ fn white_mages_staff_job_select() {
         "equipped creature is a Cleric"
     );
 }
+
+/// Tidus grows when your artifacts enter and taps a blocker on attack.
+#[test]
+fn tidus_grows_on_artifact_and_taps_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let tidus = g.add_card_to_battlefield(0, catalog::tidus_blitzball_star());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // An artifact entering under your control adds a counter.
+    let art = g.move_card_to_battlefield_for_test(0, catalog::bonesplitter());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(tidus).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "artifact ETB grew Tidus"
+    );
+    g.clear_sickness(tidus);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: tidus,
+        target: AttackTarget::Player(1),
+    }])).expect("Tidus attacks");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "attack tapped the opponent's creature");
+}
+
+/// Zidane temporarily steals an opponent's creature on entry.
+#[test]
+fn zidane_steals_on_entry() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    g.move_card_to_battlefield_for_test(0, catalog::zidane_tantalus_thief());
+    drain_stack(&mut g);
+    let stolen = g.battlefield_find(foe).unwrap();
+    assert_eq!(stolen.controller, 0, "Zidane took control");
+    assert!(!stolen.tapped, "and untapped it");
+    assert!(
+        g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste),
+        "granted haste"
+    );
+}

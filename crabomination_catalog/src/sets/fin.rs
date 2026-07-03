@@ -528,3 +528,84 @@ pub fn white_mages_staff() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tidus, Blitzball Star — {1}{W}{U} 2/1 Human Warrior. Whenever an artifact you
+/// control enters, put a +1/+1 counter on Tidus. Whenever Tidus attacks, tap
+/// target creature an opponent controls.
+pub fn tidus_blitzball_star() -> CardDefinition {
+    CardDefinition {
+        name: "Tidus, Blitzball Star",
+        cost: cost(&[generic(1), w(), crate::mana::u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Artifact,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Zidane, Tantalus Thief — {3}{R}{W} 3/3 Human Mutant Scout. ETB: gain control
+/// of target creature an opponent controls until end of turn; untap it and it
+/// gains lifelink and haste. (The "opponent gains control from you" Treasure
+/// rider is omitted.)
+pub fn zidane_tantalus_thief() -> CardDefinition {
+    CardDefinition {
+        name: "Zidane, Tantalus Thief",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mutant, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
