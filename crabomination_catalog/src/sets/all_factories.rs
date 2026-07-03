@@ -5075,6 +5075,17 @@ static DECKS: &[Factory] = &[
     super::decks::jukai_trainee,
     super::decks::gloomshrieker,
     super::decks::ecologists_terrarium,
+    // recent98 — Kamigawa: Neon Dynasty batch 4
+    super::decks::nezumi_bladeblesser,
+    super::decks::iron_apprentice,
+    super::decks::circuit_mender,
+    super::decks::dragonfly_suit,
+    super::decks::moon_circuit_hacker,
+    super::decks::kaitos_pursuit,
+    super::decks::bearer_of_memory,
+    super::decks::dokuchi_shadow_walker,
+    super::decks::reito_sentinel,
+    super::decks::akki_ronin,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
