@@ -1889,8 +1889,11 @@ pub enum GameEventWire {
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::PermanentDied` (CR 700.4). An internal
     /// trigger event (the concrete death/sacrifice lines already log it), so
-    /// its description renders blank.
-    PermanentDied { card_id: CardId },
+    /// its description renders blank. `is_creature` lets the client spawn a
+    /// death burst for *non-creature* deaths (artifacts / enchantments /
+    /// planeswalkers) without double-bursting creatures, which already fire
+    /// `CreatureDied`.
+    PermanentDied { card_id: CardId, #[serde(default)] is_creature: bool },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
     /// natural death — useful for replay rewinds and aristocrats payoffs.
@@ -2048,8 +2051,8 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
             }
-            GameEvent::PermanentDied { card_id, .. } => {
-                GameEventWire::PermanentDied { card_id: *card_id }
+            GameEvent::PermanentDied { card_id, is_creature, .. } => {
+                GameEventWire::PermanentDied { card_id: *card_id, is_creature: *is_creature }
             }
             GameEvent::CreatureSacrificed { card_id, who } => {
                 GameEventWire::CreatureSacrificed { card_id: *card_id, who: *who }

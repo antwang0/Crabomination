@@ -64,10 +64,15 @@ fn main() {
     // Connection caps must be at least 1 — a `0` (typo or empty-string-ish
     // misconfig) would otherwise silently refuse every client, so treat
     // sub-1 values as a misconfig and fall back to the default.
-    let slots = SlotManager::new(
-        usize_from_env_min("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS, 1),
-        usize_from_env_min("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP, 1),
-    );
+    let global_conns = usize_from_env_min("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS, 1);
+    let per_ip_conns = usize_from_env_min("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP, 1);
+    if per_ip_conns > global_conns {
+        eprintln!(
+            "warning: CRAB_MAX_CONNS_PER_IP={per_ip_conns} exceeds CRAB_MAX_CONNS={global_conns}; \
+             clamping the per-IP cap to {global_conns} (a per-IP cap above the global cap is a no-op)."
+        );
+    }
+    let slots = SlotManager::new(global_conns, per_ip_conns);
 
     let listener = match TcpListener::bind(&bind) {
         Ok(l) => l,

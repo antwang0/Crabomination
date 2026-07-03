@@ -96,6 +96,12 @@ pub(crate) enum SlotRefusal {
 
 impl SlotManager {
     pub(crate) fn new(global_cap: usize, per_ip_cap: usize) -> Self {
+        // A per-IP cap above the global cap is toothless — a single IP could
+        // never reach it before the global cap refuses everyone, so per-IP
+        // protection would be silently disabled. Clamp it to the global cap so
+        // the effective per-IP limit matches what an operator can reason about.
+        // (`global_cap == 0` means "unbounded global", so no clamp applies.)
+        let per_ip_cap = if global_cap != 0 { per_ip_cap.min(global_cap) } else { per_ip_cap };
         Self {
             inner: Arc::new(Mutex::new(SlotState::default())),
             global_cap,
@@ -195,6 +201,17 @@ mod tests {
         assert!(matches!(mgr.try_acquire(ip(1)), Err(SlotRefusal::PerIpCapReached)));
         // …but a different IP still has its own slot.
         let _b = mgr.try_acquire(ip(2)).expect("ip2 first");
+    }
+
+    #[test]
+    fn per_ip_cap_clamped_to_global() {
+        // A configured per-IP cap above the global cap is clamped down so the
+        // effective per-IP limit is meaningful (never above the global cap).
+        let mgr = SlotManager::new(3, 10);
+        assert_eq!(mgr.per_ip_cap, 3, "per-IP cap clamped to the global cap");
+        // With global==0 (unbounded) the per-IP cap is left as-is.
+        let unbounded = SlotManager::new(0, 10);
+        assert_eq!(unbounded.per_ip_cap, 10, "unbounded global leaves per-IP cap");
     }
 
     #[test]

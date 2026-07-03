@@ -176,6 +176,22 @@ pub fn spawn_impact_effects(
                     );
                 }
             }
+            // A non-creature permanent (artifact / enchantment / planeswalker)
+            // hitting a graveyard also earns a death burst; creatures already
+            // fire CreatureDied, so only burst here when it wasn't a creature.
+            GameEventWire::PermanentDied { card_id, is_creature: false } => {
+                if let Some(p) = pos_of(*card_id) {
+                    spawn_burst(
+                        &mut commands,
+                        p,
+                        death_color(),
+                        DEATH_TTL,
+                        DEATH_START_R,
+                        DEATH_END_R,
+                        DEATH_SPOKES,
+                    );
+                }
+            }
             GameEventWire::DamageDealt { to_card, to_player, amount } => {
                 let card_world = to_card.and_then(&pos_of);
                 // Spark at the struck permanent, else at the damaged player's
