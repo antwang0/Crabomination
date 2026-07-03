@@ -5430,6 +5430,10 @@ static FIN: &[Factory] = &[
     super::fin::goobbue_gardener,
     super::fin::dragoons_wyvern,
     super::fin::blazing_bomb,
+    super::fin::al_bhed_salvagers,
+    super::fin::demon_wall,
+    super::fin::ashe_princess_of_dalmasca,
+    super::fin::gladiolus_amicitia,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

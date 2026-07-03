@@ -881,3 +881,98 @@ fn blazing_bomb_blow_up() {
     assert!(g.battlefield_find(bomb).is_none(), "Blazing Bomb sacrificed itself");
     assert!(g.battlefield_find(foe).is_none(), "dealt 2 to the 2/2, destroying it");
 }
+
+/// Al Bhed Salvagers drains when a creature you control dies.
+#[test]
+fn al_bhed_salvagers_drains_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::al_bhed_salvagers());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    crate::game::cast_at(&mut g, bolt, Target::Permanent(fodder));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder died");
+    assert_eq!(g.players[1].life, 19, "opponent lost 1");
+    assert_eq!(g.players[0].life, 21, "you gained 1");
+}
+
+/// Demon Wall can't attack until it has a counter; its ability adds two.
+#[test]
+fn demon_wall_counter_unlocks_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    // The {5}{B} ability puts two +1/+1 counters on it.
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(0, catalog::demon_wall());
+    assert!(catalog::demon_wall().keywords.contains(&Keyword::Defender));
+    assert!(catalog::demon_wall().keywords.contains(&Keyword::Menace));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wall, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("add counters");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wall).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+
+    // With a counter it can attack despite Defender; a fresh copy cannot.
+    let mut g2 = two_player_game();
+    let bare = g2.add_card_to_battlefield(0, catalog::demon_wall());
+    g2.clear_sickness(bare);
+    advance_to(&mut g2, TurnStep::DeclareAttackers);
+    assert!(g2.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bare, target: AttackTarget::Player(1),
+    }])).is_err(), "defender stops the counterless wall");
+    g2.battlefield_find_mut(bare).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g2.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bare, target: AttackTarget::Player(1),
+    }])).expect("the counter lets it attack past Defender");
+}
+
+/// Ashe digs the top five for an artifact on attack.
+#[test]
+fn ashe_digs_for_artifact() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let ashe = g.add_card_to_battlefield(0, catalog::ashe_princess_of_dalmasca());
+    let art = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(art, catalog::bonesplitter(), 0));
+    for _ in 0..4 {
+        let id = g.next_id();
+        g.players[0].library.insert(1, crate::card::CardInstance::new(id, catalog::forest(), 0));
+    }
+    g.clear_sickness(ashe);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ashe, target: AttackTarget::Player(1),
+    }])).expect("Ashe attacks");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == art), "the artifact was taken to hand");
+}
+
+/// Gladiolus ramps on ETB and pumps another creature on landfall.
+#[test]
+fn gladiolus_ramps_and_pumps_on_landfall() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lands0 = g.battlefield.iter().filter(|c| c.definition.is_land() && c.controller == 0).count();
+    g.move_card_to_battlefield_for_test(0, catalog::gladiolus_amicitia());
+    drain_stack(&mut g);
+    let lands1 = g.battlefield.iter().filter(|c| c.definition.is_land() && c.controller == 0).count();
+    assert_eq!(lands1, lands0 + 1, "ETB put a land onto the battlefield");
+    // Landfall pumps the ally +2/+2 and grants trample.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ally).unwrap();
+    assert_eq!(cp.power, 4, "ally pumped +2/+2");
+    assert!(cp.keywords.contains(&Keyword::Trample), "ally gained trample");
+}

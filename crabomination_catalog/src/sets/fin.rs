@@ -1051,6 +1051,140 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
     }
 }
 
+/// Al Bhed Salvagers — {2}{B} 2/3 Human Artificer Warrior. Whenever this or
+/// another creature you control dies, target opponent loses 1 life, you gain 1.
+/// (Modeled on creature deaths; the printed "or artifact" clause covers
+/// artifact creatures.)
+pub fn al_bhed_salvagers() -> CardDefinition {
+    CardDefinition {
+        name: "Al Bhed Salvagers",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: crate::effect::shortcut::drain(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Demon Wall — {1}{B} 3/3 Artifact Creature with defender and menace. It can
+/// attack as though it didn't have defender while it has a +1/+1 counter.
+/// {5}{B}: put two +1/+1 counters on it.
+pub fn demon_wall() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Demon Wall",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Defender, Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "While it has a counter, it can attack as though it didn't have defender.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                },
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b()]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ashe, Princess of Dalmasca — {2}{W} 3/2 Legendary Human Rebel Noble. Whenever
+/// she attacks, look at the top five cards; you may put an artifact among them
+/// into your hand, the rest on the bottom in a random order.
+pub fn ashe_princess_of_dalmasca() -> CardDefinition {
+    CardDefinition {
+        name: "Ashe, Princess of Dalmasca",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::RevealTopTakeMatchingToHand {
+                who: PlayerRef::You,
+                count: Value::Const(5),
+                filter: SelectionRequirement::Artifact,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gladiolus Amicitia — {4}{R}{G} 6/6 Legendary Human Warrior. ETB: search your
+/// library for a land, put it onto the battlefield tapped. Landfall: another
+/// target creature you control gets +2/+2 and gains trample until end of turn.
+pub fn gladiolus_amicitia() -> CardDefinition {
+    CardDefinition {
+        name: "Gladiolus Amicitia",
+        cost: cost(&[generic(4), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![
+            etb(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
+                        ),
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Cloudbound Moogle — {3}{W}{W} 2/3 Moogle with flying. ETB: put a +1/+1
 /// counter on target creature. Plainscycling {2}.
 pub fn cloudbound_moogle() -> CardDefinition {
