@@ -1,7 +1,7 @@
 //! Functionality tests for the Strixhaven Commander (C21) card pack
 //! (`catalog::sets::c21`).
 
-use crate::card::{CounterType, Keyword};
+use crate::card::Keyword;
 use crate::catalog;
 use crate::game::*;
 use crate::mana::Color;
