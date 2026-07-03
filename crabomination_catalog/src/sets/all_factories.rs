@@ -5390,6 +5390,9 @@ static FIN: &[Factory] = &[
     super::fin::sephiroth_planets_heir,
     super::fin::aerith_gainsborough,
     super::fin::phoenix_down,
+    super::fin::tifa_lockhart,
+    super::fin::feather_of_flight,
+    super::fin::vivi_ornitier,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

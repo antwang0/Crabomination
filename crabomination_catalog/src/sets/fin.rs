@@ -2,13 +2,14 @@
 //! Each card has a functionality test in `crabomination/src/tests/fin.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector,
+    Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, etb_mint_token, target_filtered};
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Iron Giant — {7} 6/6 artifact creature with vigilance, reach, and trample.
 pub fn iron_giant() -> CardDefinition {
@@ -307,6 +308,106 @@ pub fn phoenix_down() -> CardDefinition {
                 },
             ]),
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tifa Lockhart — {1}{G} 1/2 Human Monk, trample. Landfall — whenever a land
+/// you control enters, double Tifa's power until end of turn.
+pub fn tifa_lockhart() -> CardDefinition {
+    CardDefinition {
+        name: "Tifa Lockhart",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            // Doubling as an EOT self-pump equal to current power (expires,
+            // unlike Effect::DoublePower which is permanent).
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Feather of Flight — {1}{W} Aura with flash. Enchant creature. ETB: draw a
+/// card. Enchanted creature gets +1/+0 and has flying.
+pub fn feather_of_flight() -> CardDefinition {
+    CardDefinition {
+        name: "Feather of Flight",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+        },
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Vivi Ornitier — {1}{U}{R} 0/3 Wizard. {0}: add power-worth of {U}/{R} (once
+/// each turn, your turn only). Whenever you cast a noncreature spell, put a
+/// +1/+1 counter on Vivi and it deals 1 damage to each opponent.
+pub fn vivi_ornitier() -> CardDefinition {
+    CardDefinition {
+        name: "Vivi Ornitier",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        power: 0,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[]),
+            once_per_turn: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![Color::Blue, Color::Red],
+                    Value::PowerOf(Box::new(Selector::This)),
+                ),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            ]),
         }],
         ..Default::default()
     }

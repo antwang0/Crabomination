@@ -192,3 +192,57 @@ fn phoenix_down_reanimates() {
     assert!(r.tapped, "enters tapped");
     assert!(g.exile.iter().any(|c| c.definition.name == "Phoenix Down"), "Phoenix Down exiled itself");
 }
+
+/// Tifa doubles her power until end of turn on landfall (and it expires).
+#[test]
+fn tifa_doubles_power_on_landfall() {
+    let mut g = two_player_game();
+    let tifa = g.add_card_to_battlefield(0, catalog::tifa_lockhart());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tifa).unwrap().power(), 2, "1 → doubled to 2");
+}
+
+/// Feather of Flight draws on entry and grants +1/+0 and flying.
+#[test]
+fn feather_of_flight_draws_and_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    let feather = g.add_card_to_hand(0, catalog::feather_of_flight());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(feather, Some(Target::Permanent(bear)), vec![], None, None)
+        .expect("cast the Aura");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card on entry");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "enchanted creature gets +1/+0");
+    assert!(cp.keywords.contains(&Keyword::Flying), "and flying");
+}
+
+/// Vivi grows and pings each opponent when you cast a noncreature spell.
+#[test]
+fn vivi_grows_and_pings_on_noncreature_spell() {
+    let mut g = two_player_game();
+    let vivi = g.add_card_to_battlefield(0, catalog::vivi_ornitier());
+    let life1 = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(bolt, Some(Target::Player(1)), vec![], None, None).ok();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(vivi).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Vivi got a +1/+1 counter"
+    );
+    assert!(g.players[1].life < life1, "each opponent took at least Vivi's ping");
+}

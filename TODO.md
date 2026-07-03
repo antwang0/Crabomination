@@ -262,9 +262,6 @@ Shipped: `StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower`
 - **Chandra, Acolyte of Flame** — 0-abilities incl. haste tokens that
   self-sacrifice next end step, and a −2 "cast an I/S from your graveyard this
   turn" grant.
-- **Kamigawa channel lands** (Boseiju/Otawara/Eiganjo/Takenuma/Sokenzan) —
-  `from_hand` activated ability with a discard-self cost and a
-  cost-reduction-per-legendary-creature rider (Channel, CR 702.x).
 - **Master Biomancer** — the "enters as a Mutant in addition to its types" layer
   rider is omitted (only the counters are wired).
 - **Ingenious Smith** — "rest on the bottom in a random order" is approximated by
