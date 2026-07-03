@@ -5546,6 +5546,9 @@ static FIN: &[Factory] = &[
     super::fin::unexpected_request,
     super::fin::resentful_revelation,
     super::fin::gaius_van_baelsar,
+    super::fin::sorceresss_schemes,
+    super::fin::rinoa_heartilly,
+    super::fin::the_regalia,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

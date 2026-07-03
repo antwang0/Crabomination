@@ -2407,3 +2407,61 @@ fn gaius_van_baelsar_edicts() {
     assert!(g.battlefield_find(gaius).is_none(), "you sacrificed Gaius (only nontoken creature)");
     assert!(g.battlefield_find(theirs).is_none(), "opponent sacrificed theirs");
 }
+
+// ── modern_decks batch 4 tests ────────────────────────────────────────────────
+
+/// Sorceress's Schemes returns an instant/sorcery from the graveyard and adds R.
+#[test]
+fn sorceresss_schemes_returns_instant() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt()); // Instant
+    let spell = g.add_card_to_hand(0, catalog::sorceresss_schemes());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sorceress's Schemes");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "Bolt returned to hand");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 1, "added {{R}}");
+}
+
+/// Rinoa makes an Angelo token on ETB.
+#[test]
+fn rinoa_makes_angelo() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::rinoa_heartilly());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Angelo"),
+        "made an Angelo token");
+}
+
+/// The Regalia is a haste Crew-1 Vehicle whose attack drops a land.
+#[test]
+fn the_regalia_lands_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    // Library: two nonland on top, then a land.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_library(0, catalog::forest());
+    let regalia = g.add_card_to_battlefield(0, catalog::the_regalia());
+    let crewer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crewer);
+    g.clear_sickness(regalia); // The Regalia has haste anyway
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: regalia, crew_creatures: vec![crewer] })
+        .expect("crew The Regalia");
+    let lands_before = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: regalia, target: AttackTarget::Player(1),
+    }])).expect("Regalia attacks");
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 1, "revealed and dropped a land");
+    assert!(g.battlefield_find(land).map(|c| c.tapped).unwrap_or(false), "it entered tapped");
+}

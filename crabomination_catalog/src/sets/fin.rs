@@ -3674,3 +3674,113 @@ pub fn gaius_van_baelsar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks batch 4: FIN recursion, token lord, vehicle ──────────────────
+
+/// Sorceress's Schemes — {3}{R} Sorcery. Return target instant or sorcery card
+/// from your graveyard to your hand; add {R}. Flashback {4}{R}. (The exiled-
+/// flashback-card target is omitted.)
+pub fn sorceresss_schemes() -> CardDefinition {
+    CardDefinition {
+        name: "Sorceress's Schemes",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Red, Value::ONE) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rinoa Heartilly — {3}{G}{W} 4/4 Legendary Human Rebel Warlock. ETB: create
+/// Angelo, a legendary 1/1 green and white Dog. Whenever Rinoa attacks, another
+/// target creature you control gets +1/+1 until end of turn for each creature
+/// you control.
+pub fn rinoa_heartilly() -> CardDefinition {
+    let angelo = TokenDefinition {
+        name: "Angelo".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::White],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rinoa Heartilly",
+        cost: cost(&[generic(3), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: angelo }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        )),
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    },
+                    toughness: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        )),
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    },
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Regalia — {4} Legendary Artifact — Vehicle 4/4 with haste. Whenever it
+/// attacks, reveal from the top until you reveal a land, put it onto the
+/// battlefield tapped, and the rest on the bottom in a random order. Crew 1.
+pub fn the_regalia() -> CardDefinition {
+    CardDefinition {
+        name: "The Regalia",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste, Keyword::Crew(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                cap: Value::Const(60), // "until a land" — capped past any library size
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+        }],
+        ..Default::default()
+    }
+}
