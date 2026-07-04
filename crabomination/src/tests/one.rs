@@ -378,3 +378,37 @@ fn one_keyword_creatures_shape() {
     assert_eq!((cleaver.power, cleaver.toughness), (2, 4));
     assert!(cleaver.keywords.contains(&Keyword::Menace) && cleaver.keywords.contains(&Keyword::Toxic(2)));
 }
+
+/// Cutthroat Centurion sacrifices another permanent to pump itself +2/+2.
+#[test]
+fn cutthroat_centurion_sac_pump() {
+    let mut g = two_player_game();
+    let cent = g.add_card_to_battlefield(0, catalog::cutthroat_centurion());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cent, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Cutthroat Centurion");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.computed_permanent(cent).unwrap().power, 4, "2/2 + 2/2 = 4/4");
+}
+
+/// Shrapnel Slinger sacrifices a creature on ETB to destroy an opponent artifact.
+#[test]
+fn shrapnel_slinger_sac_destroys_artifact() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::millstone()); // opponent artifact
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let slinger = g.add_card_to_battlefield(0, catalog::shrapnel_slinger());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let eff = catalog::shrapnel_slinger().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(slinger, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature");
+    assert!(g.battlefield_find(art).is_none(), "opponent's artifact destroyed");
+}

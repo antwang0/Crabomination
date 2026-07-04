@@ -572,3 +572,67 @@ pub fn chrome_prowler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cutthroat Centurion — {2}{B} Creature — Phyrexian Warrior 2/2. Sacrifice
+/// another artifact or creature: this gets +2/+2 until end of turn. Activate
+/// only once each turn.
+pub fn cutthroat_centurion() -> CardDefinition {
+    CardDefinition {
+        name: "Cutthroat Centurion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                1,
+            )),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shrapnel Slinger — {1}{R} Creature — Phyrexian Rebel 2/2. When it enters, you
+/// may sacrifice a creature; if you do, destroy target artifact an opponent
+/// controls.
+pub fn shrapnel_slinger() -> CardDefinition {
+    CardDefinition {
+        name: "Shrapnel Slinger",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Rebel],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "sacrifice a creature".into(),
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: Value::ONE,
+            then: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                }),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}

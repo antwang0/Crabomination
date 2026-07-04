@@ -6909,6 +6909,8 @@ static ONE: &[Factory] = &[
     super::one::sheoldreds_headcleaver,
     super::one::chimney_rabble,
     super::one::chrome_prowler,
+    super::one::cutthroat_centurion,
+    super::one::shrapnel_slinger,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,
