@@ -774,7 +774,15 @@ fn describe_count_filter(req: &crabomination::card::SelectionRequirement) -> Str
         R::Land => "lands".into(),
         R::Creature => "creatures".into(),
         R::Artifact => "artifacts".into(),
+        R::Enchantment => "enchantments".into(),
+        R::Planeswalker => "planeswalkers".into(),
+        R::Nonland => "nonland permanents".into(),
+        R::Noncreature => "noncreature permanents".into(),
+        R::IsBasicLand => "basic lands".into(),
+        R::IsNonbasicLand => "nonbasic lands".into(),
         R::HasCreatureType(t) => format!("{t:?}s"),
+        R::HasArtifactSubtype(a) => format!("{a:?}s"),
+        R::HasLandType(l) => format!("{l:?}s"),
         R::PowerAtLeast(n) => format!("creatures with power {n} or greater"),
         R::And(a, b) => match (&**a, &**b) {
             // The common "creature with power N or greater" pairing.

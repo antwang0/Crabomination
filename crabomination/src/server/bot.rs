@@ -2993,10 +2993,16 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
             .iter()
             .filter(|c| c.controller == seat && c.definition.is_creature())
     };
+    // Rank by *computed* power so anthems / lords / conditional pumps count
+    // (a small body under a big anthem is a better Voltron target than a
+    // vanilla bigger base body).
+    let cpow = |c: &crate::card::CardInstance| {
+        state.computed_permanent(c.id).map(|cp| cp.power).unwrap_or_else(|| c.power())
+    };
     let target = mine()
         .filter(|c| can_attack(c))
-        .max_by_key(|c| c.power())
-        .or_else(|| mine().max_by_key(|c| c.power()))
+        .max_by_key(|c| cpow(c))
+        .or_else(|| mine().max_by_key(|c| cpow(c)))
         .map(|c| c.id)?;
     for eq in &state.battlefield {
         if eq.controller != seat || !eq.definition.is_equipment() {

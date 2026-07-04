@@ -347,6 +347,33 @@ fn bot_equips_attacker_not_defender_wall() {
     assert_ne!(found.unwrap().1, wall);
 }
 
+/// The bot ranks equip targets by *computed* power, so an anthem/Aura-boosted
+/// small body outranks a bigger vanilla one.
+#[test]
+fn bot_equips_by_computed_power() {
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    let lions = g.add_card_to_battlefield(0, catalog::savannah_lions()); // 2/1
+    let mother = g.add_card_to_battlefield(0, catalog::mother_of_runes()); // 1/1
+    // Rancor (+2/+0) on the 1/1 → computed power 3, beating the 2/1.
+    let rancor = g.add_card_to_battlefield(0, catalog::rancor());
+    g.battlefield_find_mut(rancor).unwrap().attached_to = Some(mother);
+    let eq = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let mut found = None;
+    for _ in 0..40 {
+        if let Some(GameAction::Equip { equipment, target }) = RandomBot::new().next_action(&g, 0) {
+            found = Some((equipment, target));
+            break;
+        }
+    }
+    assert_eq!(found, Some((eq, mother)), "equips the Rancor'd 1/1, not the vanilla 2/1");
+    let _ = lions;
+}
+
 /// Manalith taps for one mana of any color.
 #[test]
 fn manalith_taps_for_mana() {
