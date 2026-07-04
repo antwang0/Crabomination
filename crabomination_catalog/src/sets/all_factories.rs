@@ -6937,6 +6937,8 @@ static ONE: &[Factory] = &[
     super::one::gulping_scraptrap,
     super::one::deadly_derision,
     super::one::kill_zone_acrobat,
+    super::one::blightbelly_rat,
+    super::one::sawblade_scamp,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

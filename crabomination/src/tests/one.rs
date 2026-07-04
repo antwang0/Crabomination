@@ -830,3 +830,36 @@ fn kill_zone_acrobat_sac_for_flying() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(acro).unwrap().keywords.contains(&Keyword::Flying), "gained flying via sacrifice");
 }
+
+/// Blightbelly Rat proliferates when it dies.
+#[test]
+fn blightbelly_rat_dies_proliferates() {
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::blightbelly_rat());
+    g.players[1].poison_counters = 1;
+    let ctx = crate::game::effects::EffectContext::for_ability(rat, 0, None);
+    g.resolve_effect(
+        &Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &crate::game::effects::EffectContext { targets: vec![Target::Permanent(rat)], ..ctx },
+    ).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "death proliferated opponent poison");
+}
+
+/// Sawblade Scamp gains oil on noncreature cast and spends it to ping.
+#[test]
+fn sawblade_scamp_oil_then_ping() {
+    let mut g = two_player_game();
+    let scamp = g.add_card_to_battlefield(0, catalog::sawblade_scamp());
+    add_oil(&mut g, scamp, 1);
+    g.clear_sickness(scamp);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("ping ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "dealt 1 to the opponent");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == scamp).unwrap().counter_count(CounterType::Oil), 0, "spent the oil");
+}

@@ -1370,3 +1370,55 @@ pub fn kill_zone_acrobat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Blightbelly Rat — {1}{B} Creature — Phyrexian Rat 2/2 with toxic 1. When it
+/// dies, proliferate.
+pub fn blightbelly_rat() -> CardDefinition {
+    CardDefinition {
+        name: "Blightbelly Rat",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![on_dies(Effect::Proliferate)],
+        ..Default::default()
+    }
+}
+
+/// Sawblade Scamp — {R} Creature — Phyrexian Beast 1/1 with haste. Whenever you
+/// cast a noncreature spell, put an oil counter on it. {T}, Remove an oil
+/// counter: it deals 1 damage to each opponent.
+pub fn sawblade_scamp() -> CardDefinition {
+    CardDefinition {
+        name: "Sawblade Scamp",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: deal(1, Selector::Player(PlayerRef::EachOpponent)),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
