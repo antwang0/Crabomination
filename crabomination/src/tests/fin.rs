@@ -3141,6 +3141,29 @@ fn jenova_buffs_and_grants_mutant() {
         .contains(&crate::card::CreatureType::Bear), "still a Bear");
 }
 
+/// CR 603.10 — Jenova's dies-draw reads the *granted* Mutant type from the
+/// death LKI snapshot: a Bear it turned into a Mutant still triggers the draw.
+#[test]
+fn jenova_dies_draw_reads_granted_mutant_type() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jenova_ancient_calamity());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g); // bear becomes a 3/3 Mutant (2/2 + Jenova's power 1)
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let hand0 = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the Mutant Bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "3/3 Mutant Bear died to 3 damage");
+    // hand0 counted the bolt; it left for the stack, so net draw = power (3).
+    assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 = dead Mutant's power");
+}
+
 /// CR 707.2 — a `CreateTokenCopyOf` with `enters_tapped` mints a tapped copy.
 #[test]
 fn cr_707_2_token_copy_enters_tapped() {

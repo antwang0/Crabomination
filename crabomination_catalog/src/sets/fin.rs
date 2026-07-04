@@ -5200,9 +5200,8 @@ pub fn golbez_crystal_collector() -> CardDefinition {
 /// your turn, put +1/+1 counters equal to Jenova's power on up to one other
 /// target creature; it becomes a Mutant. Whenever a Mutant you control dies
 /// during your turn, draw cards equal to its power. (The "up to one" is modeled
-/// as a required target. The dies-draw fires only for creatures printed as
-/// Mutants — a granted Mutant type isn't preserved in the death LKI snapshot;
-/// tracked in TODO.md.)
+/// as a required target; the granted Mutant type is preserved in the death LKI
+/// snapshot, so the dies-draw fires for creatures Jenova turned into Mutants.)
 pub fn jenova_ancient_calamity() -> CardDefinition {
     CardDefinition {
         name: "Jenova, Ancient Calamity",

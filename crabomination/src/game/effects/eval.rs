@@ -154,10 +154,8 @@ impl GameState {
                     // dies, deals damage equal to its power") reads the
                     // dying object's last-known power, counters/pumps
                     // included, in preference to the graveyard's printed P/T.
-                    if self.resolving_lki_source == Some(cid)
-                        && self.battlefield_find(cid).is_none()
-                        && let Some(snap) = self.leaves_bf_lki.get(&cid)
-                    {
+                    // Covers both the trigger's source and its dead subject.
+                    if let Some(snap) = self.lki_snapshot(cid) {
                         return Some(snap.power());
                     }
                     // CR 121 / Lorehold Excavation: read power from the
@@ -190,10 +188,7 @@ impl GameState {
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     let cid = e.as_permanent_id()?;
-                    if self.resolving_lki_source == Some(cid)
-                        && self.battlefield_find(cid).is_none()
-                        && let Some(snap) = self.leaves_bf_lki.get(&cid)
-                    {
+                    if let Some(snap) = self.lki_snapshot(cid) {
                         return Some(snap.toughness());
                     }
                     if let Some(c) = self.battlefield_find(cid) {
@@ -1682,17 +1677,24 @@ impl GameState {
                 // Scriptures I), an animated land, or a devotion-gated god
                 // must filter by its *computed* types, not the printed ones.
                 // Off-battlefield cards keep the printed definition.
-                let computed_types: Option<Vec<crate::card::CardType>> =
+                let computed: Option<crate::game::layers::ComputedPermanent> =
                     if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
                         None // mid-recompute: printed types (reentrancy guard)
                     } else {
-                        self.battlefield_find(*cid)
-                            .and_then(|_| self.computed_permanent(*cid))
-                            .map(|cp| cp.card_types.clone())
+                        self.battlefield_find(*cid).and_then(|_| self.computed_permanent(*cid))
                     };
-                let has_type = |t: crate::card::CardType| match &computed_types {
-                    Some(ts) => ts.contains(&t),
+                let has_type = |t: crate::card::CardType| match &computed {
+                    Some(cp) => cp.card_types.contains(&t),
                     None => card.definition.card_types.contains(&t),
+                };
+                // CR 613.2 layer-4 — a creature that gained a type from a
+                // continuous effect (Jenova's Mutant grant) matches by its
+                // *computed* subtypes on the battlefield; off-battlefield cards
+                // (incl. die-snapshots, whose grants were stamped in at death)
+                // fall back to the definition.
+                let has_ctype = |ct: &crate::card::CreatureType| match &computed {
+                    Some(cp) => cp.subtypes.creature_types.contains(ct),
+                    None => card.definition.subtypes.creature_types.contains(ct),
                 };
                 use crate::card::CardType as CT;
                 match req {
@@ -1774,7 +1776,7 @@ impl GameState {
                             && card.keyword_counters.values().all(|&n| n == 0)
                     }
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
-                    R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
+                    R::HasCreatureType(ct) => has_ctype(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
                     R::IsOutlaw => card_is_outlaw(card),
                     R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),

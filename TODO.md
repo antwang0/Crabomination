@@ -87,12 +87,14 @@ Remaining short FIN cards blocked on one primitive each:
 - **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
   Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
   to Spree/Escalate.
-- **Granted-type death LKI (CR 603.10)** — `died_card_snapshots` / `leaves_bf_lki`
-  clone the raw `CardInstance` (printed subtypes), so a "when a [type] you control
-  dies" trigger whose subject gained that type from a continuous effect doesn't
-  fire (Jenova, Ancient Calamity's Mutant-dies-draw only sees *printed* Mutants).
-  Fix: stash computed creature types in the death snapshot and have the type
-  filter read them.
+- ✅ **Granted-type death LKI (CR 603.10)** — shipped. `GameState::dying_snapshot`
+  stamps a leaving permanent's *computed* creature types (layer 4) into the death
+  snapshot, and `R::HasCreatureType` reads computed types for battlefield
+  permanents, so "when a [type] you control dies" fires for creatures that gained
+  the type from a continuous effect (Jenova's granted Mutant). Also stashes the
+  dead *subject*'s LKI (`resolving_lki_subject` + `lki_snapshot`) so
+  "draw cards equal to its power" reads its counter-boosted power, not the
+  graveyard's printed value.
 - **Sin / Jenova** — begin-combat "exile up to one target creature card from a
   graveyard; if you do, create a token copy of it (except it's tapped / …)".
   The primitive is now shipped — Ardyn, the Usurper uses

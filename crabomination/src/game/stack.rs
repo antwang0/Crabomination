@@ -1315,6 +1315,19 @@ impl GameState {
                 if had_lki {
                     self.resolving_lki_source = Some(source);
                 }
+                // CR 603.10 — scope the dead *subject*'s LKI read too, so
+                // Jenova's "draw cards equal to its power" reads the dying
+                // Mutant's counter-boosted power (not its printed value).
+                let lki_subject = match trigger_source {
+                    Some(crate::game::effects::EntityRef::Card(c))
+                    | Some(crate::game::effects::EntityRef::Permanent(c))
+                        if c != source && self.leaves_bf_lki.contains_key(&c) =>
+                    {
+                        self.resolving_lki_subject = Some(c);
+                        Some(c)
+                    }
+                    _ => None,
+                };
                 let mut trig_events = self.continue_trigger_resolution_with_source(
                     source,
                     controller,
@@ -1331,6 +1344,10 @@ impl GameState {
                 if had_lki {
                     self.resolving_lki_source = None;
                     self.leaves_bf_lki.remove(&source);
+                }
+                if let Some(sid) = lki_subject {
+                    self.resolving_lki_subject = None;
+                    self.leaves_bf_lki.remove(&sid);
                 }
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
@@ -2501,8 +2518,8 @@ impl GameState {
             // and is consulted by `event_matches_spec` (controller lookup)
             // and `evaluate_requirement_static` (type/keyword/counter
             // filter). Cleared after `dispatch_triggers_for_events`.
-            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
-                self.died_card_snapshots.insert(id, c.clone());
+            if let Some(c) = self.dying_snapshot(id) {
+                self.died_card_snapshots.insert(id, c);
             }
             // Collect Dies triggers and Persist/Undying info before removing from battlefield.
             let (

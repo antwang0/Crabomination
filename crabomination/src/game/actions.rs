@@ -2218,8 +2218,8 @@ impl GameState {
         }
         // Pay the casualty cost (CR 601.2b additional cost): sacrifice now, so
         // its death triggers go on the stack under the spell.
-        if let Some(c) = self.battlefield_find(sacrifice) {
-            self.died_card_snapshots.insert(sacrifice, c.clone());
+        if let Some(c) = self.dying_snapshot(sacrifice) {
+            self.died_card_snapshots.insert(sacrifice, c);
         }
         let mut events = vec![
             GameEvent::CreatureSacrificed { card_id: sacrifice, who: p },
@@ -2521,8 +2521,8 @@ impl GameState {
         // triggers go on the stack under the spell).
         let mut events = Vec::new();
         for sac in &sacrifices {
-            if let Some(c) = self.battlefield_find(*sac) {
-                self.died_card_snapshots.insert(*sac, c.clone());
+            if let Some(c) = self.dying_snapshot(*sac) {
+                self.died_card_snapshots.insert(*sac, c);
             }
             events.push(GameEvent::CreatureSacrificed { card_id: *sac, who: p });
             events.push(GameEvent::CreatureDied { card_id: *sac });
@@ -2674,8 +2674,8 @@ impl GameState {
             if !ok {
                 return Err(GameError::InvalidTarget);
             }
-            if let Some(c) = self.battlefield_find(sac) {
-                self.died_card_snapshots.insert(sac, c.clone());
+            if let Some(c) = self.dying_snapshot(sac) {
+                self.died_card_snapshots.insert(sac, c);
             }
             events.push(GameEvent::PermanentSacrificed { card_id: sac, who: p });
             let mut die = self.remove_to_graveyard_with_triggers(sac);
@@ -4629,8 +4629,8 @@ impl GameState {
                             sac_power = Some(power);
                         }
                         if is_creature {
-                            if let Some(c) = self.battlefield_find(id) {
-                                self.died_card_snapshots.insert(id, c.clone());
+                            if let Some(c) = self.dying_snapshot(id) {
+                                self.died_card_snapshots.insert(id, c);
                             }
                             events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });

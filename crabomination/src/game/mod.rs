@@ -1274,6 +1274,13 @@ pub struct GameState {
     /// power/toughness read to that one resolution. `#[serde(skip)]`.
     #[serde(skip)]
     pub(crate) resolving_lki_source: Option<CardId>,
+    /// CR 603.10 — the dead *subject* CardId of the leaves-battlefield trigger
+    /// currently resolving (distinct from its source: Jenova's "whenever a
+    /// Mutant you control dies, draw cards equal to its power" reads the dead
+    /// Mutant's LKI power, not Jenova's). Scopes the same LKI read to that
+    /// subject. `#[serde(skip)]`.
+    #[serde(skip)]
+    pub(crate) resolving_lki_subject: Option<CardId>,
     /// Set of permanent CardIds that gained one or more counters during
     /// the current turn. Bumped in `Effect::AddCounter`'s resolver
     /// whenever a permanent gains counters; reset to empty in
@@ -1535,6 +1542,7 @@ impl Clone for GameState {
             auras_at_death: self.auras_at_death.clone(),
             leaves_bf_lki: self.leaves_bf_lki.clone(),
             resolving_lki_source: self.resolving_lki_source,
+            resolving_lki_subject: self.resolving_lki_subject,
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
             ability_resolutions_this_turn: self.ability_resolutions_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
@@ -1676,6 +1684,7 @@ impl GameState {
             auras_at_death: HashMap::new(),
             leaves_bf_lki: HashMap::new(),
             resolving_lki_source: None,
+            resolving_lki_subject: None,
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
             ability_resolutions_this_turn: std::collections::HashMap::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
@@ -5862,6 +5871,40 @@ impl GameState {
         ))
     }
 
+    /// CR 603.10 — a last-known-information snapshot of a battlefield permanent
+    /// that is about to leave (die/sacrifice). Clones the live `CardInstance`
+    /// but stamps its *computed* creature types (layer 4) onto the definition
+    /// so a "whenever a [type] you control dies" trigger reads types the
+    /// creature gained from a continuous effect (Jenova's granted Mutant), not
+    /// just its printed subtypes. Only pays the layer cost when a grant is
+    /// actually present.
+    /// CR 603.10 — the leaves-battlefield LKI snapshot for `cid` if it's the
+    /// object currently being read as LKI (the resolving trigger's source or
+    /// its dead subject) and it's no longer on the battlefield. Backs
+    /// `Value::PowerOf`/`ToughnessOf` reads of a just-died creature.
+    pub(crate) fn lki_snapshot(&self, cid: CardId) -> Option<&CardInstance> {
+        if self.battlefield_find(cid).is_some() {
+            return None;
+        }
+        if self.resolving_lki_source == Some(cid) || self.resolving_lki_subject == Some(cid) {
+            self.leaves_bf_lki.get(&cid)
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
+        let mut snap = self.battlefield.iter().find(|c| c.id == id)?.clone();
+        if let Some(cp) = self.computed_permanent(id) {
+            let printed = &snap.definition.subtypes.creature_types;
+            if cp.subtypes.creature_types.iter().any(|t| !printed.contains(t)) {
+                std::sync::Arc::make_mut(&mut snap.definition).subtypes.creature_types =
+                    cp.subtypes.creature_types.clone();
+            }
+        }
+        Some(snap)
+    }
+
     /// CR 702.16 — true if `target` has protection from any of `source`'s
     /// (computed) colors. Reads both sides through the layer system so granted
     /// protection / color-setting effects count. Backs damage prevention
@@ -9012,6 +9055,18 @@ impl GameState {
         // value. Removed when the trigger resolves (`resolve_stack_item`).
         if let Some(snap) = self.died_card_snapshots.get(&source) {
             self.leaves_bf_lki.insert(source, snap.clone());
+        }
+        // CR 603.10 — likewise stash the dead *subject* (Jenova's dying Mutant)
+        // so "equal to its power" reads its LKI P/T at resolution. Scoped via
+        // `resolving_lki_subject` in `resolve_stack_item`.
+        if let Some(crate::game::effects::EntityRef::Card(sid))
+        | Some(crate::game::effects::EntityRef::Permanent(sid)) = subject
+        {
+            if sid != source {
+                if let Some(snap) = self.died_card_snapshots.get(&sid) {
+                    self.leaves_bf_lki.insert(sid, snap.clone());
+                }
+            }
         }
         // CR 115.1c — an engine-resolved "up to N target" triggered ability
         // (Gavony Silversmith) maximizes its targets: fill slots 1.. with
