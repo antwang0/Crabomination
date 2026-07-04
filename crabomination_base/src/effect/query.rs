@@ -403,7 +403,10 @@ impl Effect {
             Effect::Discover { n, .. } => value_has_target(n),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
-            Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
+            Effect::Search { who, to, .. }
+            | Effect::SearchLibraryOrGraveyard { who, to, .. } => {
+                player_has_target(who) || zonedest_has_target(to)
+            }
             Effect::SearchUpToN { who, to, .. } => {
                 player_has_target(who) || zonedest_has_target(to)
             }
@@ -1319,6 +1322,9 @@ impl Effect {
                     ZoneDest::Hand(_) => "search your library for a card and put it into your hand".into(),
                     _ => "search your library for a card".into(),
                 }
+            }
+            Effect::SearchLibraryOrGraveyard { .. } => {
+                "search your library and/or graveyard for a card".into()
             }
             _ => String::new(),
         }

@@ -9972,28 +9972,53 @@ impl GameState {
                 self.apply_learn_choice(player, choice.clone(), &mut events);
                 Ok(events)
             }
-            PendingEffectState::SearchPending { player, to, eligible } => {
+            PendingEffectState::SearchPending { player, to, eligible, include_graveyard } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = vec![];
                 if let Some(card_id) = chosen_id
                     && eligible.as_ref().is_none_or(|e| e.contains(card_id))
-                    && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
-                    // Grafdigger's Cage — a locked card can't leave the
-                    // library for the battlefield while the lockdown is up.
-                    let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
-                        && self.battlefield_entry_from_zone_blocked(
-                            &self.players[player].library[pos].definition,
-                            crate::card::Zone::Library,
-                        );
-                    if !blocked
-                        && let Some(card) = Self::take_card(&mut self.players[player].library, *card_id)
+                {
+                    // The pick may sit in the library, or (dual-zone search:
+                    // Delivery Moogle) in the graveyard.
+                    let from_zone = if self.players[player].library.iter().any(|c| c.id == *card_id)
                     {
-                        self.place_card_in_dest(card, player, &to, &mut events);
-                        // Surface the found card so a downstream `Selector::LastMoved`
-                        // can inspect its type (Oriq Loremage's "if instant/sorcery").
-                        self.last_moved_cards.push(*card_id);
+                        Some(crate::card::Zone::Library)
+                    } else if include_graveyard
+                        && self.players[player].graveyard.iter().any(|c| c.id == *card_id)
+                    {
+                        Some(crate::card::Zone::Graveyard)
+                    } else {
+                        None
+                    };
+                    if let Some(from_zone) = from_zone {
+                        let is_gy = from_zone == crate::card::Zone::Graveyard;
+                        // Grafdigger's Cage — a locked card can't leave the
+                        // library/graveyard for the battlefield while up.
+                        let src = if is_gy {
+                            &self.players[player].graveyard
+                        } else {
+                            &self.players[player].library
+                        };
+                        let def = src.iter().find(|c| c.id == *card_id).map(|c| c.definition.clone());
+                        let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
+                            && def.as_ref().is_some_and(|d| {
+                                self.battlefield_entry_from_zone_blocked(d, from_zone)
+                            });
+                        let taken = if blocked {
+                            None
+                        } else if is_gy {
+                            Self::take_card(&mut self.players[player].graveyard, *card_id)
+                        } else {
+                            Self::take_card(&mut self.players[player].library, *card_id)
+                        };
+                        if let Some(card) = taken {
+                            self.place_card_in_dest(card, player, &to, &mut events);
+                            // Surface the found card so a downstream `Selector::LastMoved`
+                            // can inspect its type (Oriq Loremage's "if instant/sorcery").
+                            self.last_moved_cards.push(*card_id);
+                        }
                     }
                 }
                 Ok(events)

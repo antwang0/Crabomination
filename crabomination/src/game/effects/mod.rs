@@ -7970,12 +7970,19 @@ impl GameState {
                 self.run_effect(&rest, ctx, events)
             }
 
-            e @ (Effect::Search { .. } | Effect::SearchPickedBy { .. }) => {
+            e @ (Effect::Search { .. }
+            | Effect::SearchPickedBy { .. }
+            | Effect::SearchLibraryOrGraveyard { .. }) => {
                 use crate::decision::Decision;
+                let mut include_graveyard = false;
                 let (who, picker_ref, filter, to) = match e {
                     Effect::Search { who, filter, to } => (who, None, filter, to),
                     Effect::SearchPickedBy { who, picker, filter, to } => {
                         (who, Some(picker), filter, to)
+                    }
+                    Effect::SearchLibraryOrGraveyard { who, filter, to } => {
+                        include_graveyard = true;
+                        (who, None, filter, to)
                     }
                     _ => unreachable!(),
                 };
@@ -8000,13 +8007,23 @@ impl GameState {
                 // (cards are not on the battlefield so battlefield_find would fail).
                 // X-dependent filters concretize against the paid X (Chord of Calling).
                 let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
-                let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
+                let mut candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
                     .take(limit)
                     .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
+                // Dual-zone search also pools the graveyard (Delivery Moogle).
+                if include_graveyard {
+                    candidates.extend(
+                        self.players[p]
+                            .graveyard
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                            .map(|c| (c.id, c.definition.name.to_string())),
+                    );
+                }
 
                 let eligible: Option<Vec<crate::card::CardId>> =
                     Some(candidates.iter().map(|(id, _)| *id).collect());
@@ -8015,8 +8032,12 @@ impl GameState {
                     candidates,
                     eligible: eligible.clone(),
                 };
-                let pending =
-                    PendingEffectState::SearchPending { player: p, to: to.clone(), eligible };
+                let pending = PendingEffectState::SearchPending {
+                    player: p,
+                    to: to.clone(),
+                    eligible,
+                    include_graveyard,
+                };
 
                 if self.players[picker].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

@@ -1154,6 +1154,10 @@ pub enum PendingEffectState {
         /// names" across sequential searches).
         #[serde(default)]
         eligible: Option<Vec<crate::card::CardId>>,
+        /// Dual-zone search (library *and/or* graveyard — Delivery Moogle): when
+        /// true, a pick not found in the library is taken from the graveyard.
+        #[serde(default)]
+        include_graveyard: bool,
     },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },

@@ -2552,6 +2552,11 @@ pub enum Effect {
     Move { what: Selector, to: ZoneDest },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// Search `who`'s library *and/or graveyard* for a card matching `filter`
+    /// and move it to `to` (Delivery Moogle — "search your library and/or
+    /// graveyard for an artifact card …, put it into your hand"). Candidates
+    /// pool both zones; the pick is taken from whichever zone holds it.
+    SearchLibraryOrGraveyard { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// "Search your library for up to `count` cards matching `filter` and put
     /// them into `to`." Resolves as a chain of single `Search` picks (each
     /// reuses the `SearchPending` suspend), shrinking `count` per pick.

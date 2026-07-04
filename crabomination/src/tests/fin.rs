@@ -3164,6 +3164,21 @@ fn jenova_dies_draw_reads_granted_mutant_type() {
     assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 = dead Mutant's power");
 }
 
+/// Delivery Moogle tutors a low-cost artifact from library *or graveyard*.
+#[test]
+fn delivery_moogle_dual_zone_artifact_tutor() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // A cheap artifact sitting in the graveyard, not the library.
+    let relic = g.add_card_to_graveyard(0, catalog::excalibur_ii()); // {1} artifact
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(relic))]));
+    g.move_card_to_battlefield_for_test(0, catalog::delivery_moogle());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == relic),
+        "pulled the artifact out of the graveyard into hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == relic), "left the graveyard");
+}
+
 /// Excalibur II charges on lifegain and grants +1/+1 per charge counter.
 #[test]
 fn excalibur_ii_charges_on_lifegain_and_scales() {

@@ -5469,6 +5469,27 @@ pub fn excalibur_ii() -> CardDefinition {
     }
 }
 
+/// Delivery Moogle — {3}{W} 3/2 Moogle with flying. When it enters, search your
+/// library and/or graveyard for an artifact card with mana value 2 or less and
+/// put it into your hand (shuffle if you searched your library).
+pub fn delivery_moogle() -> CardDefinition {
+    CardDefinition {
+        name: "Delivery Moogle",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moogle], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::SearchLibraryOrGraveyard {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Artifact.and(SelectionRequirement::ManaValueAtMost(2)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Aettir and Priwen — {6} Legendary Equipment. Equipped creature has base power
 /// and toughness X/X, where X is your life total. Equip {5}.
 pub fn aettir_and_priwen() -> CardDefinition {

@@ -85,7 +85,9 @@ Remaining short FIN cards blocked on one primitive each:
   + a `LifeGained` → add-charge trigger. Aettir and Priwen uses the new
   `EquipBonus.set_base_pt_controller_life` (base P/T set to the controller's
   live life total, layer 7b).
-- **Delivery Moogle** — dual-zone (library *and/or* graveyard) tutor.
+- ✅ **Delivery Moogle** — shipped. `Effect::SearchLibraryOrGraveyard` pools
+  candidates from both zones; `SearchPending.include_graveyard` takes the pick
+  from whichever zone holds it.
 - **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
   Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
   to Spree/Escalate.

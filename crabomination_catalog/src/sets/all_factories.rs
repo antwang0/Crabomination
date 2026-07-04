@@ -5599,6 +5599,7 @@ static FIN: &[Factory] = &[
     super::fin::blitzball,
     super::fin::excalibur_ii,
     super::fin::aettir_and_priwen,
+    super::fin::delivery_moogle,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
