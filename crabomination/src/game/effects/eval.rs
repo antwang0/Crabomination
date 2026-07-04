@@ -498,6 +498,16 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::TotalManaValueOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .filter_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32)
+                    }
+                    EntityRef::Player(_) => None,
+                })
+                .sum(),
             Value::HighestManaValueAmong(s) => self
                 .resolve_selector(s, ctx)
                 .into_iter()

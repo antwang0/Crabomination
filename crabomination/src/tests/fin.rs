@@ -3191,6 +3191,30 @@ fn summon_choco_mog_saga_creature_pumps_and_sacrifices() {
     assert!(g.battlefield_find(choco).is_none(), "sacrificed after chapter IV");
 }
 
+/// Summon: Bahamut's Mega Flare (IV) hits each opponent for the total mana value
+/// of your *other* permanents; III draws two.
+#[test]
+fn summon_bahamut_mega_flare_scales_with_board() {
+    let mut g = two_player_game();
+    // Fodder for chapters I/II (hostile destroy auto-targets the opponent).
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Two of our own permanents feed Mega Flare: {1} + {6} = 7 total MV.
+    g.add_card_to_battlefield(0, catalog::excalibur_ii()); // {1}
+    g.add_card_to_battlefield(0, catalog::aettir_and_priwen()); // {6}
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let bahamut = g.add_card_to_battlefield(0, catalog::summon_bahamut());
+    let hand0 = g.players[0].hand.len();
+    let life1 = g.players[1].life;
+    for _ in 0..3 { g.saga_advance(bahamut); drain_stack(&mut g); }
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "chapter III drew two");
+    g.saga_advance(bahamut); // IV — Mega Flare
+    drain_stack(&mut g);
+    // Other permanents: Excalibur II (1) + Aettir and Priwen (6) = 7. Bahamut
+    // itself is excluded (OtherThanSource).
+    assert_eq!(g.players[1].life, life1 - 7, "damage = total MV of other permanents");
+}
+
 /// Summon: G.F. Cerberus chapter II copies your next instant/sorcery.
 #[test]
 fn summon_gf_cerberus_chapter_two_copies_next_spell() {

@@ -324,6 +324,10 @@ pub enum Value {
     /// the land/blue/red cards among `Selector::LastMoved`). Culmination of
     /// Studies.
     CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
+    /// Sum of the mana values of the entities the selector resolves to
+    /// (Summon: Bahamut's IV — "total mana value of other permanents you
+    /// control"). Off-battlefield objects contribute their printed CMC.
+    TotalManaValueOf(Box<Selector>),
     PowerOf(Box<Selector>),
     /// CR 700.18 — the size of the controller's party: the number of distinct
     /// roles (Cleric, Rogue, Warrior, Wizard) among creatures they control,

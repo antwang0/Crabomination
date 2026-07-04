@@ -5504,6 +5504,45 @@ pub fn summon_choco_mog() -> CardDefinition {
     }
 }
 
+/// Summon: Bahamut — {9} Enchantment Creature — Saga Dragon 9/9 with flying.
+/// I, II — destroy up to one target nonland permanent. III — draw two cards.
+/// IV — Mega Flare — deals damage equal to the total mana value of other
+/// permanents you control to each opponent. ("Up to one" is modeled as a
+/// required target, the codebase-wide convention for the printed shape.)
+pub fn summon_bahamut() -> CardDefinition {
+    let destroy_nonland = || Effect::Destroy {
+        what: target_filtered(
+            SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+        ),
+    };
+    CardDefinition {
+        name: "Summon: Bahamut",
+        cost: cost(&[generic(9)]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 9,
+        toughness: 9,
+        keywords: vec![Keyword::Flying],
+        saga_chapters: vec![
+            (1, destroy_nonland()),
+            (2, destroy_nonland()),
+            (3, Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            (4, Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::TotalManaValueOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::OtherThanSource),
+                ))),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Summon: G.F. Cerberus — {2}{R}{R} Enchantment Creature — Saga Dog 3/3.
 /// I — Surveil 1. II — when you next cast an instant or sorcery this turn, copy
 /// it (you may choose new targets). III — copy it twice.
