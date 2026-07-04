@@ -2670,6 +2670,71 @@ pub fn adventurers_inn() -> CardDefinition {
     }
 }
 
+/// Yuna, Hope of Spira — {3}{G}{W} 3/5 Human Cleric. During your turn, Yuna and
+/// enchantment creatures you control have trample, lifelink, and ward {2}. At
+/// the beginning of your end step, return up to one target enchantment card from
+/// your graveyard to the battlefield with a finality counter on it.
+pub fn yuna_hope_of_spira() -> CardDefinition {
+    let ward2 = || Keyword::Ward(WardCost::generic(2));
+    let self_kw = |kw: Keyword| StaticAbility {
+        description: "During your turn, Yuna has this keyword.",
+        effect: StaticEffect::SelfHasKeywordIf {
+            keyword: kw,
+            condition: Predicate::IsTurnOf(PlayerRef::You),
+        },
+    };
+    CardDefinition {
+        name: "Yuna, Hope of Spira",
+        cost: cost(&[generic(3), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        static_abilities: vec![
+            // Yuna herself (she isn't an enchantment creature, so the anthem
+            // filter below wouldn't otherwise reach her).
+            self_kw(Keyword::Trample),
+            self_kw(Keyword::Lifelink),
+            self_kw(ward2()),
+            // Enchantment creatures you control, only on your turn.
+            StaticAbility {
+                description: "During your turn, enchantment creatures you control have trample, lifelink, and ward {2}.",
+                effect: StaticEffect::AnthemForFilter {
+                    filter: SelectionRequirement::HasCardType(CardType::Enchantment)
+                        .and(SelectionRequirement::Creature),
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::Trample, Keyword::Lifelink, ward2()],
+                    opponents: false,
+                    only_your_turn: true,
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::HasCardType(CardType::Enchantment)
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::Finality,
+                    amount: Value::ONE,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Elixir — {1} Artifact. Enters tapped. {5}, {T}, Exile this artifact: Shuffle
 /// all nonland cards from your graveyard into your library. You gain life equal
 /// to the number of cards shuffled into your library this way.
@@ -4751,6 +4816,7 @@ pub fn balthier_and_fran() -> CardDefinition {
                 toughness: 1,
                 keywords: vec![Keyword::Vigilance, Keyword::Reach],
                 opponents: false,
+                only_your_turn: false,
             },
         }],
         ..Default::default()
@@ -5397,6 +5463,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::Menace, Keyword::Lifelink, Keyword::Haste],
                 opponents: false,
+                only_your_turn: false,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

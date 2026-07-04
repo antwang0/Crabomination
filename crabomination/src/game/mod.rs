@@ -5246,11 +5246,16 @@ impl GameState {
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::AnthemForFilter {
-                    filter, power, toughness, keywords, opponents,
+                    filter, power, toughness, keywords, opponents, only_your_turn,
                 } = &sa.effect
                 else {
                     continue;
                 };
+                // "During your turn" anthems switch off outside the controller's
+                // turn (CR 611.2c live re-evaluation).
+                if *only_your_turn && self.active_player_idx != card.controller {
+                    continue;
+                }
                 let seats: Vec<usize> = if *opponents {
                     self.opponents_of(card.controller)
                 } else {

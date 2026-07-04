@@ -92,12 +92,17 @@ Knight // Redeemed Paladin** (`Predicate::PlayerLifeAtMostHalfStarting`, new),
 death rider), **Clash of the Eikons** (choose-one-or-more `ChooseN`),
 **Louisoix's Sacrifice** (`SacrificeOrPay` + counter noncreature spell),
 **Clive's Hideaway** and **Starting Town** (Town lands: Hideaway 4 /
-pay-1-life-any-color). Still-missing single-faced FIN (need a new primitive or
-richer wiring): Elixir (shuffle-nonlands-into-library + gain-life-by-count),
-Eden (mill-then-may-sac-self reflexive return), Chocobo Kick / Vayne's Treachery
-(non-mana Kicker — sac / return-land as the kicked cost), the Summon Sagas
+pay-1-life-any-color), **Elixir** (new `Effect::ShuffleFilteredGraveyardInto
+LibraryGainLife`), and **Yuna, Hope of Spira** (new `AnthemForFilter.
+only_your_turn` turn-gated team anthem + `SelfHasKeywordIf` for herself +
+end-step finality-counter reanimate). Still-missing single-faced FIN (need a
+new primitive or richer wiring): Eden (mill-then-may-sac-self reflexive return —
+wants an `Effect::MaySacrificeSource { then }`), Chocobo Kick / Vayne's
+Treachery (non-mana Kicker — sac / return-land as the kicked cost; wants an
+optional non-mana additional cost that sets the kicked flag), the Summon Sagas
 (Fenrir/Leviathan/Brynhildr — "when you next cast a creature spell" chapter
-riders), Gilgamesh, Vaan, Choco, Random Encounter, Memories Returning.
+riders), Gilgamesh, Vaan, Choco, Random Encounter (put-milled-creatures-onto-
+battlefield), Memories Returning.
 
 Remaining short FIN cards blocked on one primitive each:
 - ✅ **Aettir and Priwen / Excalibur II** — shipped. Excalibur II rides the

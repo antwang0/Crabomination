@@ -4676,3 +4676,41 @@ fn elixir_reshuffles_nonlands_and_gains_life() {
     assert_eq!(g.players[0].graveyard.len(), 1, "the land stayed in the graveyard");
     assert!(g.battlefield_find(elixir).is_none(), "Elixir exiled itself");
 }
+
+/// Yuna grants herself and enchantment creatures trample/lifelink/ward, but only
+/// during her controller's turn (the new `AnthemForFilter.only_your_turn`).
+#[test]
+fn yuna_turn_gated_anthem_and_self_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let yuna = g.add_card_to_battlefield(0, catalog::yuna_hope_of_spira());
+    let ench = g.add_card_to_battlefield(0, catalog::summon_choco_mog()); // enchantment creature
+    // Your turn — Yuna and the enchantment creature are pumped.
+    g.active_player_idx = 0;
+    for id in [yuna, ench] {
+        let cp = g.computed_permanent(id).unwrap();
+        assert!(cp.keywords.contains(&Keyword::Trample), "trample on your turn");
+        assert!(cp.keywords.contains(&Keyword::Lifelink), "lifelink on your turn");
+        assert!(cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "ward on your turn");
+    }
+    // Opponent's turn — the grants switch off.
+    g.active_player_idx = 1;
+    let cp = g.computed_permanent(yuna).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::Trample), "no trample off-turn");
+    let ce = g.computed_permanent(ench).unwrap();
+    assert!(!ce.keywords.contains(&Keyword::Lifelink), "no lifelink off-turn");
+}
+
+/// Yuna's end step reanimates an enchantment card with a finality counter.
+#[test]
+fn yuna_end_step_reanimates_with_finality() {
+    let mut g = two_player_game();
+    let _yuna = g.add_card_to_battlefield(0, catalog::yuna_hope_of_spira());
+    let ench = g.add_card_to_graveyard(0, catalog::summon_choco_mog());
+    let eff = catalog::yuna_hope_of_spira().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(_yuna, 0, Some(Target::Permanent(ench)), 0);
+    ctx.targets = vec![Target::Permanent(ench)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let back = g.battlefield.iter().find(|c| c.id == ench).expect("reanimated to battlefield");
+    assert_eq!(back.counter_count(CounterType::Finality), 1, "entered with a finality counter");
+}

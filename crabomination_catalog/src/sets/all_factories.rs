@@ -5682,6 +5682,7 @@ static FIN: &[Factory] = &[
     super::fin::clives_hideaway,
     super::fin::starting_town,
     super::fin::elixir,
+    super::fin::yuna_hope_of_spira,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

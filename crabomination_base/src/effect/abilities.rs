@@ -857,6 +857,11 @@ pub enum StaticEffect {
         keywords: Vec<Keyword>,
         #[serde(default)]
         opponents: bool,
+        /// "During your turn, [filter] you control have …" — the anthem only
+        /// applies while its controller is the active player (Yuna, Hope of
+        /// Spira). Defaults false (always on) for snapshot back-compat.
+        #[serde(default)]
+        only_your_turn: bool,
     },
     /// "As long as [condition], this has [keyword]" — the self keyword-grant
     /// sibling of `SetBasePtIf` / `PumpSelfIf`, gated on a live `Predicate`

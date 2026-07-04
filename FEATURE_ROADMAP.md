@@ -143,7 +143,11 @@ exercising each) was elided in a compaction pass; recover it from
   Masamune).
 - **Transform-DFC / trigger-gate primitives (modern_decks — FIN, this run):**
   `Predicate::PlayerLifeAtMostHalfStarting` (CR 103.4-relative "life ≤ half your
-  starting total" — Cecil, Dark Knight's flip gate). Kefka, Ruler of Ruin's
+  starting total" — Cecil, Dark Knight's flip gate); `StaticEffect::
+  AnthemForFilter.only_your_turn` (turn-gated team anthem — Yuna, Hope of Spira,
+  who also rides `SelfHasKeywordIf` for herself + an end-step finality-counter
+  reanimate); `Effect::ShuffleFilteredGraveyardIntoLibraryGainLife` (Elixir —
+  reshuffle nonlands + gain life by count). Kefka, Ruler of Ruin's
   "during your turn" `LifeLost`/`OpponentControl` draw trigger rides the
   existing `Predicate::IsTurnOf(You)` via `EventSpec.filter`. Both new FIN
   legends are in-place transformers over the existing `Effect::Transform` +
