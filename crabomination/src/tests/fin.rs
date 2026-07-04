@@ -3782,3 +3782,95 @@ fn weapons_vendor_attaches_equipment() {
     assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(bear),
         "Equipment attached to the creature — both reflexive slots filled");
 }
+
+/// Thunder Magic's Thundara tier ({3}) deals 4 to a target creature; the Tiered
+/// cast folds the chosen mode's cost into the total.
+#[test]
+fn thunder_magic_thundara_tier() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::thunder_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1); // base {R}
+    g.players[0].mana_pool.add_colorless(3); // Thundara {3}
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![1], target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Thundara");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "4 damage killed the 4/4");
+}
+
+/// Fire Magic's Firaga tier ({5}) deals 3 to each creature — a 2/2 dies, a 4/4
+/// lives.
+#[test]
+fn fire_magic_firaga_hits_each_creature() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::fire_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5); // Firaga {5}
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![2], target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Firaga");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(small).is_none(), "2/2 took 3 and died");
+    assert!(g.battlefield_find(big).is_some(), "4/4 survived 3 damage");
+}
+
+/// Ice Magic's Blizzard tier ({0}) returns a creature to its owner's hand.
+#[test]
+fn ice_magic_blizzard_bounces() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::ice_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1); // base {1}{U}, Blizzard {0}
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0], target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Blizzard");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe), "creature bounced to owner's hand");
+}
+
+/// Restoration Magic's Curaga tier ({3}{W}) shields your permanents and gains 6
+/// life.
+#[test]
+fn restoration_magic_curaga_shields_and_gains() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::restoration_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2); // base {W} + Curaga {W}
+    g.players[0].mana_pool.add_colorless(3);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![2], target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Curaga");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 6, "gained 6 life");
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Indestructible),
+        "your creature is indestructible");
+}
+
+/// Tiered enforces choosing exactly one mode (unlike Spree's one-or-more).
+#[test]
+fn tiered_rejects_multiple_modes() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::thunder_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(8);
+    let res = g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0, 1], target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], x_value: None,
+    });
+    assert!(res.is_err(), "choosing two tiers is illegal");
+}

@@ -2717,13 +2717,15 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // The card must be a Spree spell in hand; validate the chosen modes.
-        let mode_count = self.players[p]
+        // The card must be a Spree or Tiered spell in hand; validate the modes.
+        // Tiered (FIN "Choose one additional cost.") allows exactly one mode.
+        let (mode_count, exactly_one) = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| match &c.definition.effect {
-                crate::effect::Effect::Spree { modes } => Some(modes.len()),
+                crate::effect::Effect::Spree { modes } => Some((modes.len(), false)),
+                crate::effect::Effect::Tiered { modes } => Some((modes.len(), true)),
                 _ => None,
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
@@ -2736,7 +2738,7 @@ impl GameState {
             }
         }
         chosen.sort_unstable();
-        if chosen.is_empty() {
+        if chosen.is_empty() || (exactly_one && chosen.len() != 1) {
             return Err(GameError::InvalidTarget);
         }
         self.cast_atomically(|g| {
@@ -4208,9 +4210,11 @@ impl GameState {
         if kicked && let Some(kick) = card.definition.has_kicker() {
             cost.symbols.extend(kick.symbols.iter().cloned());
         }
-        // CR 702.172 — fold each chosen Spree mode's mana cost into the total.
+        // CR 702.172 / FIN Tiered — fold each chosen mode's mana cost into the
+        // total.
         if !spree_modes.is_empty()
-            && let crate::effect::Effect::Spree { modes } = &card.definition.effect
+            && let crate::effect::Effect::Spree { modes } | crate::effect::Effect::Tiered { modes } =
+                &card.definition.effect
         {
             for &i in &spree_modes {
                 if let Some(m) = modes.get(i as usize) {

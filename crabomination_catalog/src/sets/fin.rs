@@ -6117,3 +6117,122 @@ pub fn weapons_vendor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fire Magic — {R} Instant. Tiered (choose one additional cost): Fire {0} —
+/// 1 damage to each creature; Fira {2} — 2 damage; Firaga {5} — 3 damage.
+pub fn fire_magic() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let dmg_each = |n: i32| Effect::ForEach {
+        selector: Selector::EachPermanent(SelectionRequirement::Creature),
+        body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(n) }),
+    };
+    CardDefinition {
+        name: "Fire Magic",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: dmg_each(1) },
+                SpreeMode { cost: cost(&[generic(2)]), effect: dmg_each(2) },
+                SpreeMode { cost: cost(&[generic(5)]), effect: dmg_each(3) },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Thunder Magic — {R} Instant. Tiered: Thunder {0} — 2 damage to target
+/// creature; Thundara {3} — 4 damage; Thundaga {5}{R} — 8 damage.
+pub fn thunder_magic() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let bolt = |n: i32| Effect::DealDamage {
+        to: target_filtered(SelectionRequirement::Creature),
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Thunder Magic",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: bolt(2) },
+                SpreeMode { cost: cost(&[generic(3)]), effect: bolt(4) },
+                SpreeMode { cost: cost(&[generic(5), r()]), effect: bolt(8) },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Ice Magic — {1}{U} Instant. Tiered: Blizzard {0} — return target creature to
+/// its owner's hand; Blizzara {2} — its owner puts it on top or bottom of their
+/// library; Blizzaga {5}{U} — its owner shuffles it into their library.
+pub fn ice_magic() -> CardDefinition {
+    use crate::effect::{LibraryPosition, SpreeMode};
+    let bounce_to = |pos: Option<LibraryPosition>| Effect::Move {
+        what: target_filtered(SelectionRequirement::Creature),
+        to: match pos {
+            None => ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            Some(p) => ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: p },
+        },
+    };
+    CardDefinition {
+        name: "Ice Magic",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: bounce_to(None) },
+                SpreeMode {
+                    cost: cost(&[generic(2)]),
+                    effect: bounce_to(Some(LibraryPosition::OwnerChoice)),
+                },
+                SpreeMode {
+                    cost: cost(&[generic(5), u()]),
+                    effect: bounce_to(Some(LibraryPosition::Shuffled)),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Restoration Magic — {W} Instant. Tiered: Cure {0} — target permanent gains
+/// hexproof and indestructible until end of turn; Cura {1} — same, gain 3 life;
+/// Curaga {3}{W} — permanents you control gain hexproof and indestructible,
+/// gain 6 life.
+pub fn restoration_magic() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let protect = |what: Selector| Effect::Seq(vec![
+        Effect::GrantKeyword { what: what.clone(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+        Effect::GrantKeyword { what, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+    ]);
+    CardDefinition {
+        name: "Restoration Magic",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode {
+                    cost: cost(&[]),
+                    effect: protect(target_filtered(SelectionRequirement::Permanent)),
+                },
+                SpreeMode {
+                    cost: cost(&[generic(1)]),
+                    effect: Effect::Seq(vec![
+                        protect(target_filtered(SelectionRequirement::Permanent)),
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    ]),
+                },
+                SpreeMode {
+                    cost: cost(&[generic(3), w()]),
+                    effect: Effect::Seq(vec![
+                        protect(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(6) },
+                    ]),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}

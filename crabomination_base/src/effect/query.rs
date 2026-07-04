@@ -285,7 +285,7 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             // Spree targets are supplied per chosen mode at cast time and
             // consumed at resolution; no fixed cast-time slot is demanded.
-            Effect::Spree { .. } => false,
+            Effect::Spree { .. } | Effect::Tiered { .. } => false,
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
@@ -1091,6 +1091,7 @@ impl Effect {
                 "choose a land of each basic land type, then destroy those lands".into()
             }
             Effect::Spree { .. } => "spree (choose one or more additional costs)".into(),
+            Effect::Tiered { .. } => "tiered (choose one additional cost)".into(),
             Effect::DestroyNoRegen { .. } => {
                 format!("destroy {} (can't be regenerated)", self.target_phrase())
             }
@@ -1635,7 +1636,7 @@ impl Effect {
                 // `mode` field, so a mode-agnostic slot filter would reject a
                 // single-mode cast of any non-first mode). No cast-time slot
                 // filter is surfaced; see `Effect::Spree`'s resolution arm.
-                Effect::Spree { .. } => None,
+                Effect::Spree { .. } | Effect::Tiered { .. } => None,
                 Effect::MayDo { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),

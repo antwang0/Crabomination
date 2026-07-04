@@ -1908,6 +1908,13 @@ pub enum Effect {
     /// the next target slot (slot 0 = `target`, then `additional_targets`).
     /// Targets are validated at resolution, not cast time.
     Spree { modes: Vec<SpreeMode> },
+    /// FIN "Tiered" (Choose one additional cost.) — a modal spell where the
+    /// caster picks **exactly one** mode, pays that mode's additional mana cost
+    /// at cast time, and runs its effect at resolution. Shares Spree's cast
+    /// plumbing (`GameAction::CastSpellSpree` stamps the single chosen index
+    /// onto `CardInstance.spree_modes`) but the cast validator enforces a
+    /// one-mode selection. Fire/Ice/Thunder/Restoration Magic.
+    Tiered { modes: Vec<SpreeMode> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into

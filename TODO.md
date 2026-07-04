@@ -115,9 +115,14 @@ Remaining short FIN cards blocked on one primitive each:
   a one-shot "your next creature spell's permanent enters with a +1/+1 counter /
   gains haste" primitive; Leviathan II/III want a floating-until-EOT attack
   trigger.
-- **"Tiered" spells** (Fire/Ice/Thunder/Restoration Magic, Limit Breaks) — still
-  want a "choose one additional cost" modal-with-per-mode-cost primitive; not yet
-  mapped to Spree/Escalate.
+- **"Tiered" spells** — `Effect::Tiered { modes: Vec<SpreeMode> }` ships (reuses
+  Spree's `CastSpellSpree` cast plumbing; the cast validator enforces exactly one
+  chosen mode). Fire/Ice/Thunder/Restoration Magic are wired. Remaining: Limit
+  Breaks with a *shared preamble + chosen base P/T* (Vincent's Limit Break — the
+  tier picks a P/T that a common effect then applies) need a "chosen-tier value"
+  read at resolution. Client UX: Tiered cards ride the Spree per-mode picker, so
+  the UI still lets you tick multiple tiers (server rejects) — add a one-mode
+  radio for Tiered.
 
 ## Environment note
 
