@@ -4521,3 +4521,47 @@ pub fn town_greeter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Giott, King of the Dwarves — {R}{W} 1/1 Dwarf Noble with double strike.
+/// Whenever Giott or another Dwarf you control enters, and whenever an Equipment
+/// you control enters, you may discard a card. If you do, draw a card.
+pub fn giott_king_of_the_dwarves() -> CardDefinition {
+    let loot = || Effect::MayDiscard {
+        description: "Discard a card to draw a card?".into(),
+        count: Value::ONE,
+        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        else_: None,
+    };
+    CardDefinition {
+        name: "Giott, King of the Dwarves",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Dwarf),
+                    }),
+                effect: loot(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    }),
+                effect: loot(),
+            },
+        ],
+        ..Default::default()
+    }
+}

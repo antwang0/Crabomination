@@ -2876,3 +2876,23 @@ fn town_greeter_mills_and_takes_a_land() {
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "a land went to hand");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"));
 }
+
+/// Giott loots when a Dwarf you control enters (its own ETB included).
+#[test]
+fn giott_loots_on_dwarf_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    g.add_card_to_library(0, catalog::forest());
+    let giott = g.add_card_to_battlefield(0, catalog::giott_king_of_the_dwarves());
+    let hand0 = g.players[0].hand.len();
+    // Accept the "you may discard" loot.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    // A Dwarf you control (Giott itself) entering fires the loot trigger.
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: giott }]);
+    drain_stack(&mut g);
+    // Discarded one, drew one → net hand unchanged.
+    assert_eq!(g.players[0].hand.len(), hand0, "looted: -1 discard +1 draw");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"), "discarded a card");
+}
