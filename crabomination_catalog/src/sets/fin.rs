@@ -6490,3 +6490,106 @@ pub fn buster_sword() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Absolute Virtue — {6}{W}{U} 8/8 Legendary Avatar Warrior. Can't be countered,
+/// flying, and you have protection from each of your opponents.
+/// (Protection is modeled as controller hexproof — the "can't be targeted by
+/// opponents" half; the damage-prevention half is approximated.)
+pub fn absolute_virtue() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Absolute Virtue",
+        cost: cost(&[generic(6), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "You have protection from each of your opponents.",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Masamune — {3} Legendary Equipment. While the equipped creature is
+/// attacking it has first strike and must be blocked if able. Equip {2}.
+/// ("While attacking" is modeled as "during your turn"; the death-trigger
+/// doubler rider is dropped.)
+pub fn the_masamune() -> CardDefinition {
+    CardDefinition {
+        name: "The Masamune",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            during_your_turn_keywords: vec![Keyword::FirstStrike, Keyword::MustBeBlocked],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dark Knight's Greatsword — {2}{B} Equipment. Job select. Equipped creature
+/// gets +3/+0 and is a Knight in addition to its other types. Equip {3}.
+/// (The printed "Equip—Pay 3 life, once each turn" is approximated as a {3}
+/// generic equip.)
+pub fn dark_knights_greatsword() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Knight's Greatsword",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 0,
+            add_creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Summoner's Grimoire — {3}{G} Book Equipment. Job select. Equipped creature is
+/// a Shaman and, when it attacks, you may put a creature card from your hand
+/// onto the battlefield. Equip {3}.
+/// (The "if it's an enchantment card it enters tapped and attacking" rider is
+/// approximated — the entrant simply enters under your control.)
+pub fn summoners_grimoire() -> CardDefinition {
+    CardDefinition {
+        name: "Summoner's Grimoire",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment, ArtifactSubtype::Book],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            add_creature_types: vec![CreatureType::Shaman],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

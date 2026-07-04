@@ -5628,6 +5628,10 @@ static FIN: &[Factory] = &[
     super::fin::phantom_train,
     super::fin::stuck_in_summoners_sanctum,
     super::fin::buster_sword,
+    super::fin::absolute_virtue,
+    super::fin::the_masamune,
+    super::fin::dark_knights_greatsword,
+    super::fin::summoners_grimoire,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

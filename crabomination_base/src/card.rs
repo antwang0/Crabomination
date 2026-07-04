@@ -216,6 +216,8 @@ pub enum ArtifactSubtype {
     Powerstone,
     // Edge of Eternities: station card (CR 721) and its Lander token.
     Spacecraft, Lander,
+    // Final Fantasy: Book (grimoire equipment).
+    Book,
 }
 
 /// Enchantment subtypes.

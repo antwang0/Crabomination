@@ -4056,3 +4056,69 @@ fn buster_sword_pumps_and_draws() {
     advance_to(&mut g, TurnStep::PostCombatMain);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "combat damage drew a card");
 }
+
+/// Absolute Virtue ships as an 8/8 flyer that can't be countered and grants its
+/// controller hexproof (its protection-from-opponents approximation).
+#[test]
+fn absolute_virtue_shape_and_controller_hexproof() {
+    let mut g = two_player_game();
+    let av = g.add_card_to_battlefield(0, catalog::absolute_virtue());
+    let cp = g.computed_permanent(av).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8));
+    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::CantBeCountered));
+    // The controller gains player hexproof from the static (its protection approx).
+    assert!(g.player_has_static_hexproof(0), "controller has static hexproof");
+}
+
+/// The Masamune grants first strike + must-be-blocked only during your turn.
+#[test]
+fn the_masamune_conditional_combat_keywords() {
+    let mut g = two_player_game();
+    let bearer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::the_masamune());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bearer);
+    g.active_player_idx = 0;
+    let cp = g.computed_permanent(bearer).unwrap();
+    assert!(cp.keywords.contains(&Keyword::FirstStrike) && cp.keywords.contains(&Keyword::MustBeBlocked),
+        "first strike + lure on your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(bearer).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "no bonus on the opponent's turn");
+}
+
+/// Dark Knight's Greatsword's Job select mints a Hero and grants +3/+0 Knight.
+#[test]
+fn dark_knights_greatsword_job_select() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::dark_knights_greatsword());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 1), "1/1 + 3/+0");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Knight));
+}
+
+/// Summoner's Grimoire puts a creature from hand onto the battlefield when the
+/// equipped Hero attacks.
+#[test]
+fn summoners_grimoire_cheats_creature_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::summoners_grimoire());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    let big = g.add_card_to_hand(0, catalog::serra_angel());
+    g.clear_sickness(hero);
+    // Force the optional put-from-hand to pick the Angel.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Cards(vec![big]),
+    ]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_some(), "Angel put onto the battlefield from hand");
+}
