@@ -5608,6 +5608,7 @@ static FIN: &[Factory] = &[
     super::fin::summon_gf_cerberus,
     super::fin::summon_bahamut,
     super::fin::summon_fat_chocobo,
+    super::fin::ether,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

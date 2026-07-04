@@ -5543,6 +5543,41 @@ pub fn summon_bahamut() -> CardDefinition {
     }
 }
 
+/// Ether — {3}{U} Artifact. {T}, Exile this artifact: Add {U}. When you next
+/// cast an instant or sorcery spell this turn, copy that spell (you may choose
+/// new targets for the copy).
+pub fn ether() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ether",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_self_cost: true,
+            effect: Effect::Seq(vec![
+                crate::effect::shortcut::add_mana(vec![Color::Blue]),
+                Effect::OnYourNextSpellCastThisTurn {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        },
+                        then: Box::new(Effect::CopySpellMayChooseTargets {
+                            what: Selector::TriggerSource,
+                            count: Value::ONE,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Summon: Fat Chocobo — {4}{G} Enchantment Creature — Saga Bird 4/4. I — create
 /// a 2/2 green Bird token with a landfall +1/+0. II, III, IV — creatures you
 /// control gain trample until end of turn.

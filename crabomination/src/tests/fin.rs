@@ -3215,6 +3215,31 @@ fn summon_bahamut_mega_flare_scales_with_board() {
     assert_eq!(g.players[1].life, life1 - 7, "damage = total MV of other permanents");
 }
 
+/// Ether adds {U}, exiles itself, and copies your next instant/sorcery.
+#[test]
+fn ether_adds_mana_and_copies_next_spell() {
+    let mut g = two_player_game();
+    let ether = g.add_card_to_battlefield(0, catalog::ether());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ether, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Ether");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Ether"), "Ether exiled itself");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Blue), 1, "added {{U}}");
+    let life1 = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lightning Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 6, "bolt + its Ether copy = 6 damage");
+}
+
 /// Summon: Fat Chocobo makes a Bird on I and grants team trample on II+.
 #[test]
 fn summon_fat_chocobo_bird_and_trample() {
