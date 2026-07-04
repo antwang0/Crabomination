@@ -82,6 +82,17 @@ Remaining short FIN cards blocked on one primitive each:
 - **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
   Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
   to Spree/Escalate.
+- **Fixed-filter anthem static** — "[filter] you control get +X/+X and have
+  [keywords]" (Balthier and Fran → Vehicles; Ardyn → Demons). `AnthemForChosenType`
+  only anthems a *chosen* creature type; a fixed-filter variant would unblock
+  several tribal/permanent-class lords.
+- **Turn-gated keyword grant** — "During your turn, [source] has flying"
+  (Freya Crescent's Jump, Cloud/Planet's Champion). Needs a predicate-gated
+  `GrantKeyword` static (`IsControllerTurn`).
+- **Ardyn / Sin / Jenova** — begin-combat "exile a card from a graveyard, create
+  a token copy of it (except it's a 5/5 Demon / tapped / …)": a
+  `CreateTokenCopyOf` whose `source` is a just-exiled graveyard target, with a
+  color override on the copy.
 
 ## Environment note
 
