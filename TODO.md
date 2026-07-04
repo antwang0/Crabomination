@@ -123,6 +123,26 @@ Remaining short FIN cards blocked on one primitive each:
   read at resolution. Client UX: Tiered cards ride the Spree per-mode picker, so
   the UI still lets you tick multiple tiers (server rejects) — add a one-mode
   radio for Tiered.
+- **FIN primitives still wanted (noticed this run, deferred):**
+  - *Free-cast-from-hand by mana value* — "you may cast a spell from your hand
+    with mana value ≤ N without paying its cost" (Buster Sword's combat rider;
+    dropped there — it currently just draws).
+  - *Cross-player impulse* — "exile the top card of *that player's* library, you
+    may play it" gated on a sacrifice (Reno and Rude, Vaan, Street Thief). Needs
+    `ExileTopAndGrantMayPlay`-style with `who: Target(player)` + a sac gate.
+  - *Kicker with a non-mana cost* — "Kicker—Sacrifice/Return a land" (Vayne's
+    Treachery sac-kicker, Chocobo Kick return-land kicker). Only mana kicker ships.
+  - *Source deals its power to each other creature* (Nibelheim Aflame,
+    Chandra's-Ignition shape) — no such effect yet.
+  - *Dig-and-put-a-land* — "look at the top N, put a land onto the battlefield
+    tapped, rest to bottom in a random order" (Ignis Scientia ETB).
+  - *Token-creation replacement that adds a token* — "if a token would be created,
+    that token plus a Frog is created instead" (Quina, Qu Gourmet).
+  - *Mill "+N" replacement* — The Water Crystal's "mill that many plus four" is
+    approximated by `OpponentMillDoubled`; a flat-`+N` opponent-mill replacement
+    would be exact.
+  - *Extra combat phase gated on "first combat phase this turn"* — Genji Glove
+    is deferred: an ungated extra-combat trigger loops.
 
 ## Environment note
 
