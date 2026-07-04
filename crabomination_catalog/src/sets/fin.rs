@@ -6811,3 +6811,152 @@ pub fn genji_glove() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ultima — {3}{W}{W} sorcery. Destroy all artifacts and creatures, then end
+/// the turn (CR 728).
+pub fn ultima() -> CardDefinition {
+    CardDefinition {
+        name: "Ultima",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+            },
+            Effect::EndTheTurn,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Summon: Knights of Round — {6}{W}{W} Saga Knight 3/3, indestructible.
+/// I–IV: create three 2/2 white Knight tokens. V (Ultimate End): other creatures
+/// you control get +2/+2 and gain an indestructible counter.
+pub fn summon_knights_of_round() -> CardDefinition {
+    let knight = || TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        ..Default::default()
+    };
+    let make_three = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(3),
+        definition: knight(),
+    };
+    let others = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )
+    };
+    CardDefinition {
+        name: "Summon: Knights of Round",
+        cost: cost(&[generic(6), w(), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Indestructible],
+        saga_chapters: vec![
+            (1, make_three()),
+            (2, make_three()),
+            (3, make_three()),
+            (4, make_three()),
+            (5, Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: others(),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AddCounter {
+                    what: others(),
+                    kind: CounterType::Indestructible,
+                    amount: Value::ONE,
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Lunar Whale — {3}{U} Legendary Vehicle 3/5, flying, crew 1. Whenever it
+/// attacks you may play the top card of your library for the rest of the turn.
+/// (The always-on "look at your top card" is cosmetic and omitted.)
+pub fn the_lunar_whale() -> CardDefinition {
+    CardDefinition {
+        name: "The Lunar Whale",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Crew(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantPlayFromTopThisTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tellah, Great Sage — {3}{U}{R} 3/3 Human Wizard. Whenever you cast a
+/// noncreature spell, create a 1/1 Hero. If 4+ mana was spent, draw two; if 8+
+/// mana was spent, sacrifice Tellah and it deals that much to each opponent.
+pub fn tellah_great_sage() -> CardDefinition {
+    CardDefinition {
+        name: "Tellah, Great Sage",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: hero_token(),
+                },
+                Effect::If {
+                    cond: Predicate::CastSpellManaSpentAtLeast(4),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::CastSpellManaSpentAtLeast(8),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::SacrificeSource,
+                        Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::CastSpellManaSpent,
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

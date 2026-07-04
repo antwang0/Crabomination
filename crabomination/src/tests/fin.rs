@@ -4256,3 +4256,77 @@ fn genji_glove_grants_one_extra_combat() {
     advance_to(&mut g, TurnStep::PostCombatMain);
     assert_eq!(g.players[1].life, start - 8, "double strike 4 dmg × two combats");
 }
+
+/// Ultima wipes every artifact and creature but spares lands.
+#[test]
+fn ultima_wipes_artifacts_and_creatures() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let art = g.add_card_to_battlefield(0, catalog::phoenix_down()); // Artifact
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let eff = catalog::ultima().effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(c1).is_none() && g.battlefield_find(c2).is_none(), "creatures gone");
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(land).is_some(), "land survives");
+}
+
+/// Summon: Knights of Round makes three Knights per early chapter and its finale
+/// buffs and shields the rest of the team.
+#[test]
+fn summon_knights_of_round_tokens_then_finale() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let saga = g.add_card_to_battlefield(0, catalog::summon_knights_of_round());
+    g.saga_advance(saga); // I
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Knight").count(),
+        3,
+        "chapter I made three Knights"
+    );
+    for _ in 0..4 { g.saga_advance(saga); drain_stack(&mut g); } // II, III, IV, V
+    let cp = g.computed_permanent(ally).unwrap();
+    assert_eq!(cp.power, 4, "finale gave +2/+2");
+    assert!(
+        g.battlefield_find(ally).unwrap().counter_count(CounterType::Indestructible) >= 1,
+        "finale added an indestructible counter"
+    );
+}
+
+/// The Lunar Whale lets you play off the top for the rest of the turn once it
+/// attacks.
+#[test]
+fn the_lunar_whale_unlocks_top_of_library_on_attack() {
+    let mut g = two_player_game();
+    let whale = g.add_card_to_battlefield(0, catalog::the_lunar_whale());
+    assert!(!g.players[0].play_from_top_this_turn, "off by default");
+    let eff = catalog::the_lunar_whale().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(whale, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.players[0].play_from_top_this_turn, "attack unlocked top-of-library");
+}
+
+/// Tellah spawns a Hero on any noncreature cast; big-mana casts add draws and,
+/// past 8 mana, sacrifice him for a burst to each opponent.
+#[test]
+fn tellah_scales_with_mana_spent() {
+    let mut g = two_player_game();
+    let tellah = g.add_card_to_battlefield(0, catalog::tellah_great_sage());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let eff = catalog::tellah_great_sage().triggered_abilities[0].effect.clone();
+    // 8+ mana spent: Hero token, +2 draws, sac Tellah, burn each opponent.
+    let hand0 = g.players[0].hand.len();
+    let life1 = g.players[1].life;
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(tellah, 0, None, 0);
+    ctx.mana_spent = 8;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Hero"), "made a Hero");
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two at 4+ mana");
+    assert!(g.battlefield_find(tellah).is_none(), "sacrificed at 8+ mana");
+    assert_eq!(g.players[1].life, life1 - 8, "dealt 8 to the opponent");
+}
