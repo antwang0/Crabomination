@@ -936,11 +936,6 @@ pub enum Predicate {
     /// werewolf "transform back" check. Backed by
     /// `GameState.spells_cast_last_turn >= 2`.
     TwoOrMoreSpellsCastLastTurn,
-    /// True during the turn of the context's controller ("during your turn").
-    /// Gates triggers/effects on the active player being the source's
-    /// controller — Kefka, Ruler of Ruin's "whenever an opponent loses life
-    /// during your turn".
-    ControllersTurn,
     /// At least `at_least` creatures controlled by `who` died this turn.
     /// Backed by `Player.creatures_died_this_turn` (bumped from the SBA
     /// dies handler and `remove_to_graveyard_with_triggers`). Used by
@@ -2627,6 +2622,14 @@ pub enum Effect {
     ReturnRandomFromGraveyard { who: PlayerRef, filter: SelectionRequirement, count: Value },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
+    /// Shuffle every card matching `filter` from `who`'s graveyard into their
+    /// library, then that player gains life equal to the number shuffled this
+    /// way (Elixir — "shuffle all nonland cards … gain life equal to the number
+    /// of cards shuffled").
+    ShuffleFilteredGraveyardIntoLibraryGainLife {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+    },
     /// Shuffle `who`'s hand and graveyard into their library (Day's
     /// Undoing, Timetwister).
     ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef },

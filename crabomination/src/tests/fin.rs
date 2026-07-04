@@ -4579,8 +4579,8 @@ fn kefka_eight_mana_edicts_and_transforms() {
 }
 
 /// CR 603.2 — Kefka, Ruler of Ruin's life-loss trigger honors its "during your
-/// turn" gate (the new `Predicate::ControllersTurn`): it fires when an opponent
-/// loses life on your turn and stays silent on theirs.
+/// turn" gate (`Predicate::IsTurnOf(You)` on the `EventSpec` filter): it fires
+/// when an opponent loses life on your turn and stays silent on theirs.
 #[test]
 fn kefka_back_trigger_gated_to_your_turn() {
     let back = *catalog::kefka_court_mage().back_face.clone().unwrap();
@@ -4652,4 +4652,27 @@ fn cr_712_9_transform_keeps_counters() {
     assert_eq!(inst.counter_count(CounterType::PlusOnePlusOne), 1, "counter survived the flip");
     let cp = g.computed_permanent(cecil).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 back face + a +1/+1 counter");
+}
+
+/// Elixir shuffles only nonland cards from your graveyard back and gains you
+/// life equal to the number returned.
+#[test]
+fn elixir_reshuffles_nonlands_and_gains_life() {
+    let mut g = two_player_game();
+    let elixir = g.add_card_to_battlefield(0, catalog::elixir());
+    // Graveyard: two nonland cards + one land.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let life0 = g.players[0].life;
+    let lib0 = g.players[0].library.len();
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elixir, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("{5},{T},exile: reshuffle nonlands");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2, "gained 2 for the 2 nonlands");
+    assert_eq!(g.players[0].library.len(), lib0 + 2, "two nonlands shuffled in");
+    assert_eq!(g.players[0].graveyard.len(), 1, "the land stayed in the graveyard");
+    assert!(g.battlefield_find(elixir).is_none(), "Elixir exiled itself");
 }

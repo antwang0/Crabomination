@@ -5681,6 +5681,7 @@ static FIN: &[Factory] = &[
     super::fin::kefka_court_mage,
     super::fin::clives_hideaway,
     super::fin::starting_town,
+    super::fin::elixir,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

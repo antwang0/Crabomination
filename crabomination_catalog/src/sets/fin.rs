@@ -2670,6 +2670,33 @@ pub fn adventurers_inn() -> CardDefinition {
     }
 }
 
+/// Elixir — {1} Artifact. Enters tapped. {5}, {T}, Exile this artifact: Shuffle
+/// all nonland cards from your graveyard into your library. You gain life equal
+/// to the number of cards shuffled into your library this way.
+pub fn elixir() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Elixir",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_self_cost: true,
+            mana_cost: cost(&[generic(5)]),
+            effect: Effect::ShuffleFilteredGraveyardIntoLibraryGainLife {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Nonland,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Clive's Hideaway — Land — Town. Hideaway 4. {T}: Add {C}. {2}, {T}: You may
 /// play the exiled card without paying its mana cost if you control four or more
 /// legendary creatures.
@@ -7432,7 +7459,7 @@ pub fn kefka_court_mage() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                filter: Some(Predicate::ControllersTurn),
+                filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 ..EventSpec::new(EventKind::LifeLost, EventScope::OpponentControl)
             },
             effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },

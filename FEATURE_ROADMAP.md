@@ -143,9 +143,9 @@ exercising each) was elided in a compaction pass; recover it from
   Masamune).
 - **Transform-DFC / trigger-gate primitives (modern_decks — FIN, this run):**
   `Predicate::PlayerLifeAtMostHalfStarting` (CR 103.4-relative "life ≤ half your
-  starting total" — Cecil, Dark Knight's flip gate) and `Predicate::
-  ControllersTurn` ("during your turn" — Kefka, Ruler of Ruin's `LifeLost`/
-  `OpponentControl` draw trigger; reusable via `EventSpec.filter`). Both new FIN
+  starting total" — Cecil, Dark Knight's flip gate). Kefka, Ruler of Ruin's
+  "during your turn" `LifeLost`/`OpponentControl` draw trigger rides the
+  existing `Predicate::IsTurnOf(You)` via `EventSpec.filter`. Both new FIN
   legends are in-place transformers over the existing `Effect::Transform` +
   `back_face`. Bot: `sacrifice_keep_value` ranks tokens below every real card so
   a forced edict gives up a spare token before a land. Client oracle panel:

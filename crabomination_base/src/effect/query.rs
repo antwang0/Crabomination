@@ -424,7 +424,10 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::ShuffleGraveyardIntoLibrary { who }
-            | Effect::ShuffleHandAndGraveyardIntoLibrary { who } => player_has_target(who),
+            | Effect::ShuffleHandAndGraveyardIntoLibrary { who }
+            | Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, .. } => {
+                player_has_target(who)
+            }
             Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),

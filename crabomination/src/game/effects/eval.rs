@@ -1042,10 +1042,6 @@ impl GameState {
             }
             Predicate::NoSpellsCastLastTurn => self.spells_cast_last_turn == 0,
             Predicate::TwoOrMoreSpellsCastLastTurn => self.spells_cast_last_turn >= 2,
-            Predicate::ControllersTurn => self
-                .resolve_player(&crate::effect::PlayerRef::You, ctx)
-                .map(|p| p == self.active_player_idx)
-                .unwrap_or(false),
             Predicate::CreaturesDiedThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

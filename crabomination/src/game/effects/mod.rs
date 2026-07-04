@@ -9117,6 +9117,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, filter } => {
+                use rand::seq::SliceRandom;
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let gy = std::mem::take(&mut self.players[p].graveyard);
+                    let (matched, kept): (Vec<_>, Vec<_>) = gy
+                        .into_iter()
+                        .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
+                    let moved = matched.len() as i32;
+                    self.players[p].graveyard = kept;
+                    self.players[p].library.extend(matched);
+                    self.players[p].library.shuffle(&mut rand::rng());
+                    if moved > 0 {
+                        let applied = self.adjust_life_applied(p, moved);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+                        } else if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ShuffleHandAndGraveyardIntoLibrary { who } => {
                 use rand::seq::SliceRandom;
                 for p in self.resolve_players(who, ctx) {

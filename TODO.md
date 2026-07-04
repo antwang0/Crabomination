@@ -39,7 +39,7 @@ Deferred FIN cards wanting primitives not yet built:
   **Kefka (Court Mage // Ruler of Ruin)** ship: both are in-place transformers
   (`Effect::Transform { This }` + `back_face`), so they needed no new zone-hop
   primitive. Cecil rides the new `Predicate::PlayerLifeAtMostHalfStarting`;
-  Kefka's back rides the new `Predicate::ControllersTurn` ("during your turn")
+  Kefka's back rides the existing `Predicate::IsTurnOf(You)` ("during your turn")
   over a `LifeLost`/`OpponentControl` trigger. Still deferred: Terra (Trance
   Saga), Clive (Ifrit) and Garland (Chaos) — those transform via an
   *activated/triggered exile-and-return-transformed* from graveyard/battlefield,
@@ -87,7 +87,7 @@ mana).
 
 Transform-DFC + short-card batch (modern_decks, this run): **Cecil, Dark
 Knight // Redeemed Paladin** (`Predicate::PlayerLifeAtMostHalfStarting`, new),
-**Kefka, Court Mage // Ruler of Ruin** (`Predicate::ControllersTurn`, new —
+**Kefka, Court Mage // Ruler of Ruin** (`Predicate::IsTurnOf(You)` —
 "during your turn" trigger gate), **Galuf's Final Act** (`GrantTriggeredAbility`
 death rider), **Clash of the Eikons** (choose-one-or-more `ChooseN`),
 **Louisoix's Sacrifice** (`SacrificeOrPay` + counter noncreature spell),
