@@ -186,6 +186,13 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Can't attack or block unless it has an even number of counters on it"
         // (Sab-Sunen) — a live combat gate that flips as counters change.
         CantAttackOrBlockUnlessEvenCounters => "Even?",
+        // Upkeep obligations & count-down timers change how long a permanent
+        // sticks around — a real board read for both players (the remaining
+        // count rides the counter coins; these tags flag the mechanic).
+        Echo(_) => "Echo",
+        CumulativeUpkeep(_) => "CmUp",
+        Fading(_) => "Fade",
+        Vanishing(_) => "Vanish",
         _ => return None,
     })
 }
@@ -440,6 +447,14 @@ mod tests {
     fn strip_surfaces_must_attack_and_crew() {
         assert_eq!(keyword_strip(&[Keyword::MustAttack]), "Atk!");
         assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
+    }
+
+    #[test]
+    fn strip_surfaces_upkeep_and_countdown_obligations() {
+        use crabomination::mana::cost;
+        assert_eq!(keyword_strip(&[Keyword::Echo(cost(&[]))]), "Echo");
+        assert_eq!(keyword_strip(&[Keyword::Fading(3)]), "Fade");
+        assert_eq!(keyword_strip(&[Keyword::Vanishing(2)]), "Vanish");
     }
 
     #[test]
