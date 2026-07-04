@@ -94,7 +94,13 @@ drain). New engine work this batch: `StaticEffect::PumpTeamByControlledPermanent
 Warrior of Light), Warrior's legendary-cast impulse via `RevealUntilFind` +
 `ManaValueLessThanEventAmount`, and `DealDamageEqualToPower` now reads
 last-known power when the source was sacrificed as a cost (CR 608.2h — Blazing
-Bomb). Deferred FIN cards needing more primitives are logged in TODO.md.
+Bomb). A later wave added `Effect::DealDamageEqualToPowerToEach` (Nibelheim
+Aflame; `each_opponent` → Chandra's Ignition), `Effect::DigForLandToBattlefield`
+(Ignis Scientia), the first-combat/end-step gates
+(`Predicate::IsFirst{CombatPhase,EndStep}ThisTurn` + `Effect::AdditionalEndStep`
+— Genji Glove, Y'shtola Rhul), and rideable legends (Ultima, Summon: Knights of
+Round, The Lunar Whale, Tellah, Ragnarok, Omega, Beatrix, Kain). Deferred FIN
+cards needing more primitives are logged in TODO.md.
 
 `catalog::sets::decks::recent8` is an eighth staples wave (tests in
 `tests/recent8.rs`) built around three brand-new keyword actions:
