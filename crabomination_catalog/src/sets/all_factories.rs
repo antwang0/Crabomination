@@ -5587,6 +5587,7 @@ static FIN: &[Factory] = &[
     super::fin::magitek_scythe,
     super::fin::ardyn_the_usurper,
     super::fin::jenova_ancient_calamity,
+    super::fin::cloud_planets_champion,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

@@ -2965,6 +2965,27 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Cloud gains double strike + indestructible only while equipped on your turn.
+#[test]
+fn cloud_planets_champion_conditional_keywords() {
+    let mut g = two_player_game();
+    let cloud = g.add_card_to_battlefield(0, catalog::cloud_planets_champion());
+    g.active_player_idx = 0;
+    // Unequipped: no grant even on your turn.
+    let cp = g.computed_permanent(cloud).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::DoubleStrike), "no double strike unequipped");
+    // Equip a Bonesplitter.
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(cloud);
+    let cp = g.computed_permanent(cloud).unwrap();
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "double strike while equipped");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible while equipped");
+    // Opponent's turn: no grant even while equipped.
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(cloud).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "no grant on opponent's turn");
+}
+
 /// Jenova's begin-combat buff adds +power counters to a target creature and
 /// makes it a Mutant in addition to its other types (CR 205.1b / 613.4).
 #[test]

@@ -4826,6 +4826,52 @@ pub fn dragoons_lance() -> CardDefinition {
     }
 }
 
+/// Cloud, Planet's Champion — {3}{R}{W} 4/4 Human Soldier Mercenary. During your
+/// turn, while equipped, Cloud has double strike and indestructible. Equip
+/// abilities you activate cost {2} less. (The reduction is modeled as applying to
+/// all your equips, not just those targeting Cloud.)
+pub fn cloud_planets_champion() -> CardDefinition {
+    let equipped_this_turn = || Predicate::All(vec![
+        Predicate::IsTurnOf(PlayerRef::You),
+        Predicate::SourceIsEquipped,
+    ]);
+    CardDefinition {
+        name: "Cloud, Planet's Champion",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human, CreatureType::Soldier, CreatureType::Mercenary,
+            ],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, while equipped, Cloud has double strike.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::DoubleStrike,
+                    condition: equipped_this_turn(),
+                },
+            },
+            StaticAbility {
+                description: "During your turn, while equipped, Cloud has indestructible.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::Indestructible,
+                    condition: equipped_this_turn(),
+                },
+            },
+            StaticAbility {
+                description: "Equip abilities you activate that target Cloud cost {2} less.",
+                effect: StaticEffect::EquipCostReduction { amount: 2 },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Jenova, Ancient Calamity — {2}{B}{G} 1/5 Alien. At the beginning of combat on
 /// your turn, put +1/+1 counters equal to Jenova's power on up to one other
 /// target creature; it becomes a Mutant. Whenever a Mutant you control dies
