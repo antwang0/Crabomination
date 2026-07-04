@@ -3674,3 +3674,111 @@ fn dragoons_lance_flying_only_on_your_turn() {
     assert!(g.computed_permanent(hero).unwrap().subtypes.creature_types
         .contains(&crate::card::CreatureType::Knight), "is a Knight");
 }
+
+/// Summon: Shiva taps opponents' creatures with stun counters (I, II), then
+/// draws a card per tapped opposing creature (III).
+#[test]
+fn summon_shiva_stuns_then_draws() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let shiva = g.add_card_to_battlefield(0, catalog::summon_shiva());
+    let hand0 = g.players[0].hand.len();
+    g.saga_advance(shiva); // I — Heavenly Strike
+    drain_stack(&mut g);
+    g.saga_advance(shiva); // II — Heavenly Strike
+    drain_stack(&mut g);
+    let tapped = [a, b].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count();
+    assert!(tapped >= 1, "at least one opposing creature tapped with a stun counter");
+    assert!([a, b].iter().any(|id|
+        g.battlefield_find(*id).unwrap().counter_count(CounterType::Stun) >= 1));
+    g.saga_advance(shiva); // III — Diamond Dust
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + tapped, "drew one per tapped foe");
+}
+
+/// Summon: Titan returns all land cards from the graveyard to the battlefield
+/// tapped (II).
+#[test]
+fn summon_titan_reclaims_lands() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); } // mill fodder
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let lands0 = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .count();
+    let titan = g.add_card_to_battlefield(0, catalog::summon_titan());
+    g.saga_advance(titan); // I — mill five
+    drain_stack(&mut g);
+    g.saga_advance(titan); // II — reclaim lands
+    drain_stack(&mut g);
+    let lands1 = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land())
+        .collect::<Vec<_>>();
+    assert_eq!(lands1.len(), lands0 + 2, "two forests returned from graveyard");
+    assert!(lands1.iter().all(|c| c.tapped), "returned lands enter tapped");
+}
+
+/// Summon: Primal Garuda's Aerial Blast (I) deals 4 to a tapped opposing
+/// creature, killing a 2/2.
+#[test]
+fn summon_primal_garuda_aerial_blast() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let garuda = g.add_card_to_battlefield(0, catalog::summon_primal_garuda());
+    g.saga_advance(garuda); // I — Aerial Blast
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "tapped foe took 4 and died");
+}
+
+/// Summon: Primal Odin grants itself Zantetsuken (II) — its combat damage to a
+/// player makes that player lose the game.
+#[test]
+fn summon_primal_odin_zantetsuken() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // chapter I destroys it
+    let odin = g.add_card_to_battlefield(0, catalog::summon_primal_odin());
+    g.saga_advance(odin); // I — Gungnir
+    drain_stack(&mut g);
+    g.saga_advance(odin); // II — Zantetsuken (grant)
+    drain_stack(&mut g);
+    g.clear_sickness(odin);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: odin, target: AttackTarget::Player(1),
+    }])).expect("Odin attacks");
+    // Pass through combat damage; the elimination ends the game, so stop as
+    // soon as the seat loses (further priority passes would error).
+    while !g.players[1].eliminated && g.step != TurnStep::PostCombatMain {
+        if g.perform_action(GameAction::PassPriority).is_err() { break; }
+    }
+    assert!(g.players[1].eliminated, "combat damage from Odin made the player lose");
+}
+
+/// Weapons Vendor's begin-combat reflexive attaches an Equipment you control to
+/// a creature you control — both target slots auto-fill.
+#[test]
+fn weapons_vendor_attaches_equipment() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island()); // ETB draw
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::weapons_vendor());
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    advance_to(&mut g, TurnStep::BeginCombat);
+    // Mana empties at each step boundary, so float the {1} after entering combat
+    // (the trigger is already on the stack).
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(bear),
+        "Equipment attached to the creature — both reflexive slots filled");
+}

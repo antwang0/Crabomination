@@ -5882,3 +5882,238 @@ pub fn aettir_and_priwen() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Summon: Shiva — {3}{U}{U} Enchantment Creature — Saga Elemental 4/5.
+/// I, II — tap target creature an opponent controls and put a stun counter on
+/// it. III — draw a card for each tapped creature your opponents control.
+pub fn summon_shiva() -> CardDefinition {
+    let heavenly_strike = || Effect::Seq(vec![
+        Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+    ]);
+    CardDefinition {
+        name: "Summon: Shiva",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        saga_chapters: vec![
+            (1, heavenly_strike()),
+            (2, heavenly_strike()),
+            (3, Effect::Draw {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Tapped)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                )),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Summon: Titan — {3}{G}{G} Enchantment Creature — Saga Giant 7/7, reach and
+/// trample. I — mill five. II — return all land cards from your graveyard to
+/// the battlefield tapped. III — another target creature you control gains
+/// trample and gets +X/+X, where X is the number of lands you control.
+pub fn summon_titan() -> CardDefinition {
+    let lands_you_control = || Value::count(Selector::EachPermanent(
+        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+    ));
+    CardDefinition {
+        name: "Summon: Titan",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        saga_chapters: vec![
+            (1, Effect::Mill { who: Selector::You, amount: Value::Const(5) }),
+            (2, Effect::Move {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Land,
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+            (3, Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: lands_you_control(),
+                    toughness: lands_you_control(),
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Summon: Primal Garuda — {3}{W} Enchantment Creature — Saga Harpy 3/3, flying.
+/// I — deal 4 damage to target tapped creature an opponent controls. II, III —
+/// another target creature you control gets +1/+0 and gains flying until end of
+/// turn.
+pub fn summon_primal_garuda() -> CardDefinition {
+    let slipstream = || Effect::Seq(vec![
+        Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            power: Value::ONE,
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        },
+        Effect::GrantKeyword {
+            what: Selector::Target(0),
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        },
+    ]);
+    CardDefinition {
+        name: "Summon: Primal Garuda",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Harpy],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        saga_chapters: vec![
+            (1, Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Tapped)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(4),
+            }),
+            (2, slipstream()),
+            (3, slipstream()),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Summon: Primal Odin — {4}{B}{B} Enchantment Creature — Saga Knight 5/3.
+/// I — destroy target creature an opponent controls. II — gains "Whenever this
+/// creature deals combat damage to a player, that player loses the game." III —
+/// draw two cards; each player loses 2 life.
+pub fn summon_primal_odin() -> CardDefinition {
+    let zantetsuken = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::LoseGame { who: PlayerRef::Target(0) },
+    };
+    CardDefinition {
+        name: "Summon: Primal Odin",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        saga_chapters: vec![
+            (1, Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+            (2, Effect::GrantTriggeredAbility {
+                what: Selector::This,
+                trigger: Box::new(zantetsuken),
+                duration: Duration::Permanent,
+            }),
+            (3, Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Weapons Vendor — {3}{W} 2/2 Human Artificer. When it enters, draw a card. At
+/// the beginning of combat on your turn, if you control an Equipment, you may
+/// pay {1}. When you do, attach target Equipment you control to target creature
+/// you control.
+pub fn weapons_vendor() -> CardDefinition {
+    CardDefinition {
+        name: "Weapons Vendor",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                }),
+                effect: Effect::MayPay {
+                    description: "Pay {1} to attach an Equipment you control".into(),
+                    mana_cost: cost(&[generic(1)]),
+                    body: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::Attach {
+                            what: Selector::TargetFiltered {
+                                slot: 0,
+                                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                                    .and(SelectionRequirement::ControlledByYou),
+                            },
+                            to: Selector::TargetFiltered {
+                                slot: 1,
+                                filter: SelectionRequirement::Creature
+                                    .and(SelectionRequirement::ControlledByYou),
+                            },
+                        }),
+                    }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

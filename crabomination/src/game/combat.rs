@@ -2391,12 +2391,20 @@ impl GameState {
             .find(|c| c.id == source)
             .map(|c| {
                 // Printed + statics-granted ("Slivers you control have
-                // '…combat damage…'" — Tempered/Virulent) fire alike.
+                // '…combat damage…'" — Tempered/Virulent) + instance-granted
+                // (`GrantTriggeredAbility` on `granted_triggers_eot` — Summon:
+                // Primal Odin's Zantetsuken) fire alike.
                 let static_granted = self.statics_granted_triggers_for(c);
+                let instance_granted: &[crate::card::TriggeredAbility] = self
+                    .granted_triggers_eot
+                    .get(&c.id)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]);
                 c.definition
                     .triggered_abilities
                     .iter()
                     .chain(static_granted.iter())
+                    .chain(instance_granted.iter())
                     .filter(|t| {
                         t.event.kind == kind
                             && matches!(

@@ -107,21 +107,17 @@ Remaining short FIN cards blocked on one primitive each:
   their own override riders (tapped-entry, per-card color/type).
 - **FIN "Summon:" Saga-creature cycle** — the engine handles Enchantment
   Creature — Saga bodies (chapters fire; CR 714 sacrifices after the last
-  chapter). Shipped: Choco/Mog, G.F. Ifrit, Anima, Esper Ramuh. Remaining, each
-  a straight saga_chapters build: Bahamut ({9} 9/9 fly — needs a Value for
-  "total mana value of other permanents you control"), Fat Chocobo (token w/
-  granted landfall ability), Fenrir (search + next-creature-counter + top-power
-  draw), G.F. Cerberus (surveil + copy-next-spell), Brynhildr (impulse + gestalt
-  haste), Choco/Mog done. Most reuse existing effects.
+  chapter). Shipped: Choco/Mog, G.F. Ifrit, Anima, Esper Ramuh, Bahamut, Fat
+  Chocobo, G.F. Cerberus, Shiva, Titan, Primal Garuda, Primal Odin. Remaining,
+  each a straight saga_chapters build: Fenrir (search + next-creature-counter +
+  top-power draw), Brynhildr (impulse + gestalt haste), Leviathan (mass bounce +
+  delayed "whenever [type] attacks, draw"). Fenrir/Brynhildr chapter II each want
+  a one-shot "your next creature spell's permanent enters with a +1/+1 counter /
+  gains haste" primitive; Leviathan II/III want a floating-until-EOT attack
+  trigger.
 - **"Tiered" spells** (Fire/Ice/Thunder/Restoration Magic, Limit Breaks) — still
   want a "choose one additional cost" modal-with-per-mode-cost primitive; not yet
   mapped to Spree/Escalate.
-- **Reflexive multi-target auto-targeting** — a `MayPay { body: Reflexive(<2-slot
-  body>) }` only auto-fills the first target slot at resolution, so Weapons Vendor
-  ("pay {1}; attach *target* Equipment you control to *target* creature you
-  control") pays the cost but the attach fizzles (the creature slot goes unfilled).
-  `auto_extra_targets_for` needs to fan out all slots of a reflexive body. Weapons
-  Vendor is deferred pending this.
 
 ## Environment note
 

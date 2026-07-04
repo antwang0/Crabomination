@@ -5610,6 +5610,11 @@ static FIN: &[Factory] = &[
     super::fin::summon_fat_chocobo,
     super::fin::ether,
     super::fin::the_gold_saucer,
+    super::fin::summon_shiva,
+    super::fin::summon_titan,
+    super::fin::summon_primal_garuda,
+    super::fin::summon_primal_odin,
+    super::fin::weapons_vendor,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
