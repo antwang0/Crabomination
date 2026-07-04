@@ -401,19 +401,9 @@ impl MatchStats {
     /// edge of the bucket holding the target sample, or 0 with no samples.
     /// `p` is clamped to [0, 1]. Mirrors [`turn_percentile`](Self::turn_percentile).
     pub(crate) fn win_life_delta_percentile(&self, p: f32) -> i64 {
-        if self.win_life_samples == 0 {
-            return 0;
-        }
-        let p = p.clamp(0.0, 1.0);
-        let target = ((self.win_life_samples as f32) * p).ceil().max(1.0) as u64;
-        let mut acc = 0u64;
-        for (i, &n) in self.win_life_delta_buckets.iter().enumerate() {
-            acc = acc.saturating_add(n as u64);
-            if acc >= target {
-                return Self::win_life_delta_bucket_upper_bound(i);
-            }
-        }
-        Self::win_life_delta_bucket_upper_bound(5)
+        Self::percentile_bucket(&self.win_life_delta_buckets, p)
+            .map(Self::win_life_delta_bucket_upper_bound)
+            .unwrap_or(0)
     }
     /// The median (p50) win-by-life delta.
     pub(crate) fn win_life_delta_median(&self) -> i64 {
@@ -613,28 +603,35 @@ impl MatchStats {
     /// match-length distribution shape over time. Used by
     /// `format_match_stats` to surface `p50` and `p95` in the rolling
     /// summary line.
-    pub(crate) fn percentile(&self, p: f32) -> Duration {
-        // Rank against this histogram's own sample count, not `total_matches()`.
-        // They coincide when every recorded match observes a duration, but
-        // decoupling keeps the quantile correct even if the two ever drift.
-        let total: u64 = self.duration_buckets.iter().map(|&n| n as u64).sum();
+    /// Index of the histogram bucket holding the `p`-th percentile sample,
+    /// or `None` when the histogram is empty. The rank is 1-indexed and
+    /// ceil-rounded so `p=1.0` selects the last sample and any `p>0` selects
+    /// at least the first. Ranks against the histogram's own sample count
+    /// (not `total_matches()`) so the quantile stays correct even if the two
+    /// ever drift. Shared by the duration / turn-count / win-life-delta
+    /// percentile readouts so the rank math lives in exactly one place.
+    fn percentile_bucket(buckets: &[u32], p: f32) -> Option<usize> {
+        let total: u64 = buckets.iter().map(|&n| n as u64).sum();
         if total == 0 {
-            return Duration::ZERO;
+            return None;
         }
         let p = p.clamp(0.0, 1.0);
-        // Target rank — 1-indexed so p=1.0 selects the last sample.
         let target = (total as f32 * p).ceil().max(1.0) as u64;
         let mut acc = 0u64;
-        for (i, &n) in self.duration_buckets.iter().enumerate() {
+        for (i, &n) in buckets.iter().enumerate() {
             acc = acc.saturating_add(n as u64);
             if acc >= target {
-                // Return the upper bound of bucket `i`.
-                return Self::bucket_upper_bound(i);
+                return Some(i);
             }
         }
-        // Shouldn't reach here when total > 0, but fall back to the
-        // open-ended bucket's nominal upper bound.
-        Self::bucket_upper_bound(5)
+        // Unreachable when total > 0; fall back to the open-ended bucket.
+        Some(buckets.len().saturating_sub(1))
+    }
+
+    pub(crate) fn percentile(&self, p: f32) -> Duration {
+        Self::percentile_bucket(&self.duration_buckets, p)
+            .map(Self::bucket_upper_bound)
+            .unwrap_or(Duration::ZERO)
     }
     /// Turn-count analogue of [`percentile`](Self::percentile): the
     /// upper turn-count bound of the bucket containing the `p`-th
@@ -643,21 +640,9 @@ impl MatchStats {
     /// distribution centre (p50) and tail (p95) directly instead of
     /// eyeballing the histogram columns.
     pub(crate) fn turn_percentile(&self, p: f32) -> u32 {
-        // Rank against the turn histogram's own sample count (see `percentile`).
-        let total: u64 = self.turn_buckets.iter().map(|&n| n as u64).sum();
-        if total == 0 {
-            return 0;
-        }
-        let p = p.clamp(0.0, 1.0);
-        let target = (total as f32 * p).ceil().max(1.0) as u64;
-        let mut acc = 0u64;
-        for (i, &n) in self.turn_buckets.iter().enumerate() {
-            acc = acc.saturating_add(n as u64);
-            if acc >= target {
-                return Self::turn_bucket_upper_bound(i);
-            }
-        }
-        Self::turn_bucket_upper_bound(5)
+        Self::percentile_bucket(&self.turn_buckets, p)
+            .map(Self::turn_bucket_upper_bound)
+            .unwrap_or(0)
     }
     /// Population standard deviation of final turn counts, computed from
     /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
@@ -991,5 +976,38 @@ pub(crate) fn format_duration(d: Duration) -> String {
         format!("{m}m{s}s")
     } else {
         format!("{s}s")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MatchStats;
+
+    #[test]
+    fn percentile_bucket_empty_is_none() {
+        assert_eq!(MatchStats::percentile_bucket(&[0; 6], 0.5), None);
+    }
+
+    #[test]
+    fn percentile_bucket_ceil_rank_and_extremes() {
+        // 10 samples split 3/0/0/0/0/7: p=0.3 lands in bucket 0 (rank 3),
+        // p=0.31 crosses into the tail bucket (rank 4 > 3), p=1.0 the last.
+        let h = [3u32, 0, 0, 0, 0, 7];
+        assert_eq!(MatchStats::percentile_bucket(&h, 0.0), Some(0));
+        assert_eq!(MatchStats::percentile_bucket(&h, 0.3), Some(0));
+        assert_eq!(MatchStats::percentile_bucket(&h, 0.31), Some(5));
+        assert_eq!(MatchStats::percentile_bucket(&h, 1.0), Some(5));
+    }
+
+    #[test]
+    fn public_percentiles_route_through_shared_helper() {
+        let mut s = MatchStats::default();
+        // One short match, one long one → p50 sits in an early bucket, p100 last.
+        s.observe_duration(std::time::Duration::from_secs(10));
+        s.observe_duration(std::time::Duration::from_secs(1200));
+        assert_eq!(s.percentile(0.0), std::time::Duration::from_secs(30));
+        assert_eq!(s.percentile(1.0), std::time::Duration::from_secs(3600));
+        // Empty turn histogram still reads 0 rather than panicking.
+        assert_eq!(MatchStats::default().turn_percentile(0.9), 0);
     }
 }
