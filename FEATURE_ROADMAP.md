@@ -471,7 +471,9 @@ Each a small targeted feature; sweep batch by batch.
   `Predicate::CommittedCrimeThisTurn`), ✅ **Pack tactics**
   (`Predicate::AttackedWithTotalPowerAtLeast`), ✅ **Outlaws**
   (`SelectionRequirement::IsOutlaw` + `Predicate::ControlsOutlaw`) — OTJ batch in
-  `decks::recent20`.
+  `decks::recent20`. ✅ **Corrupted** (CR 702.166 — `Predicate::CorruptedActive`:
+  an opponent has 3+ poison; ONE batch in `sets::one` — Apostle of Invasion,
+  Bonepicker Skirge, Vivisection Evangelist, Sinew Dancer, Fleshless Gladiator).
 - **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
   Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,
