@@ -60880,3 +60880,172 @@ pub fn chandras_ignition() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Molten Rain — {1}{R}{R} sorcery. Destroy target land; if it was nonbasic,
+/// deal 2 damage to its controller.
+pub fn molten_rain() -> CardDefinition {
+    CardDefinition {
+        name: "Molten Rain",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            Effect::If {
+                cond: Predicate::EntityMatchesAny {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::IsNonbasicLand,
+                },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rain of Tears — {1}{B}{B} sorcery. Destroy target land.
+pub fn rain_of_tears() -> CardDefinition {
+    CardDefinition {
+        name: "Rain of Tears",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+        ..Default::default()
+    }
+}
+
+/// Choking Sands — {1}{B}{B} sorcery. Destroy target non-Swamp land; if it was
+/// nonbasic, deal 2 damage to its controller.
+pub fn choking_sands() -> CardDefinition {
+    CardDefinition {
+        name: "Choking Sands",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Land.and(
+                    SelectionRequirement::HasLandType(LandType::Swamp).negate(),
+                )),
+            },
+            Effect::If {
+                cond: Predicate::EntityMatchesAny {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::IsNonbasicLand,
+                },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Psionic Blast — {2}{U} instant. Deal 4 damage to any target and 2 damage to
+/// yourself.
+pub fn psionic_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Psionic Blast",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::You),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reckless Rage — {R} instant. Deal 4 damage to target creature you don't
+/// control and 2 damage to target creature you control.
+pub fn reckless_rage() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Rage",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Electrostatic Bolt — {R} instant. Deal 2 damage to target creature, or 4 if
+/// it's an artifact creature (modeled as 2 + 2-more-if-artifact).
+pub fn electrostatic_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Electrostatic Bolt",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::If {
+                cond: Predicate::EntityMatchesAny {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Artifact,
+                },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Barbed Shocker — {3}{R} 2/2 Insect with trample and haste. Whenever it deals
+/// combat damage to a player, that player discards their hand, then draws that
+/// many cards.
+pub fn barbed_shocker() -> CardDefinition {
+    CardDefinition {
+        name: "Barbed Shocker",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::DiscardHandDrawThatMany {
+                who: Selector::Player(PlayerRef::Target(0)),
+            },
+        }],
+        ..Default::default()
+    }
+}

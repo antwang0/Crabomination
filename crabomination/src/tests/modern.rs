@@ -66000,3 +66000,122 @@ fn chandras_ignition_hits_others_and_opponents() {
     assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "others died");
     assert_eq!(g.players[1].life, opp_life - 2, "each opponent took power-2");
 }
+
+/// Molten Rain destroys a land and burns the controller only if it was nonbasic.
+#[test]
+fn molten_rain_destroys_land_and_burns_on_nonbasic() {
+    // Nonbasic land → 2 damage to controller.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::mutavault()); // nonbasic
+    let life1 = g.players[1].life;
+    let eff = catalog::molten_rain().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(land)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+    assert_eq!(g.players[1].life, life1 - 2, "nonbasic → 2 damage to controller");
+
+    // Basic land → destroyed, no burn.
+    let mut g = two_player_game();
+    let basic = g.add_card_to_battlefield(1, catalog::forest());
+    let life1 = g.players[1].life;
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(basic)];
+    g.resolve_effect(&catalog::molten_rain().effect.clone(), &ctx).unwrap();
+    assert!(g.battlefield_find(basic).is_none(), "basic destroyed");
+    assert_eq!(g.players[1].life, life1, "basic → no burn");
+}
+
+/// Psionic Blast deals 4 to the target and 2 to its caster.
+#[test]
+fn psionic_blast_hits_target_and_caster() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    let eff = catalog::psionic_blast().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life1 - 4, "4 to target");
+    assert_eq!(g.players[0].life, life0 - 2, "2 to caster");
+}
+
+/// Choking Sands can't hit a Swamp but destroys other nonbasics with the burn.
+#[test]
+fn choking_sands_spares_swamps_burns_nonbasics() {
+    let mut g = two_player_game();
+    let nonbasic = g.add_card_to_battlefield(1, catalog::mutavault());
+    let life1 = g.players[1].life;
+    let eff = catalog::choking_sands().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(nonbasic)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(nonbasic).is_none(), "non-Swamp nonbasic destroyed");
+    assert_eq!(g.players[1].life, life1 - 2, "nonbasic → 2 damage");
+}
+
+/// Rain of Tears destroys a target land.
+#[test]
+fn rain_of_tears_destroys_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let eff = catalog::rain_of_tears().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(land)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+}
+
+/// Reckless Rage burns an enemy creature for 4 and one of yours for 2.
+#[test]
+fn reckless_rage_splits_damage() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5 → survives 4
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → dies to 2
+    let eff = catalog::reckless_rage().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(foe), Target::Permanent(mine)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 4, "enemy took 4");
+    assert!(g.battlefield_find(mine).is_none(), "your 2/2 died to 2");
+}
+
+/// Electrostatic Bolt deals 2 to a creature, but 4 to an artifact creature.
+#[test]
+fn electrostatic_bolt_doubles_on_artifacts() {
+    let eff = catalog::electrostatic_bolt().effect.clone();
+    // Non-artifact 3/3 survives with 2 damage.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 2, "non-artifact takes 2");
+    // Artifact creature with toughness 4 takes the full 4 and dies.
+    let mut g = two_player_game();
+    let bot = g.add_card_to_battlefield(1, catalog::brass_squire()); // 1/3 artifact
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bot)];
+    g.resolve_effect(&catalog::electrostatic_bolt().effect.clone(), &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bot).is_none(), "artifact creature took 4 and died");
+}
+
+/// Barbed Shocker wheels the player it hits (discard hand, draw that many).
+#[test]
+fn barbed_shocker_wheels_the_damaged_player() {
+    let mut g = two_player_game();
+    // P1 has 3 cards in hand and a stocked library.
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::island()); }
+    for _ in 0..5 { g.add_card_to_library(1, catalog::forest()); }
+    let hand_before = g.players[1].hand.len();
+    let eff = catalog::barbed_shocker().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(9), 0, Some(Target::Player(1)), 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].hand.len(), hand_before, "discarded hand, drew that many");
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Island"), "old hand discarded");
+}
