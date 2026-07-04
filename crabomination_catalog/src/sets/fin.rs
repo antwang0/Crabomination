@@ -4742,6 +4742,44 @@ pub fn black_mages_rod() -> CardDefinition {
     }
 }
 
+/// Ninja's Blades — {2}{B} Equipment. Job select. Equipped creature gets +1/+1,
+/// is a Ninja, and has "Whenever this creature deals combat damage to a player,
+/// draw a card, then discard a card. That player loses life equal to the
+/// discarded card's mana value." Equip {2}.
+pub fn ninjas_blades() -> CardDefinition {
+    CardDefinition {
+        name: "Ninja's Blades",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            add_creature_types: vec![CreatureType::Ninja],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::ManaValueOf(Box::new(Selector::DiscardedThisResolution {
+                            filter: SelectionRequirement::Any,
+                        })),
+                    },
+                ]),
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Machinist's Arsenal — {4}{W} Equipment. Job select. Equipped creature gets
 /// +2/+2 for each artifact you control and is an Artificer. Equip {4}.
 pub fn machinists_arsenal() -> CardDefinition {

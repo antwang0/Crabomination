@@ -3118,6 +3118,28 @@ fn magitek_scythe_attaches_and_grants() {
     assert!(cp.keywords.contains(&Keyword::MustBeBlocked), "must be blocked this turn");
 }
 
+/// Ninja's Blades: on combat damage, loot then drain by the discarded card's MV.
+#[test]
+fn ninjas_blades_loots_and_drains() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // wearer, 2/2 → 3/3
+    let blades = g.add_card_to_battlefield(0, catalog::ninjas_blades());
+    g.battlefield_find_mut(blades).unwrap().attached_to = Some(hero);
+    // Empty hand; the only card drawn (and thus discarded) is Sol Ring, MV 1.
+    g.add_card_to_library(0, catalog::sol_ring());
+    g.clear_sickness(hero);
+    let life1 = g.players[1].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // 3 combat damage + 1 life lost to the discarded Sol Ring's mana value.
+    assert_eq!(g.players[1].life, life1 - 4, "3 combat + 1 drain by discarded MV");
+}
+
 /// Machinist's Arsenal scales +2/+2 per artifact and grants Artificer.
 #[test]
 fn machinists_arsenal_scales_per_artifact() {
