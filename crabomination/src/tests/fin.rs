@@ -3118,6 +3118,46 @@ fn magitek_scythe_attaches_and_grants() {
     assert!(cp.keywords.contains(&Keyword::MustBeBlocked), "must be blocked this turn");
 }
 
+/// Relentless X-ATM092 needs 3+ blockers and self-returns from the graveyard.
+#[test]
+fn relentless_x_atm092_evasion_and_recursion() {
+    assert!(catalog::relentless_x_atm092().keywords.contains(&Keyword::CantBeBlockedExceptByN(3)));
+    // Recur from the graveyard for {8}, entering tapped with a finality counter.
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::relentless_x_atm092());
+    g.players[0].mana_pool.add_colorless(8);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("recur from graveyard");
+    drain_stack(&mut g);
+    let onbf = g.battlefield.iter().find(|c| c.definition.name == "Relentless X-ATM092")
+        .expect("returned to battlefield");
+    assert!(onbf.tapped, "enters tapped");
+    assert_eq!(onbf.counter_count(CounterType::Finality), 1, "with a finality counter");
+}
+
+/// Qutrub Forayer's modal ETB can destroy a creature that took damage this turn.
+#[test]
+fn qutrub_forayer_destroys_damaged_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // Deal 1 damage so it counts as "dealt damage this turn".
+    g.resolve_effect(&crate::effect::Effect::DealDamage {
+        to: crate::effect::Selector::Target(0),
+        amount: crate::effect::Value::ONE,
+    }, &crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(foe)),
+    )).unwrap();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Mode(0), // destroy the damaged creature
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::qutrub_forayer());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "the damaged creature was destroyed");
+}
+
 /// Ninja's Blades: on combat damage, loot then drain by the discarded card's MV.
 #[test]
 fn ninjas_blades_loots_and_drains() {

@@ -5582,6 +5582,8 @@ static FIN: &[Factory] = &[
     super::fin::machinists_arsenal,
     super::fin::sages_nouliths,
     super::fin::ninjas_blades,
+    super::fin::relentless_x_atm092,
+    super::fin::qutrub_forayer,
     super::fin::lightning_security_sergeant,
     super::fin::bartz_and_boko,
     super::fin::self_destruct,

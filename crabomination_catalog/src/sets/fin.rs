@@ -4742,6 +4742,74 @@ pub fn black_mages_rod() -> CardDefinition {
     }
 }
 
+/// Relentless X-ATM092 — {6} 6/5 Robot Spider artifact creature. Can't be blocked
+/// except by three or more creatures. {8}: return it from your graveyard to the
+/// battlefield tapped with a finality counter on it.
+pub fn relentless_x_atm092() -> CardDefinition {
+    CardDefinition {
+        name: "Relentless X-ATM092",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::Finality,
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Qutrub Forayer — {2}{B} 3/2 Zombie Horror. When it enters, choose one —
+/// destroy target creature that was dealt damage this turn; or exile up to two
+/// target cards from graveyards. (The "single graveyard" clause is approximated
+/// as any graveyards.)
+pub fn qutrub_forayer() -> CardDefinition {
+    CardDefinition {
+        name: "Qutrub Forayer",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::DealtDamageThisTurn),
+                ),
+            },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::InGraveyard,
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Ninja's Blades — {2}{B} Equipment. Job select. Equipped creature gets +1/+1,
 /// is a Ninja, and has "Whenever this creature deals combat damage to a player,
 /// draw a card, then discard a card. That player loses life equal to the
