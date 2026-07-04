@@ -6359,3 +6359,134 @@ pub fn swallowed_by_leviathan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zodiark, Umbral God — {B}{B}{B}{B}{B} 5/5 Legendary God with indestructible.
+/// ETB: each player sacrifices half the non-God creatures they control, rounded
+/// down. Whenever a player sacrifices a creature, put a +1/+1 counter on it.
+pub fn zodiark_umbral_god() -> CardDefinition {
+    CardDefinition {
+        name: "Zodiark, Umbral God",
+        cost: cost(&[b(), b(), b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Indestructible],
+        triggered_abilities: vec![
+            etb(Effect::SacrificeHalf {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::God).negate()),
+                rounded_up: false,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::AnyPlayer),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Phantom Train — {3}{B} Vehicle 4/4 with trample. Sacrifice another artifact
+/// or creature: put a +1/+1 counter on it and it becomes a Spirit artifact
+/// creature until end of turn.
+pub fn phantom_train() -> CardDefinition {
+    CardDefinition {
+        name: "Phantom Train",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Spirit],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                1,
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stuck in Summoner's Sanctum — {2}{U} Aura with flash. Enchant artifact or
+/// creature. ETB taps it. Enchanted permanent doesn't untap and its activated
+/// abilities can't be activated.
+pub fn stuck_in_summoners_sanctum() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Stuck in Summoner's Sanctum",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+        },
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted permanent doesn't untap during its controller's untap step.",
+                effect: StaticEffect::PreventUntap {
+                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                },
+            },
+            StaticAbility {
+                description: "Enchanted permanent's activated abilities can't be activated.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                    keyword: Keyword::CantActivateAbilities,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Buster Sword — {3} Equipment. Equipped creature gets +3/+2 and draws a card
+/// when it deals combat damage to a player. Equip {2}.
+/// (The "then cast a spell with mana value ≤ that damage for free" rider is
+/// dropped — no free-cast-from-hand-by-mana-value primitive yet.)
+pub fn buster_sword() -> CardDefinition {
+    CardDefinition {
+        name: "Buster Sword",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

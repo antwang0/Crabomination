@@ -3981,3 +3981,78 @@ fn swallowed_by_leviathan_counters() {
     assert!(g.battlefield_find(spell).is_none(), "Grizzly countered");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "went to graveyard");
 }
+
+/// Zodiark's ETB makes each player sacrifice half their non-God creatures, and
+/// its sacrifice-trigger grows it per creature sacrificed.
+#[test]
+fn zodiark_edict_and_grows_on_sacrifice() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    let foes0 = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
+    let zodiark = g.move_card_to_battlefield_for_test(0, catalog::zodiark_umbral_god());
+    drain_stack(&mut g);
+    let foes1 = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
+    assert_eq!(foes1, foes0 - 2, "player 1 sacrificed half of four creatures");
+    assert_eq!(
+        g.battlefield_find(zodiark).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "one +1/+1 counter per creature sacrificed",
+    );
+    assert!(g.computed_permanent(zodiark).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Phantom Train sacrifices another permanent to grow and animate into a Spirit.
+#[test]
+fn phantom_train_animates_on_sacrifice() {
+    let mut g = two_player_game();
+    let train = g.add_card_to_battlefield(0, catalog::phantom_train());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(train).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "starts as a noncreature Vehicle");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: train, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    let cp = g.computed_permanent(train).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit), "a Spirit");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 base + one +1/+1 counter");
+}
+
+/// Stuck in Summoner's Sanctum keeps the enchanted permanent tapped and locks
+/// its activated abilities.
+#[test]
+fn stuck_in_summoners_sanctum_locks_permanent() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::stuck_in_summoners_sanctum());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(foe);
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantActivateAbilities),
+        "activated abilities locked");
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(foe).unwrap().tapped, "enchanted permanent doesn't untap");
+}
+
+/// Buster Sword grants +3/+2 and draws when the equipped creature hits a player.
+#[test]
+fn buster_sword_pumps_and_draws() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bearer = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let sword = g.add_card_to_battlefield(0, catalog::buster_sword());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bearer);
+    g.add_card_to_library(0, catalog::island());
+    assert_eq!(g.computed_permanent(bearer).unwrap().power, 5, "2/2 + 3/+2");
+    g.clear_sickness(bearer);
+    let hand0 = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bearer, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "combat damage drew a card");
+}

@@ -5624,6 +5624,10 @@ static FIN: &[Factory] = &[
     super::fin::suplex,
     super::fin::tifas_limit_break,
     super::fin::swallowed_by_leviathan,
+    super::fin::zodiark_umbral_god,
+    super::fin::phantom_train,
+    super::fin::stuck_in_summoners_sanctum,
+    super::fin::buster_sword,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
