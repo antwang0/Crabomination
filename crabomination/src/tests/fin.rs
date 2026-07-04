@@ -4866,3 +4866,23 @@ fn summon_brynhildr_gestalt_grants_haste() {
     let cp = g.computed_permanent(bears).expect("bears on battlefield");
     assert!(cp.keywords.contains(&Keyword::Haste), "next creature entered with haste");
 }
+
+/// Torgal grows your first Human creature spell each turn by a +1/+1 counter per
+/// Dog/Wolf you control (Torgal + Watchwolf = 2 → a 2/1 Human enters as 4/3).
+#[test]
+fn torgal_pumps_first_human_creature() {
+    let mut g = two_player_game();
+    let _torgal = g.add_card_to_battlefield(0, catalog::torgal_a_fine_hound()); // Wolf
+    g.add_card_to_battlefield(0, catalog::watchwolf()); // second Wolf
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let human = g.add_card_to_hand(0, catalog::beskir_shieldmate()); // {1}{W} 2/1 Human
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: human, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Beskir Shieldmate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(human).expect("human on battlefield");
+    assert_eq!((cp.power, cp.toughness), (4, 3), "2/1 + two +1/+1 counters (two Wolves)");
+}

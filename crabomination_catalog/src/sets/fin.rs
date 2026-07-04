@@ -7572,6 +7572,51 @@ pub fn kefka_court_mage() -> CardDefinition {
     }
 }
 
+/// Torgal, A Fine Hound — {1}{G} 2/2 Wolf. Whenever you cast your first Human
+/// creature spell each turn, that creature enters with an additional +1/+1
+/// counter for each Dog and/or Wolf you control. {T}: Add one mana of any color.
+pub fn torgal_a_fine_hound() -> CardDefinition {
+    CardDefinition {
+        name: "Torgal, A Fine Hound",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                once_per_turn: true,
+                ..EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::CastSpellMatches(SelectionRequirement::HasCreatureType(
+                        CreatureType::Human,
+                    )),
+                )
+            },
+            // The rider lands on the very spell that triggered it: the trigger
+            // resolves above the still-on-the-stack Human creature, so the
+            // counter count (Dogs/Wolves out now) applies as that creature ETBs.
+            effect: Effect::GrantNextCreatureSpellCounters {
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dog)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Wolf))
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Garnet, Princess of Alexandria — {G}{W} 2/2 Human Noble Cleric with lifelink.
 /// Whenever Garnet attacks, remove a lore counter from each Saga you control and
 /// put a +1/+1 counter on Garnet for each one removed.
