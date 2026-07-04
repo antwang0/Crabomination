@@ -5543,6 +5543,56 @@ pub fn summon_bahamut() -> CardDefinition {
     }
 }
 
+/// Summon: Fat Chocobo — {4}{G} Enchantment Creature — Saga Bird 4/4. I — create
+/// a 2/2 green Bird token with a landfall +1/+0. II, III, IV — creatures you
+/// control gain trample until end of turn.
+pub fn summon_fat_chocobo() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Bird".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    };
+    let trample = || Effect::GrantKeyword {
+        what: Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        keyword: Keyword::Trample,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Summon: Fat Chocobo",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        saga_chapters: vec![
+            (1, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: bird }),
+            (2, trample()),
+            (3, trample()),
+            (4, trample()),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Summon: G.F. Cerberus — {2}{R}{R} Enchantment Creature — Saga Dog 3/3.
 /// I — Surveil 1. II — when you next cast an instant or sorcery this turn, copy
 /// it (you may choose new targets). III — copy it twice.

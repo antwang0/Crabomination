@@ -3215,6 +3215,23 @@ fn summon_bahamut_mega_flare_scales_with_board() {
     assert_eq!(g.players[1].life, life1 - 7, "damage = total MV of other permanents");
 }
 
+/// Summon: Fat Chocobo makes a Bird on I and grants team trample on II+.
+#[test]
+fn summon_fat_chocobo_bird_and_trample() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let chocobo = g.add_card_to_battlefield(0, catalog::summon_fat_chocobo());
+    g.saga_advance(chocobo); // I — Wark
+    drain_stack(&mut g);
+    let bird = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Bird")
+        .expect("2/2 Bird token minted");
+    assert_eq!((bird.definition.power, bird.definition.toughness), (2, 2));
+    g.saga_advance(chocobo); // II — Kerplunk
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Trample),
+        "team gained trample");
+}
+
 /// Summon: G.F. Cerberus chapter II copies your next instant/sorcery.
 #[test]
 fn summon_gf_cerberus_chapter_two_copies_next_spell() {
