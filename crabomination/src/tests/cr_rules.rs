@@ -6601,3 +6601,26 @@ fn cr_514_2_eot_pump_expires_after_extra_end_step() {
     }
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "pump expired at cleanup");
 }
+
+/// CR 702.166 — Corrupted: Bonepicker Skirge gains deathtouch and lifelink only
+/// while an opponent has three or more poison counters.
+#[test]
+fn cr_702_166_corrupted_gates_static_keywords() {
+    let mut g = two_player_game();
+    let skirge = g.add_card_to_battlefield(0, catalog::bonepicker_skirge());
+    // No poison yet → neither keyword is live.
+    let kw = g.computed_permanent(skirge).unwrap().keywords;
+    assert!(!kw.contains(&Keyword::Deathtouch), "no deathtouch below 3 poison");
+    assert!(!kw.contains(&Keyword::Lifelink), "no lifelink below 3 poison");
+    // Opponent reaches 3 poison → Corrupted turns on.
+    g.players[1].poison_counters = 3;
+    let kw = g.computed_permanent(skirge).unwrap().keywords;
+    assert!(kw.contains(&Keyword::Deathtouch), "deathtouch live at 3 poison");
+    assert!(kw.contains(&Keyword::Lifelink), "lifelink live at 3 poison");
+    // Two poison is below the threshold.
+    g.players[1].poison_counters = 2;
+    assert!(
+        !g.computed_permanent(skirge).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "threshold is strictly three",
+    );
+}

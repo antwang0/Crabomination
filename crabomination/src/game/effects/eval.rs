@@ -1400,6 +1400,12 @@ impl GameState {
                     .collect();
                 powers.len() >= 3
             }
+            Predicate::CorruptedActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                self.players.iter().enumerate().any(|(i, pl)| {
+                    i != p && !pl.eliminated && !self.same_team(i, p) && pl.poison_counters >= 3
+                })
+            }
             Predicate::ControlsGreatestPowerCreature { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let powers: Vec<(usize, i32)> = self

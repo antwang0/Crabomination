@@ -157,3 +157,64 @@ pub fn compleated_huntmaster() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Incisor Glider — {1}{W} Artifact Creature — Phyrexian Construct 1/3 with
+/// flying. Corrupted (CR 702.166) — whenever it attacks, if an opponent has
+/// three or more poison counters, creatures you control get +1/+1 until EOT.
+pub fn incisor_glider() -> CardDefinition {
+    CardDefinition {
+        name: "Incisor Glider",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::CorruptedActive { who: PlayerRef::You }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bonepicker Skirge — {2}{B} Creature — Phyrexian Imp 2/2 with flying.
+/// Corrupted (CR 702.166) — as long as an opponent has three or more poison
+/// counters, it has deathtouch and lifelink.
+pub fn bonepicker_skirge() -> CardDefinition {
+    let corrupted_keyword = |keyword: Keyword| StaticAbility {
+        description: "Corrupted — has deathtouch and lifelink.",
+        effect: StaticEffect::SelfHasKeywordIf {
+            keyword,
+            condition: Predicate::CorruptedActive { who: PlayerRef::You },
+        },
+    };
+    CardDefinition {
+        name: "Bonepicker Skirge",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Imp],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            corrupted_keyword(Keyword::Deathtouch),
+            corrupted_keyword(Keyword::Lifelink),
+        ],
+        ..Default::default()
+    }
+}

@@ -1127,6 +1127,10 @@ pub enum Predicate {
     /// power values). Gates Coven attack triggers and "activate only if …"
     /// abilities (Sigarda, Champion of Light; Dawnhart Mentor; Sungold Sentinel).
     CovenActive { who: PlayerRef },
+    /// CR 702.166 — Corrupted (Phyrexia: All Will Be One ability word): an
+    /// opponent of `who` has three or more poison counters. Gates Corrupted
+    /// triggers / "as long as" statics.
+    CorruptedActive { who: PlayerRef },
     /// `who` controls a creature whose power is greater than or equal to every
     /// creature's power on the battlefield — i.e. controls the creature with
     /// the greatest power, or one tied for it (Summon: Fenrir III "Ecliptic
