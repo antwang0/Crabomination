@@ -5594,6 +5594,8 @@ static FIN: &[Factory] = &[
     super::fin::cloud_planets_champion,
     super::fin::golbez_crystal_collector,
     super::fin::raubahn_bull_of_ala_mhigo,
+    super::fin::seifer_almasy,
+    super::fin::blitzball,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

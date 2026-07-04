@@ -2986,6 +2986,61 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Blitzball taps for any color; its GOOOOAAAALLL draw needs a combat hit.
+#[test]
+fn blitzball_mana_and_conditional_draw() {
+    let mut g = two_player_game();
+    let ball = g.add_card_to_battlefield(0, catalog::blitzball());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Mana ability works.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ball, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one mana of any color");
+    // GOOOOAAAALLL is gated on having dealt combat damage this turn.
+    g.battlefield_find_mut(ball).unwrap().tapped = false;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "can't draw without a combat hit this turn");
+    g.players[0].dealt_combat_damage_to_player_this_turn = true;
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("GOOOOAAAALLL");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two");
+    assert!(g.battlefield_find(ball).is_none(), "sacrificed itself");
+}
+
+/// Seifer grants a lone attacker double strike and recasts an I/S from the gy
+/// on combat damage.
+#[test]
+fn seifer_almasy_lone_attacker_and_recast() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let seifer = g.add_card_to_battlefield(0, catalog::seifer_almasy());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a legal Bolt target
+    g.clear_sickness(seifer);
+    // Accept the "you may cast" recast.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: seifer, target: AttackTarget::Player(1),
+    }])).expect("Seifer attacks alone");
+    drain_stack(&mut g);
+    // Attacks-alone grant.
+    assert!(g.computed_permanent(seifer).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "lone attacker gains double strike");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the recast Bolt was exiled after resolving");
+}
+
 /// Raubahn has Ward (pay life = power) and attaches an Equipment when it attacks.
 #[test]
 fn raubahn_wards_and_attaches_on_attack() {

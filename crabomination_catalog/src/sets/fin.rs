@@ -5006,6 +5006,78 @@ pub fn cloud_planets_champion() -> CardDefinition {
     }
 }
 
+/// Blitzball — {3} Artifact. {T}: Add one mana of any color. "GOOOOAAAALLL!" —
+/// {T}, Sacrifice this artifact: draw two cards, if you dealt combat damage to a
+/// player this turn. (The printed "an opponent was dealt combat damage by a
+/// legendary creature this turn" is approximated as your own combat hit.)
+pub fn blitzball() -> CardDefinition {
+    CardDefinition {
+        name: "Blitzball",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn { who: PlayerRef::You }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Seifer Almasy — {3}{R} 3/4 Human Knight. Whenever a creature you control
+/// attacks alone, it gains double strike. Fire Cross — whenever Seifer deals
+/// combat damage to a player, you may cast target instant or sorcery card with
+/// mana value 3 or less from your graveyard without paying its mana cost (exiled
+/// if it would leave the stack).
+pub fn seifer_almasy() -> CardDefinition {
+    CardDefinition {
+        name: "Seifer Almasy",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(Predicate::AttackingAlone),
+                effect: Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::CastWithoutPayingImmediate {
+                    what: target_filtered(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .and(SelectionRequirement::InYourGraveyard)
+                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                    ),
+                    source_zone: crate::card::Zone::Graveyard,
+                    exile_after: true,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Raubahn, Bull of Ala Mhigo — {1}{R} 2/2 Human Warrior. Ward—pay life equal to
 /// Raubahn's power. Whenever Raubahn attacks, attach up to one target Equipment
 /// you control to it. (The printed "target attacking creature" is approximated
