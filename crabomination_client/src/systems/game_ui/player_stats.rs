@@ -92,6 +92,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Hellbent / Formidable) — a shared slate-teal so these "condition
         // online" badges read consistently.
         StatChipKind::AbilityWord => (Color::srgba(0.16, 0.26, 0.28, 1.0), theme::TEXT_PRIMARY),
+        // Summon-saga growth — a woodland green matching the Fenrir/Brynhildr
+        // "your next creature" riders.
+        StatChipKind::Summon => (Color::srgba(0.16, 0.30, 0.16, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -126,6 +129,23 @@ pub(super) enum StatChipKind {
     SkipCombat,
     Shield,
     AbilityWord,
+    /// CR 603.7e — a pending "your next creature spell enters with +1/+1 /
+    /// haste" rider (the FIN "Summon" saga chapters).
+    Summon,
+}
+
+/// Label for the pending "your next creature spell" rider chip (CR 603.7e),
+/// e.g. `"🐺 next +1/+1"` / `"🐺 next haste"` / `"🐺 next +1/+1 haste"`.
+/// `None` when nothing is pending, so callers skip the chip.
+pub(super) fn summon_chip_body(bonus_counters: u32, gains_haste: bool) -> Option<String> {
+    let mut parts = Vec::new();
+    if bonus_counters > 0 {
+        parts.push(format!("+{bonus_counters}/+{bonus_counters}"));
+    }
+    if gains_haste {
+        parts.push("haste".to_string());
+    }
+    (!parts.is_empty()).then(|| format!("\u{1F43A} next {}", parts.join(" ")))
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -683,6 +703,12 @@ pub fn update_player_stats_chips(
         if p.coven_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
         }
+        // CR 603.7e — a pending "your next creature spell enters with …" rider.
+        if let Some(label) =
+            summon_chip_body(p.next_creature_bonus_counters, p.next_creature_gains_haste)
+        {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Summon, label);
+        }
         // CR 700.13 (OTJ) — lit once this player has committed a crime this turn.
         if p.committed_crime_this_turn {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Crime, "🔫 crime".to_string());
@@ -981,6 +1007,11 @@ pub fn update_opponent_stats_rows(
                 }
                 if p.rad_counters > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
+                }
+                if let Some(label) =
+                    summon_chip_body(p.next_creature_bonus_counters, p.next_creature_gains_haste)
+                {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Summon, label);
                 }
                 if let Some(cap) = p.draw_cap {
                     spawn_stat_chip(

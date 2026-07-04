@@ -565,6 +565,15 @@ fn project_player(
         draw_cap,
         cards_left_graveyard_this_turn: player.cards_left_graveyard_this_turn,
         creatures_died_this_turn: player.creatures_died_this_turn,
+        next_creature_bonus_counters: player
+            .pending_creature_etb_counters
+            .iter()
+            .filter(|(k, _)| *k == crate::card::CounterType::PlusOnePlusOne)
+            .map(|(_, n)| *n)
+            .sum(),
+        next_creature_gains_haste: player
+            .pending_creature_etb_keywords
+            .contains(&crate::card::Keyword::Haste),
         cards_exiled_this_turn: player.cards_exiled_this_turn,
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,

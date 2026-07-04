@@ -589,6 +589,15 @@ pub struct PlayerView {
     /// fire when a creature died under your control (Essenceknit Scholar).
     #[serde(default)]
     pub creatures_died_this_turn: u32,
+    /// CR 603.7e — total +1/+1 counters this player's next creature spell this
+    /// turn will enter with, from pending "Summon" saga riders (Fenrir II).
+    /// Surfaced so the HUD can hint the bonus before you commit to a creature.
+    #[serde(default)]
+    pub next_creature_bonus_counters: u32,
+    /// CR 603.7e — true if this player's next creature spell this turn enters
+    /// with haste (Brynhildr's Gestalt Mode). Surfaced for the same HUD hint.
+    #[serde(default)]
+    pub next_creature_gains_haste: bool,
     /// Number of cards this player has caused to be exiled on the current
     /// turn. Reset on the controller's untap. Surfaced so UIs can show
     /// "Ennis end-step counter ready" hints on Strixhaven cards whose

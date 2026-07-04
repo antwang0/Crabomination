@@ -252,14 +252,11 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
             let bin_format = Format::from_lobby(format);
             let snapshot = {
                 let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-                s.record_pair(duration, bin_format);
-                s.observe_turns(outcome.final_turn);
-                s.observe_format_turns(bin_format, outcome.final_turn);
-                s.observe_winner(outcome.winner);
-                if let Some(Some(w)) = outcome.winner {
-                    s.observe_win_life_delta(w, &outcome.final_life_totals);
-                    s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
-                }
+                // Route through the single `record_outcome` accumulator (same as
+                // the bot/pair paths) so lobby mode — the default — also folds in
+                // decisive/draw turn sums. Replicating the observe_* calls by hand
+                // here previously dropped those, leaving `turns(win/draw)` at 0/0.
+                s.record_outcome(&outcome, bin_format, duration, true);
                 *s
             };
             eprintln!(
