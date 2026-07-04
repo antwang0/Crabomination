@@ -3215,6 +3215,37 @@ fn summon_bahamut_mega_flare_scales_with_board() {
     assert_eq!(g.players[1].life, life1 - 7, "damage = total MV of other permanents");
 }
 
+/// The Gold Saucer wins a coin flip for a Treasure, and sacs two artifacts to
+/// draw.
+#[test]
+fn the_gold_saucer_coinflip_treasure_and_sac_draw() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let saucer = g.add_card_to_battlefield(0, catalog::the_gold_saucer());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // {2},{T}: flip → heads → Treasure.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: saucer, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("flip for Treasure");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure"),
+        "heads minted a Treasure");
+    // {3},{T}, Sacrifice two artifacts (the Treasure + one more): draw a card.
+    g.add_card_to_battlefield(0, catalog::excalibur_ii());
+    g.add_card_to_library(0, catalog::island());
+    g.battlefield_find_mut(saucer).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(3);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: saucer, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac two artifacts to draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
 /// Ether adds {U}, exiles itself, and copies your next instant/sorcery.
 #[test]
 fn ether_adds_mana_and_copies_next_spell() {

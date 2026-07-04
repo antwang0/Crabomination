@@ -2625,6 +2625,38 @@ pub fn treno_dark_city() -> CardDefinition { town_dual("Treno, Dark City", Color
 pub fn vector_imperial_capital() -> CardDefinition { town_dual("Vector, Imperial Capital", Color::Black, Color::Red) }
 pub fn windurst_federation_center() -> CardDefinition { town_dual("Windurst, Federation Center", Color::Green, Color::White) }
 
+/// The Gold Saucer — Land — Town. {T}: Add {C}. {2}, {T}: Flip a coin; on a win,
+/// create a Treasure token. {3}, {T}, Sacrifice two artifacts: Draw a card.
+pub fn the_gold_saucer() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "The Gold Saucer",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::FlipCoin {
+                    count: Value::ONE,
+                    on_heads: Box::new(crate::effect::shortcut::mint_treasures(1)),
+                    on_tails: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                sac_other_filter: Some((SelectionRequirement::Artifact, 2)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Adventurer's Inn — untapped "Land — Town". ETB gain 2 life; {T}: Add {C}.
 pub fn adventurers_inn() -> CardDefinition {
     use crate::card::LandType;
