@@ -2965,6 +2965,55 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Lightning exiles the top card for a may-play on combat damage to a player.
+#[test]
+fn lightning_security_sergeant_impulses_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let lightning = g.add_card_to_battlefield(0, catalog::lightning_security_sergeant());
+    g.add_card_to_library(0, catalog::island());
+    g.clear_sickness(lightning);
+    let exile0 = g.exile.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lightning, target: AttackTarget::Player(1),
+    }])).expect("Lightning attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.exile.len(), exile0 + 1, "top card exiled for a may-play");
+}
+
+/// Bartz's ETB has each other Bird deal its power to an opponent's creature.
+#[test]
+fn bartz_and_boko_birds_deal_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sea_eagle()); // 1/1 Bird
+    let foe = g.add_card_to_battlefield(1, catalog::sea_eagle()); // 1/1 target
+    g.move_card_to_battlefield_for_test(0, catalog::bartz_and_boko());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "the other Bird's 1 damage killed the 1/1 foe");
+}
+
+/// Self-Destruct: the chosen creature deals its power to another target and itself.
+#[test]
+fn self_destruct_deals_power_to_both() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::self_destruct());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None, x_value: None,
+    }).expect("cast Self-Destruct");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 2, "2 damage to the other target");
+    assert!(g.battlefield_find(mine).is_none(), "2 damage killed the 2/2 itself");
+}
+
 /// Machinist's Arsenal scales +2/+2 per artifact and grants Artificer.
 #[test]
 fn machinists_arsenal_scales_per_artifact() {

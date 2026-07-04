@@ -4823,3 +4823,96 @@ pub fn dragoons_lance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lightning, Security Sergeant — {2}{R} 2/3 Human Soldier with menace. Whenever
+/// she deals combat damage to a player, exile the top card of your library; you
+/// may play it (modeled as "for as long as it remains exiled").
+pub fn lightning_security_sergeant() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning, Security Sergeant",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bartz and Boko — {3}{G}{G} 4/3 Human Bird with Affinity for Birds. When it
+/// enters, each other Bird you control deals damage equal to its power to target
+/// creature an opponent controls.
+pub fn bartz_and_boko() -> CardDefinition {
+    CardDefinition {
+        name: "Bartz and Boko",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        affinity_filter: Some(
+            SelectionRequirement::HasCreatureType(CreatureType::Bird)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Bird)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Self-Destruct — {1}{R} Instant. Target creature you control deals X damage to
+/// any other target and X damage to itself, where X is its power.
+pub fn self_destruct() -> CardDefinition {
+    CardDefinition {
+        name: "Self-Destruct",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                })),
+            },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
