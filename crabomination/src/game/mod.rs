@@ -9069,12 +9069,10 @@ impl GameState {
         // `resolving_lki_subject` in `resolve_stack_item`.
         if let Some(crate::game::effects::EntityRef::Card(sid))
         | Some(crate::game::effects::EntityRef::Permanent(sid)) = subject
+            && sid != source
+            && let Some(snap) = self.died_card_snapshots.get(&sid)
         {
-            if sid != source {
-                if let Some(snap) = self.died_card_snapshots.get(&sid) {
-                    self.leaves_bf_lki.insert(sid, snap.clone());
-                }
-            }
+            self.leaves_bf_lki.insert(sid, snap.clone());
         }
         // CR 115.1c — an engine-resolved "up to N target" triggered ability
         // (Gavony Silversmith) maximizes its targets: fill slots 1.. with
