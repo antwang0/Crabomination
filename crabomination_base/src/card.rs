@@ -2391,6 +2391,11 @@ pub struct EquipBonus {
     pub toughness: i32,
     /// Keywords granted to the equipped creature (layer 6).
     pub keywords: Vec<Keyword>,
+    /// Keywords granted to the equipped creature only during the source's
+    /// controller's turn (layer 6, gated on active player). Dragoon's Lance —
+    /// "During your turn, equipped creature has flying."
+    #[serde(default)]
+    pub during_your_turn_keywords: Vec<Keyword>,
     /// Optional board-count scaling (CR 613 layer 7c): the attached creature
     /// gets an additional `per_power`/`per_toughness` for each permanent
     /// matching `filter` the source's controller controls, on top of the flat

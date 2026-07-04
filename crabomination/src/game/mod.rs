@@ -4308,6 +4308,21 @@ impl GameState {
                     modification: Modification::AddKeyword(kw.clone()),
                 });
             }
+            // "During your turn, equipped creature has [keyword]" (Dragoon's
+            // Lance) — layer-6 grant gated on the source controller's turn.
+            if self.active_player_idx == card.controller {
+                for kw in &bonus.during_your_turn_keywords {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target]),
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+            }
             // Characteristic-overriding Auras (Ichthyomorphosis,
             // One with the Stars): set base P/T (7b), card/creature types,
             // and colors on the host while attached.

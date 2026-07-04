@@ -2932,3 +2932,72 @@ fn freya_crescent_mana_restricted_to_equipment() {
     assert!(r.allows(&equip), "funds an Equipment spell/ability");
     assert!(!r.allows(&creature), "not a creature spell");
 }
+
+/// Samurai's Katana job-selects a Hero and grants +2/+2, trample, haste, Samurai.
+#[test]
+fn samurais_katana_job_select() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::samurais_katana());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted");
+    let cp = g.computed_permanent(hero.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 Hero + 2/2");
+    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Samurai));
+}
+
+/// Black Mage's Rod's equipped creature pings each opponent on a noncreature cast.
+#[test]
+fn black_mages_rod_pings_on_noncreature_cast() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::black_mages_rod());
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    // Bolt's 3 + Rod's 1 ping on cast = 4 to the opponent.
+    assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
+}
+
+/// Red Mage's Rapier's equipped creature grows +2/+0 on a noncreature cast.
+#[test]
+fn red_mages_rapier_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::red_mages_rapier());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    assert_eq!(g.computed_permanent(hero).unwrap().power, 1, "base 1/1 Hero");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(hero).unwrap().power, 3, "+2/+0 from the granted trigger");
+}
+
+/// Dragoon's Lance grants the equipped creature flying only on your turn.
+#[test]
+fn dragoons_lance_flying_only_on_your_turn() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::dragoons_lance());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying),
+        "flying during your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying on opponent's turn");
+    assert!(g.computed_permanent(hero).unwrap().subtypes.creature_types
+        .contains(&crate::card::CreatureType::Knight), "is a Knight");
+}

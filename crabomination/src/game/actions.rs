@@ -7182,40 +7182,44 @@ impl GameState {
         // fire from non-caster permanents (Wandering Archaic etc.). The
         // ability's effective controller is its own permanent's controller,
         // *not* the spell-caster's index.
+        // A SpellCast trigger applies iff its scope matches the caster.
+        let scope_matches = |scope: EventScope, c_controller: usize| match scope {
+            EventScope::YourControl => c_controller == controller,
+            EventScope::OpponentControl => c_controller != controller,
+            EventScope::AnyPlayer => true,
+            _ => false,
+        };
+        // Walk printed triggers AND statics-/equip-granted ones (Red Mage's
+        // Rapier's "equipped creature has 'whenever you cast a noncreature
+        // spell, …'", Sliver-granted Magecraft): granted abilities fire as
+        // though printed on the host. Granted triggers use a sentinel index and
+        // are never once-per-turn.
         #[allow(clippy::type_complexity)]
-        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> = self
+        let mut candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> =
+            Vec::new();
+        let live: Vec<(CardId, usize)> = self
             .battlefield
             .iter()
             .filter(|c| !stripped.contains(&c.id))
-            .flat_map(|c| {
-                let c_controller = c.controller;
-                c.definition
-                    .triggered_abilities
-                    .iter()
-                    .enumerate()
-                    .filter(move |(_, t)| {
-                        if t.event.kind != EventKind::SpellCast {
-                            return false;
-                        }
-                        match t.event.scope {
-                            // "Whenever you cast …" — listener's controller
-                            // must equal the caster.
-                            EventScope::YourControl => c_controller == controller,
-                            // "Whenever an opponent casts …" — listener's
-                            // controller must differ from the caster.
-                            EventScope::OpponentControl => c_controller != controller,
-                            // "Whenever any player casts …" — always fires
-                            // regardless of caster.
-                            EventScope::AnyPlayer => true,
-                            // Other scopes don't apply to a SpellCast event.
-                            _ => false,
-                        }
-                    })
-                    .map(move |(idx, t)| {
-                        (c.id, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn)
-                    })
-            })
+            .map(|c| (c.id, c.controller))
             .collect();
+        for (cid, c_controller) in live {
+            let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { continue };
+            for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
+                if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
+                    candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn));
+                }
+            }
+            for t in self
+                .statics_granted_triggers_for(c)
+                .into_iter()
+                .chain(self.equip_granted_triggers_for(c))
+            {
+                if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
+                    candidates.push((cid, c_controller, t.effect, t.event.filter, usize::MAX, false));
+                }
+            }
+        }
 
         for (source, listener_controller, effect, filter, trig_idx, once_per_turn) in candidates {
             // CR 603.3d — "This ability triggers only once each turn"

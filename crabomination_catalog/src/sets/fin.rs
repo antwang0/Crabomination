@@ -4631,3 +4631,134 @@ pub fn balthier_and_fran() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The 1/1 colorless Hero token minted by Job select (CR 702.182).
+fn hero_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Hero".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Job select ETB: mint a Hero and attach this Equipment to it (CR 702.182).
+fn job_select_etb() -> TriggeredAbility {
+    etb(Effect::Seq(vec![
+        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: hero_token() },
+        Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+    ]))
+}
+
+/// Trigger: "Whenever you cast a noncreature spell, [effect]" fired off the host.
+fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+        effect,
+    }
+}
+
+/// Samurai's Katana — {2}{R} Equipment. Job select. Equipped creature gets +2/+2,
+/// has trample and haste, and is a Samurai. Equip {5}.
+pub fn samurais_katana() -> CardDefinition {
+    CardDefinition {
+        name: "Samurai's Katana",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Trample, Keyword::Haste],
+            add_creature_types: vec![CreatureType::Samurai],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Red Mage's Rapier — {1}{R} Equipment. Job select. Equipped creature is a
+/// Wizard and has "Whenever you cast a noncreature spell, this creature gets
+/// +2/+0 until end of turn." Equip {3}.
+pub fn red_mages_rapier() -> CardDefinition {
+    CardDefinition {
+        name: "Red Mage's Rapier",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            add_creature_types: vec![CreatureType::Wizard],
+            triggered_abilities: vec![on_cast_noncreature(Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Black Mage's Rod — {1}{B} Equipment. Job select. Equipped creature gets +1/+0,
+/// is a Wizard, and has "Whenever you cast a noncreature spell, this creature
+/// deals 1 damage to each opponent." Equip {3}.
+pub fn black_mages_rod() -> CardDefinition {
+    CardDefinition {
+        name: "Black Mage's Rod",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            add_creature_types: vec![CreatureType::Wizard],
+            triggered_abilities: vec![on_cast_noncreature(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dragoon's Lance — {1}{W} Equipment. Job select. Equipped creature gets +1/+0,
+/// is a Knight, and has flying during your turn. Equip {4}.
+pub fn dragoons_lance() -> CardDefinition {
+    CardDefinition {
+        name: "Dragoon's Lance",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            add_creature_types: vec![CreatureType::Knight],
+            during_your_turn_keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
