@@ -4095,6 +4095,16 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // "Can't be targeted by nongreen spells opponents control"
+                // (Thrun): an opponent's spell that shares none of the listed
+                // colors can't target this. Own spells are unaffected.
+                if let Keyword::HexproofExceptColors(colors) = kw
+                    && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
+                    && !colors.iter().any(|c| spell_colors.contains(c))
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
             }
         }
 
@@ -6998,6 +7008,7 @@ impl GameState {
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
                     | Keyword::ProtectionFromEverything
+                    | Keyword::HexproofExceptColors(_)
             )
         }) && !(src_is_opponent && (printed_hexproof_color || turn_hexproof_color))
         {
@@ -7035,6 +7046,11 @@ impl GameState {
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
             Keyword::ProtectionFromEverything => true,
+            // "Abilities from nongreen sources opponents control can't target
+            // this" (Thrun) — opponent's source sharing none of the colors.
+            Keyword::HexproofExceptColors(colors) => {
+                src_is_opponent && !colors.iter().any(|c| src.colors.contains(c))
+            }
             _ => false,
         })
     }

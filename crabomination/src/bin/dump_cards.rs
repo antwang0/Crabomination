@@ -55,6 +55,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Indestructible => "Indestructible",
         Keyword::Hexproof => "Hexproof",
         Keyword::HexproofFromColor(_) => "Hexproof from",
+        Keyword::HexproofExceptColors(_) => "Hexproof except",
         Keyword::Shroud => "Shroud",
         Keyword::Flash => "Flash",
         Keyword::Defender => "Defender",

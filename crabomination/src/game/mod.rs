@@ -5523,6 +5523,10 @@ impl GameState {
                     }).map(|c| c.definition.cost.cmc() as i32).max().unwrap_or(0);
                     (base_p + greatest, base_t)
                 }
+                crate::card::DynamicPt::BasePlusCountersOnSelf { counter_type, base_p, base_t } => {
+                    let n = card.counter_count(counter_type) as i32;
+                    (base_p + n, base_t + n)
+                }
                 crate::card::DynamicPt::ControllerHandSize => {
                     let n = self.players[card.controller].hand.len() as i32;
                     (n, n)
@@ -12392,6 +12396,7 @@ fn blocker_matches_block_filter(
         R::HasColor(c) => computed.colors.contains(c),
         R::Colorless => computed.colors.is_empty(),
         R::HasKeyword(k) => computed.keywords.contains(k),
+        R::HasToxic => computed.keywords.iter().any(|k| matches!(k, Keyword::Toxic(_))),
         R::HasMutate => blocker.definition.mutate.is_some(),
         R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
             || computed.keywords.contains(&Keyword::Changeling),

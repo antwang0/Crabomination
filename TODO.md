@@ -191,6 +191,26 @@ Remaining short FIN cards blocked on one primitive each:
   cast-property intervening-ifs still read true. (Attack/etc. SelfSource triggers
   already went through the general dispatch, which evaluated filters.)
 
+## Discovered follow-ups — Phyrexia: All Will Be One (`sets::one`)
+
+Primitives shipped this run: `Keyword::HexproofExceptColors`,
+`SelectionRequirement::HasToxic` (+ `CardInstance::has_toxic`),
+`DynamicPt::BasePlusCountersOnSelf`. Cards still blocked on one primitive each:
+
+- **Necrogen Communion** (aura): "when enchanted creature dies, return that card
+  to the battlefield **under your control**." No effect returns a just-died
+  creature to the battlefield under the aura-controller. Add
+  `Effect::ReturnDiedToBattlefieldUnderYourControl { what }` reading the death
+  LKI → owner's graveyard card.
+- **Furnace Punisher**: "at each player's upkeep, deal 2 to that player unless
+  they control two or more basic lands." Needs a per-upkeep-player damage target
+  + a `Predicate` counting that player's basic lands.
+- **Voltage Surge**: optional additional sacrifice cost with a "if the cost was
+  paid, 4 damage instead" rider — an optional-cost / conditional-magnitude split.
+- **Anoint with Affliction** (recent): the Corrupted rider is dropped (base mode
+  caps target at MV 3). Faithful version needs a "target's controller has 3+
+  poison" predicate to widen the exile.
+
 ## Environment note
 
 The `crabomination_client` (Bevy GUI) needs system libs the base image lacks.

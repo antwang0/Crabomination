@@ -412,3 +412,361 @@ fn shrapnel_slinger_sac_destroys_artifact() {
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature");
     assert!(g.battlefield_find(art).is_none(), "opponent's artifact destroyed");
 }
+
+// ── Modern_decks ONE wave (toxic / corrupted / oil / for-Mirrodin payoffs) ──
+
+use crate::card::Keyword;
+use crate::effect::{Effect, Value};
+use crate::game::types::Target;
+
+/// Resolve a targeted `effect` for `player` against `targets`.
+fn resolve_targeted(g: &mut GameState, player: usize, effect: Effect, targets: Vec<Target>) {
+    let src = g.add_card_to_battlefield(player, catalog::grizzly_bears());
+    let base = crate::game::effects::EffectContext::for_ability(src, player, None);
+    let ctx = crate::game::effects::EffectContext { targets, ..base };
+    g.resolve_effect(&effect, &ctx).unwrap();
+    drain_stack(g);
+}
+
+fn add_oil(g: &mut GameState, id: crate::card::CardId, n: u32) {
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().add_counters(CounterType::Oil, n);
+}
+
+/// Tyrranax Rex ships toxic 4 + ward + trample + haste, and is uncounterable.
+#[test]
+fn tyrranax_rex_keywords() {
+    let mut g = two_player_game();
+    let rex = g.add_card_to_battlefield(0, catalog::tyrranax_rex());
+    let kws = g.computed_permanent(rex).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Toxic(4)) && kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
+    assert!(catalog::tyrranax_rex().keywords.iter().any(|k| matches!(k, Keyword::CantBeCountered)));
+}
+
+/// Thrun has indestructible only on his controller's turn (SelfHasKeywordIf).
+#[test]
+fn thrun_indestructible_only_your_turn() {
+    let mut g = two_player_game();
+    let thrun = g.add_card_to_battlefield(0, catalog::thrun_breaker_of_silence());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(thrun).unwrap().keywords.contains(&Keyword::Indestructible));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(thrun).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Thrun can't be targeted by an opponent's nongreen source, but a green one is
+/// fine (HexproofExceptColors).
+#[test]
+fn thrun_hexproof_from_nongreen() {
+    let mut g = two_player_game();
+    let thrun = g.add_card_to_battlefield(0, catalog::thrun_breaker_of_silence());
+    let red = g.add_card_to_battlefield(1, catalog::goblin_king()); // a red source
+    let green = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a green source
+    assert!(g.ability_target_has_protection(&Target::Permanent(thrun), red), "nongreen blocked");
+    assert!(!g.ability_target_has_protection(&Target::Permanent(thrun), green), "green allowed");
+}
+
+/// Mondrak doubles token creation.
+#[test]
+fn mondrak_doubles_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mondrak_glory_dominus());
+    let token = crate::card::TokenDefinition {
+        name: "Test Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Red],
+        ..Default::default()
+    };
+    resolve_for(&mut g, 0, Effect::CreateToken {
+        who: crate::effect::PlayerRef::You,
+        count: Value::ONE,
+        definition: token,
+    });
+    let minted = g.battlefield.iter().filter(|c| c.definition.name == "Test Goblin").count();
+    assert_eq!(minted, 2, "one token doubled to two");
+}
+
+/// Kuldotha Cackler's attack pump = number of your permanents with oil counters.
+#[test]
+fn kuldotha_cackler_pumps_per_oil_permanent() {
+    let mut g = two_player_game();
+    let cackler = g.add_card_to_battlefield(0, catalog::kuldotha_cackler());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    add_oil(&mut g, a, 1);
+    add_oil(&mut g, b, 3); // two permanents carry oil (counts permanents, not counters)
+    g.clear_sickness(cackler);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: cackler, target: crate::game::types::AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(cackler).unwrap().power, 4, "2 base + 2 oil-bearing permanents");
+}
+
+/// Evolving Adaptive enters with an oil counter (so it's 1/1) via the P/T CDA.
+#[test]
+fn evolving_adaptive_grows_with_oil() {
+    let mut g = two_player_game();
+    let ea = g.move_card_to_battlefield_for_test(0, catalog::evolving_adaptive());
+    let cp = g.computed_permanent(ea).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "0/0 + 1 oil = 1/1");
+    add_oil(&mut g, ea, 2);
+    let cp = g.computed_permanent(ea).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "three oil = 3/3");
+}
+
+/// A bigger creature entering adds an oil counter to Evolving Adaptive; a smaller
+/// one doesn't.
+#[test]
+fn evolving_adaptive_gains_oil_on_bigger_entry() {
+    let mut g = two_player_game();
+    let ea = g.move_card_to_battlefield_for_test(0, catalog::evolving_adaptive()); // 1/1
+    let oil0 = g.battlefield.iter().find(|c| c.id == ea).unwrap().counter_count(CounterType::Oil);
+    // Serra Angel (4/4) is bigger.
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentEntered { card_id: big }]);
+    drain_stack(&mut g);
+    let oil1 = g.battlefield.iter().find(|c| c.id == ea).unwrap().counter_count(CounterType::Oil);
+    assert_eq!(oil1, oil0 + 1, "bigger creature added an oil counter");
+}
+
+/// Skrelv's Hive: corrupted grants lifelink to your toxic creatures only.
+#[test]
+fn skrelvs_hive_corrupted_lifelink() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::skrelvs_hive());
+    let toxic = g.add_card_to_battlefield(0, catalog::crawling_chorus()); // toxic 1
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Not corrupted yet.
+    assert!(!g.computed_permanent(toxic).unwrap().keywords.contains(&Keyword::Lifelink));
+    g.players[1].poison_counters = 3;
+    assert!(g.computed_permanent(toxic).unwrap().keywords.contains(&Keyword::Lifelink), "toxic gains lifelink");
+    assert!(!g.computed_permanent(plain).unwrap().keywords.contains(&Keyword::Lifelink), "non-toxic doesn't");
+}
+
+/// Prologue to Phyresis poisons each opponent and draws.
+#[test]
+fn prologue_to_phyresis_poison_and_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    resolve_for(&mut g, 0, catalog::prologue_to_phyresis().effect);
+    assert_eq!(g.players[1].poison_counters, 1);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1);
+}
+
+/// Whisper of the Dross shrinks a creature and proliferates.
+#[test]
+fn whisper_of_the_dross_shrinks_and_proliferates() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[1].poison_counters = 1; // opponent already poisoned
+    resolve_targeted(&mut g, 0, catalog::whisper_of_the_dross().effect, vec![Target::Permanent(victim)]);
+    assert_eq!(g.computed_permanent(victim).unwrap().toughness, 3, "4/4 -> 3/3");
+    assert_eq!(g.players[1].poison_counters, 2, "proliferated opponent's poison");
+}
+
+/// Crawling Chorus mints a Mite when it dies.
+#[test]
+fn crawling_chorus_dies_to_mite() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::crawling_chorus());
+    let ctx = crate::game::effects::EffectContext::for_ability(cc, 0, None);
+    g.resolve_effect(
+        &Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &crate::game::effects::EffectContext { targets: vec![Target::Permanent(cc)], ..ctx },
+    ).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Phyrexian Mite"), "died into a Mite");
+}
+
+/// Zealot of the God-Pharaoh pings an opponent for 2.
+#[test]
+fn zealot_pings_opponent() {
+    let mut g = two_player_game();
+    let z = g.add_card_to_battlefield(0, catalog::zealot_of_the_god_pharaoh());
+    g.clear_sickness(z);
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: z, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("activate Zealot");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// Mandibular Kite's living weapon mints a Germ and attaches.
+#[test]
+fn mandibular_kite_living_weapon() {
+    let mut g = two_player_game();
+    let kite = g.move_card_to_battlefield_for_test(0, catalog::mandibular_kite());
+    drain_stack(&mut g);
+    let germ = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Germ").expect("Germ minted");
+    // Equipped: 0/0 + 1/1 = 1/1 with flying.
+    let cp = g.computed_permanent(germ.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+    let _ = kite;
+}
+
+/// Migloz enters with five oil counters and can spend two for +2/+2.
+#[test]
+fn migloz_spends_oil_to_pump() {
+    let mut g = two_player_game();
+    let migloz = g.move_card_to_battlefield_for_test(0, catalog::migloz_maze_crusher());
+    assert_eq!(g.battlefield.iter().find(|c| c.id == migloz).unwrap().counter_count(CounterType::Oil), 5);
+    g.clear_sickness(migloz);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: migloz, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump ability");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(migloz).unwrap().power, 6, "4 + 2");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == migloz).unwrap().counter_count(CounterType::Oil), 3, "spent two oil");
+}
+
+/// Vraan drains 2 the first time another of your creatures dies each turn.
+#[test]
+fn vraan_drains_once_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vraan_executioner_thane());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::CreatureDied { card_id: fodder }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2);
+    assert_eq!(g.players[0].life, my_life + 2);
+}
+
+/// Karumonix grants toxic to your other Rats.
+#[test]
+fn karumonix_rat_lord() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::karumonix_the_rat_king());
+    // A plain Rat: give it via a token-ish stand-in — use another Karumonix body? Instead
+    // verify the static targets Rats: a Rat creature gains toxic 1.
+    let rat = g.add_card_to_battlefield(0, catalog::ravenous_rats());
+    assert!(g.computed_permanent(rat).unwrap().keywords.iter().any(|k| matches!(k, Keyword::Toxic(_))));
+}
+
+/// Slaughter Singer pumps another attacking toxic creature.
+#[test]
+fn slaughter_singer_pumps_toxic_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::slaughter_singer());
+    let chorus = g.add_card_to_battlefield(0, catalog::crawling_chorus()); // toxic 1, 1/1
+    g.clear_sickness(chorus);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: chorus, target: crate::game::types::AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(chorus).unwrap().power, 2, "1/1 toxic attacker gets +1/+1");
+}
+
+/// Ichor Drinker incubates 2 from the graveyard (exile-self cost).
+#[test]
+fn ichor_drinker_gy_incubates() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::ichor_drinker());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate from graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Incubator"), "incubated 2");
+}
+
+/// Corrupted Conviction sacrifices a creature and draws two.
+#[test]
+fn corrupted_conviction_sac_draws_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let cc = g.add_card_to_hand(0, catalog::corrupted_conviction());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: cc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Corrupted Conviction");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed a creature");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "spent the spell, drew two");
+}
+
+/// Vraska's Fall edicts each opponent and poisons them.
+#[test]
+fn vraskas_fall_edict_and_poison() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve_for(&mut g, 0, catalog::vraskas_fall().effect);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed a creature");
+    assert_eq!(g.players[1].poison_counters, 1, "opponent got a poison counter");
+}
+
+/// Bring the Ending hard-counters while Corrupted; otherwise it's a soft counter.
+#[test]
+fn bring_the_ending_corrupted_hard_counter() {
+    let mut g = two_player_game();
+    // On player 1's turn they cast a creature; player 0 counters it while Corrupted.
+    g.active_player_idx = 1;
+    let angel = g.add_card_to_hand(1, catalog::serra_angel());
+    g.players[1].mana_pool.add_colorless(3);
+    g.players[1].mana_pool.add(crate::mana::Color::White, 2);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: angel, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts angel");
+    // Bring the Ending checks the caster's (player 0's) Corrupted — an opponent
+    // with three or more poison — so poison the opponent (player 1).
+    g.players[1].poison_counters = 3;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let base = crate::game::effects::EffectContext::for_ability(src, 0, None);
+    let ctx = crate::game::effects::EffectContext { targets: vec![Target::Permanent(angel)], ..base };
+    g.resolve_effect(&catalog::bring_the_ending().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == angel), "angel hard-countered to graveyard");
+}
+
+/// Vindictive Flamestoker accrues an oil counter per noncreature spell you cast.
+#[test]
+fn vindictive_flamestoker_oil_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let vf = g.add_card_to_battlefield(0, catalog::vindictive_flamestoker());
+    // Cast a noncreature spell (Lightning Bolt) from hand.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == vf).unwrap().counter_count(CounterType::Oil), 1,
+        "noncreature cast put an oil counter");
+}
+
+/// Gitaxian Anatomist taps and proliferates on entry.
+#[test]
+fn gitaxian_anatomist_taps_and_proliferates() {
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 1;
+    let ga = g.move_card_to_battlefield_for_test(0, catalog::gitaxian_anatomist());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == ga).unwrap().tapped, "tapped itself");
+    assert_eq!(g.players[1].poison_counters, 2, "proliferated opponent poison");
+}

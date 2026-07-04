@@ -3,13 +3,15 @@
 //! it to a 0/0 Phyrexian artifact creature (so it becomes N/N).
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, SelectionRequirement, StaticAbility, StaticEffect, Subtypes,
-    TokenDefinition, TriggeredAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    DynamicPt, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, WardCost,
 };
-use crate::effect::shortcut::{etb, gain_life, on_dies, target_filtered};
-use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::effect::shortcut::{deal, drain, draw, etb, gain_life, on_attack, on_dies, target_filtered};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::game::types::TurnStep;
+use crate::mana::{b, cost, g, generic, phyrexian, r, u, w, Color};
 
 /// Anthem: "Phyrexians you control have `keyword`."
 fn phyrexians_have(keyword: Keyword) -> StaticEffect {
@@ -633,6 +635,619 @@ pub fn shrapnel_slinger() -> CardDefinition {
             }),
             else_: None,
         })],
+        ..Default::default()
+    }
+}
+
+/// A 1/1 colorless Phyrexian Mite artifact creature token with toxic 1 that
+/// can't block (Skrelv's Hive, Crawling Chorus).
+fn mite_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Phyrexian Mite".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian, CreatureType::Mite], ..Default::default() },
+        keywords: vec![Keyword::Toxic(1), Keyword::CantBlock],
+        ..Default::default()
+    }
+}
+
+/// Tyrranax Rex — {4}{G}{G}{G} Creature — Phyrexian Dinosaur 8/8. Can't be
+/// countered. Trample, ward {4}, haste, toxic 4.
+pub fn tyrranax_rex() -> CardDefinition {
+    CardDefinition {
+        name: "Tyrranax Rex",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Trample,
+            Keyword::Ward(WardCost::generic(4)),
+            Keyword::Haste,
+            Keyword::Toxic(4),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Thrun, Breaker of Silence — {3}{G}{G} Legendary Creature — Troll Shaman 5/5.
+/// Can't be countered. Trample. Can't be the target of nongreen spells or
+/// abilities opponents control. During your turn, Thrun has indestructible.
+pub fn thrun_breaker_of_silence() -> CardDefinition {
+    CardDefinition {
+        name: "Thrun, Breaker of Silence",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Trample,
+            Keyword::HexproofExceptColors(vec![Color::Green]),
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, Thrun has indestructible.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Indestructible,
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mondrak, Glory Dominus — {2}{W}{W} Legendary Creature — Phyrexian Horror 4/4.
+/// Token doubler. {1}{W/P}{W/P}, Sacrifice two other artifacts and/or creatures:
+/// Put an indestructible counter on Mondrak.
+pub fn mondrak_glory_dominus() -> CardDefinition {
+    CardDefinition {
+        name: "Mondrak, Glory Dominus",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If one or more tokens would be created under your control, twice that many are created instead.",
+            effect: StaticEffect::DoubleTokens,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), phyrexian(Color::White), phyrexian(Color::White)]),
+            sac_other_filter: Some((SelectionRequirement::Artifact.or(SelectionRequirement::Creature), 2)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Indestructible,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kuldotha Cackler — {2}{R} Creature — Phyrexian Hyena 2/3. Trample. Whenever
+/// it attacks, it gets +X/+0 until end of turn, where X is the number of
+/// permanents you control with oil counters on them.
+pub fn kuldotha_cackler() -> CardDefinition {
+    CardDefinition {
+        name: "Kuldotha Cackler",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Hyena],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::WithCounter(CounterType::Oil)
+                    .and(SelectionRequirement::ControlledByYou),
+            ))),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Evolving Adaptive — {G} Creature — Phyrexian Warrior 0/0. Enters with an oil
+/// counter; gets +1/+1 for each oil counter on it. Whenever another creature you
+/// control enters with greater power or toughness, put an oil counter on this.
+pub fn evolving_adaptive() -> CardDefinition {
+    CardDefinition {
+        name: "Evolving Adaptive",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::Oil, Value::ONE)),
+        dynamic_pt: Some(DynamicPt::BasePlusCountersOnSelf {
+            counter_type: CounterType::Oil,
+            base_p: 0,
+            base_t: 0,
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    },
+                    Predicate::Any(vec![
+                        Predicate::Not(Box::new(Predicate::ValueAtMost(
+                            Value::PowerOf(Box::new(Selector::TriggerSource)),
+                            Value::PowerOf(Box::new(Selector::This)),
+                        ))),
+                        Predicate::Not(Box::new(Predicate::ValueAtMost(
+                            Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                            Value::ToughnessOf(Box::new(Selector::This)),
+                        ))),
+                    ]),
+                ])),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Oil,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skrelv's Hive — {1}{W} Enchantment. At the beginning of your upkeep, lose 1
+/// life and create a Phyrexian Mite token. Corrupted — while an opponent has 3+
+/// poison counters, creatures you control with toxic have lifelink.
+pub fn skrelvs_hive() -> CardDefinition {
+    CardDefinition {
+        name: "Skrelv's Hive",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: mite_token() },
+            ]),
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Corrupted — creatures you control with toxic have lifelink.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::CorruptedActive { who: PlayerRef::You },
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasToxic.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Lifelink],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Prologue to Phyresis — {1}{U} Instant. Each opponent gets a poison counter.
+/// Draw a card.
+pub fn prologue_to_phyresis() -> CardDefinition {
+    CardDefinition {
+        name: "Prologue to Phyresis",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddPoison { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            draw(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Corrupted Conviction — {B} Instant. As an additional cost, sacrifice a
+/// creature. Draw two cards.
+pub fn corrupted_conviction() -> CardDefinition {
+    CardDefinition {
+        name: "Corrupted Conviction",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
+        effect: draw(2),
+        ..Default::default()
+    }
+}
+
+/// Whisper of the Dross — {B} Instant. Target creature gets -1/-1 until end of
+/// turn. Proliferate.
+pub fn whisper_of_the_dross() -> CardDefinition {
+    CardDefinition {
+        name: "Whisper of the Dross",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Proliferate,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bring the Ending — {1}{U} Instant. Counter target spell unless its controller
+/// pays {2}. Corrupted — counter it outright instead if its controller has three
+/// or more poison counters.
+pub fn bring_the_ending() -> CardDefinition {
+    CardDefinition {
+        name: "Bring the Ending",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::CorruptedActive { who: PlayerRef::You },
+            then: Box::new(Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            }),
+            else_: Box::new(Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[generic(2)]),
+                exile: false,
+                extra_generic: None,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Vraska's Fall — {2}{B} Instant. Each opponent sacrifices a creature or
+/// planeswalker of their choice and gets a poison counter.
+pub fn vraskas_fall() -> CardDefinition {
+    CardDefinition {
+        name: "Vraska's Fall",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            },
+            Effect::AddPoison { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Crawling Chorus — {W} Creature — Phyrexian Horror 1/1 with toxic 1. When it
+/// dies, create a Phyrexian Mite token.
+pub fn crawling_chorus() -> CardDefinition {
+    CardDefinition {
+        name: "Crawling Chorus",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: mite_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Slaughter Singer — {G}{W} Creature — Phyrexian Cleric 2/2 with toxic 2.
+/// Whenever another creature you control with toxic attacks, it gets +1/+1
+/// until end of turn.
+pub fn slaughter_singer() -> CardDefinition {
+    CardDefinition {
+        name: "Slaughter Singer",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Toxic(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasToxic,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zealot of the God-Pharaoh — {3}{R} Creature — Minotaur Archer 4/3.
+/// {4}{R}: This creature deals 2 damage to target opponent or planeswalker.
+pub fn zealot_of_the_god_pharaoh() -> CardDefinition {
+    CardDefinition {
+        name: "Zealot of the God-Pharaoh",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), r()]),
+            effect: deal(2, target_filtered(
+                SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mandibular Kite — {W} Artifact — Equipment. Living weapon. Equipped creature
+/// gets +1/+1 and has flying. Equip {3}{W}.
+pub fn mandibular_kite() -> CardDefinition {
+    let germ = TokenDefinition {
+        name: "Phyrexian Germ".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mandibular Kite",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3), w()]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: germ },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Migloz, Maze Crusher — {1}{R}{G} Legendary Creature — Phyrexian Beast 4/4.
+/// Enters with five oil counters. Three activated abilities spend oil: gain
+/// vigilance+menace; +2/+2; or destroy an artifact/enchantment.
+pub fn migloz_maze_crusher() -> CardDefinition {
+    CardDefinition {
+        name: "Migloz, Maze Crusher",
+        cost: cost(&[generic(1), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(5))),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                remove_counter_cost: Some((CounterType::Oil, 1)),
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Menace, duration: Duration::EndOfTurn },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                remove_counter_cost: Some((CounterType::Oil, 2)),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                remove_counter_cost: Some((CounterType::Oil, 3)),
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ichor Drinker — {B} Creature — Phyrexian Vampire 1/1 with lifelink.
+/// {B}, Exile this card from your graveyard: Incubate 2. Sorcery speed.
+pub fn ichor_drinker() -> CardDefinition {
+    CardDefinition {
+        name: "Ichor Drinker",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: incubate(2),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vraan, Executioner Thane — {1}{B} Legendary Creature — Phyrexian Vampire 2/2.
+/// Whenever one or more other creatures you control die, each opponent loses 2
+/// life and you gain 2 life. Only once each turn.
+pub fn vraan_executioner_thane() -> CardDefinition {
+    CardDefinition {
+        name: "Vraan, Executioner Thane",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).once_per_turn(),
+            effect: drain(2),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Karumonix, the Rat King — {1}{B}{B} Legendary Creature — Phyrexian Rat 3/3
+/// with toxic 1. Other Rats you control have toxic 1. When it enters, look at the
+/// top five cards of your library; put any number of Rat cards into your hand and
+/// the rest on the bottom.
+pub fn karumonix_the_rat_king() -> CardDefinition {
+    CardDefinition {
+        name: "Karumonix, the Rat King",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Toxic(1)],
+        static_abilities: vec![StaticAbility {
+            description: "Other Rats you control have toxic 1.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Rat)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Toxic(1),
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Rat),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vindictive Flamestoker — {R} Creature — Phyrexian Wizard 1/2. Whenever you
+/// cast a noncreature spell, put an oil counter on it. {6}{R}, Sacrifice it:
+/// Discard your hand, then draw four cards. This ability costs {1} less to
+/// activate for each oil counter on it.
+pub fn vindictive_flamestoker() -> CardDefinition {
+    CardDefinition {
+        name: "Vindictive Flamestoker",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), r()]),
+            sac_cost: true,
+            self_counter_cost_reduction: Some(CounterType::Oil),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::CardsInHandMatching { who: PlayerRef::You, filter: SelectionRequirement::Any },
+                    random: false,
+                },
+                draw(4),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gitaxian Anatomist — {3}{U} Creature — Phyrexian Wizard 2/5. When it enters,
+/// you may tap it; if you do, proliferate.
+pub fn gitaxian_anatomist() -> CardDefinition {
+    CardDefinition {
+        name: "Gitaxian Anatomist",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: Selector::This },
+            Effect::Proliferate,
+        ]))],
         ..Default::default()
     }
 }

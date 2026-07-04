@@ -1752,6 +1752,7 @@ impl GameState {
                     // empty under Devoid. `printed_colors` folds all three in.
                     R::HasColor(c) => card.definition.printed_colors().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
+                    R::HasToxic => card.has_toxic(),
                     R::HasMutate => card.definition.mutate.is_some(),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
@@ -2103,6 +2104,7 @@ impl GameState {
             // path (`colors_from_card`) for cards in hidden zones too.
             R::HasColor(c) => card.definition.printed_colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
+            R::HasToxic => card.has_toxic(),
             R::HasMutate => card.definition.mutate.is_some(),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                 k,

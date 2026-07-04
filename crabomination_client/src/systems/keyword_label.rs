@@ -58,6 +58,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Indestructible => "Ind",
         Hexproof => "Hex",
         HexproofFromColor(_) => "HexC",
+        HexproofExceptColors(_) => "HexX",
         Shroud => "Shr",
         Unblockable => "Unb",
         Intimidate => "Int",

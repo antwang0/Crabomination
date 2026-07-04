@@ -607,6 +607,12 @@ pub enum Keyword {
     /// half of protection-from-color (Witchbane Orb-style, Veil of Summer's
     /// rider granted via the turn-scoped player flag).
     HexproofFromColor(Color),
+    /// "Can't be the target of nongreen spells opponents control or abilities
+    /// from nongreen sources opponents control" and its siblings (Thrun,
+    /// Breaker of Silence). Blocks an opponent's spell/ability whose source
+    /// includes *none* of the listed colors. `HexproofExceptColors(vec![Green])`
+    /// = hexproof from nongreen opponents.
+    HexproofExceptColors(Vec<Color>),
     Shroud,
     CantBeCountered,
     /// CR 117.x — "If X is N or more, this spell can't be countered."
@@ -1184,6 +1190,10 @@ pub enum SelectionRequirement {
     PlayerDamagedBySourceThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
+    /// Has Toxic N for any N (CR 702.180). The parameter-agnostic sibling of
+    /// `HasKeyword(Toxic(n))` — matches "a creature you control with toxic"
+    /// regardless of the toxic value (Slaughter Singer, Skrelv's Hive).
+    HasToxic,
     /// CR 702.140 — the card has a mutate cost (Pollywog Symbiote's
     /// "creature spell you cast … if it has mutate").
     HasMutate,
@@ -2680,6 +2690,10 @@ pub enum DynamicPt {
     /// where X is the greatest mana value among other artifacts you control"
     /// (Emissary Escort, base 0/4).
     BasePlusGreatestOtherArtifactMv { base_p: i32, base_t: i32 },
+    /// P/T = base + one for each `counter_type` counter on this permanent
+    /// itself. "gets +1/+1 for each oil counter on it" (Evolving Adaptive,
+    /// base 0/0).
+    BasePlusCountersOnSelf { counter_type: CounterType, base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
@@ -3806,6 +3820,13 @@ impl CardInstance {
         self.definition.keywords.contains(kw)
             || self.granted_keywords_eot.contains(kw)
             || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
+    }
+
+    /// True if this permanent has Toxic N for any N (printed or EOT-granted).
+    /// The value-agnostic sibling of `has_keyword(&Toxic(n))`.
+    pub fn has_toxic(&self) -> bool {
+        self.definition.keywords.iter().chain(self.granted_keywords_eot.iter())
+            .any(|k| matches!(k, Keyword::Toxic(_)))
     }
 
     /// True if this permanent can't be destroyed — either the

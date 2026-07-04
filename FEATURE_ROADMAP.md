@@ -156,6 +156,16 @@ exercising each) was elided in a compaction pass; recover it from
   `event_phrase` now names ~10 more trigger events (opponent-life-gain/loss,
   you-attack, unblocked, combat-damage-to-creature, enrage, scry/surveil,
   counter-added) instead of the generic "Triggered ability:".
+- **Toxic / oil / targeting primitives (modern_decks — ONE, this run):**
+  `Keyword::HexproofExceptColors(Vec<Color>)` ("can't be targeted by nongreen
+  spells/abilities opponents control" — Thrun, Breaker of Silence; enforced at
+  both the spell-cast and ability-target protection gates);
+  `SelectionRequirement::HasToxic` (value-agnostic "creature with toxic" filter —
+  Slaughter Singer, Skrelv's Hive, backed by `CardInstance::has_toxic`);
+  `DynamicPt::BasePlusCountersOnSelf { counter_type, .. }` (+1/+1 per oil counter
+  on itself — Evolving Adaptive). Oil-count payoffs reuse `Value::CountOf` over
+  `SelectionRequirement::WithCounter` (Kuldotha Cackler). 21 ONE cards in
+  `sets::one`; tests in `tests/one.rs`.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
