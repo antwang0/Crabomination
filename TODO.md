@@ -116,6 +116,12 @@ Remaining short FIN cards blocked on one primitive each:
 - **"Tiered" spells** (Fire/Ice/Thunder/Restoration Magic, Limit Breaks) — still
   want a "choose one additional cost" modal-with-per-mode-cost primitive; not yet
   mapped to Spree/Escalate.
+- **Reflexive multi-target auto-targeting** — a `MayPay { body: Reflexive(<2-slot
+  body>) }` only auto-fills the first target slot at resolution, so Weapons Vendor
+  ("pay {1}; attach *target* Equipment you control to *target* creature you
+  control") pays the cost but the attach fizzles (the creature slot goes unfilled).
+  `auto_extra_targets_for` needs to fan out all slots of a reflexive body. Weapons
+  Vendor is deferred pending this.
 
 ## Environment note
 
