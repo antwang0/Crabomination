@@ -5573,6 +5573,8 @@ static FIN: &[Factory] = &[
     super::fin::quistis_trepe,
     super::fin::town_greeter,
     super::fin::giott_king_of_the_dwarves,
+    super::fin::freya_crescent,
+    super::fin::balthier_and_fran,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

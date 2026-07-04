@@ -13,7 +13,7 @@ use crate::effect::shortcut::{
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, SpendRestriction};
 
 /// Iron Giant — {7} 6/6 artifact creature with vigilance, reach, and trample.
 pub fn iron_giant() -> CardDefinition {
@@ -4562,6 +4562,72 @@ pub fn giott_king_of_the_dwarves() -> CardDefinition {
                 effect: loot(),
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Freya Crescent — {R} 1/1 Rat Knight. Jump — during your turn she has flying.
+/// {T}: Add {R}, spendable only on Equipment spells or equip abilities.
+pub fn freya_crescent() -> CardDefinition {
+    CardDefinition {
+        name: "Freya Crescent",
+        cost: cost(&[r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Jump — During your turn, Freya Crescent has flying.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Flying,
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::OfColor(Color::Red, Value::ONE)),
+                    SpendRestriction::EquipmentOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Balthier and Fran — {1}{R}{G} 4/3 Human Rabbit with reach. Vehicles you
+/// control get +1/+1 and have vigilance and reach. (The extra-combat-phase rider
+/// when a Vehicle it crewed attacks is omitted — no crew-source attribution.)
+pub fn balthier_and_fran() -> CardDefinition {
+    CardDefinition {
+        name: "Balthier and Fran",
+        cost: cost(&[generic(1), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rabbit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Vehicles you control get +1/+1 and have vigilance and reach.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Vigilance, Keyword::Reach],
+                opponents: false,
+            },
+        }],
         ..Default::default()
     }
 }

@@ -2896,3 +2896,39 @@ fn giott_loots_on_dwarf_enter() {
     assert_eq!(g.players[0].hand.len(), hand0, "looted: -1 discard +1 draw");
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"), "discarded a card");
 }
+
+/// Freya's Jump grants flying only during her controller's turn.
+#[test]
+fn freya_crescent_flying_only_on_your_turn() {
+    let mut g = two_player_game();
+    let freya = g.add_card_to_battlefield(0, catalog::freya_crescent());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(freya).unwrap().keywords.contains(&Keyword::Flying),
+        "flying during your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(freya).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying on opponent's turn");
+}
+
+/// Balthier and Fran pumps controlled Vehicles +1/+1 and grants vigilance+reach.
+#[test]
+fn balthier_and_fran_buffs_vehicles() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::cargo_ship()); // 2/3 Vehicle, no reach
+    g.add_card_to_battlefield(0, catalog::balthier_and_fran());
+    let cp = g.computed_permanent(ship).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "Vehicle gets +1/+1");
+    assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+}
+
+/// Freya's red mana pays for an Equipment ability/cast but not a creature spell.
+#[test]
+fn freya_crescent_mana_restricted_to_equipment() {
+    use crate::mana::{SpellKind, SpendRestriction};
+    let r = SpendRestriction::EquipmentOnly;
+    let equip = SpellKind { equipment: true, ..Default::default() };
+    let creature = SpellKind { creature: true, ..Default::default() };
+    assert!(r.allows(&equip), "funds an Equipment spell/ability");
+    assert!(!r.allows(&creature), "not a creature spell");
+}

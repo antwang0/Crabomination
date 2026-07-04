@@ -5167,6 +5167,87 @@ impl GameState {
                 }
             }
         }
+        // Fixed-filter team anthem (`StaticEffect::AnthemForFilter`) — pumps
+        // and/or grants keywords to the controller's (or each opponent's)
+        // permanents matching a printed filter. Balthier and Fran (Vehicles),
+        // Ardyn, the Usurper (Demons).
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::AnthemForFilter {
+                    filter, power, toughness, keywords, opponents,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let seats: Vec<usize> = if *opponents {
+                    self.opponents_of(card.controller)
+                } else {
+                    vec![card.controller]
+                };
+                for seat in seats {
+                    // "[filter] you control" for `seat` — wrap the printed filter
+                    // with the controller restriction relative to `seat`.
+                    let req = crate::card::SelectionRequirement::And(
+                        Box::new(filter.clone()),
+                        Box::new(crate::card::SelectionRequirement::ControlledByYou),
+                    );
+                    let affected = AffectedPermanents::CardMatch {
+                        source_controller: seat,
+                        requirement: Box::new(req),
+                    };
+                    if *power != 0 || *toughness != 0 {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: affected.clone(),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        });
+                    }
+                    for kw in keywords {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: affected.clone(),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
+            }
+        }
+        // Predicate-gated self keyword (`StaticEffect::SelfHasKeywordIf`) —
+        // Freya Crescent's "During your turn, Freya has flying".
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfHasKeywordIf { keyword, condition } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                if !self.evaluate_predicate(condition, &ctx) {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(keyword.clone()),
+                });
+            }
+        }
         // CR 604.3 — characteristic-defining dynamic P/T injection. The
         // formula lives on `CardDefinition.dynamic_pt`; we resolve it here
         // on every layer recompute and emit a layer-7 SetPT effect.
@@ -11584,6 +11665,10 @@ fn static_effect_to_effects(
             // AnthemForChosenType — reads the source's live chosen creature
             // type; resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForChosenType { .. }
+            // AnthemForFilter / SelfHasKeywordIf — need live game state
+            // (opponents / predicate eval); resolved in `gather_continuous_effects`.
+            | StaticEffect::AnthemForFilter { .. }
+            | StaticEffect::SelfHasKeywordIf { .. }
             // GrantKeywordToChosenType — reads the source's live chosen type;
             // resolved in `gather_continuous_effects`.
             | StaticEffect::GrantKeywordToChosenType { .. }

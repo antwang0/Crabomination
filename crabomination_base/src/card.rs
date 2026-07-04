@@ -2880,6 +2880,7 @@ impl CardDefinition {
             casting_nonartifact_spell: !self.is_artifact(),
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
+            equipment: self.is_equipment(),
         }
     }
 
@@ -2891,6 +2892,7 @@ impl CardDefinition {
             land_ability: self.is_land(),
             creature_ability: self.is_creature(),
             activating_ability: true,
+            equipment: self.is_equipment(),
             ..Default::default()
         }
     }

@@ -73,6 +73,11 @@ Crystals, Ancient Adamantoise, Ultros, …) on the new `Effect::MayPayLife`
 (CR 119.4) and `StaticEffect::DoublePlusOneCounters` (CR 614.16 +1/+1-only
 doubler — also corrected Branching Evolution / Corpsejack Menace, which were
 over-scoped to all counter kinds via `DoubleCounters`).
+Also shipped: `StaticEffect::AnthemForFilter` (fixed-filter team anthem —
+Balthier and Fran → Vehicles +1/+1 vigilance/reach), `StaticEffect::
+SelfHasKeywordIf` (predicate-gated self keyword — Freya Crescent's "during your
+turn, has flying"), and `SpendRestriction::EquipmentOnly` (Freya's equip-only
+mana).
 
 Remaining short FIN cards blocked on one primitive each:
 - **Aettir and Priwen / Excalibur II** — equip bonus scaled by life total /
@@ -82,17 +87,13 @@ Remaining short FIN cards blocked on one primitive each:
 - **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
   Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
   to Spree/Escalate.
-- **Fixed-filter anthem static** — "[filter] you control get +X/+X and have
-  [keywords]" (Balthier and Fran → Vehicles; Ardyn → Demons). `AnthemForChosenType`
-  only anthems a *chosen* creature type; a fixed-filter variant would unblock
-  several tribal/permanent-class lords.
-- **Turn-gated keyword grant** — "During your turn, [source] has flying"
-  (Freya Crescent's Jump, Cloud/Planet's Champion). Needs a predicate-gated
-  `GrantKeyword` static (`IsControllerTurn`).
-- **Ardyn / Sin / Jenova** — begin-combat "exile a card from a graveyard, create
-  a token copy of it (except it's a 5/5 Demon / tapped / …)": a
-  `CreateTokenCopyOf` whose `source` is a just-exiled graveyard target, with a
-  color override on the copy.
+- **Ardyn, the Usurper / Sin / Jenova** — begin-combat "exile up to one target
+  creature card from a graveyard; if you do, create a token copy of it (except
+  it's a 5/5 black Demon / tapped / …)". Needs (a) a trigger targeting a card in
+  a graveyard, (b) exile-then-copy sequencing, and (c) a color override on
+  `CreateTokenCopyOf` (which already mints off graveyard/exile sources and
+  supports P/T + type overrides). Ardyn's *anthem* half ("Demons you control have
+  menace, lifelink, haste") is now shippable via `StaticEffect::AnthemForFilter`.
 
 ## Environment note
 

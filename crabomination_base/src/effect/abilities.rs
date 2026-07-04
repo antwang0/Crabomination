@@ -839,6 +839,33 @@ pub enum StaticEffect {
         #[serde(default)]
         per_counter: Option<crate::card::CounterType>,
     },
+    /// "[filter] you control get +P/+T [and have keywords]" — a fixed-filter
+    /// team anthem (Balthier and Fran → Vehicles; Ardyn, the Usurper → Demons).
+    /// Unlike `AnthemForChosenType` (keyed to a chosen creature type stamped at
+    /// ETB) the filter is printed on the card. Resolved live in
+    /// `gather_continuous_effects`: a layer-7 pump plus one layer-6 keyword
+    /// grant per `keywords` entry over the controller's permanents matching
+    /// `filter` (via `AffectedPermanents::CardMatch`). `opponents: true` targets
+    /// each opponent's matching permanents instead.
+    AnthemForFilter {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        power: i32,
+        #[serde(default)]
+        toughness: i32,
+        #[serde(default)]
+        keywords: Vec<Keyword>,
+        #[serde(default)]
+        opponents: bool,
+    },
+    /// "As long as [condition], this has [keyword]" — the self keyword-grant
+    /// sibling of `SetBasePtIf` / `PumpSelfIf`, gated on a live `Predicate`
+    /// (source as ability context). Freya Crescent's "During your turn, Freya
+    /// has flying" (`Predicate::IsTurnOf(You)`). Emits a layer-6 self
+    /// `AddKeyword` while the predicate holds. Unlike `SelfHasKeywordWhile`
+    /// (a `SelectionRequirement` over the source's own characteristics) this
+    /// reads game state via the `Predicate` machinery.
+    SelfHasKeywordIf { keyword: Keyword, condition: Predicate },
     /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
     /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
     /// list is accepted on any spell whose controller has this static, not
