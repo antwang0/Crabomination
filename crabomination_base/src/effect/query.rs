@@ -305,6 +305,7 @@ impl Effect {
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.requires_target(),
             Effect::MaySacrifice { then, else_, .. }
+            | Effect::MaySacrificeSource { then, else_, .. }
             | Effect::MayTap { then, else_, .. }
             | Effect::MayDiscard { then, else_, .. } => {
                 then.requires_target()

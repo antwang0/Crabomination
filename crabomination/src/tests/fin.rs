@@ -4905,3 +4905,25 @@ fn reno_and_rude_impulses_from_victim_library() {
     let exiled = g.exile.iter().find(|c| c.id == loot).expect("victim's top card exiled");
     assert!(exiled.may_play_until.is_some(), "you may play the exiled card");
 }
+
+/// Eden's {5},{T} mills two, then (on the may-sacrifice) returns a permanent
+/// card from your graveyard to hand.
+#[test]
+fn eden_mills_then_sacrifices_to_return_permanent() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let eden = g.add_card_to_battlefield(0, catalog::eden_seat_of_the_sanctum());
+    let target = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // permanent card
+    g.add_card_to_library(0, catalog::lightning_bolt()); // mill fodder (instant)
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // yes, sacrifice
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eden, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Eden");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(eden).is_none(), "Eden sacrificed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == target), "grizzly returned to hand");
+}

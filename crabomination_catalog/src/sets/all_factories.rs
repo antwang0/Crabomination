@@ -5686,6 +5686,7 @@ static FIN: &[Factory] = &[
     super::fin::garnet_princess_of_alexandria,
     super::fin::torgal_a_fine_hound,
     super::fin::reno_and_rude,
+    super::fin::eden_seat_of_the_sanctum,
     super::fin::summon_brynhildr,
     super::fin::summon_fenrir,
     super::fin::stiltzkin_moogle_merchant,

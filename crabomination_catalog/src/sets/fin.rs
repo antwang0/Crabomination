@@ -7572,6 +7572,45 @@ pub fn kefka_court_mage() -> CardDefinition {
     }
 }
 
+/// Eden, Seat of the Sanctum — Land — Town. {T}: Add {C}. {5}, {T}: Mill two
+/// cards. Then you may sacrifice Eden; when you do, return another target
+/// permanent card from your graveyard to your hand.
+pub fn eden_seat_of_the_sanctum() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "Eden, Seat of the Sanctum",
+        card_types: vec![CardType::Land],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(5)]),
+                effect: Effect::Seq(vec![
+                    Effect::Mill { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) },
+                    Effect::MaySacrificeSource {
+                        description: "sacrifice Eden, Seat of the Sanctum".into(),
+                        then: Box::new(Effect::Reflexive {
+                            body: Box::new(Effect::Move {
+                                what: target_filtered(
+                                    SelectionRequirement::PermanentCard
+                                        .and(SelectionRequirement::InYourGraveyard)
+                                        .and(SelectionRequirement::OtherThanSource),
+                                ),
+                                to: ZoneDest::Hand(PlayerRef::You),
+                            }),
+                        }),
+                        else_: None,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Reno and Rude — {1}{B} 2/1 Human Assassin with menace. Whenever it deals
 /// combat damage to a player, you may sacrifice another creature or artifact;
 /// if you do, exile the top card of that player's library and you may play it

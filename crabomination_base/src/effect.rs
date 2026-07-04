@@ -2041,6 +2041,18 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// "You may sacrifice [this / the source]. If you do, [then]." (CR 701.16 +
+    /// 603.7 — the reflexive self-sacrifice cost; Eden, Seat of the Sanctum's
+    /// mill-then-may-sac-then-return). Asks the controller yes/no (gated on the
+    /// source still being on the battlefield); on yes, the source is sacrificed
+    /// and `then` runs, else `else_`.
+    MaySacrificeSource {
+        description: String,
+        then: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
     /// "You may tap [count] untapped [filter] you control. If you do, [then]."
     /// The reflexive tap cost (Caparocti Sunborn's attack → discover 3). Asks
     /// the controller yes/no (gated on owning `count` untapped matches); on

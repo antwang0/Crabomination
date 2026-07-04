@@ -1645,6 +1645,38 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 701.16 + 603.7 — reflexive "you may sacrifice this; if you
+            // do, [then]." Gated on the source still being on the battlefield.
+            Effect::MaySacrificeSource { description, then, else_ } => {
+                let source_id = ctx.source;
+                let on_bf = source_id.is_some_and(|id| self.battlefield_find(id).is_some());
+                if !on_bf {
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                    return Ok(());
+                }
+                let source = source_id.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
+                    self.sacrifice_one(source, ctx.controller, events);
+                    self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::MayTap {
                 description,
                 filter,
