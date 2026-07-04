@@ -3055,6 +3055,7 @@ static DECKS: &[Factory] = &[
     super::decks::temur_charm,
     super::decks::kor_outfitter,
     super::decks::brass_squire,
+    super::decks::chandras_ignition,
     super::decks::invasion_of_zendikar,
     super::decks::invasion_of_kaladesh,
     super::decks::invasion_of_amonkhet,

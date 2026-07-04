@@ -937,6 +937,38 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn split_turn_averages_separate_wins_from_draws() {
+        use crabomination::server::MatchOutcome;
+        let mut s = MatchStats::default();
+        let d = std::time::Duration::from_secs(30);
+        // Two decisive wins at 6 and 10 turns → avg 8.
+        for t in [6u32, 10] {
+            let o = MatchOutcome {
+                final_turn: t,
+                winner: Some(Some(0)),
+                final_life_totals: vec![14, 0],
+                loss_reasons: vec![None, Some(LossReason::LifeDepleted)],
+                ..Default::default()
+            };
+            s.record_outcome(&o, Format::Demo, d, false);
+        }
+        // One draw at a 40-turn grind.
+        let draw = MatchOutcome {
+            final_turn: 40,
+            winner: Some(None),
+            final_life_totals: vec![3, 3],
+            ..Default::default()
+        };
+        s.record_outcome(&draw, Format::Demo, d, false);
+        assert_eq!(s.avg_decisive_turns(), 8, "decisive average excludes the draw");
+        assert_eq!(s.avg_draw_turns(), 40, "draw average tracks the grind");
+        assert!(
+            format_match_stats(&s).contains("turns(win/draw)=8/40"),
+            "split rendered once a draw exists"
+        );
+    }
+
+    #[test]
     pub(crate) fn observe_win_kind_classifies_from_loss_reasons() {
         let mut s = MatchStats::default();
         // Seat 0 wins; seat 1 decked out → alternate + deck bucket.

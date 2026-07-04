@@ -65976,3 +65976,27 @@ fn bot_pings_a_chipped_creature_for_lethal() {
         "bot should ping the chipped 2/2 for the kill; got {action:?}"
     );
 }
+
+/// Chandra's Ignition — the chosen creature deals its power to each other
+/// creature AND each opponent (the source and its controller are spared).
+#[test]
+fn chandras_ignition_hits_others_and_opponents() {
+    let mut g = two_player_game();
+    let source = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // dies (2 dmg)
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // dies
+    let spell = g.add_card_to_hand(0, catalog::chandras_ignition());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(source)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chandra's Ignition");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(source).is_some(), "source spared");
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "others died");
+    assert_eq!(g.players[1].life, opp_life - 2, "each opponent took power-2");
+}

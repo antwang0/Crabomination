@@ -60862,3 +60862,21 @@ pub fn brass_squire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Chandra's Ignition — {3}{R}{R} sorcery. Target creature you control deals
+/// damage equal to its power to each other creature and each opponent.
+pub fn chandras_ignition() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra's Ignition",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageEqualToPowerToEach {
+            source: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            targets: Selector::EachPermanent(SelectionRequirement::Creature),
+            each_opponent: true,
+        },
+        ..Default::default()
+    }
+}

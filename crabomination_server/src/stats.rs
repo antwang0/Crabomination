@@ -172,6 +172,14 @@ pub(crate) struct MatchStats {
     /// average (small σ) or swing wildly (large σ), complementing the
     /// min/max envelope and the histogram shape.
     pub(crate) total_turns_squared: u128,
+    /// Running sum of final turn counts for decisive matches (a declared
+    /// winner). Paired with `wins` it yields the average length of *decided*
+    /// games; compared against the draw average below it surfaces whether
+    /// stalemates are systematically longer grinds than clean wins.
+    pub(crate) decisive_turn_sum: u64,
+    /// Running sum of final turn counts for drawn matches. Paired with `draws`
+    /// it yields the average length of drawn games (see `decisive_turn_sum`).
+    pub(crate) draw_turn_sum: u64,
     /// Running sum of squared match durations in **milliseconds**
     /// (`Σ ms²`). The duration analogue of `total_turns_squared`: paired
     /// with `total_duration` (`Σ ms`) and the match count it yields the
@@ -253,10 +261,28 @@ impl MatchStats {
         self.observe_turns(outcome.final_turn);
         self.observe_format_turns(format, outcome.final_turn);
         self.observe_winner(outcome.winner);
-        if let Some(Some(w)) = outcome.winner {
-            self.observe_win_life_delta(w, &outcome.final_life_totals);
-            self.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
+        match outcome.winner {
+            Some(Some(w)) => {
+                self.decisive_turn_sum =
+                    self.decisive_turn_sum.saturating_add(outcome.final_turn as u64);
+                self.observe_win_life_delta(w, &outcome.final_life_totals);
+                self.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
+            }
+            Some(None) => {
+                self.draw_turn_sum = self.draw_turn_sum.saturating_add(outcome.final_turn as u64);
+            }
+            None => {}
         }
+    }
+
+    /// Average final turn count of decisive (won) matches, or 0 with no wins.
+    pub(crate) fn avg_decisive_turns(&self) -> u64 {
+        if self.wins == 0 { 0 } else { self.decisive_turn_sum / self.wins }
+    }
+
+    /// Average final turn count of drawn matches, or 0 with no draws.
+    pub(crate) fn avg_draw_turns(&self) -> u64 {
+        if self.draws == 0 { 0 } else { self.draw_turn_sum / self.draws }
     }
     /// Bump the cumulative turn counter — called at match completion
     /// from the record paths if the caller has a final turn number.
@@ -811,6 +837,13 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         // resolved-only `decisive_pct` can't show. Only when draws exist.
         if s.draws > 0 {
             out.push_str(&format!(" draw_rate={}%", s.draw_pct()));
+            // Are stalemates longer grinds than decided games? Show the split
+            // averages so a "draws run 3× longer" pattern is visible at a glance.
+            out.push_str(&format!(
+                " turns(win/draw)={}/{}",
+                s.avg_decisive_turns(),
+                s.avg_draw_turns()
+            ));
         }
         // Unresolved (disconnect / watchdog) matches — surfaced explicitly so a
         // hang regression is visible instead of hiding in `total - wins - draws`.
