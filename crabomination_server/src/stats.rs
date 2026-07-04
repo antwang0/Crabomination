@@ -550,6 +550,12 @@ impl MatchStats {
     pub(crate) fn poison_pct(&self) -> u64 {
         self.poison_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
+    /// Poison's share *among alternate (non-lethal-damage) wins*, not of all
+    /// wins — a sharper toxic-metagame signal than `poison_pct` when most
+    /// games still close on life. 0 when no alternate wins recorded.
+    pub(crate) fn poison_of_alt_pct(&self) -> u64 {
+        self.poison_wins.saturating_mul(100).checked_div(self.deckout_wins).unwrap_or(0)
+    }
     /// Percent of wins in which a losing seat decked out (CR 104.3a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn deck_pct(&self) -> u64 {
@@ -862,7 +868,12 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             out.push_str(&format!(" dmg_wins={} ({}%)", s.damage_wins, s.damage_pct()));
             // Split the alternate-win share into its two main paths when seen.
             if s.poison_wins > 0 {
-                out.push_str(&format!(" poison={} ({}%)", s.poison_wins, s.poison_pct()));
+                out.push_str(&format!(
+                    " poison={} ({}%, {}% of alt)",
+                    s.poison_wins,
+                    s.poison_pct(),
+                    s.poison_of_alt_pct()
+                ));
             }
             if s.deck_wins > 0 {
                 out.push_str(&format!(" deck={} ({}%)", s.deck_wins, s.deck_pct()));
@@ -1015,6 +1026,21 @@ pub(crate) fn format_duration(d: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::MatchStats;
+    use crabomination::server::LossReason;
+
+    #[test]
+    fn poison_of_alt_pct_reads_share_among_alternate_wins() {
+        // Three alternate wins (deckout umbrella), one of them poison.
+        let s = MatchStats { wins: 4, deckout_wins: 3, poison_wins: 1, ..Default::default() };
+        // 1/4 of all wins, but 1/3 of the alternate wins.
+        assert_eq!(s.poison_pct(), 25);
+        assert_eq!(s.poison_of_alt_pct(), 33);
+        // A poison-only win increments both umbrella and sub-bucket.
+        let mut s2 = MatchStats { wins: 1, ..Default::default() };
+        s2.observe_win_kind(0, &[20, 15], &[None, Some(LossReason::Poison)]);
+        assert_eq!(s2.poison_wins, 1);
+        assert_eq!(s2.poison_of_alt_pct(), 100);
+    }
 
     #[test]
     fn percentile_bucket_empty_is_none() {

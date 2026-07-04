@@ -6624,3 +6624,62 @@ fn cr_702_166_corrupted_gates_static_keywords() {
         "threshold is strictly three",
     );
 }
+
+// ── CR 702.11e — "hexproof from nongreen" targeting gate (Thrun) ─────────────
+
+/// An opponent's nongreen spell can't target a creature with "can't be the
+/// target of nongreen spells opponents control"; a green spell can.
+#[test]
+fn cr_702_11e_hexproof_from_nongreen_blocks_only_nongreen_opponents() {
+    let mut g = two_player_game();
+    let thrun = g.add_card_to_battlefield(0, catalog::thrun_breaker_of_silence());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    // Opponent's red Lightning Bolt is rejected.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(thrun)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "nongreen opponent spell can't target Thrun");
+    // Opponent's green Giant Growth is allowed (green is exempt).
+    let gg = g.add_card_to_hand(1, catalog::giant_growth());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: gg, target: Some(Target::Permanent(thrun)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_ok(), "a green opponent spell may target Thrun");
+}
+
+// ── CR 104.3c / 704.5c — ten poison counters is a game loss ──────────────────
+
+/// A player with ten or more poison counters loses when SBAs are checked (the
+/// end-state of the toxic/infect payoffs).
+#[test]
+fn cr_704_5c_ten_poison_counters_loses() {
+    let mut g = two_player_game();
+    assert!(!g.players[1].eliminated);
+    g.players[1].poison_counters = 10;
+    g.check_state_based_actions();
+    assert!(g.players[1].eliminated, "ten poison counters loses the game (CR 704.5c)");
+}
+
+// ── CR 702.180c — Toxic adds poison equal to its value on combat damage ──────
+
+/// A toxic-4 attacker dealing combat damage to a player gives four poison
+/// counters (Tyrranax Rex).
+#[test]
+fn cr_702_180c_toxic_gives_poison_equal_to_value() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let rex = g.add_card_to_battlefield(0, catalog::tyrranax_rex());
+    g.clear_sickness(rex);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rex, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 4, "toxic 4 → four poison counters (CR 702.180c)");
+}
