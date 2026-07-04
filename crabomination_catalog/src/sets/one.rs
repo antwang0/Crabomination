@@ -189,6 +189,40 @@ pub fn incisor_glider() -> CardDefinition {
     }
 }
 
+/// Sinew Dancer — {W} Creature — Phyrexian Soldier 1/1. {3}{W}, {T}: Tap target
+/// creature. Corrupted (CR 702.166) — {W}, {T}: Tap target creature (only while
+/// an opponent has three or more poison counters).
+pub fn sinew_dancer() -> CardDefinition {
+    let tap_target = || Effect::Tap { what: target_filtered(SelectionRequirement::Creature) };
+    CardDefinition {
+        name: "Sinew Dancer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), w()]),
+                tap_cost: true,
+                effect: tap_target(),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                tap_cost: true,
+                condition: Some(Predicate::CorruptedActive { who: PlayerRef::You }),
+                effect: tap_target(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Apostle of Invasion — {4}{W}{W} Creature — Phyrexian Angel 4/4 with flying.
 /// Corrupted (CR 702.166) — has double strike while an opponent has three or
 /// more poison counters.

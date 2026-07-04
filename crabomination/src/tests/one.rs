@@ -159,3 +159,29 @@ fn bloated_contaminator_toxic_and_proliferate() {
     // toxic 1 gives a poison counter, then the proliferate trigger bumps it to 2.
     assert_eq!(g.players[1].poison_counters, 2, "toxic 1 + proliferate = 2 poison");
 }
+
+/// Sinew Dancer's cheap Corrupted tap ability is only activatable while an
+/// opponent has 3+ poison (CR 702.166); its full-price ability always works.
+#[test]
+fn sinew_dancer_corrupted_ability_gated() {
+    let mut g = two_player_game();
+    let dancer = g.add_card_to_battlefield(0, catalog::sinew_dancer());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    // No poison → the {W} Corrupted ability (index 1) is rejected.
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: dancer, ability_index: 1,
+        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None,
+    });
+    assert!(err.is_err(), "Corrupted ability blocked below 3 poison");
+    // Grant Corrupted and retry — now it taps the target.
+    g.players[1].poison_counters = 3;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dancer, ability_index: 1,
+        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None,
+    }).expect("Corrupted ability activatable at 3 poison");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target creature tapped");
+}
