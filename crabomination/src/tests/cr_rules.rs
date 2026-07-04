@@ -6455,3 +6455,99 @@ fn creature_or_artifact_died_ignores_noncreature_nonartifact() {
         "a land dying is neither a creature nor an artifact"
     );
 }
+
+// ── CR 603.2e — instance-granted combat-damage triggers fire ──────────────────
+
+/// A triggered ability granted by an effect (`Effect::GrantTriggeredAbility`,
+/// e.g. a Saga chapter that gives its own creature a keyword ability) fires on
+/// the same events as a printed one — here a `DealsCombatDamageToPlayer`
+/// self-trigger reaches the combat-damage dispatch (CR 603.2e / 702.6-style
+/// grant), not just printed/statics-granted abilities.
+#[test]
+fn cr_603_2e_granted_combat_damage_trigger_fires() {
+    use crate::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{Duration, Effect, Selector, Value};
+    let granter = CardDefinition {
+        name: "Grantest",
+        cost: crate::mana::cost(&[crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GrantTriggeredAbility {
+            what: Selector::This,
+            trigger: Box::new(TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            }),
+            duration: Duration::Permanent,
+        })],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let atk = g.move_card_to_battlefield_for_test(0, granter);
+    drain_stack(&mut g); // ETB installs the granted trigger
+    g.clear_sickness(atk);
+    let life = g.players[0].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g); // the granted trigger resolves off the stack
+    assert_eq!(g.players[0].life, life + 3, "granted combat-damage trigger gained life");
+}
+
+// ── CR 702.19a — trample is inert while the creature is blocking ──────────────
+
+/// Trample only modifies an *attacking* creature's damage assignment; a
+/// trampler that's blocking assigns all its damage to the attacker and no
+/// "excess" reaches any player (CR 702.19a).
+#[test]
+fn cr_702_19a_trample_inert_while_blocking() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // Seat 1 (active) attacks with a 3/3 into seat 0's 5/5 trample blocker.
+    let attacker = g.add_card_to_battlefield(1, kw_creature("Runner", 3, 3, &[]));
+    let blocker = g.add_card_to_battlefield(0, kw_creature("Wall", 5, 5, &[Keyword::Trample]));
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect("block");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(attacker).is_none(), "3/3 died to the 5/5");
+    assert!(g.battlefield_find(blocker).is_some(), "5/5 blocker survived 3 damage");
+    assert_eq!(g.players[0].life, life0, "trampling blocker deals no excess to any player");
+    assert_eq!(g.players[1].life, life1, "attacker's controller takes nothing");
+}
+
+// ── CR 700.4 — a noncreature artifact dying triggers "creature or artifact died" ─
+
+/// "Whenever a creature or artifact you control dies" fires off a *noncreature*
+/// artifact's death, backed by the single battlefield→graveyard chokepoint
+/// (CR 700.4).
+#[test]
+fn cr_700_4_noncreature_artifact_death_triggers_payoff() {
+    let mut g = two_player_game();
+    let gabranth = g.add_card_to_battlefield(0, catalog::judge_magister_gabranth());
+    let relic = g.add_card_to_battlefield(0, catalog::sol_ring()); // a noncreature artifact
+    assert!(!g.battlefield_find(relic).unwrap().definition.is_creature());
+    let evs = g.remove_to_graveyard_with_triggers(relic);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gabranth).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Gabranth grew when the noncreature artifact died",
+    );
+}
