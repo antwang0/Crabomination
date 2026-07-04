@@ -446,24 +446,6 @@ pub fn jawbone_duelist() -> CardDefinition {
     }
 }
 
-/// Pestilent Syphoner — {1}{B} Creature — Phyrexian Insect 1/1 with flying and
-/// toxic 1.
-pub fn pestilent_syphoner() -> CardDefinition {
-    CardDefinition {
-        name: "Pestilent Syphoner",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying, Keyword::Toxic(1)],
-        ..Default::default()
-    }
-}
-
 /// Ichorspit Basilisk — {2}{G} Creature — Phyrexian Basilisk 1/3 with deathtouch
 /// and toxic 1.
 pub fn ichorspit_basilisk() -> CardDefinition {

@@ -279,8 +279,6 @@ fn one_toxic_cycle_stats_and_keywords() {
     assert!(bilious.keywords.contains(&Keyword::Deathtouch) && bilious.keywords.contains(&Keyword::Toxic(1)));
     let jawbone = catalog::jawbone_duelist();
     assert!(jawbone.keywords.contains(&Keyword::DoubleStrike) && jawbone.keywords.contains(&Keyword::Toxic(1)));
-    let syphoner = catalog::pestilent_syphoner();
-    assert!(syphoner.keywords.contains(&Keyword::Flying) && syphoner.keywords.contains(&Keyword::Toxic(1)));
     let basilisk = catalog::ichorspit_basilisk();
     assert_eq!((basilisk.power, basilisk.toughness), (1, 3));
     assert!(basilisk.keywords.contains(&Keyword::Deathtouch) && basilisk.keywords.contains(&Keyword::Toxic(1)));

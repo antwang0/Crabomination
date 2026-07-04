@@ -187,6 +187,8 @@ mod tests {
                 draw_cap: None,
                 cards_left_graveyard_this_turn: 0,
                 creatures_died_this_turn: 0,
+                next_creature_bonus_counters: 0,
+                next_creature_gains_haste: false,
                 cards_exiled_this_turn: 0,
                 instants_or_sorceries_cast_this_turn: 0,
                 creatures_cast_this_turn: 0,
