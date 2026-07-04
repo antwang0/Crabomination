@@ -5674,6 +5674,13 @@ static FIN: &[Factory] = &[
     super::fin::summoners_grimoire,
     super::fin::the_water_crystal,
     super::fin::the_wandering_minstrel,
+    super::fin::cecil_dark_knight,
+    super::fin::galufs_final_act,
+    super::fin::clash_of_the_eikons,
+    super::fin::louisoixs_sacrifice,
+    super::fin::kefka_court_mage,
+    super::fin::clives_hideaway,
+    super::fin::starting_town,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

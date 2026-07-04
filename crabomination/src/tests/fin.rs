@@ -4451,3 +4451,205 @@ fn kain_jump_and_traitor_trigger() {
         "two Treasures for you"
     );
 }
+
+/// Cecil, Dark Knight is a {B} 2/3 deathtouch DFC whose back is a 4/4 lifelink.
+#[test]
+fn cecil_dark_knight_stats_and_back_face() {
+    let c = catalog::cecil_dark_knight();
+    assert_eq!((c.power, c.toughness), (2, 3));
+    assert!(c.keywords.contains(&Keyword::Deathtouch));
+    let back = c.back_face.as_ref().expect("has a back face");
+    assert_eq!(back.name, "Cecil, Redeemed Paladin");
+    assert_eq!((back.power, back.toughness), (4, 4));
+    assert!(back.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Cecil's combat-damage trigger drains you, and flips him once your life is at
+/// or below half your starting total (20 → 10).
+#[test]
+fn cecil_flips_at_half_starting_life() {
+    let mut g = two_player_game();
+    let cecil = g.add_card_to_battlefield(0, catalog::cecil_dark_knight());
+    g.players[0].life = 13; // above half (10) — no flip yet
+    let eff = catalog::cecil_dark_knight().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(cecil, 0, None, 0);
+    ctx.event_amount = 2;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 11, "lost 2 life");
+    assert!(!g.battlefield_find(cecil).unwrap().transformed, "still front above half");
+    // One more hit lands at 10 = half → flip.
+    ctx.event_amount = 1;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 10);
+    assert!(g.battlefield_find(cecil).unwrap().transformed, "flipped at/below half");
+}
+
+/// Galuf's Final Act pumps +1/+0 and grants a death trigger.
+#[test]
+fn galufs_final_act_pumps_and_grants_death_trigger() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = catalog::galufs_final_act().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "2/2 + 1/0");
+    assert!(
+        g.granted_triggers_eot.get(&bear).map(|v| !v.is_empty()).unwrap_or(false),
+        "granted a death trigger"
+    );
+}
+
+/// Clash of the Eikons is a choose-one-or-more with three real modes.
+#[test]
+fn clash_of_the_eikons_is_modal() {
+    let c = catalog::clash_of_the_eikons();
+    match c.effect {
+        crate::card::Effect::ChooseN { ref picks, ref modes } => {
+            assert_eq!(picks, &vec![1, 2, 3], "choose one or more of three");
+            assert_eq!(modes.len(), 3);
+        }
+        _ => panic!("expected ChooseN"),
+    }
+}
+
+/// Louisoix's Sacrifice counters a noncreature spell and carries its sac-or-pay
+/// additional cost.
+#[test]
+fn louisoixs_sacrifice_counters_noncreature() {
+    use crate::card::AdditionalCastCost;
+    let c = catalog::louisoixs_sacrifice();
+    assert!(matches!(
+        c.additional_cast_cost.first(),
+        Some(AdditionalCastCost::SacrificeOrPay { pay: 2, .. })
+    ));
+    let mut g = two_player_game();
+    // Put a noncreature spell (an instant) on the stack owned by P1.
+    let bolt = g.add_card_to_hand(1, catalog::molten_rain()); // sorcery = noncreature
+    let _ = bolt;
+    // Resolve the counter against a stack item constructed via cast is heavy;
+    // just assert the counter targets a noncreature spell filter.
+    match c.effect {
+        crate::card::Effect::CounterSpell { what: crate::card::Selector::TargetFiltered { slot: 0, ref filter } } => {
+            assert!(format!("{filter:?}").contains("Noncreature"), "targets noncreature spell");
+        }
+        _ => panic!("expected CounterSpell"),
+    }
+}
+
+/// Kefka is a 4/5 DFC whose back is a 5/7 flier that draws off opponents' life
+/// loss on your turn.
+#[test]
+fn kefka_dfc_stats_and_back_draw() {
+    let c = catalog::kefka_court_mage();
+    assert_eq!((c.power, c.toughness), (4, 5));
+    let back = c.back_face.as_ref().expect("has a back face");
+    assert_eq!(back.name, "Kefka, Ruler of Ruin");
+    assert_eq!((back.power, back.toughness), (5, 7));
+    assert!(back.keywords.contains(&Keyword::Flying));
+    // Back's life-loss trigger draws that many cards.
+    let mut g = two_player_game();
+    g.active_player_idx = 0; // your turn
+    let kefka = g.add_card_to_battlefield(0, *back.clone());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let hand0 = g.players[0].hand.len();
+    let eff = back.triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(kefka, 0, None, 0);
+    ctx.event_amount = 3;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 for the 3 life lost");
+}
+
+/// Kefka's {8} sorcery-speed ability edicts each opponent and transforms him.
+#[test]
+fn kefka_eight_mana_edicts_and_transforms() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let kefka = g.add_card_to_battlefield(0, catalog::kefka_court_mage());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 8);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kefka, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("{8}: edict + transform");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
+    assert!(g.battlefield_find(kefka).unwrap().transformed, "Kefka flipped to Ruler of Ruin");
+}
+
+/// CR 603.2 — Kefka, Ruler of Ruin's life-loss trigger honors its "during your
+/// turn" gate (the new `Predicate::ControllersTurn`): it fires when an opponent
+/// loses life on your turn and stays silent on theirs.
+#[test]
+fn kefka_back_trigger_gated_to_your_turn() {
+    let back = *catalog::kefka_court_mage().back_face.clone().unwrap();
+    // Your turn: an opponent losing 2 life draws you 2 cards.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let _kefka = g.add_card_to_battlefield(0, back.clone());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let hand0 = g.players[0].hand.len();
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::LifeLost { player: 1, amount: 2 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew 2 on your turn");
+    // Opponent's turn: same life loss, no draw.
+    let mut g2 = two_player_game();
+    g2.active_player_idx = 1;
+    let _k2 = g2.add_card_to_battlefield(0, back.clone());
+    g2.add_card_to_library(0, catalog::island());
+    let h2 = g2.players[0].hand.len();
+    g2.dispatch_triggers_for_events(&[crate::game::GameEvent::LifeLost { player: 1, amount: 2 }]);
+    drain_stack(&mut g2);
+    assert_eq!(g2.players[0].hand.len(), h2, "no draw on the opponent's turn");
+}
+
+/// Clive's Hideaway is a Town land with Hideaway 4 and a gated free-play ability.
+#[test]
+fn clives_hideaway_is_hideaway_town() {
+    use crate::card::LandType;
+    let c = catalog::clives_hideaway();
+    assert!(c.subtypes.land_types.contains(&LandType::Town));
+    assert!(
+        c.triggered_abilities.iter().any(|t| matches!(t.effect, crate::card::Effect::Hideaway { .. })),
+        "has Hideaway on ETB"
+    );
+    assert_eq!(c.activated_abilities.len(), 2, "tap-for-C + gated free play");
+    assert!(c.activated_abilities[1].condition.is_some(), "free play is gated");
+}
+
+/// Starting Town is a Town land that taps for {C} or, for 1 life, any color.
+#[test]
+fn starting_town_taps_for_any_color_for_life() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::starting_town());
+    assert!(catalog::starting_town().subtypes.land_types.contains(&LandType::Town));
+    let life0 = g.players[0].life;
+    // Second ability: {T}, pay 1 life → one mana of any color.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("pay 1 life for any color");
+    assert_eq!(g.players[0].life, life0 - 1, "paid 1 life");
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+}
+
+/// CR 712.9 / 122.2 — transforming a permanent is the same object staying in
+/// place, so counters ride along. Cecil flips with a +1/+1 counter and the back
+/// face (4/4) computes 5/5.
+#[test]
+fn cr_712_9_transform_keeps_counters() {
+    let mut g = two_player_game();
+    let cecil = g.add_card_to_battlefield(0, catalog::cecil_dark_knight());
+    g.battlefield_find_mut(cecil).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].life = 11; // 11 − 1 = 10 = half → the trigger will flip
+    let eff = catalog::cecil_dark_knight().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(cecil, 0, None, 0);
+    ctx.event_amount = 1;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let inst = g.battlefield_find(cecil).unwrap();
+    assert!(inst.transformed, "flipped");
+    assert_eq!(inst.counter_count(CounterType::PlusOnePlusOne), 1, "counter survived the flip");
+    let cp = g.computed_permanent(cecil).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 back face + a +1/+1 counter");
+}

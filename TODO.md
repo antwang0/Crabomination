@@ -35,9 +35,15 @@ reanimation activated ability omitted), Squall (the "creature *spell* you
 control targeted" half dropped).
 
 Deferred FIN cards wanting primitives not yet built:
-- **Transform DFCs** — Kefka, Cecil (Dark Knight), Terra (Trance Saga), Clive
-  (Ifrit), Garland (Chaos), Bahamut/Dion. Need the "exile-and-return-transformed
-  from an activated/triggered source" DFC pattern wired per-card.
+- **Transform DFCs** — ✅ **Cecil (Dark Knight // Redeemed Paladin)** and ✅
+  **Kefka (Court Mage // Ruler of Ruin)** ship: both are in-place transformers
+  (`Effect::Transform { This }` + `back_face`), so they needed no new zone-hop
+  primitive. Cecil rides the new `Predicate::PlayerLifeAtMostHalfStarting`;
+  Kefka's back rides the new `Predicate::ControllersTurn` ("during your turn")
+  over a `LifeLost`/`OpponentControl` trigger. Still deferred: Terra (Trance
+  Saga), Clive (Ifrit) and Garland (Chaos) — those transform via an
+  *activated/triggered exile-and-return-transformed* from graveyard/battlefield,
+  the pattern still unbuilt — and Bahamut/Dion (meld).
 - **Gilgamesh, Master-at-Arms** — dig top-6, put Equipment onto the battlefield,
   reflexive attach.
 - **Jenova / Sin / Summon Sagas** — Mutant-type riders, random-exile-copy loops,
@@ -78,6 +84,20 @@ Balthier and Fran → Vehicles +1/+1 vigilance/reach), `StaticEffect::
 SelfHasKeywordIf` (predicate-gated self keyword — Freya Crescent's "during your
 turn, has flying"), and `SpendRestriction::EquipmentOnly` (Freya's equip-only
 mana).
+
+Transform-DFC + short-card batch (modern_decks, this run): **Cecil, Dark
+Knight // Redeemed Paladin** (`Predicate::PlayerLifeAtMostHalfStarting`, new),
+**Kefka, Court Mage // Ruler of Ruin** (`Predicate::ControllersTurn`, new —
+"during your turn" trigger gate), **Galuf's Final Act** (`GrantTriggeredAbility`
+death rider), **Clash of the Eikons** (choose-one-or-more `ChooseN`),
+**Louisoix's Sacrifice** (`SacrificeOrPay` + counter noncreature spell),
+**Clive's Hideaway** and **Starting Town** (Town lands: Hideaway 4 /
+pay-1-life-any-color). Still-missing single-faced FIN (need a new primitive or
+richer wiring): Elixir (shuffle-nonlands-into-library + gain-life-by-count),
+Eden (mill-then-may-sac-self reflexive return), Chocobo Kick / Vayne's Treachery
+(non-mana Kicker — sac / return-land as the kicked cost), the Summon Sagas
+(Fenrir/Leviathan/Brynhildr — "when you next cast a creature spell" chapter
+riders), Gilgamesh, Vaan, Choco, Random Encounter, Memories Returning.
 
 Remaining short FIN cards blocked on one primitive each:
 - ✅ **Aettir and Priwen / Excalibur II** — shipped. Excalibur II rides the

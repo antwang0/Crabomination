@@ -141,6 +141,17 @@ exercising each) was elided in a compaction pass; recover it from
   Auras (`PreventUntap` + granted `CantActivateAbilities` — Stuck in Summoner's
   Sanctum), and turn-gated equip keywords (`during_your_turn_keywords` — The
   Masamune).
+- **Transform-DFC / trigger-gate primitives (modern_decks — FIN, this run):**
+  `Predicate::PlayerLifeAtMostHalfStarting` (CR 103.4-relative "life ≤ half your
+  starting total" — Cecil, Dark Knight's flip gate) and `Predicate::
+  ControllersTurn` ("during your turn" — Kefka, Ruler of Ruin's `LifeLost`/
+  `OpponentControl` draw trigger; reusable via `EventSpec.filter`). Both new FIN
+  legends are in-place transformers over the existing `Effect::Transform` +
+  `back_face`. Bot: `sacrifice_keep_value` ranks tokens below every real card so
+  a forced edict gives up a spare token before a land. Client oracle panel:
+  `event_phrase` now names ~10 more trigger events (opponent-life-gain/loss,
+  you-attack, unblocked, combat-damage-to-creature, enrage, scry/surveil,
+  counter-added) instead of the generic "Triggered ability:".
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

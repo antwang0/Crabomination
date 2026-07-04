@@ -946,6 +946,18 @@ fn permanent_value(state: &GameState, id: crate::card::CardId) -> i32 {
     v
 }
 
+/// Keep-value for deciding which of the bot's *own* permanents to give up (to an
+/// edict, a "sacrifice a creature" cost, or a self-vote). Distinct from
+/// `permanent_value`, which ranks removal targets: here a token is the ideal
+/// thing to lose (it can't be recast and vanishes on leaving), so it sorts
+/// strictly below every real card, even a bare land of `permanent_value` 0.
+fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId) -> i32 {
+    if state.battlefield_find(id).is_some_and(|c| c.is_token) {
+        return -1;
+    }
+    permanent_value(state, id)
+}
+
 /// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
 /// removal). Prefer destroying/exiling an opponent's **most** valuable
 /// permanent; if every legal permanent is our own (a "sacrifice/vote your own"
@@ -970,14 +982,15 @@ fn decide_choose_target(
     if let Some(id) = best_opp {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
-    // Only our own permanents are legal — give up the smallest.
+    // Only our own permanents are legal — give up the least valuable to keep
+    // (tokens first, then lowest-value real cards).
     let worst_own = legal
         .iter()
         .filter_map(|t| match t {
             Target::Permanent(id) if owner(*id) == Some(seat) => Some(*id),
             _ => None,
         })
-        .min_by_key(|id| permanent_value(state, *id));
+        .min_by_key(|id| sacrifice_keep_value(state, *id));
     if let Some(id) = worst_own {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
@@ -6015,6 +6028,27 @@ mod tests {
         match decide_choose_target(&g, 0, &legal) {
             DecisionAnswer::Target(Target::Permanent(id)) => {
                 assert_eq!(id, small, "bot gives up its 2/2, keeps the 6/6");
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+    }
+
+    /// A forced sacrifice gives up a spare token before a real land, even
+    /// though the token's raw power/toughness makes it "bigger."
+    #[test]
+    fn bot_sacrifices_token_before_a_land() {
+        use crate::decision::DecisionAnswer;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(0, catalog::forest());
+        let mut tok = catalog::grizzly_bears(); // a 2/2 body...
+        tok.name = "Bear Token";
+        let token = g.add_card_to_battlefield(0, tok);
+        g.battlefield_find_mut(token).unwrap().is_token = true; // ...but a token
+        let legal = vec![Target::Permanent(land), Target::Permanent(token)];
+        match decide_choose_target(&g, 0, &legal) {
+            DecisionAnswer::Target(Target::Permanent(id)) => {
+                assert_eq!(id, token, "bot sacrifices the token, keeps the land");
             }
             other => panic!("expected a permanent target, got {other:?}"),
         }

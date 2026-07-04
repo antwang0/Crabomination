@@ -788,6 +788,11 @@ pub enum Predicate {
     /// Powers "as long as you have at least N life more than your starting life
     /// total" statics/activations (Righteous Valkyrie, Speaker of the Heavens).
     PlayerLifeAtLeastAboveStarting { who: PlayerRef, delta: i32 },
+    /// True if any player matched by `who` has an effective life total less than
+    /// or equal to half the life total they started the game with (rounded
+    /// down). Powers "if your life total is less than or equal to half your
+    /// starting life total" gates (Cecil, Dark Knight).
+    PlayerLifeAtMostHalfStarting { who: PlayerRef },
     /// True if any player matched by `who` has the most life, or is tied for
     /// the most, among all (non-eliminated) players. Powers Dethrone (CR
     /// 702.105 — "attacks the player with the most life or tied for most
@@ -931,6 +936,11 @@ pub enum Predicate {
     /// werewolf "transform back" check. Backed by
     /// `GameState.spells_cast_last_turn >= 2`.
     TwoOrMoreSpellsCastLastTurn,
+    /// True during the turn of the context's controller ("during your turn").
+    /// Gates triggers/effects on the active player being the source's
+    /// controller — Kefka, Ruler of Ruin's "whenever an opponent loses life
+    /// during your turn".
+    ControllersTurn,
     /// At least `at_least` creatures controlled by `who` died this turn.
     /// Backed by `Player.creatures_died_this_turn` (bumped from the SBA
     /// dies handler and `remove_to_graveyard_with_triggers`). Used by

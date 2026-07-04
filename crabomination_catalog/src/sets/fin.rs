@@ -2670,6 +2670,70 @@ pub fn adventurers_inn() -> CardDefinition {
     }
 }
 
+/// Clive's Hideaway — Land — Town. Hideaway 4. {T}: Add {C}. {2}, {T}: You may
+/// play the exiled card without paying its mana cost if you control four or more
+/// legendary creatures.
+pub fn clives_hideaway() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "Clive's Hideaway",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasSupertype(Supertype::Legendary))
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(4),
+                }),
+                effect: Effect::CastWithoutPayingImmediate {
+                    what: Selector::CardExiledWithSource,
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Hideaway { count: Value::Const(4) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Starting Town — Land — Town. {T}: Add {C}. {T}, Pay 1 life: Add one mana of
+/// any color. (Approximation: the "enters tapped unless it's your first,
+/// second, or third turn" clause is modeled as always entering tapped.)
+pub fn starting_town() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "Starting Town",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Town], ..Default::default() },
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![super::etb_tap()],
+        ..Default::default()
+    }
+}
+
 /// Travel the Overworld — {5}{U}{U} Sorcery with Affinity for Towns (costs {1}
 /// less to cast for each Town you control). Draw four cards.
 pub fn travel_the_overworld() -> CardDefinition {
@@ -7168,3 +7232,249 @@ pub fn kain_traitorous_dragoon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cecil, Dark Knight // Cecil, Redeemed Paladin — {B} 2/3 Human Knight,
+/// deathtouch (transform DFC). Whenever Cecil deals combat damage to a player,
+/// you lose that much life; then if your life ≤ half your starting life, untap
+/// Cecil and transform it. Back: 4/4 lifelink; when it attacks, other attacking
+/// creatures you control gain indestructible until end of turn.
+/// (Approximation: the front's "deals damage" trigger fires only on combat
+/// damage to a player, the dominant play pattern.)
+pub fn cecil_dark_knight() -> CardDefinition {
+    let paladin = CardDefinition {
+        name: "Cecil, Redeemed Paladin",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsAttacking
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cecil, Dark Knight",
+        cost: cost(&[b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::TriggerEventAmount },
+                Effect::If {
+                    cond: Predicate::PlayerLifeAtMostHalfStarting { who: PlayerRef::You },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Untap { what: Selector::This, up_to: None },
+                        Effect::Transform { what: Selector::This },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(paladin)),
+        ..Default::default()
+    }
+}
+
+/// Galuf's Final Act — {1}{G} instant. Until end of turn, target creature gets
+/// +1/+0 and gains "When this creature dies, put a number of +1/+1 counters
+/// equal to its power on up to one target creature."
+pub fn galufs_final_act() -> CardDefinition {
+    CardDefinition {
+        name: "Galuf's Final Act",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                    effect: Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Clash of the Eikons — {G} sorcery. Choose one or more — target creature you
+/// control fights target creature an opponent controls; remove a lore counter
+/// from target Saga you control; put a lore counter on target Saga you control.
+pub fn clash_of_the_eikons() -> CardDefinition {
+    CardDefinition {
+        name: "Clash of the Eikons",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![1, 2, 3],
+            modes: vec![
+                Effect::Fight {
+                    attacker: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    },
+                },
+                Effect::RemoveCounter {
+                    what: target_filtered(
+                        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::Lore,
+                    amount: Value::ONE,
+                },
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::Lore,
+                    amount: Value::ONE,
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Louisoix's Sacrifice — {U} instant. As an additional cost, sacrifice a
+/// legendary creature or pay {2}. Counter target noncreature spell.
+/// (Approximation: the "counter an activated or triggered ability" halves are
+/// dropped — the noncreature-spell counter is the dominant mode.)
+pub fn louisoixs_sacrifice() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Louisoix's Sacrifice",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
+            filter: SelectionRequirement::HasSupertype(Supertype::Legendary)
+                .and(SelectionRequirement::Creature),
+            pay: 2,
+        }],
+        effect: Effect::CounterSpell {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::Noncreature),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Kefka, Court Mage // Kefka, Ruler of Ruin — {2}{U}{B}{R} 4/5 Human Wizard
+/// (transform DFC). When Kefka enters or attacks, each player discards a card,
+/// then you draw a card. {8}: Each opponent sacrifices a permanent, then
+/// transform Kefka (sorcery-speed). Back: 5/7 flying; whenever an opponent
+/// loses life during your turn, you draw that many cards.
+/// (Approximation: the front's "draw a card for each card type among the
+/// discarded cards" is modeled as a flat draw of one.)
+pub fn kefka_court_mage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let discard_draw = || {
+        Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::ONE,
+                random: false,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ])
+    };
+    let ruler = CardDefinition {
+        name: "Kefka, Ruler of Ruin",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 7,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                filter: Some(Predicate::ControllersTurn),
+                ..EventSpec::new(EventKind::LifeLost, EventScope::OpponentControl)
+            },
+            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kefka, Court Mage",
+        cost: cost(&[generic(2), u(), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: discard_draw(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: discard_draw(),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Permanent,
+                },
+                Effect::Transform { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(ruler)),
+        ..Default::default()
+    }
+}
+

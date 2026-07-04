@@ -857,6 +857,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.effective_life(p) >= self.players[p].starting_life + *delta),
+            Predicate::PlayerLifeAtMostHalfStarting { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.effective_life(p) <= self.players[p].starting_life / 2),
             Predicate::PlayerHasMostLife { who } => {
                 let max_life = (0..self.players.len())
                     .filter(|&p| !self.players[p].eliminated)
@@ -1038,6 +1042,10 @@ impl GameState {
             }
             Predicate::NoSpellsCastLastTurn => self.spells_cast_last_turn == 0,
             Predicate::TwoOrMoreSpellsCastLastTurn => self.spells_cast_last_turn >= 2,
+            Predicate::ControllersTurn => self
+                .resolve_player(&crate::effect::PlayerRef::You, ctx)
+                .map(|p| p == self.active_player_idx)
+                .unwrap_or(false),
             Predicate::CreaturesDiedThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

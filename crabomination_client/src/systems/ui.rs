@@ -908,7 +908,21 @@ fn event_phrase(spec: &crabomination::card::EventSpec) -> String {
         K::SpellCast => "Whenever a spell is cast,".into(),
         K::CardDrawn => "Whenever a card is drawn,".into(),
         K::LandPlayed => "Whenever a land enters,".into(),
+        K::LifeGained if matches!(spec.scope, S::OpponentControl) => {
+            "Whenever an opponent gains life,".into()
+        }
         K::LifeGained => "Whenever life is gained,".into(),
+        K::LifeLost if matches!(spec.scope, S::OpponentControl) => {
+            "Whenever an opponent loses life,".into()
+        }
+        K::LifeLost => "Whenever a player loses life,".into(),
+        K::YouAttack => "Whenever you attack,".into(),
+        K::AttacksAndIsntBlocked if self_src => "Whenever this attacks and isn't blocked,".into(),
+        K::DealsCombatDamageToCreature => "Whenever this deals combat damage to a creature,".into(),
+        K::DealtDamage if self_src => "Whenever this is dealt damage,".into(),
+        K::CreatureOrArtifactDied => "Whenever a creature or artifact you control dies,".into(),
+        K::ScriedOrSurveiled if self_src => "Whenever you scry or surveil,".into(),
+        K::AnyCounterAdded if self_src => "Whenever a counter is put on this,".into(),
         K::StepBegins(step) => format!("At the beginning of {step:?},").to_lowercase().replacen("at", "At", 1),
         K::TurnedFaceUp => "When this is turned face up,".into(),
         K::Transformed => "When this transforms,".into(),
