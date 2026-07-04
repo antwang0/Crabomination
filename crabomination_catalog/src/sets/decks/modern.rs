@@ -61131,3 +61131,81 @@ pub fn boulderfall() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rain of Salt — {4}{R}{R} sorcery. Destroy two target lands.
+pub fn rain_of_salt() -> CardDefinition {
+    CardDefinition {
+        name: "Rain of Salt",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            Effect::Destroy {
+                what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Land },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Afterlife — {2}{W} instant. Destroy target creature; its controller creates
+/// a 1/1 white Spirit with flying.
+pub fn afterlife() -> CardDefinition {
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Afterlife",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::ONE,
+                definition: spirit,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Excommunicate — {2}{W} sorcery. Put target creature on top of its owner's
+/// library.
+pub fn excommunicate() -> CardDefinition {
+    CardDefinition {
+        name: "Excommunicate",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: crate::effect::LibraryPosition::Top,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Assassinate — {2}{B} sorcery. Destroy target tapped creature.
+pub fn assassinate() -> CardDefinition {
+    CardDefinition {
+        name: "Assassinate",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        },
+        ..Default::default()
+    }
+}

@@ -66183,3 +66183,61 @@ fn boulderfall_divides_five_damage() {
     g.resolve_effect(&eff, &ctx).unwrap();
     assert_eq!(g.players[1].life, life1 - 5, "all 5 damage to the sole target");
 }
+
+/// Rain of Salt destroys two target lands.
+#[test]
+fn rain_of_salt_destroys_two_lands() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(1, catalog::forest());
+    let l2 = g.add_card_to_battlefield(1, catalog::island());
+    let eff = catalog::rain_of_salt().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(l1), Target::Permanent(l2)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(l1).is_none() && g.battlefield_find(l2).is_none(), "both lands destroyed");
+}
+
+/// Afterlife destroys a creature and gives its controller a flying Spirit.
+#[test]
+fn afterlife_destroys_and_leaves_a_spirit() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eff = catalog::afterlife().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "creature destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Spirit" && c.controller == 1),
+        "its controller got a Spirit"
+    );
+}
+
+/// Excommunicate puts the target creature on top of its owner's library.
+#[test]
+fn excommunicate_tucks_to_top() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eff = catalog::excommunicate().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(victim).is_none(), "left the battlefield");
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(victim), "on top of owner's library");
+}
+
+/// Assassinate destroys only a tapped creature.
+#[test]
+fn assassinate_needs_a_tapped_target() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let eff = catalog::assassinate().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "tapped creature destroyed");
+}
