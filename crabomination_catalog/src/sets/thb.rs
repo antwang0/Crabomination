@@ -5198,6 +5198,7 @@ pub fn nightmare_shepherd() -> CardDefinition {
                         extra_card_types: vec![],
                         override_pt: Some((1, 1)),
                         override_colors: None,
+                        enters_tapped: false,
                         non_legendary: false,
                         legendary: false,
                     },

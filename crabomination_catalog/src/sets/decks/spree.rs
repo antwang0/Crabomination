@@ -262,6 +262,7 @@ pub fn three_steps_ahead() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: None,
                     override_colors: None,
+                    enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
                 },

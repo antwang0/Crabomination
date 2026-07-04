@@ -2562,6 +2562,22 @@ impl GameState {
         n
     }
 
+    /// CR 614.16 scaling for player-bound counters (poison): Winding
+    /// Constrictor's "+1 to any counters you'd get" adder, then any all-kinds
+    /// counter doublers. Players aren't creatures, so the `+1/+1`-only and
+    /// creature-gated modifiers don't apply — this is the player analogue of
+    /// [`scaled_counter_count`]. `base == 0` produces 0 (CR 119.10-style no-op).
+    pub fn scaled_player_counter_count(&self, seat: usize, base: u32) -> u32 {
+        if base == 0 {
+            return 0;
+        }
+        let mut n = base.saturating_add(self.extra_any_kind_adders_for(seat));
+        for _ in 0..self.counter_doublers_for(seat) {
+            n = n.saturating_mul(2);
+        }
+        n
+    }
+
     /// Number of `StaticEffect::DoublePlusOneCounters` permanents `seat`
     /// controls — each doubles a +1/+1 placement onto one of `seat`'s
     /// creatures (Branching Evolution / The Earth Crystal). Multiplicative,

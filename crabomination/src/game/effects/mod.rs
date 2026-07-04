@@ -5453,6 +5453,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddCreatureTypes { what, creature_types, duration } => {
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    for ct in creature_types {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification: Modification::AddCreatureType(*ct),
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChooseColorForSelf => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
@@ -5753,15 +5774,9 @@ impl GameState {
                             self.permanents_gained_counter_this_turn.insert(cid);
                         }
                         EntityRef::Player(p) if *kind == CounterType::Poison => {
-                            // Poison counters on players also scale per
-                            // CR 614.16 (Doubling Season / Vorinclex would
-                            // double poison too); use the affected player's
-                            // own counter-doubler count.
-                            let doublers = self.counter_doublers_for(p);
-                            let mut n = base;
-                            for _ in 0..doublers {
-                                n = n.saturating_mul(2);
-                            }
+                            // Poison on a player scales per CR 614.16 — Winding
+                            // Constrictor's +1 adder then any counter doublers.
+                            let n = self.scaled_player_counter_count(p, base);
                             self.players[p].poison_counters += n;
                             events.push(GameEvent::PoisonAdded { player: p, amount: n });
                         }
@@ -6527,6 +6542,7 @@ impl GameState {
                 extra_card_types,
                 override_pt,
                 override_colors,
+                enters_tapped,
                 non_legendary,
                 legendary,
             } => {
@@ -6603,7 +6619,7 @@ impl GameState {
                     def.supertypes.push(crate::card::Supertype::Legendary);
                 }
                 for _ in 0..n {
-                    self.mint_token_onto_battlefield(def.clone(), p, false, events);
+                    self.mint_token_onto_battlefield(def.clone(), p, *enters_tapped, events);
                 }
                 Ok(())
             }
@@ -7641,14 +7657,10 @@ impl GameState {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        // CR 122 / 614.16 — Winding Constrictor's player half:
-                        // "if you would get one or more counters, you get that
-                        // many plus one."
-                        let n = if base > 0 {
-                            base.saturating_add(self.extra_any_kind_adders_for(p))
-                        } else {
-                            0
-                        };
+                        // CR 122 / 614.16 — Winding Constrictor's player half
+                        // ("you get that many plus one") composed with any
+                        // counter doublers.
+                        let n = self.scaled_player_counter_count(p, base);
                         self.players[p].poison_counters += n;
                         events.push(GameEvent::PoisonAdded { player: p, amount: n });
                     }

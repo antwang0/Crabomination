@@ -2956,6 +2956,7 @@ pub fn relms_sketching() -> CardDefinition {
             extra_card_types: vec![],
             override_pt: None,
             override_colors: None,
+            enters_tapped: false,
             non_legendary: false,
             legendary: false,
         },
@@ -4825,6 +4826,60 @@ pub fn dragoons_lance() -> CardDefinition {
     }
 }
 
+/// Jenova, Ancient Calamity — {2}{B}{G} 1/5 Alien. At the beginning of combat on
+/// your turn, put +1/+1 counters equal to Jenova's power on up to one other
+/// target creature; it becomes a Mutant. Whenever a Mutant you control dies
+/// during your turn, draw cards equal to its power. (The "up to one" is modeled
+/// as a required target. The dies-draw fires only for creatures printed as
+/// Mutants — a granted Mutant type isn't preserved in the death LKI snapshot;
+/// tracked in TODO.md.)
+pub fn jenova_ancient_calamity() -> CardDefinition {
+    CardDefinition {
+        name: "Jenova, Ancient Calamity",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Alien], ..Default::default() },
+        power: 1,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::OtherThanSource),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::PowerOf(Box::new(Selector::This)),
+                    },
+                    Effect::AddCreatureTypes {
+                        what: Selector::Target(0),
+                        creature_types: vec![CreatureType::Mutant],
+                        duration: Duration::Permanent,
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::HasCreatureType(CreatureType::Mutant),
+                        },
+                        Predicate::IsTurnOf(PlayerRef::You),
+                    ])),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Ardyn, the Usurper — {5}{B}{B}{B} 4/4 Elder Human Noble. Demons you control
 /// have menace, lifelink, and haste. Starscourge — at the beginning of combat on
 /// your turn, exile up to one target creature card from a graveyard; if you do,
@@ -4869,6 +4924,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                     extra_card_types: vec![],
                     override_pt: Some((5, 5)),
                     override_colors: Some(vec![Color::Black]),
+                    enters_tapped: false,
                     non_legendary: false,
                     legendary: false,
                 },

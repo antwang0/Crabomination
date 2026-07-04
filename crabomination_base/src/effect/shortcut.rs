@@ -819,6 +819,7 @@ pub fn squad_etb() -> TriggeredAbility {
         extra_card_types: Vec::new(),
         override_pt: None,
         override_colors: None,
+        enters_tapped: false,
         non_legendary: false,
         legendary: false,
     })
@@ -2996,6 +2997,7 @@ fn embalm_like(
             extra_card_types: Vec::new(),
             override_pt,
             override_colors: None,
+            enters_tapped: false,
             non_legendary: false,
             legendary: false,
         },

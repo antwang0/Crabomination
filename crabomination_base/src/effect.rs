@@ -2895,6 +2895,12 @@ pub enum Effect {
     /// (Kasmina's Transmutation → blue Frog, Kenrith's Transformation → Elk,
     /// Turn to Frog, Lignify → Treefolk).
     BecomeCreatureType { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
+    /// CR 205.1b / 613.4 — each permanent picked by `what` gains
+    /// `creature_types` *in addition* to its own for `duration` (layer-4
+    /// additive `AddCreatureType`, unlike `BecomeCreatureType`'s full set).
+    /// "That creature becomes a Mutant in addition to its other types"
+    /// (Jenova, Ancient Calamity).
+    AddCreatureTypes { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
     /// CR 612 — change the target's text by replacing all instances of one
     /// color word with another, both chosen by the controller (layer 3;
     /// rewrites Protection-from-color). Trait Doctoring, Mind Bend.
@@ -3184,6 +3190,10 @@ pub enum Effect {
         /// `None` keeps the source's own colors.
         #[serde(default)]
         override_colors: Option<Vec<crate::mana::Color>>,
+        /// The token copy enters tapped (Sin, Spira's Punishment — "create a
+        /// tapped token that's a copy"). `false` = enters untapped (default).
+        #[serde(default)]
+        enters_tapped: bool,
         /// CR 707.2e rider — the token copy isn't legendary (Helm of the
         /// Host). Strips supertypes from the copy so the legend rule doesn't
         /// destroy it alongside a legendary host.

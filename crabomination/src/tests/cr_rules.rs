@@ -6019,6 +6019,25 @@ fn cr_614_16_winding_constrictor_boosts_experience() {
     assert_eq!(g.players[0].experience, 2, "got one experience plus one");
 }
 
+/// CR 614.16 / 122 — Winding Constrictor's player half boosts poison counters
+/// the controller gets, on both the AddPoison and AddCounter(Player) paths.
+#[test]
+fn cr_614_16_winding_constrictor_boosts_poison() {
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    // Player 1 controls the Constrictor and is the one gaining poison.
+    g.add_card_to_battlefield(1, catalog::winding_constrictor());
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::AddPoison { who: Selector::Player(PlayerRef::Seat(1)), amount: Value::Const(2) }, &ctx).unwrap();
+    assert_eq!(g.players[1].poison_counters, 3, "two poison plus one");
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Player(PlayerRef::Seat(1)),
+        kind: crate::card::CounterType::Poison,
+        amount: Value::Const(2),
+    }, &ctx).unwrap();
+    assert_eq!(g.players[1].poison_counters, 6, "AddCounter path also boosts: +3 more");
+}
+
 // ── CR 115 — an activated ability can target a spell on the stack ──────────────
 
 /// CR 115.4 / 706 — a "copy target spell you control" activated ability

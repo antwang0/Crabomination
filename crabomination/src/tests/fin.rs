@@ -2965,6 +2965,50 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Jenova's begin-combat buff adds +power counters to a target creature and
+/// makes it a Mutant in addition to its other types (CR 205.1b / 613.4).
+#[test]
+fn jenova_buffs_and_grants_mutant() {
+    let mut g = two_player_game();
+    let jenova = g.add_card_to_battlefield(0, catalog::jenova_ancient_calamity());
+    // Pump Jenova to power 3 so it grants 3 counters.
+    g.battlefield_find_mut(jenova).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3,
+        "3 counters = Jenova's power");
+    assert!(g.computed_permanent(bear).unwrap().subtypes.creature_types
+        .contains(&crate::card::CreatureType::Mutant), "gained Mutant in addition to Bear");
+    assert!(g.computed_permanent(bear).unwrap().subtypes.creature_types
+        .contains(&crate::card::CreatureType::Bear), "still a Bear");
+}
+
+/// CR 707.2 — a `CreateTokenCopyOf` with `enters_tapped` mints a tapped copy.
+#[test]
+fn cr_707_2_token_copy_enters_tapped() {
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(src)),
+    );
+    g.resolve_effect(&crate::effect::Effect::CreateTokenCopyOf {
+        who: crate::effect::PlayerRef::You,
+        count: crate::effect::Value::ONE,
+        source: crate::effect::Selector::Target(0),
+        extra_creature_types: vec![],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: true,
+        non_legendary: false,
+        legendary: false,
+    }, &ctx).unwrap();
+    let token = g.battlefield.iter().find(|c| c.is_token && c.id != src)
+        .expect("token copy minted");
+    assert!(token.tapped, "the copy entered tapped");
+}
+
 /// Ardyn's anthem grants Demons menace/lifelink/haste; Starscourge mints a
 /// 5/5 black Demon copy of an exiled graveyard creature.
 #[test]
