@@ -6552,3 +6552,52 @@ fn cr_700_4_noncreature_artifact_death_triggers_payoff() {
         "Gabranth grew when the noncreature artifact died",
     );
 }
+
+/// CR 120.3 / 104.3c — attempting to draw from an empty library (via a draw
+/// *effect*, not just the draw step) loses the game, recorded as `Decked`.
+#[test]
+fn cr_120_3_overdraw_effect_decks_the_player() {
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    use crate::player::LossCause;
+    let mut g = two_player_game();
+    // Exactly one card in P0's library; draw two → the second draw is illegal.
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    let eff = Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) };
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated, "drawing from empty library loses");
+    assert_eq!(g.players[0].loss_cause, Some(LossCause::Decked), "cause recorded as Decked");
+}
+
+/// CR 514.2 × 500.7 — an "until end of turn" pump expires at the single cleanup
+/// that follows a *looped* end step (Y'shtola's extra end step), not partway
+/// through, and not never.
+#[test]
+fn cr_514_2_eot_pump_expires_after_extra_end_step() {
+    use crate::effect::{Duration, Selector, Value};
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(3),
+        toughness: Value::Const(0),
+        duration: Duration::EndOfTurn,
+    };
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "EOT pump applied");
+    // Reach the end step and bank an extra one.
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.additional_end_steps = 1;
+    // Walk into the next turn (past both end steps and the one cleanup).
+    let start_turn = g.turn_number;
+    while g.turn_number == start_turn {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "pump expired at cleanup");
+}
