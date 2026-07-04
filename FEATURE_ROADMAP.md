@@ -510,7 +510,12 @@ Each a small targeted feature; sweep batch by batch.
   combat-damage order + assignment to the *defending* player (Benalish Hero).
   Remaining: attacking-band formation + "bands with other".
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
-  post-main insertion (Relentless Assault).
+  post-main insertion (Relentless Assault). First-combat detection
+  (`combat_phases_this_turn` + `Predicate::IsFirstCombatPhaseThisTurn`) gates
+  "if it's the first combat phase" riders so extra combats don't loop (Genji
+  Glove). **Additional end steps** (CR 500.7 — `Effect::AdditionalEndStep` +
+  `end_steps_this_turn` + `Predicate::IsFirstEndStepThisTurn`; Y'shtola Rhul).
+  Repeated phases are surfaced to UIs via `ClientView.extra_phase`.
 - ✅ **"Whenever you attack"** (CR 508) — `EventKind::YouAttack` fires once per
   combat for the attacking player (not per-attacker), via `shortcut::on_you_attack`.
   Replaces the old `Attacks/YourControl + once_per_turn` approximation on

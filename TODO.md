@@ -137,6 +137,18 @@ Remaining short FIN cards blocked on one primitive each:
   - *Mill "+N" replacement* — The Water Crystal's "mill that many plus four" is
     approximated by `OpponentMillDoubled`; a flat-`+N` opponent-mill replacement
     would be exact.
+  - *Next-creature-spell-enters-with-extra-counter (turn-scoped)* — a one-shot
+    of `StaticEffect::ExtraEtbCountersForCreatureCasts` (Summon: Fenrir II,
+    Torgal's first-Human rider). The continuous static ships; the "your next
+    creature this turn" flavor does not.
+  - *Temporary attack-triggered ability granted for a turn* — "until end of
+    turn, whenever a [type] attacks, draw" (Summon: Leviathan II/III).
+  - Still-unimplemented FIN cards (need one of the above or interactive
+    cast-time payment): Vayne's Treachery, Chocobo Kick, Quina, Reno and Rude,
+    Vaan, Stiltzkin, Kain, Torgal, Firion, Gogo, Louisoix's Sacrifice, Random
+    Encounter, Memories Returning, Triple Triad, Sin, the remaining Summon
+    Sagas (Fenrir/Leviathan/Brynhildr), Clive's Hideaway/Starting Town/Eden,
+    The Darkness Crystal, Lightning, Vincent's Limit Break, Vanille's meld.
 
 ## Environment note
 
@@ -2953,6 +2965,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Sungold Sentinel).
 - ✅ CR 702.104 — Tribute
 - ✅ CR 728 — Ending the Turn
+- ✅ CR 500.7 — additional phases/steps. `AdditionalCombatPhase` (combat) plus
+  new `Effect::AdditionalEndStep` (Y'shtola Rhul): `additional_end_steps` loops
+  the End step in `advance_step`. First-occurrence gates via
+  `combat_phases_this_turn` / `end_steps_this_turn` +
+  `Predicate::IsFirst{CombatPhase,EndStep}ThisTurn` stop the extra phase from
+  re-triggering (Genji Glove, Y'shtola). Repeated phases surfaced via
+  `ClientView.extra_phase`. Tests `cr_500_7_*`, `cr_514_2_eot_pump_*`.
+- ✅ CR 120.3 / 104.3c — drawing from an empty library via a draw *effect*
+  (not just the draw step) loses the game, recorded as `LossCause::Decked`
+  (`Effect::Draw` → `lose_to_empty_draw`; test `cr_120_3_overdraw_*`).
 - ✅ CR 701.19 — Searching (incl. `Effect::SearchUpToN` count-search — Nylea's Intervention, Deathbellow War Cry; test `cr_701_19_search_up_to_n_picks_matches_only`)
 - ✅ CR 714.4 — DFC sagas
 - ✅ CR 702.103 — Jump-start
