@@ -5006,6 +5006,37 @@ pub fn cloud_planets_champion() -> CardDefinition {
     }
 }
 
+/// Opera Love Song — {1}{R} Instant. Choose one — exile the top two cards of your
+/// library, you may play them until your next end step; or one or two target
+/// creatures each get +2/+0 until end of turn.
+pub fn opera_love_song() -> CardDefinition {
+    CardDefinition {
+        name: "Opera Love Song",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Blitzball — {3} Artifact. {T}: Add one mana of any color. "GOOOOAAAALLL!" —
 /// {T}, Sacrifice this artifact: draw two cards, if you dealt combat damage to a
 /// player this turn. (The printed "an opponent was dealt combat damage by a

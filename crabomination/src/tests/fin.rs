@@ -2986,6 +2986,24 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Opera Love Song mode 2 pumps one or two target creatures +2/+0.
+#[test]
+fn opera_love_song_pumps_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::opera_love_song());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: Some(1), x_value: None,
+    }).expect("cast Opera Love Song");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4, "first target +2/+0");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 4, "second target +2/+0");
+}
+
 /// Blitzball taps for any color; its GOOOOAAAALLL draw needs a combat hit.
 #[test]
 fn blitzball_mana_and_conditional_draw() {
