@@ -299,7 +299,7 @@ impl Effect {
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
-            Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.requires_target(),
             Effect::MaySacrifice { then, else_, .. }
             | Effect::MayTap { then, else_, .. }
             | Effect::MayDiscard { then, else_, .. } => {
@@ -872,7 +872,7 @@ impl Effect {
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
-            Effect::MayPay { body, .. } => body.primary_target_filter(),
+            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::CollectEvidence { then, .. } | Effect::Forage { then } => {
@@ -1030,7 +1030,8 @@ impl Effect {
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
-            | Effect::MayPay { body, .. } => body.prefers_graveyard_target(),
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. } => body.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
             // The Dawning Archaic) wants the graveyard walked for the target.
@@ -1300,6 +1301,7 @@ impl Effect {
             }
             Effect::MayDo { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::Reflexive { body }
@@ -1443,7 +1445,7 @@ impl Effect {
             Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
-            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => body.accepts_player_target(),
+            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
             Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
@@ -1625,9 +1627,9 @@ impl Effect {
                 // single-mode cast of any non-first mode). No cast-time slot
                 // filter is surfaced; see `Effect::Spree`'s resolution arm.
                 Effect::Spree { .. } => None,
-                Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
-                    eff_find(body, slot, mode, kicked)
-                }
+                Effect::MayDo { body, .. }
+                | Effect::MayPay { body, .. }
+                | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::CollectEvidence { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::IfRevealFromHand { then, else_, .. } => {
                     eff_find(then, slot, mode, kicked).or_else(|| eff_find(else_, slot, mode, kicked))
@@ -1879,9 +1881,9 @@ impl Effect {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),
             },
-            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
-                body.distinct_target_count(mode)
-            }
+            Effect::MayDo { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. } => body.distinct_target_count(mode),
             _ => None,
         }
     }

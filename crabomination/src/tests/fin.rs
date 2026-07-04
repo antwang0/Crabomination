@@ -2465,3 +2465,307 @@ fn the_regalia_lands_on_attack() {
     assert_eq!(lands_after, lands_before + 1, "revealed and dropped a land");
     assert!(g.battlefield_find(land).map(|c| c.tapped).unwrap_or(false), "it entered tapped");
 }
+
+/// A Realm Reborn grants "{T}: Add one mana of any color" to your other
+/// permanents (not to itself).
+#[test]
+fn a_realm_reborn_grants_mana_ability_to_others() {
+    let mut g = two_player_game();
+    let realm = g.add_card_to_battlefield(0, catalog::a_realm_reborn());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // The bear can tap for one mana of any color.
+    assert!(!g.granted_abilities_for(bear).is_empty(), "bear gained a mana ability");
+    // The enchantment itself is excluded ("other permanents").
+    assert!(g.granted_abilities_for(realm).is_empty(), "A Realm Reborn does not grant itself the ability");
+}
+
+/// Combat Tutorial: target player draws two and a creature you control grows.
+#[test]
+fn combat_tutorial_draws_and_grows_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::combat_tutorial());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    }).expect("cast Combat Tutorial");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2, "drew two (minus the spell cast)");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Combat Tutorial's creature slot is optional: with no creature it still draws.
+#[test]
+fn combat_tutorial_optional_creature_slot_can_be_declined() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::combat_tutorial());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![], // decline the creature slot
+        mode: None,
+        x_value: None,
+    }).expect("cast Combat Tutorial with no creature target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2, "still drew two");
+}
+
+/// Seymour Flux pays 1 life at upkeep to draw a card and grow.
+#[test]
+fn seymour_flux_pays_life_to_draw_and_grow() {
+    let mut g = two_player_game();
+    let seymour = g.add_card_to_battlefield(0, catalog::seymour_flux());
+    g.add_card_to_library(0, catalog::forest());
+    let life0 = g.players[0].life;
+    let hand0 = g.players[0].hand.len();
+    // Accept the "pay 1 life" optional.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(crate::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 1, "paid 1 life");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+    assert_eq!(g.battlefield_find(seymour).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Cloud of Darkness shrinks an opponent's creature by its graveyard's
+/// permanent-card count.
+#[test]
+fn cloud_of_darkness_shrinks_by_graveyard() {
+    let mut g = two_player_game();
+    // One permanent card in your graveyard → -1/-1 (a 2/2 survives as 1/1).
+    g.add_card_to_graveyard(0, catalog::forest());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::cloud_of_darkness());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "2/2 shrunk to 1/1 by one graveyard permanent");
+}
+
+/// Cargo Ship is a flying, vigilant Vehicle with a crew cost and a mana ability.
+#[test]
+fn cargo_ship_is_flying_vigilant_crew_vehicle() {
+    let c = catalog::cargo_ship();
+    for kw in [Keyword::Flying, Keyword::Vigilance, Keyword::Crew(1)] {
+        assert!(c.keywords.contains(&kw), "Cargo Ship has {kw:?}");
+    }
+    assert_eq!(c.activated_abilities.len(), 1, "one {{T}}: Add {{C}} ability");
+}
+
+/// The Wind Crystal doubles life you'd gain.
+#[test]
+fn wind_crystal_doubles_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_wind_crystal());
+    let life0 = g.players[0].life;
+    g.adjust_life(0, 2);
+    assert_eq!(g.players[0].life, life0 + 4, "gained twice the 2 life");
+}
+
+/// The Fire Crystal gives creatures you control haste.
+#[test]
+fn fire_crystal_grants_haste() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_fire_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "bear has haste");
+}
+
+/// Ancient Adamantoise exiles itself and mints ten Treasures when it dies.
+#[test]
+fn ancient_adamantoise_dies_to_ten_treasures() {
+    let mut g = two_player_game();
+    let toise = g.add_card_to_battlefield(0, catalog::ancient_adamantoise());
+    kill_perm(&mut g, toise);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Ancient Adamantoise"), "exiled, not in graveyard");
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 10, "ten Treasure tokens");
+}
+
+/// Poison the Waters' first mode gives all creatures -1/-1.
+#[test]
+fn poison_the_waters_mode0_shrinks_all() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::poison_the_waters());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Poison the Waters mode 0");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().toughness, 1, "your bear is 1/1");
+    assert_eq!(g.computed_permanent(theirs).unwrap().toughness, 1, "their bear is 1/1");
+}
+
+/// Valkyrie Aerial Unit's Affinity for artifacts reduces its cost.
+#[test]
+fn valkyrie_affinity_reduces_cost() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::valkyrie_aerial_unit());
+    // {5}{U}{U} with three artifacts → {2}{U}{U}.
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Affinity made Valkyrie cost {2}{U}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_some(), "Valkyrie resolved");
+}
+
+/// Ice Flan taps and stuns an opponent's permanent on entry.
+#[test]
+fn ice_flan_taps_and_stuns() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::ice_flan());
+    drain_stack(&mut g);
+    let f = g.battlefield_find(foe).unwrap();
+    assert!(f.tapped, "opponent creature tapped");
+    assert_eq!(f.counter_count(CounterType::Stun), 1, "and stunned");
+}
+
+/// Namazu Trader loses a life and makes a Treasure when it enters.
+#[test]
+fn namazu_trader_etb_treasure_and_loselife() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::namazu_trader());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 1, "lost 1 life");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
+}
+
+/// Ultros stuns an opponent's creature after a four-mana noncreature spell.
+#[test]
+fn ultros_stuns_on_big_noncreature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ultros_obnoxious_octopus());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::chemisters_insight()); // {3}{U}, instant
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chemister's Insight");
+    drain_stack(&mut g);
+    let f = g.battlefield_find(foe).unwrap();
+    assert!(f.tapped && f.counter_count(CounterType::Stun) == 1, "Ultros tapped+stunned the foe");
+}
+
+/// Aerith Rescue Mission's first mode makes three Hero tokens.
+#[test]
+fn aerith_mode0_makes_three_heroes() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::aerith_rescue_mission());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Aerith mode 0");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Hero").count(), 3);
+}
+
+/// Zack Fair enters with a +1/+1 counter and can sacrifice for indestructible.
+#[test]
+fn zack_fair_counter_and_indestructible() {
+    let mut g = two_player_game();
+    let zack = g.move_card_to_battlefield_for_test(0, catalog::zack_fair());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(zack).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zack, ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).expect("sacrifice Zack for indestructible");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(zack).is_none(), "Zack sacrificed");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// The Final Days makes two Horror tokens on a normal cast.
+#[test]
+fn the_final_days_makes_two_horrors() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::the_final_days());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast The Final Days");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Horror").count(), 2);
+}
+
+/// From Father to Son fetches a Vehicle to hand.
+#[test]
+fn from_father_to_son_fetches_vehicle_to_hand() {
+    let mut g = two_player_game();
+    let veh = g.add_card_to_library(0, catalog::cargo_ship()); // a Vehicle to find
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::from_father_to_son());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(veh)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast From Father to Son");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Cargo Ship"), "Vehicle in hand");
+}
+
+/// Call the Mountain Chocobo fetches a Mountain and mints a Bird token.
+#[test]
+fn call_the_mountain_chocobo_fetches_and_makes_bird() {
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_library(0, catalog::mountain());
+    let spell = g.add_card_to_hand(0, catalog::call_the_mountain_chocobo());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(mtn)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Call the Mountain Chocobo");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mountain"), "Mountain in hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Chocobo").count(), 1, "one Bird token");
+}
+
+/// Traveling Chocobo lets you cast Bird spells and play lands off the top.
+#[test]
+fn traveling_chocobo_plays_bird_from_top() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::traveling_chocobo());
+    let top_bird = g.add_card_to_library(0, catalog::traveling_chocobo());
+    // Move it to the top of the library.
+    let idx = g.players[0].library.iter().position(|c| c.id == top_bird).unwrap();
+    let card = g.players[0].library.remove(idx);
+    g.players[0].library.insert(0, card);
+    assert!(g.library_top_playable(0, top_bird), "a Bird on top is playable");
+}

@@ -1520,6 +1520,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayPayLife { description, amount, body, else_ } => {
+                // CR 119.4 — "you may pay N life." Ask yes/no, then pay only
+                // while life ≥ amount (paying life is a life loss). Declined or
+                // unpayable runs `else_`.
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let payable = amt == 0 || self.players[ctx.controller].life >= amt as i32;
+                if yes && payable {
+                    if amt > 0 {
+                        let applied = self.adjust_life_applied(ctx.controller, -(amt as i32));
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost {
+                                player: ctx.controller,
+                                amount: (-applied) as u32,
+                            });
+                        }
+                    }
+                    self.run_effect(body, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::MayPayGenericUpTo { max, body } => {
                 // "You may pay {X}, X ≤ max" — prompt for a number bounded by
                 // both the printed cap and the mana actually in the pool, spend

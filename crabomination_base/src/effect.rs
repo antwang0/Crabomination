@@ -1963,6 +1963,19 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
+    /// CR 119.4 — "You may pay N life. If you do, `body`." The controller is
+    /// asked yes/no; the payment (which is a life loss, CR 119.4) is only
+    /// possible while their life total is at least `amount`. Declined or
+    /// unpayable runs `else_`. Seymour Flux, and the broad "pay N life: draw /
+    /// scry / pump" cluster. Sibling of [`Effect::MayPay`] for life costs.
+    MayPayLife {
+        description: String,
+        amount: Value,
+        body: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
     /// "You may pay {X}, where X ≤ `max`; if you do, [body reads X as
     /// `Value::TriggerEventAmount`]." The controller is prompted for a number
     /// in `0..=min(max, mana in pool)` via `Decision::ChooseAmount`; that many

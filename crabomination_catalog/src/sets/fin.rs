@@ -7,7 +7,10 @@ use crate::card::{
     SelectionRequirement, Selector, StaticAbility, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, etb_mint_token, target_filtered};
+use crate::card::WardCost;
+use crate::effect::shortcut::{
+    etb, etb_mint_token, etb_surveil, grant_tap_for_any_color, mint_treasures, target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
@@ -3779,6 +3782,616 @@ pub fn the_regalia() -> CardDefinition {
                 cap: Value::Const(60), // "until a land" — capped past any library size
                 life_per_revealed: 0,
                 miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// A Realm Reborn — {4}{G}{G} Enchantment. Other permanents you control have
+/// "{T}: Add one mana of any color."
+pub fn a_realm_reborn() -> CardDefinition {
+    CardDefinition {
+        name: "A Realm Reborn",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![grant_tap_for_any_color(
+            SelectionRequirement::ControlledByYou.and(SelectionRequirement::OtherThanSource),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Combat Tutorial — {2}{U} Sorcery. Target player draws two cards. Put a
+/// +1/+1 counter on up to one target creature you control. (The creature slot
+/// is optional: with no legal creature the spell just draws.)
+pub fn combat_tutorial() -> CardDefinition {
+    CardDefinition {
+        name: "Combat Tutorial",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Seymour Flux — {4}{B} 5/5 Spirit Avatar. At the beginning of your upkeep,
+/// you may pay 1 life. If you do, draw a card and put a +1/+1 counter on it.
+pub fn seymour_flux() -> CardDefinition {
+    CardDefinition {
+        name: "Seymour Flux",
+        cost: cost(&[generic(4), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayPayLife {
+                description: "Pay 1 life: draw a card and grow Seymour Flux?".into(),
+                amount: Value::ONE,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cloud of Darkness — {2}{B}{G}{G} 3/3 Avatar with flying. Particle Beam: when
+/// it enters, target creature an opponent controls gets -X/-X until end of turn,
+/// where X is the number of permanent cards in your graveyard.
+pub fn cloud_of_darkness() -> CardDefinition {
+    CardDefinition {
+        name: "Cloud of Darkness",
+        cost: cost(&[generic(2), b(), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Diff(
+                Box::new(Value::ZERO),
+                Box::new(Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::PermanentCard,
+                }),
+            ),
+            toughness: Value::Diff(
+                Box::new(Value::ZERO),
+                Box::new(Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::PermanentCard,
+                }),
+            ),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cargo Ship — {1}{U} 2/3 Vehicle with flying and vigilance. {T}: Add {C},
+/// spendable only on artifact spells/abilities. Crew 1.
+pub fn cargo_ship() -> CardDefinition {
+    CardDefinition {
+        name: "Cargo Ship",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Crew(1)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::ONE)),
+                    crate::mana::SpendRestriction::ArtifactOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Wind Crystal — {2}{W}{W} Legendary Artifact. White spells you cast cost
+/// {1} less. If you would gain life, you gain twice that much instead.
+/// {4}{W}{W}, {T}: Creatures you control gain flying and lifelink until EOT.
+pub fn the_wind_crystal() -> CardDefinition {
+    use crate::effect::PlayerStaticTarget;
+    CardDefinition {
+        name: "The Wind Crystal",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "White spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasColor(Color::White),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "If you would gain life, you gain twice that much instead.",
+                effect: StaticEffect::LifeGainMultiplier {
+                    target: PlayerStaticTarget::Controller,
+                    factor: 2,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), w(), w()]),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Fire Crystal — {2}{R}{R} Legendary Artifact. Red spells you cast cost {1}
+/// less. Creatures you control have haste. {4}{R}{R}, {T}: Create a token that's
+/// a copy of target creature you control; sacrifice it at the next end step.
+pub fn the_fire_crystal() -> CardDefinition {
+    CardDefinition {
+        name: "The Fire Crystal",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Red spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), r(), r()]),
+            effect: Effect::CreateTokenCopiesHasteSac {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ancient Adamantoise — {5}{G}{G}{G} 8/20 Turtle. Vigilance, ward {3}. All
+/// damage that would be dealt to you and other permanents you control is dealt
+/// to it instead. When it dies, exile it and create ten Treasure tokens.
+/// (The cleanup-damage-retention rider is omitted.)
+pub fn ancient_adamantoise() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Adamantoise",
+        cost: cost(&[generic(5), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        power: 8,
+        toughness: 20,
+        keywords: vec![Keyword::Vigilance, Keyword::Ward(WardCost::generic(3))],
+        static_abilities: vec![StaticAbility {
+            description: "All damage that would be dealt to you and other permanents you control is dealt to this creature instead.",
+            effect: StaticEffect::RedirectDamageToSelf,
+        }],
+        dies_to_exile: true,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(mint_treasures(10))],
+        ..Default::default()
+    }
+}
+
+/// Poison the Waters — {1}{B} Sorcery. Choose one — all creatures get -1/-1
+/// until end of turn; or target player reveals their hand, you choose an
+/// artifact or creature card from it, and that player discards it.
+pub fn poison_the_waters() -> CardDefinition {
+    CardDefinition {
+        name: "Poison the Waters",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Valkyrie Aerial Unit — {5}{U}{U} 5/4 Construct artifact creature. Affinity
+/// for artifacts, flying. When it enters, surveil 2.
+pub fn valkyrie_aerial_unit() -> CardDefinition {
+    CardDefinition {
+        name: "Valkyrie Aerial Unit",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        triggered_abilities: vec![etb_surveil(2)],
+        ..Default::default()
+    }
+}
+
+/// Ice Flan — {4}{U}{U} 5/4 Elemental Ooze. When it enters, tap target artifact
+/// or creature an opponent controls and put a stun counter on it.
+/// Islandcycling {2}.
+pub fn ice_flan() -> CardDefinition {
+    CardDefinition {
+        name: "Ice Flan",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Ooze],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), crate::card::LandType::Island)],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::ONE,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Namazu Trader — {3}{B} 3/4 Fish Citizen. When it enters, you lose 1 life and
+/// create a Treasure token. Whenever it attacks, you may sacrifice another
+/// creature or artifact. If you do, surveil 2.
+pub fn namazu_trader() -> CardDefinition {
+    CardDefinition {
+        name: "Namazu Trader",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                mint_treasures(1),
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MaySacrifice {
+                    description: "Sacrifice another creature or artifact to surveil 2?".into(),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::OtherThanSource),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ultros, Obnoxious Octopus — {1}{U} 2/1 Octopus. Whenever you cast a
+/// noncreature spell with at least four mana spent, tap target creature an
+/// opponent controls and put a stun counter on it. With at least eight mana
+/// spent, put eight +1/+1 counters on Ultros instead.
+pub fn ultros_obnoxious_octopus() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_noncreature;
+    CardDefinition {
+        name: "Ultros, Obnoxious Octopus",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
+                        cast_is_noncreature(),
+                        Predicate::CastSpellManaSpentAtLeast(4),
+                    ]),
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::Tap {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::ONE,
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
+                        cast_is_noncreature(),
+                        Predicate::CastSpellManaSpentAtLeast(8),
+                    ]),
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(8),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Aerith Rescue Mission — {3}{W} Sorcery. Choose one — create three 1/1
+/// colorless Hero creature tokens; or tap up to three target creatures and put
+/// a stun counter on one of them.
+pub fn aerith_rescue_mission() -> CardDefinition {
+    let hero = TokenDefinition {
+        name: "Hero".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Aerith Rescue Mission",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: hero },
+            Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 3,
+                    filter: SelectionRequirement::Creature,
+                    effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::ONE,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Zack Fair — {W} 0/1 Soldier. Enters with a +1/+1 counter. {1}, Sacrifice
+/// Zack Fair: Target creature you control gains indestructible until end of
+/// turn. (The counter- and Equipment-transfer riders are omitted.)
+pub fn zack_fair() -> CardDefinition {
+    CardDefinition {
+        name: "Zack Fair",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Final Days — {2}{B}{B} Sorcery. Create two 2/2 black Horror creature
+/// tokens. If this spell was cast from a graveyard, instead create one for each
+/// creature card in your graveyard. Flashback {4}{B}{B}. (Tokens enter untapped.)
+pub fn the_final_days() -> CardDefinition {
+    let horror = TokenDefinition {
+        name: "Horror".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Final Days",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), b(), b()]))],
+        effect: Effect::If {
+            cond: Predicate::CastFromGraveyard,
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                },
+                definition: horror.clone(),
+            }),
+            else_: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: horror,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// From Father to Son — {1}{W} Sorcery. Search your library for a Vehicle card
+/// and put it into your hand — or onto the battlefield if this spell was cast
+/// from a graveyard — then shuffle. Flashback {4}{W}{W}{W}.
+pub fn from_father_to_son() -> CardDefinition {
+    CardDefinition {
+        name: "From Father to Son",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), w(), w(), w()]))],
+        effect: Effect::If {
+            cond: Predicate::CastFromGraveyard,
+            then: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Call the Mountain Chocobo — {3}{R} Sorcery. Search your library for a
+/// Mountain, put it into your hand, then shuffle. Create a 2/2 green Bird token
+/// that gets +1/+0 until end of turn whenever a land you control enters.
+/// Flashback {5}{R}.
+pub fn call_the_mountain_chocobo() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Chocobo".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Call the Mountain Chocobo",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasLandType(crate::card::LandType::Mountain),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: bird },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Traveling Chocobo — {2}{G} 3/2 Bird. You may play lands and cast Bird spells
+/// from the top of your library. (The extra-trigger "additional time" rider is
+/// omitted.)
+pub fn traveling_chocobo() -> CardDefinition {
+    CardDefinition {
+        name: "Traveling Chocobo",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands and cast Bird spells from the top of your library.",
+            effect: StaticEffect::PlayFromLibraryTop {
+                filter: SelectionRequirement::Land
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Bird)),
             },
         }],
         ..Default::default()
