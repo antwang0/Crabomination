@@ -1266,7 +1266,11 @@ pub fn update_phase_chart(
                     StopMode::Always => "  [stop]",
                     StopMode::Skip => "  [skip]",
                 };
-                text.0 = format!("{marker}{}{stop_tag}", step_short_label(label.0));
+                // CR 500.7 — flag a repeated combat/end step (extra combat,
+                // Y'shtola's extra end step) on the active row so the loop reads.
+                let extra_tag = if active && cv.extra_phase { "  ⟳ extra" } else { "" };
+                text.0 =
+                    format!("{marker}{}{extra_tag}{stop_tag}", step_short_label(label.0));
                 *color = TextColor(match (active, mode) {
                     (true, _) => theme::ACCENT_YELLOW,
                     (false, StopMode::Always) => theme::ACCENT_ORANGE,

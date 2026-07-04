@@ -232,6 +232,13 @@ pub struct ClientView {
     pub priority: usize,
     pub step: TurnStep,
     pub turn: u32,
+    /// CR 500.7 — true when the current step is a *repeated* phase this turn:
+    /// an additional combat phase (Aggravated Assault, Genji Glove) or an
+    /// additional end step (Y'shtola Rhul). Lets the phase bar flag "you're in
+    /// an extra combat/end step" rather than silently looping. `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub extra_phase: bool,
     pub players: Vec<PlayerView>,
     pub battlefield: Vec<PermanentView>,
     pub stack: Vec<StackItemView>,

@@ -57,6 +57,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         priority: state.player_with_priority(),
         step: state.step,
         turn: state.turn_number,
+        extra_phase: is_extra_phase(state),
         players: state
             .players
             .iter()
@@ -148,6 +149,20 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         legal_blockers: viewer.map(|s| state.legal_blockers(s)).unwrap_or_default(),
         permanents_to_graveyard_this_turn: state.permanents_to_graveyard_this_turn,
     }
+}
+
+/// CR 500.7 — true when the current step is a *repeated* phase this turn: the
+/// active player is in an additional combat phase (any combat step while more
+/// than one combat has begun) or an additional end step. Drives the phase-bar
+/// "extra" marker so a looped combat/end step reads clearly.
+pub(crate) fn is_extra_phase(state: &GameState) -> bool {
+    use crate::game::types::TurnStep::*;
+    let in_combat = matches!(
+        state.step,
+        BeginCombat | DeclareAttackers | DeclareBlockers | FirstStrikeDamage | CombatDamage | EndCombat
+    );
+    (in_combat && state.combat_phases_this_turn > 1)
+        || (state.step == crate::game::types::TurnStep::End && state.end_steps_this_turn > 1)
 }
 
 /// Total Afflict N across a card's triggered abilities (CR 702.131) — a

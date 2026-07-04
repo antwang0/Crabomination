@@ -1372,3 +1372,25 @@ fn combat_preview_reflects_afflict_on_block() {
     // Blocked 3/3 deals no face damage, but Afflict 2 still drains P1.
     assert_eq!(prev.damage_to_players, vec![(1, 2)], "Afflict 2 shown as 2 to P1");
 }
+
+/// CR 500.7 — the client view flags an extra combat/end step via `extra_phase`
+/// so the phase bar can mark a looped phase.
+#[test]
+fn cr_500_7_view_flags_extra_combat_and_end_step() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    // First combat: not an extra phase.
+    g.step = TurnStep::BeginCombat;
+    g.combat_phases_this_turn = 1;
+    assert!(!crate::server::view::project(&g, 0).extra_phase, "first combat isn't extra");
+    // Second (looped) combat: flagged.
+    g.combat_phases_this_turn = 2;
+    assert!(crate::server::view::project(&g, 0).extra_phase, "second combat is extra");
+    // Outside combat the combat count doesn't flag the phase.
+    g.step = TurnStep::PostCombatMain;
+    assert!(!crate::server::view::project(&g, 0).extra_phase, "main phase never extra");
+    // A repeated end step is flagged too.
+    g.step = TurnStep::End;
+    g.end_steps_this_turn = 2;
+    assert!(crate::server::view::project(&g, 0).extra_phase, "second end step is extra");
+}

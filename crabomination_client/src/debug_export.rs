@@ -164,6 +164,7 @@ mod tests {
             priority: 0,
             step: TurnStep::PreCombatMain,
             turn: 1,
+            extra_phase: false,
             permanents_to_graveyard_this_turn: 0,
             players: vec![PlayerView {
                 seat: 0,
