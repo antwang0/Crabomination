@@ -5632,6 +5632,8 @@ static FIN: &[Factory] = &[
     super::fin::the_masamune,
     super::fin::dark_knights_greatsword,
     super::fin::summoners_grimoire,
+    super::fin::the_water_crystal,
+    super::fin::the_wandering_minstrel,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

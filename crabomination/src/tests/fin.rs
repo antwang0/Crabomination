@@ -4122,3 +4122,53 @@ fn summoners_grimoire_cheats_creature_on_attack() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(big).is_some(), "Angel put onto the battlefield from hand");
 }
+
+/// The Water Crystal's activated mill scales with your hand and is boosted by
+/// its own opponent-mill replacement.
+#[test]
+fn the_water_crystal_mills_scaled_by_hand() {
+    let mut g = two_player_game();
+    let crystal = g.add_card_to_battlefield(0, catalog::the_water_crystal());
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); } // hand of 3
+    for _ in 0..12 { g.add_card_to_library(1, catalog::island()); }
+    let gy1 = g.players[1].graveyard.len();
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crystal, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    // 3 (hand) doubled by the crystal's own replacement = 6 milled.
+    assert_eq!(g.players[1].graveyard.len(), gy1 + 6, "milled 3×2 = 6");
+}
+
+/// The Wandering Minstrel's activated pump scales with Towns you control, and
+/// its static makes lands enter untapped.
+#[test]
+fn the_wandering_minstrel_town_scaling() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_wandering_minstrel());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for f in [catalog::baron_airship_kingdom, catalog::treno_dark_city, catalog::windurst_federation_center] {
+        g.add_card_to_battlefield(0, f());
+    }
+    // Lands enter untapped despite Towns normally entering tapped.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let town = g.add_card_to_hand(0, catalog::gohn_town_of_ruin());
+    g.perform_action(GameAction::PlayLand(town)).expect("play a Town");
+    assert!(!g.battlefield_find(town).unwrap().tapped, "Town entered untapped via the static");
+    // Now four Towns → +4/+4 to the ally.
+    let minstrel = g.battlefield.iter()
+        .find(|c| c.definition.name == "The Wandering Minstrel").unwrap().id;
+    for c in [crate::mana::Color::White, crate::mana::Color::Blue, crate::mana::Color::Black,
+              crate::mana::Color::Red, crate::mana::Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: minstrel, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 2 + 4, "+X/+X where X = 4 Towns");
+}

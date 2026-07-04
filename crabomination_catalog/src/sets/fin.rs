@@ -6593,3 +6593,108 @@ pub fn summoners_grimoire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Water Crystal — {2}{U}{U} Legendary Artifact. Blue spells you cast cost
+/// {1} less. Opponents mill extra. {4}{U}{U}, {T}: each opponent mills cards
+/// equal to the number of cards in your hand.
+/// (The printed "mill that many plus four" is approximated as mill-doubling.)
+pub fn the_water_crystal() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "The Water Crystal",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Blue spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasColor(Color::Blue),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "If an opponent would mill one or more cards, they mill extra.",
+                effect: StaticEffect::OpponentMillDoubled,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), u(), u()]),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::count(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Hand,
+                    filter: SelectionRequirement::Any,
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Wandering Minstrel — {G}{U} 1/3 Legendary Human Bard. Lands you control
+/// enter untapped. At the beginning of combat on your turn, if you control five
+/// or more Towns, create a 2/2 all-colors Elemental token. {3}{W}{U}{B}{R}{G}:
+/// other creatures you control get +X/+X, where X is the number of Towns you
+/// control.
+pub fn the_wandering_minstrel() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let towns = || Value::count(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(crate::card::LandType::Town)
+            .and(SelectionRequirement::ControlledByYou),
+    ));
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        colors: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Wandering Minstrel",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control enter untapped.",
+            effect: StaticEffect::LandsEnterUntapped,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl)
+                .with_filter(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasLandType(crate::card::LandType::Town)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(5),
+                }),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elemental },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), u(), b(), r(), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: towns(),
+                toughness: towns(),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
