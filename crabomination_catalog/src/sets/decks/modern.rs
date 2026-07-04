@@ -61209,3 +61209,63 @@ pub fn assassinate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kill Shot — {2}{W} instant. Destroy target attacking creature.
+pub fn kill_shot() -> CardDefinition {
+    CardDefinition {
+        name: "Kill Shot",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Aggressive Urge — {1}{G} instant. Target creature gets +1/+1 until end of
+/// turn. Draw a card.
+pub fn aggressive_urge() -> CardDefinition {
+    CardDefinition {
+        name: "Aggressive Urge",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bestial Menace — {3}{G}{G} sorcery. Create a 1/1 Snake, a 2/2 Wolf, and a
+/// 3/3 Elephant, all green.
+pub fn bestial_menace() -> CardDefinition {
+    let beast = |name: &'static str, p: i32, t: i32, ct: CreatureType| TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: t,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Bestial Menace",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: beast("Snake", 1, 1, CreatureType::Snake) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: beast("Wolf", 2, 2, CreatureType::Wolf) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: beast("Elephant", 3, 3, CreatureType::Elephant) },
+        ]),
+        ..Default::default()
+    }
+}

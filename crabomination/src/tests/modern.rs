@@ -66241,3 +66241,53 @@ fn assassinate_needs_a_tapped_target() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(foe).is_none(), "tapped creature destroyed");
 }
+
+/// Kill Shot destroys only an attacking creature.
+#[test]
+fn kill_shot_destroys_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // P1 attacks P0 so the creature is "attacking".
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let eff = catalog::kill_shot().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(attacker)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(attacker).is_none(), "attacking creature destroyed");
+}
+
+/// Aggressive Urge pumps a creature and cantrips.
+#[test]
+fn aggressive_urge_pumps_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    let eff = catalog::aggressive_urge().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 applied");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
+/// Bestial Menace makes a Snake, a Wolf, and an Elephant.
+#[test]
+fn bestial_menace_makes_three_beasts() {
+    let mut g = two_player_game();
+    let eff = catalog::bestial_menace().effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    for name in ["Snake", "Wolf", "Elephant"] {
+        assert!(g.battlefield.iter().any(|c| c.definition.name == name), "made a {name}");
+    }
+}
