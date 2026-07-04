@@ -5584,6 +5584,7 @@ static FIN: &[Factory] = &[
     super::fin::lightning_security_sergeant,
     super::fin::bartz_and_boko,
     super::fin::self_destruct,
+    super::fin::magitek_scythe,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

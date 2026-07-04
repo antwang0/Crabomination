@@ -3014,6 +3014,19 @@ fn self_destruct_deals_power_to_both() {
     assert!(g.battlefield_find(mine).is_none(), "2 damage killed the 2/2 itself");
 }
 
+/// Magitek Scythe attaches on entry, granting first strike + must-be-blocked.
+#[test]
+fn magitek_scythe_attaches_and_grants() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.move_card_to_battlefield_for_test(0, catalog::magitek_scythe());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(creature).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 from the Scythe");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "granted first strike");
+    assert!(cp.keywords.contains(&Keyword::MustBeBlocked), "must be blocked this turn");
+}
+
 /// Machinist's Arsenal scales +2/+2 per artifact and grants Artificer.
 #[test]
 fn machinists_arsenal_scales_per_artifact() {

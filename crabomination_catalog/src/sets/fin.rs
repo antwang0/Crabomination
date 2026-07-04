@@ -4892,6 +4892,43 @@ pub fn bartz_and_boko() -> CardDefinition {
     }
 }
 
+/// Magitek Scythe — {4} Equipment. When it enters, attach it to target creature
+/// you control; that creature gains first strike and must be blocked this turn.
+/// Equipped creature gets +2/+1. Equip {2}. (The "you may" attach is modeled as
+/// a required target — no-op if you control no creature.)
+pub fn magitek_scythe() -> CardDefinition {
+    CardDefinition {
+        name: "Magitek Scythe",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::MustBeBlocked,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
 /// Self-Destruct — {1}{R} Instant. Target creature you control deals X damage to
 /// any other target and X damage to itself, where X is its power.
 pub fn self_destruct() -> CardDefinition {
