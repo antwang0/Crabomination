@@ -2933,6 +2933,27 @@ fn freya_crescent_mana_restricted_to_equipment() {
     assert!(!r.allows(&creature), "not a creature spell");
 }
 
+/// Astrologian's Planisphere's Hero grows a +1/+1 counter on a noncreature cast.
+#[test]
+fn astrologians_planisphere_counter_on_noncreature_cast() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::astrologians_planisphere());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    assert!(g.computed_permanent(hero).unwrap().subtypes.creature_types
+        .contains(&crate::card::CreatureType::Wizard), "equipped is a Wizard");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hero).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "gained a +1/+1 counter from the granted trigger");
+}
+
 /// Samurai's Katana job-selects a Hero and grants +2/+2, trample, haste, Samurai.
 #[test]
 fn samurais_katana_job_select() {

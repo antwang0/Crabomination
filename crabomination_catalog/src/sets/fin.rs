@@ -4663,6 +4663,34 @@ fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// Astrologian's Planisphere — {1}{U} Equipment. Job select. Equipped creature is
+/// a Wizard and has "Whenever you cast a noncreature spell, put a +1/+1 counter on
+/// this creature." Equip {2}. (The "draw your third card each turn" counter half
+/// is omitted — no drew-Nth-card-this-turn trigger yet.)
+pub fn astrologians_planisphere() -> CardDefinition {
+    CardDefinition {
+        name: "Astrologian's Planisphere",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            add_creature_types: vec![CreatureType::Wizard],
+            triggered_abilities: vec![on_cast_noncreature(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Samurai's Katana — {2}{R} Equipment. Job select. Equipped creature gets +2/+2,
 /// has trample and haste, and is a Samurai. Equip {5}.
 pub fn samurais_katana() -> CardDefinition {

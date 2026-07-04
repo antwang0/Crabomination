@@ -5575,6 +5575,7 @@ static FIN: &[Factory] = &[
     super::fin::giott_king_of_the_dwarves,
     super::fin::freya_crescent,
     super::fin::balthier_and_fran,
+    super::fin::astrologians_planisphere,
     super::fin::samurais_katana,
     super::fin::red_mages_rapier,
     super::fin::black_mages_rod,
