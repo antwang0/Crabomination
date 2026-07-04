@@ -1147,6 +1147,13 @@ pub struct GameState {
     /// Reset at cleanup.
     #[serde(default)]
     pub(crate) additional_post_main_combats: u32,
+    /// How many Begin Combat steps have started this turn (1 during the first
+    /// combat, 2 during an extra combat, …). Read by
+    /// `Predicate::IsFirstCombatPhaseThisTurn` so "if it's the first combat
+    /// phase of the turn" riders (Genji Glove) don't loop on the extra combat
+    /// they grant. Reset at cleanup.
+    #[serde(default)]
+    pub(crate) combat_phases_this_turn: u32,
     /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
     /// directions for the rest of the turn (Maze of Ith: "prevent all combat
     /// damage that would be dealt to and dealt by that creature"). The combat
@@ -1524,6 +1531,7 @@ impl Clone for GameState {
             layer_freeze: LayerFreeze::default(),
             additional_combat_phases: self.additional_combat_phases,
             additional_post_main_combats: self.additional_post_main_combats,
+            combat_phases_this_turn: self.combat_phases_this_turn,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
@@ -1666,6 +1674,7 @@ impl GameState {
             layer_freeze: LayerFreeze::default(),
             additional_combat_phases: 0,
             additional_post_main_combats: 0,
+            combat_phases_this_turn: 0,
             combat_damage_prevented_creatures: Vec::new(),
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
@@ -10021,7 +10030,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, keep_on_top } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -10079,7 +10088,7 @@ impl GameState {
                                 player,
                                 &crate::effect::ZoneDest::Battlefield {
                                     controller: crate::effect::PlayerRef::Seat(player),
-                                    tapped: false,
+                                    tapped,
                                 },
                                 &mut events,
                             );

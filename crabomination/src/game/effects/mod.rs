@@ -2043,6 +2043,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DealDamageEqualToPowerToEach { source, targets, each_opponent } => {
+                let Some(src_id) = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                // CR 608.2h — read last-known power if the source has since left.
+                let power = self
+                    .computed_permanent(src_id)
+                    .map(|cp| cp.power)
+                    .or_else(|| self.leaves_bf_lki.get(&src_id).map(|s| s.power()))
+                    .unwrap_or(0);
+                if power <= 0 {
+                    return Ok(());
+                }
+                let mut recipients: Vec<EntityRef> = self
+                    .resolve_selector(targets, ctx)
+                    .into_iter()
+                    .filter(|e| e.as_card_id() != Some(src_id))
+                    .collect();
+                if *each_opponent {
+                    let controller =
+                        self.battlefield_find(src_id).map(|c| c.controller).unwrap_or(0);
+                    for opp in self.opponents_of(controller) {
+                        recipients.push(EntityRef::Player(opp));
+                    }
+                }
+                for r in recipients {
+                    self.deal_damage_to_from(r, power as u32, Some(src_id), events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::GainLife { who, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
@@ -8338,6 +8375,66 @@ impl GameState {
                     eligible,
                     take,
                     to_battlefield: *to_battlefield,
+                    tapped: false,
+                    keep_on_top: false,
+                };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::DigForLandToBattlefield { count } => {
+                use crate::decision::Decision;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top_ids: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top_ids.is_empty() {
+                    return Ok(());
+                }
+                // Only lands are eligible to deploy; the "may" is honored by an
+                // empty pick (no land, or the decider declines) leaving all
+                // revealed cards to be bottomed.
+                let eligible: Vec<crate::card::CardId> = top_ids
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(
+                            &crate::card::SelectionRequirement::Land,
+                            &Target::Permanent(*id),
+                            p,
+                            ctx.source,
+                        )
+                    })
+                    .collect();
+                let candidates: Vec<(crate::card::CardId, String)> = top_ids
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let decision = Decision::SearchLibrary {
+                    player: p,
+                    candidates,
+                    eligible: Some(eligible.clone()),
+                };
+                let pending = PendingEffectState::ImpulsePending {
+                    player: p,
+                    revealed: top_ids,
+                    rest_to_graveyard: false,
+                    eligible: Some(eligible),
+                    take: 1,
+                    to_battlefield: true,
+                    tapped: true,
                     keep_on_top: false,
                 };
                 if self.players[p].wants_ui {
@@ -8374,6 +8471,7 @@ impl GameState {
                     eligible: None,
                     take: 1,
                     to_battlefield: false,
+                    tapped: false,
                     keep_on_top: true,
                 };
                 if self.players[p].wants_ui {

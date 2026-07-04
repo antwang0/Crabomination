@@ -6698,3 +6698,116 @@ pub fn the_wandering_minstrel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nibelheim Aflame — {2}{R}{R} sorcery with Flashback {5}{R}{R}.
+/// Target creature you control deals damage equal to its power to each other
+/// creature; if cast from a graveyard, discard your hand and draw four.
+pub fn nibelheim_aflame() -> CardDefinition {
+    CardDefinition {
+        name: "Nibelheim Aflame",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), r(), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::DealDamageEqualToPowerToEach {
+                source: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                targets: Selector::EachPermanent(SelectionRequirement::Creature),
+                each_opponent: false,
+            },
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::HandSizeOf(PlayerRef::You),
+                        random: false,
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+                ])),
+                else_: Box::new(Effect::Seq(vec![])),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ignis Scientia — {1}{G}{U} 2/2 Legendary Human Advisor. ETB: dig for a land
+/// (top six, put a land onto the battlefield tapped, bottom the rest).
+/// {1}{G}{U}, {T}: exile target card from a graveyard; if a creature card was
+/// exiled this way, create a Food token.
+pub fn ignis_scientia() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ignis Scientia",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::DigForLandToBattlefield { count: Value::Const(6) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), g(), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Exile {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::InGraveyard,
+                    },
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatchesAny {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::Creature,
+                    },
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: crabomination_base::tokens::food_token(),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Genji Glove — {5} Equipment. Equipped creature has double strike. Whenever
+/// it attacks, if it's the first combat phase of the turn, untap it and add an
+/// additional combat phase after this one. Equip {3}.
+pub fn genji_glove() -> CardDefinition {
+    CardDefinition {
+        name: "Genji Glove",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::DoubleStrike],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::IsFirstCombatPhaseThisTurn,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Untap { what: Selector::This, up_to: None },
+                        Effect::AdditionalCombatPhase { count: Value::ONE },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

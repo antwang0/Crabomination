@@ -1193,6 +1193,10 @@ pub enum PendingEffectState {
         /// Company).
         #[serde(default)]
         to_battlefield: bool,
+        /// When `to_battlefield`, picks enter tapped (Ignis Scientia's
+        /// dig-for-a-land).
+        #[serde(default)]
+        tapped: bool,
         /// Picks stay on top of the library (Sage of Days).
         #[serde(default)]
         keep_on_top: bool,

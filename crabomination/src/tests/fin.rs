@@ -4172,3 +4172,87 @@ fn the_wandering_minstrel_town_scaling() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ally).unwrap().power, 2 + 4, "+X/+X where X = 4 Towns");
 }
+
+/// Nibelheim Aflame — the chosen creature deals its power to each *other*
+/// creature; the source is unharmed and its power (not a fixed number) is used.
+#[test]
+fn nibelheim_aflame_pings_each_other_creature() {
+    let mut g = two_player_game();
+    let source = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, power 2
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies
+    let big = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4 → survives w/ 2 dmg
+    let spell = g.add_card_to_hand(0, catalog::nibelheim_aflame());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(source)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nibelheim Aflame");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(source).is_some(), "source is not hit");
+    assert!(g.battlefield_find(small).is_none(), "2/2 took 2 and died");
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 2, "big took power-2 damage");
+}
+
+/// Ignis Scientia's ETB digs six deep and deploys a land tapped.
+#[test]
+fn ignis_scientia_digs_out_a_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_library(0, catalog::forest());
+    g.move_card_to_battlefield_for_test(0, catalog::ignis_scientia());
+    drain_stack(&mut g);
+    let forest = g.battlefield_find(land).expect("land deployed");
+    assert_eq!(forest.controller, 0, "under your control");
+    assert!(forest.tapped, "enters tapped");
+}
+
+/// Ignis Scientia's ability makes a Food only when a creature card is exiled.
+#[test]
+fn ignis_scientia_food_on_creature_exile() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let ability = catalog::ignis_scientia().activated_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    ctx.targets = vec![Target::Permanent(corpse)];
+    g.resolve_effect(&ability, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.id == corpse), "creature exiled");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Food"),
+        "a Food token was created"
+    );
+}
+
+/// Genji Glove grants double strike and a single extra combat — the extra
+/// combat does NOT re-trigger (no loop), and the attacker is untapped between.
+#[test]
+fn genji_glove_grants_one_extra_combat() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let glove = g.add_card_to_battlefield(0, catalog::genji_glove());
+    g.battlefield_find_mut(glove).unwrap().attached_to = Some(hero);
+    g.clear_sickness(hero);
+    let start = g.players[1].life;
+
+    // First combat: attack. Double strike → 4 damage; glove grants an extra combat.
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack 1");
+    drain_stack(&mut g);
+    assert_eq!(g.additional_combat_phases, 1, "one extra combat banked");
+    advance_to(&mut g, TurnStep::BeginCombat);
+    assert!(!g.battlefield_find(hero).unwrap().tapped, "attacker untapped for combat 2");
+
+    // Second combat: attack again. The gate blocks a further extra combat.
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack 2");
+    drain_stack(&mut g);
+    assert_eq!(g.additional_combat_phases, 0, "no third combat granted (no loop)");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, start - 8, "double strike 4 dmg × two combats");
+}

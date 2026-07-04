@@ -257,6 +257,7 @@ impl Effect {
             Effect::PreventNextDamageFromChosenSource { .. } => false,
             Effect::RevealTopPayOrTake { .. } => false,
             Effect::LookTopKeepOneRestToGraveyard { .. } => false,
+            Effect::DigForLandToBattlefield { .. } => false,
             Effect::Tribute { otherwise, .. } => otherwise.requires_target(),
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {
@@ -333,6 +334,9 @@ impl Effect {
             }
             Effect::DealDamageEqualToPower { source, target } => {
                 sel_has_target(source) || sel_has_target(target)
+            }
+            Effect::DealDamageEqualToPowerToEach { source, targets, .. } => {
+                sel_has_target(source) || sel_has_target(targets)
             }
             Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::ExchangeControlChoosing { with, .. } => sel_has_target(with),
@@ -731,6 +735,9 @@ impl Effect {
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
+            // The chosen creature (`source`) is the targeted object; the
+            // per-creature/opponent recipients are not targeted.
+            Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
             Effect::ExchangeControl { a, .. } => sel_filter(a),
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
@@ -1154,6 +1161,9 @@ impl Effect {
             | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
+            Effect::DealDamageEqualToPowerToEach { .. } => {
+                "deal damage equal to power to each".into()
+            }
             Effect::ExchangeControl { .. } | Effect::ExchangeControlChoosing { .. } => {
                 "exchange control".into()
             }
@@ -1424,6 +1434,7 @@ impl Effect {
             | Effect::ExchangeControl { .. }
             | Effect::ExchangeControlChoosing { .. }
             | Effect::DealDamageEqualToPower { .. }
+            | Effect::DealDamageEqualToPowerToEach { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -1681,6 +1692,9 @@ impl Effect {
                 }
                 Effect::DealDamageEqualToPower { source, target } => {
                     sel_find(source, slot).or_else(|| sel_find(target, slot))
+                }
+                Effect::DealDamageEqualToPowerToEach { source, targets, .. } => {
+                    sel_find(source, slot).or_else(|| sel_find(targets, slot))
                 }
                 Effect::ExchangeControl { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))

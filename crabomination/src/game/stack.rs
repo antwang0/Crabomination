@@ -330,6 +330,7 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::BeginCombat => {
+                self.combat_phases_this_turn = self.combat_phases_this_turn.saturating_add(1);
                 self.fire_step_triggers(TurnStep::BeginCombat);
                 self.give_priority_to_active();
             }
@@ -2028,6 +2029,7 @@ impl GameState {
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;
         self.additional_post_main_combats = 0;
+        self.combat_phases_this_turn = 0;
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;

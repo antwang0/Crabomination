@@ -1063,6 +1063,11 @@ pub enum Predicate {
     /// to `true`, so this predicate evaluates as `True` outside of
     /// spell-resolution context too.
     CastFromHand,
+    /// True while the current turn is in (or has only ever reached) its first
+    /// combat phase — i.e. no extra combat has begun yet. Gates "if it's the
+    /// first combat phase of the turn, …" attack riders (Genji Glove) so the
+    /// extra combat they grant doesn't re-trigger and loop.
+    IsFirstCombatPhaseThisTurn,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by
@@ -2107,6 +2112,17 @@ pub enum Effect {
     /// selector resolves to no permanent. Stew the Coneys, Tail Swipe,
     /// Pounce, Friendly Rivalry's per-fighter swing.
     DealDamageEqualToPower { source: Selector, target: Selector },
+    /// The `source` permanent deals damage equal to its power to each entity
+    /// `targets` resolves to (the source is always excluded), and — when
+    /// `each_opponent` — to each opponent of the source's controller. Power is
+    /// read once up front; damage carries `source` so lifelink/deathtouch/
+    /// wither apply. Chandra's Ignition (each opponent), Nibelheim Aflame
+    /// (creatures only). No-op if `source` resolves to no permanent.
+    DealDamageEqualToPowerToEach {
+        source: Selector,
+        targets: Selector,
+        each_opponent: bool,
+    },
     /// CR 701.12 — Exchange control of the two permanents the selectors
     /// resolve to (one each). A permanent control swap (Vedalken Plotter,
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent
@@ -2420,6 +2436,11 @@ pub enum Effect {
         #[serde(default)]
         filter: Option<crate::card::SelectionRequirement>,
     },
+    /// "Look at the top `count` cards of your library. You may put a land card
+    /// from among them onto the battlefield tapped. Put the rest on the bottom
+    /// of your library in a random order." Ignis Scientia's ETB. Reuses the
+    /// Impulse machinery (`to_battlefield` + `tapped`).
+    DigForLandToBattlefield { count: Value },
     /// CR 702.39 — *provoke*: untap the creature `what` resolves to and force
     /// it to block this combat's source attacker if able. Sets the target's
     /// `must_block` to the effect source. Used by `shortcut::provoke`.

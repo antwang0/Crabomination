@@ -1272,6 +1272,7 @@ impl GameState {
                 // ("cast from a graveyard" is a spell-only concept).
                 !ctx.cast_from_hand
             }
+            Predicate::IsFirstCombatPhaseThisTurn => self.combat_phases_this_turn <= 1,
             Predicate::CastFromHand => {
                 // Inverse of CastFromGraveyard. Triggers / activated
                 // abilities default `cast_from_hand` to `true` which
