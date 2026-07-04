@@ -3164,6 +3164,86 @@ fn jenova_dies_draw_reads_granted_mutant_type() {
     assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 = dead Mutant's power");
 }
 
+/// Summon: Choco/Mog is a Saga *creature*: its chapters pump the rest of the
+/// team, and it's sacrificed after chapter IV like any Saga (CR 714 on a
+/// creature body).
+#[test]
+fn summon_choco_mog_saga_creature_pumps_and_sacrifices() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let choco = g.add_card_to_battlefield(0, catalog::summon_choco_mog());
+    // It's both a creature and a Saga.
+    let cp = g.computed_permanent(choco).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature)
+        && cp.subtypes.enchantment_subtypes.contains(&crate::card::EnchantmentSubtype::Saga));
+    g.saga_advance(choco); // I — Stampede
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "other creature +1/+0");
+    // Choco pumps only *others*, so it stays 3/3.
+    assert_eq!(g.computed_permanent(choco).unwrap().power, 3, "self not pumped");
+    g.saga_advance(choco); // II
+    drain_stack(&mut g);
+    g.saga_advance(choco); // III
+    drain_stack(&mut g);
+    g.saga_advance(choco); // IV
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(choco).is_none(), "sacrificed after chapter IV");
+}
+
+/// Summon: G.F. Ifrit adds {R} on its third chapter.
+#[test]
+fn summon_gf_ifrit_chapter_three_adds_red() {
+    let mut g = two_player_game();
+    let ifrit = g.add_card_to_battlefield(0, catalog::summon_gf_ifrit());
+    g.saga_advance(ifrit); // I
+    drain_stack(&mut g);
+    g.saga_advance(ifrit); // II
+    drain_stack(&mut g);
+    g.saga_advance(ifrit); // III — add {R}
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 1, "chapter III added {{R}}");
+}
+
+/// Summon: Anima's final chapter edicts each opponent and drains 3 life.
+#[test]
+fn summon_anima_final_chapter_edict_and_drain() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let anima = g.add_card_to_battlefield(0, catalog::summon_anima());
+    let life1 = g.players[1].life;
+    for _ in 0..4 {
+        g.saga_advance(anima);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(foe).is_none(), "opponent edicted their creature");
+    assert_eq!(g.players[1].life, life1 - 3, "opponent lost 3 life");
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(anima).is_none(), "Anima sacrificed after IV");
+}
+
+/// Haste Magic pumps +3/+1, grants haste, and impulse-exiles the top card.
+#[test]
+fn haste_magic_pumps_and_impulses() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::island());
+    let ex0 = g.exile.len();
+    let spell = g.add_card_to_hand(0, catalog::haste_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Haste Magic");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "2/2 +3/+1");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert_eq!(g.exile.len(), ex0 + 1, "top card impulse-exiled");
+}
+
 /// Delivery Moogle tutors a low-cost artifact from library *or graveyard*.
 #[test]
 fn delivery_moogle_dual_zone_artifact_tutor() {

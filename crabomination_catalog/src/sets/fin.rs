@@ -5469,6 +5469,141 @@ pub fn excalibur_ii() -> CardDefinition {
     }
 }
 
+/// Summon: Choco/Mog — {2}{W} Enchantment Creature — Saga Bird Moogle 3/3.
+/// Chapters I–IV each: Stampede! — other creatures you control get +1/+0 until
+/// end of turn. Sacrificed after IV (CR 714 saga rule, applied to a creature).
+pub fn summon_choco_mog() -> CardDefinition {
+    let stampede = || Effect::PumpPT {
+        what: Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        ),
+        power: Value::ONE,
+        toughness: Value::ZERO,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Summon: Choco/Mog",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Bird, CreatureType::Moogle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        saga_chapters: vec![
+            (1, stampede()),
+            (2, stampede()),
+            (3, stampede()),
+            (4, stampede()),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Summon: G.F. Ifrit — {2}{R} Enchantment Creature — Saga Demon 3/2. I, II — you
+/// may discard a card; if you do, draw a card. III, IV — add {R}. Sacrificed
+/// after IV.
+pub fn summon_gf_ifrit() -> CardDefinition {
+    let loot = || Effect::MayDiscard {
+        description: "Discard a card to draw a card".into(),
+        count: Value::ONE,
+        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        else_: None,
+    };
+    let add_r = || crate::effect::shortcut::add_mana(vec![Color::Red]);
+    CardDefinition {
+        name: "Summon: G.F. Ifrit",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        saga_chapters: vec![(1, loot()), (2, loot()), (3, add_r()), (4, add_r())],
+        ..Default::default()
+    }
+}
+
+/// Summon: Anima — {4}{B}{B} Enchantment Creature — Saga Horror 4/4 with menace.
+/// I, II, III — Pain — you draw a card and lose 1 life. IV — Oblivion — each
+/// opponent sacrifices a creature of their choice and loses 3 life.
+pub fn summon_anima() -> CardDefinition {
+    let pain = || Effect::Seq(vec![
+        Effect::Draw { who: Selector::You, amount: Value::ONE },
+        Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+    ]);
+    CardDefinition {
+        name: "Summon: Anima",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        saga_chapters: vec![
+            (1, pain()),
+            (2, pain()),
+            (3, pain()),
+            (4, Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Creature,
+                },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Haste Magic — {1}{R} Instant. Target creature gets +3/+1 and gains haste
+/// until end of turn. Exile the top card of your library; you may play it until
+/// end of turn. (The "until your next end step" window is modeled as end of the
+/// current turn — the intended attack-this-turn use.)
+pub fn haste_magic() -> CardDefinition {
+    CardDefinition {
+        name: "Haste Magic",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Delivery Moogle — {3}{W} 3/2 Moogle with flying. When it enters, search your
 /// library and/or graveyard for an artifact card with mana value 2 or less and
 /// put it into your hand (shuffle if you searched your library).
