@@ -7572,6 +7572,48 @@ pub fn kefka_court_mage() -> CardDefinition {
     }
 }
 
+/// Reno and Rude — {1}{B} 2/1 Human Assassin with menace. Whenever it deals
+/// combat damage to a player, you may sacrifice another creature or artifact;
+/// if you do, exile the top card of that player's library and you may play it
+/// this turn, spending mana of any type to cast it.
+/// (Approximation: the printed order exiles first, then gates play on the
+/// sacrifice; here the exile+play grant is gated on the sacrifice together.)
+pub fn reno_and_rude() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Reno and Rude",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "sacrifice another creature or artifact".into(),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::ControlledByYou),
+                count: Value::ONE,
+                then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::Target(0),
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: true,
+                    uncast_penalty: None,
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Torgal, A Fine Hound — {1}{G} 2/2 Wolf. Whenever you cast your first Human
 /// creature spell each turn, that creature enters with an additional +1/+1
 /// counter for each Dog and/or Wolf you control. {T}: Add one mana of any color.

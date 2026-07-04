@@ -4886,3 +4886,22 @@ fn torgal_pumps_first_human_creature() {
     let cp = g.computed_permanent(human).expect("human on battlefield");
     assert_eq!((cp.power, cp.toughness), (4, 3), "2/1 + two +1/+1 counters (two Wolves)");
 }
+
+/// Reno and Rude: on combat damage, sacrificing a creature exiles the top of
+/// the damaged player's library and lets you play it this turn.
+#[test]
+fn reno_and_rude_impulses_from_victim_library() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let reno = g.add_card_to_battlefield(0, catalog::reno_and_rude());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    let loot = g.add_card_to_library(1, catalog::lightning_bolt()); // top of victim's library
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // yes, sacrifice
+    let eff = catalog::reno_and_rude().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(reno, 0, Some(Target::Player(1)), 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(fodder).is_none(), "fodder was sacrificed");
+    let exiled = g.exile.iter().find(|c| c.id == loot).expect("victim's top card exiled");
+    assert!(exiled.may_play_until.is_some(), "you may play the exiled card");
+}
