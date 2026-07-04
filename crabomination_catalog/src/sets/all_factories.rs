@@ -6904,6 +6904,11 @@ static ONE: &[Factory] = &[
     super::one::branchblight_stalker,
     super::one::jawbone_duelist,
     super::one::ichorspit_basilisk,
+    super::one::swooping_lookout,
+    super::one::malcators_watcher,
+    super::one::sheoldreds_headcleaver,
+    super::one::chimney_rabble,
+    super::one::chrome_prowler,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

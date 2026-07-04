@@ -313,3 +313,68 @@ fn incisor_glider_corrupted_attack_pump() {
     attack(&mut g, glider, bear);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "Corrupted pump: 2/2 → 3/3");
 }
+
+/// Malcator's Watcher draws a card when it dies.
+#[test]
+fn malcators_watcher_draws_on_death() {
+    let mut g = two_player_game();
+    let watcher = g.add_card_to_battlefield(0, catalog::malcators_watcher());
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(watcher, 0, None);
+    g.resolve_effect(
+        &crate::effect::Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &crate::game::effects::EffectContext { targets: vec![Target::Permanent(watcher)], ..ctx },
+    ).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "death drew a card");
+}
+
+/// Chimney Rabble enters with haste and mints a 1/1 Phyrexian Goblin token.
+#[test]
+fn chimney_rabble_mints_goblin_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::chimney_rabble());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chimney Rabble");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&crate::card::Keyword::Haste));
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Goblin" && c.controller == 0).count(),
+        1, "one Goblin token minted",
+    );
+}
+
+/// Chrome Prowler taps an opponent's creature on ETB.
+#[test]
+fn chrome_prowler_taps_on_etb() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::chrome_prowler());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chrome Prowler");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature tapped on ETB");
+}
+
+/// The simple ONE keyword creatures ship with their printed stats/keywords.
+#[test]
+fn one_keyword_creatures_shape() {
+    use crate::card::Keyword;
+    let lookout = catalog::swooping_lookout();
+    assert_eq!((lookout.power, lookout.toughness), (1, 2));
+    assert!(lookout.keywords.contains(&Keyword::Flying) && lookout.keywords.contains(&Keyword::Vigilance));
+    let cleaver = catalog::sheoldreds_headcleaver();
+    assert_eq!((cleaver.power, cleaver.toughness), (2, 4));
+    assert!(cleaver.keywords.contains(&Keyword::Menace) && cleaver.keywords.contains(&Keyword::Toxic(2)));
+}

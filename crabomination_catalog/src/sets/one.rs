@@ -5,11 +5,11 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, Predicate, SelectionRequirement, StaticAbility, StaticEffect, Subtypes,
-    TriggeredAbility,
+    TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, gain_life, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Anthem: "Phyrexians you control have `keyword`."
 fn phyrexians_have(keyword: Keyword) -> StaticEffect {
@@ -457,6 +457,118 @@ pub fn ichorspit_basilisk() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Deathtouch, Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}
+
+/// Swooping Lookout — {W} Creature — Phyrexian Bird 1/2 with flying and vigilance.
+pub fn swooping_lookout() -> CardDefinition {
+    CardDefinition {
+        name: "Swooping Lookout",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Malcator's Watcher — {1}{U} Artifact Creature — Phyrexian Bird 1/1 with flying
+/// and vigilance. When it dies, draw a card.
+pub fn malcators_watcher() -> CardDefinition {
+    CardDefinition {
+        name: "Malcator's Watcher",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![on_dies(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Sheoldred's Headcleaver — {3}{B} Creature — Phyrexian Horror 2/4 with menace
+/// and toxic 2.
+pub fn sheoldreds_headcleaver() -> CardDefinition {
+    CardDefinition {
+        name: "Sheoldred's Headcleaver",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Menace, Keyword::Toxic(2)],
+        ..Default::default()
+    }
+}
+
+/// Chimney Rabble — {3}{R} Creature — Phyrexian Goblin 3/3 with haste. When it
+/// enters, create a 1/1 red Phyrexian Goblin creature token.
+pub fn chimney_rabble() -> CardDefinition {
+    let goblin = TokenDefinition {
+        name: "Phyrexian Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Chimney Rabble",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: goblin,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Chrome Prowler — {2}{U} Artifact Creature — Phyrexian Insect 3/2 with flash.
+/// When it enters, tap target creature an opponent controls.
+pub fn chrome_prowler() -> CardDefinition {
+    CardDefinition {
+        name: "Chrome Prowler",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
         ..Default::default()
     }
 }
