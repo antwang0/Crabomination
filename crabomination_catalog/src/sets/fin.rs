@@ -4435,3 +4435,89 @@ pub fn the_earth_crystal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Prima Vista — {4}{U} 5/3 Vehicle with flying. Whenever you cast a
+/// noncreature spell with at least four mana spent, it becomes an artifact
+/// creature until end of turn. Crew 2.
+pub fn the_prima_vista() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_noncreature;
+    CardDefinition {
+        name: "The Prima Vista",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    cast_is_noncreature(),
+                    Predicate::CastSpellManaSpentAtLeast(4),
+                ]),
+            ),
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(5),
+                toughness: Value::Const(3),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quistis Trepe — {2}{U} 2/2 Wizard. Blue Magic: when it enters, you may cast
+/// target instant or sorcery card from a graveyard; if that spell would go to a
+/// graveyard, exile it instead. (Any mana can pay for it.)
+pub fn quistis_trepe() -> CardDefinition {
+    CardDefinition {
+        name: "Quistis Trepe",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+            source_zone: crate::card::Zone::Graveyard,
+            exile_after: true,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Town Greeter — {1}{G} 1/1 Citizen. When it enters, mill four cards, then you
+/// may put a land card from among them into your hand. (The "if it's a Town,
+/// gain 2 life" rider is omitted.)
+pub fn town_greeter() -> CardDefinition {
+    CardDefinition {
+        name: "Town Greeter",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::MillThenToHand {
+            amount: Value::Const(4),
+            filter: SelectionRequirement::Land,
+        })],
+        ..Default::default()
+    }
+}

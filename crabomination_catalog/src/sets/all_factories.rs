@@ -5569,6 +5569,9 @@ static FIN: &[Factory] = &[
     super::fin::call_the_mountain_chocobo,
     super::fin::traveling_chocobo,
     super::fin::the_earth_crystal,
+    super::fin::the_prima_vista,
+    super::fin::quistis_trepe,
+    super::fin::town_greeter,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

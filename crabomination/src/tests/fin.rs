@@ -2831,3 +2831,48 @@ fn cr_119_4_may_pay_life_requires_sufficient_life() {
     assert_eq!(g.players[0].life, 2, "no 5-life payment (life stayed 3); else_ lost 1");
     assert_eq!(g.players[0].hand.len(), hand0, "body (draw) was skipped");
 }
+
+/// The Prima Vista becomes an artifact creature after a four-mana noncreature
+/// spell.
+#[test]
+fn the_prima_vista_animates_on_big_noncreature() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::the_prima_vista());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::chemisters_insight()); // {3}{U}
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chemister's Insight");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ship).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "The Prima Vista is a creature this turn");
+}
+
+/// Quistis Trepe casts an instant from a graveyard on entry and exiles it.
+#[test]
+fn quistis_trepe_casts_instant_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a legal target for the free Bolt
+    // Accept the "you may cast" optional.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::quistis_trepe());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the recast Bolt was exiled");
+}
+
+/// Town Greeter mills four and puts a land into hand.
+#[test]
+fn town_greeter_mills_and_takes_a_land() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let hand0 = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::town_greeter());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "a land went to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"));
+}
