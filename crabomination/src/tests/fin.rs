@@ -4330,3 +4330,39 @@ fn tellah_scales_with_mana_spent() {
     assert!(g.battlefield_find(tellah).is_none(), "sacrificed at 8+ mana");
     assert_eq!(g.players[1].life, life1 - 8, "dealt 8 to the opponent");
 }
+
+/// Ragnarok's death trigger destroys a permanent and reanimates a nonlegendary
+/// permanent card from your graveyard.
+#[test]
+fn ragnarok_death_destroys_and_reanimates() {
+    let mut g = two_player_game();
+    let ragnarok = g.add_card_to_battlefield(0, catalog::ragnarok_divine_deliverance());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // nonlegendary permanent
+    let eff = catalog::ragnarok_divine_deliverance().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(ragnarok, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(victim), Target::Permanent(corpse)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "target permanent destroyed");
+    assert!(g.battlefield_find(corpse).is_some(), "graveyard permanent reanimated");
+}
+
+/// Omega taps an opposing permanent, stuns it, and gains life — all scaled by
+/// the number of nonbasic lands you control.
+#[test]
+fn omega_stuns_and_gains_by_nonbasic_lands() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_battlefield(0, catalog::mutavault()); } // 2 nonbasic lands → X=2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let omega = g.add_card_to_battlefield(0, catalog::omega_heartless_evolution());
+    let life0 = g.players[0].life;
+    let eff = catalog::omega_heartless_evolution().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(omega, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let f = g.battlefield_find(foe).unwrap();
+    assert!(f.tapped, "target tapped");
+    assert_eq!(f.counter_count(crate::card::CounterType::Stun), 2, "two stun counters");
+    assert_eq!(g.players[0].life, life0 + 2, "gained 2 life");
+}

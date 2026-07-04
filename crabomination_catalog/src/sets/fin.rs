@@ -6960,3 +6960,85 @@ pub fn tellah_great_sage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ragnarok, Divine Deliverance — the {0} meld back-face, 7/6 Legendary Beast
+/// Avatar with vigilance, menace, trample, reach, and haste. When it dies,
+/// destroy target permanent and return a target nonlegendary permanent card
+/// from your graveyard to the battlefield.
+pub fn ragnarok_divine_deliverance() -> CardDefinition {
+    CardDefinition {
+        name: "Ragnarok, Divine Deliverance",
+        cost: cost(&[]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Menace,
+            Keyword::Trample,
+            Keyword::Reach,
+            Keyword::Haste,
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Permanent) },
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::InYourGraveyard
+                            .and(SelectionRequirement::PermanentCard)
+                            .and(SelectionRequirement::Not(Box::new(
+                                SelectionRequirement::HasSupertype(Supertype::Legendary),
+                            ))),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Omega, Heartless Evolution — {5}{G}{U} 8/8 Legendary Artifact Robot. Wave
+/// Cannon ETB: tap up to one target nonland permanent an opponent controls, put
+/// X stun counters on it, and gain X life, where X is the number of nonbasic
+/// lands you control. (Multiplayer "for each opponent" is one target — the
+/// codebase convention.)
+pub fn omega_heartless_evolution() -> CardDefinition {
+    let x = || Value::NonbasicLandCountControlledBy(PlayerRef::You);
+    CardDefinition {
+        name: "Omega, Heartless Evolution",
+        cost: cost(&[generic(5), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: x(),
+            },
+            Effect::GainLife { who: Selector::You, amount: x() },
+        ]))],
+        ..Default::default()
+    }
+}
