@@ -7042,3 +7042,45 @@ pub fn omega_heartless_evolution() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Y'shtola Rhul — {4}{U}{U} 3/5 Legendary Cat Druid. At the beginning of your
+/// end step, blink target creature you control (exile, then return it). If it's
+/// the first end step of the turn, there is an additional end step after this
+/// one (CR 500.7).
+pub fn yshtola_rhul() -> CardDefinition {
+    CardDefinition {
+        name: "Y'shtola Rhul",
+        cost: cost(&[generic(4), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::If {
+                    cond: Predicate::IsFirstEndStepThisTurn,
+                    then: Box::new(Effect::AdditionalEndStep { count: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

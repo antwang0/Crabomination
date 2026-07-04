@@ -1273,6 +1273,7 @@ impl GameState {
                 !ctx.cast_from_hand
             }
             Predicate::IsFirstCombatPhaseThisTurn => self.combat_phases_this_turn <= 1,
+            Predicate::IsFirstEndStepThisTurn => self.end_steps_this_turn <= 1,
             Predicate::CastFromHand => {
                 // Inverse of CastFromGraveyard. Triggers / activated
                 // abilities default `cast_from_hand` to `true` which

@@ -1068,6 +1068,10 @@ pub enum Predicate {
     /// first combat phase of the turn, …" attack riders (Genji Glove) so the
     /// extra combat they grant doesn't re-trigger and loop.
     IsFirstCombatPhaseThisTurn,
+    /// True while the current turn is in (or has only ever reached) its first
+    /// end step — i.e. no extra end step has begun yet. Gates "if it's the
+    /// first end step of the turn, …" riders (Y'shtola Rhul).
+    IsFirstEndStepThisTurn,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by
@@ -4298,6 +4302,10 @@ pub enum Effect {
     /// the following main phase comes from the normal EndCombat → PostMain
     /// flow. Relentless Assault.
     AdditionalCombatPhaseAfterMain { count: Value },
+    /// CR 500.7 — "there is an additional end step after this step." Banks
+    /// `count` extra end steps; when the active player leaves the End step with
+    /// one banked, the turn loops back to another End step (Y'shtola Rhul).
+    AdditionalEndStep { count: Value },
     /// "At the beginning of each combat this turn, [body]." Registers a
     /// turn-scoped `DelayedKind::EachCombatThisTurn` delayed trigger that
     /// runs `body` at the start of every Begin-Combat step for the rest of

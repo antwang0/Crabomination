@@ -4366,3 +4366,38 @@ fn omega_stuns_and_gains_by_nonbasic_lands() {
     assert_eq!(f.counter_count(crate::card::CounterType::Stun), 2, "two stun counters");
     assert_eq!(g.players[0].life, life0 + 2, "gained 2 life");
 }
+
+/// CR 500.7 — a banked additional end step loops the turn back into another End
+/// step exactly once (the counter drives the gate that prevents an infinite loop).
+#[test]
+fn cr_500_7_additional_end_step_loops_once() {
+    let mut g = two_player_game();
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.end_steps_this_turn, 1, "first end step");
+    g.additional_end_steps = 1;
+    // Pass priority until the (banked) step loops back into a second End step.
+    let before = g.end_steps_this_turn;
+    while g.end_steps_this_turn == before && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.end_steps_this_turn, 2, "looped into a second end step");
+    assert_eq!(g.additional_end_steps, 0, "banked step consumed — no infinite loop");
+    assert!(matches!(g.step, TurnStep::End), "still an end step");
+}
+
+/// Y'shtola Rhul blinks a creature you control and, on the first end step,
+/// banks an additional end step.
+#[test]
+fn yshtola_rhul_blinks_and_extends_first_end_step() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ysh = g.add_card_to_battlefield(0, catalog::yshtola_rhul());
+    g.end_steps_this_turn = 1; // as if the first end step just began
+    let eff = catalog::yshtola_rhul().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(ysh, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(ally)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(!g.exile.iter().any(|c| c.id == ally), "creature not stranded in exile");
+    assert!(g.battlefield_find(ally).is_some(), "creature blinked back onto the battlefield");
+    assert_eq!(g.additional_end_steps, 1, "first end step banks an extra");
+}

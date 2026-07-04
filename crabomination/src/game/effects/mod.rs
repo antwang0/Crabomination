@@ -12548,6 +12548,12 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AdditionalEndStep { count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                self.additional_end_steps = self.additional_end_steps.saturating_add(n);
+                Ok(())
+            }
+
             Effect::UnlockRoomDoor { what } => {
                 // CR 709.5 — unlock one still-locked door of each resolved Room
                 // (left first, else right). `set_room_door_unlocked` fires the

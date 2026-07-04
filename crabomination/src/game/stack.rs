@@ -201,6 +201,14 @@ impl GameState {
             next = TurnStep::BeginCombat;
         }
 
+        // CR 500.7 — additional end step. When the active player leaves the
+        // End step with one banked, loop back to another End step instead of
+        // advancing to cleanup (Y'shtola Rhul).
+        if self.step == TurnStep::End && self.additional_end_steps > 0 {
+            self.additional_end_steps -= 1;
+            next = TurnStep::End;
+        }
+
         // CR 511.2 — "Effects that last 'until end of combat' expire at the
         // end of the combat phase." Sweep `UntilEndOfCombat` continuous
         // effects whenever we leave EndCombat — including into an additional
@@ -351,6 +359,7 @@ impl GameState {
                 }
             }
             TurnStep::End => {
+                self.end_steps_this_turn = self.end_steps_this_turn.saturating_add(1);
                 // CR 724 — the monarch draws a card at the beginning of
                 // their end step (a turn-based action).
                 if self.monarch == Some(self.active_player_idx) {
@@ -2030,6 +2039,8 @@ impl GameState {
         self.additional_combat_phases = 0;
         self.additional_post_main_combats = 0;
         self.combat_phases_this_turn = 0;
+        self.additional_end_steps = 0;
+        self.end_steps_this_turn = 0;
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;

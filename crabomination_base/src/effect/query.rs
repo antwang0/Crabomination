@@ -658,7 +658,8 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::AdditionalCombatPhase { count }
-            | Effect::AdditionalCombatPhaseAfterMain { count } => value_has_target(count),
+            | Effect::AdditionalCombatPhaseAfterMain { count }
+            | Effect::AdditionalEndStep { count } => value_has_target(count),
             // Registers a delayed trigger; its body targets at fire time, not cast.
             Effect::AtEachCombatThisTurn { .. } => false,
             Effect::UnlockRoomDoor { what } => sel_has_target(what),
