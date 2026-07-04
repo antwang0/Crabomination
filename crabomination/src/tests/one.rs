@@ -204,7 +204,8 @@ fn vivisection_evangelist_corrupted_etb_destroy() {
     };
     let mut g = two_player_game();
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Not corrupted → the ETB's intervening-if fails, no destroy.
+    // Not corrupted → the ETB trigger's intervening-`if` (CR 603.4) fails, so
+    // the self-ETB trigger doesn't fire (exercises the filter-gating fix).
     cast(&mut g, None);
     assert!(g.battlefield_find(foe).is_some(), "no destroy below 3 poison");
     // Corrupted → the ETB destroys the opponent's creature (target bound at cast).
@@ -282,4 +283,33 @@ fn one_toxic_cycle_stats_and_keywords() {
     let basilisk = catalog::ichorspit_basilisk();
     assert_eq!((basilisk.power, basilisk.toughness), (1, 3));
     assert!(basilisk.keywords.contains(&Keyword::Deathtouch) && basilisk.keywords.contains(&Keyword::Toxic(1)));
+}
+
+/// Incisor Glider's Corrupted attack trigger pumps your team only while an
+/// opponent has 3+ poison (CR 702.166 intervening-if on an attack trigger).
+#[test]
+fn incisor_glider_corrupted_attack_pump() {
+    use crate::game::types::{Attack, AttackTarget};
+    let attack = |g: &mut GameState, glider, other| {
+        g.clear_sickness(glider);
+        g.clear_sickness(other);
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: glider, target: AttackTarget::Player(1),
+        }])).unwrap();
+        drain_stack(g);
+    };
+    // Not corrupted → no pump: the other creature stays a 2/2.
+    let mut g = two_player_game();
+    let glider = g.add_card_to_battlefield(0, catalog::incisor_glider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    attack(&mut g, glider, bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "no pump below 3 poison");
+    // Corrupted → team gets +1/+1.
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 3;
+    let glider = g.add_card_to_battlefield(0, catalog::incisor_glider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    attack(&mut g, glider, bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "Corrupted pump: 2/2 → 3/3");
 }

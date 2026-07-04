@@ -836,13 +836,18 @@ impl GameState {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
                     // copied object's ETB triggers (CR 707.5).
-                    let mut etb_triggers: Vec<Effect> = card
+                    // Carry each self-ETB trigger's intervening-`if`
+                    // (`event.filter`) so it can be re-evaluated once the card
+                    // is on the battlefield (CR 603.4) — the inline resolution
+                    // path used to drop it, firing filtered self-ETB triggers
+                    // unconditionally (Corrupted / kicker-gated ETBs).
+                    let mut etb_triggers: Vec<(Effect, Option<crate::card::Predicate>)> = card
                         .definition
                         .triggered_abilities
                         .iter()
                         .filter(|t| t.event.kind == EventKind::EntersBattlefield
                             && matches!(t.event.scope, EventScope::SelfSource))
-                        .map(|t| t.effect.clone())
+                        .map(|t| (t.effect.clone(), t.event.filter.clone()))
                         .collect();
                     let evoked = card.evoked;
                     let dashed = card.dashed;
@@ -1016,7 +1021,7 @@ impl GameState {
                                     .iter()
                                     .filter(|t| t.event.kind == EventKind::EntersBattlefield
                                         && matches!(t.event.scope, EventScope::SelfSource))
-                                    .map(|t| t.effect.clone())
+                                    .map(|t| (t.effect.clone(), t.event.filter.clone()))
                                     .collect()
                             })
                             .unwrap_or_default();
@@ -1033,7 +1038,7 @@ impl GameState {
                                     t.event.kind == EventKind::EntersBattlefield
                                         && matches!(t.event.scope, EventScope::SelfSource)
                                 })
-                                .map(|t| t.effect),
+                                .map(|t| (t.effect, t.event.filter)),
                         );
                     }
 
@@ -1200,7 +1205,27 @@ impl GameState {
                         caster,
                         Some(card_id),
                     );
-                    for effect in etb_triggers {
+                    for (effect, filter) in etb_triggers {
+                        // CR 603.4 — honor the trigger's intervening-`if`
+                        // (`event.filter`) now that the source is on the
+                        // battlefield; a false condition skips the fire.
+                        if let Some(pred) = &filter {
+                            let mut ctx = crate::game::effects::EffectContext::for_trigger(
+                                card_id, caster, None, 0,
+                            );
+                            // Carry the source's cast-mode flags so cast-property
+                            // intervening-`if`s (SpellWasKicked / SpellWasBargained
+                            // / …) read true when the mode was paid.
+                            if let Some(c) = self.battlefield_find(card_id) {
+                                ctx.kicked = c.kicked;
+                                ctx.bargained = c.bargained;
+                                ctx.cast_from_hand = c.cast_from_hand;
+                                ctx.cast_via_mayhem = c.cast_via_mayhem;
+                            }
+                            if !self.evaluate_predicate(pred, &ctx) {
+                                continue;
+                            }
+                        }
                         // Strict Proctor's CR 614 tax — pay {amount} or
                         // sacrifice the source. Applied once per fire.
                         if !crate::game::actions::apply_etb_trigger_tax(

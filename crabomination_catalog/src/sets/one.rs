@@ -174,18 +174,15 @@ pub fn incisor_glider() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::CorruptedActive { who: PlayerRef::You },
-                then: Box::new(Effect::PumpPT {
-                    what: Selector::EachPermanent(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    power: Value::ONE,
-                    toughness: Value::ONE,
-                    duration: crate::effect::Duration::EndOfTurn,
-                }),
-                else_: Box::new(Effect::Noop),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::CorruptedActive { who: PlayerRef::You }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: crate::effect::Duration::EndOfTurn,
             },
         }],
         ..Default::default()
@@ -208,17 +205,17 @@ pub fn vivisection_evangelist() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::CorruptedActive { who: PlayerRef::You },
-            then: Box::new(Effect::Destroy {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::CorruptedActive { who: PlayerRef::You }),
+            effect: Effect::Destroy {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .or(SelectionRequirement::Planeswalker)
                         .and(SelectionRequirement::ControlledByOpponent),
                 ),
-            }),
-            else_: Box::new(Effect::Noop),
-        })],
+            },
+        }],
         ..Default::default()
     }
 }

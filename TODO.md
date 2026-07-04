@@ -181,15 +181,15 @@ Remaining short FIN cards blocked on one primitive each:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
-- **Ability-word `Predicate` as an `EventSpec.filter` on a SelfSource trigger may
-  not gate.** A `SelfSource` ETB/attack trigger whose intervening-if is a
-  no-subject game-state predicate (`Predicate::CorruptedActive`) fired even when
-  the predicate was false — the Corrupted ONE cards (Vivisection Evangelist,
-  Incisor Glider) had to move the condition into the effect body
-  (`Effect::If { cond: CorruptedActive, .. }`) to gate correctly. Investigate
-  whether SelfSource ETB/attack trigger collection evaluates `EventSpec.filter`;
-  if not, either fix the collection path or document that no-subject filters must
-  be modeled as `Effect::If`.
+- ✅ **Self-ETB trigger `EventSpec.filter` was dropped.** The inline
+  spell-resolution path (`stack.rs`) collected `SelfSource` `EntersBattlefield`
+  triggers by kind+scope only, discarding `event.filter`, so filtered self-ETB
+  triggers (Corrupted, kicker/bargain-gated ETBs) fired unconditionally. Fixed:
+  the collection now carries the filter and the execution loop re-evaluates it
+  once the source is on the battlefield (CR 603.4), building a context that
+  carries the cast-mode flags (`kicked`/`bargained`/`cast_from_hand`/mayhem) so
+  cast-property intervening-ifs still read true. (Attack/etc. SelfSource triggers
+  already went through the general dispatch, which evaluated filters.)
 
 ## Environment note
 
