@@ -4714,3 +4714,114 @@ fn yuna_end_step_reanimates_with_finality() {
     let back = g.battlefield.iter().find(|c| c.id == ench).expect("reanimated to battlefield");
     assert_eq!(back.counter_count(CounterType::Finality), 1, "entered with a finality counter");
 }
+
+/// Summon: Fenrir chapter I fetches a basic land onto the battlefield tapped.
+#[test]
+fn summon_fenrir_chapter_one_fetches_land() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fenrir = g.add_card_to_battlefield(0, catalog::summon_fenrir());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.saga_advance(fenrir); // I — Crescent Fang
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped), "fetched a Forest, entered tapped");
+}
+
+/// Summon: Fenrir chapter II makes your next creature spell enter with an extra
+/// +1/+1 counter (a 2/2 Grizzly Bears enters as a 3/3).
+#[test]
+fn summon_fenrir_chapter_two_grows_next_creature() {
+    let mut g = two_player_game();
+    let fenrir = g.add_card_to_battlefield(0, catalog::summon_fenrir());
+    g.saga_advance(fenrir); // I
+    drain_stack(&mut g);
+    g.saga_advance(fenrir); // II — Heavenward Howl
+    drain_stack(&mut g);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Grizzly Bears");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).expect("bears on battlefield");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "entered with an extra +1/+1 counter");
+    // The rider is one-shot: a second creature enters at its printed size.
+    let bears2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast second Grizzly Bears");
+    drain_stack(&mut g);
+    let cp2 = g.computed_permanent(bears2).unwrap();
+    assert_eq!((cp2.power, cp2.toughness), (2, 2), "rider consumed by the first creature only");
+}
+
+/// Summon: Fenrir chapter III draws when you control the greatest-power creature.
+#[test]
+fn summon_fenrir_chapter_three_draws_on_greatest_power() {
+    let mut g = two_player_game();
+    let fenrir = g.add_card_to_battlefield(0, catalog::summon_fenrir()); // 3/2
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — smaller
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    g.saga_advance(fenrir); // I
+    drain_stack(&mut g);
+    g.saga_advance(fenrir); // II
+    drain_stack(&mut g);
+    g.saga_advance(fenrir); // III — Ecliptic Growl
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew: Fenrir is the greatest power");
+}
+
+/// Stiltzkin donates a permanent to the opponent and draws a card.
+#[test]
+fn stiltzkin_donates_and_draws() {
+    let mut g = two_player_game();
+    let stiltzkin = g.add_card_to_battlefield(0, catalog::stiltzkin_moogle_merchant());
+    let gift = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stiltzkin, ability_index: 0,
+        target: Some(Target::Permanent(gift)), additional_targets: vec![], x_value: None,
+    }).expect("activate Stiltzkin");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gift).unwrap().controller, 1, "opponent now controls the gift");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "controller drew a card");
+}
+
+/// Vincent's Limit Break's Death Gigas tier ({1}) sets a creature to 5/2 and
+/// makes it return tapped when it dies this turn.
+#[test]
+fn vincents_limit_break_death_gigas_returns_on_death() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::vincents_limit_break());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2); // base {1}{B} + Death Gigas {1}
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![1], target: Some(Target::Permanent(cat)),
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Death Gigas");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(cat).expect("still there");
+    assert_eq!((cp.power, cp.toughness), (5, 2), "base P/T set to 5/2");
+    // Kill it (2 damage vs the 5/2 body) and confirm it returns tapped.
+    g.resolve_effect(&crate::effect::Effect::DealDamage {
+        to: crate::effect::Selector::Target(0),
+        amount: crate::effect::Value::Const(2),
+    }, &crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(cat)),
+    )).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let back = g.battlefield_find(cat).expect("returned to battlefield");
+    assert!(back.tapped, "returned tapped");
+}

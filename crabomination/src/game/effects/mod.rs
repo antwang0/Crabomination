@@ -5907,6 +5907,18 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 603.7e — register a one-shot "your next creature spell this
+            // turn enters with N counters" rider on the controller.
+            Effect::GrantNextCreatureSpellCounters { kind, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 {
+                    self.players[ctx.controller]
+                        .pending_creature_etb_counters
+                        .push((*kind, n));
+                }
+                Ok(())
+            }
+
             Effect::RemoveAllCounters { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()

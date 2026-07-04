@@ -384,6 +384,9 @@ impl GameState {
                     pl.spells_cast_this_game_turn = 0;
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
+                    // CR 603.7e — unused "your next creature spell this turn"
+                    // counter riders expire with the turn.
+                    pl.pending_creature_etb_counters.clear();
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
@@ -923,6 +926,15 @@ impl GameState {
                     // creature entry the caster controls).
                     if is_creature_resolve {
                         for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
+                            counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                        }
+                    }
+                    // CR 603.7e — one-shot "your next creature spell enters
+                    // with N counters" riders (FIN "Summon" saga chapters).
+                    if is_creature_resolve {
+                        for (kind, n) in
+                            std::mem::take(&mut self.players[caster].pending_creature_etb_counters)
+                        {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
                     }

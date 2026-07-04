@@ -1400,6 +1400,19 @@ impl GameState {
                     .collect();
                 powers.len() >= 3
             }
+            Predicate::ControlsGreatestPowerCreature { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let powers: Vec<(usize, i32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .filter_map(|c| {
+                        self.computed_permanent(c.id).map(|cp| (c.controller, cp.power))
+                    })
+                    .collect();
+                let Some(max) = powers.iter().map(|(_, pow)| *pow).max() else { return false };
+                powers.iter().any(|(ctrl, pow)| *ctrl == p && *pow >= max)
+            }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
             Predicate::AttackedWithTotalPowerAtLeast { who, at_least } => {

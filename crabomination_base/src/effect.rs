@@ -1127,6 +1127,11 @@ pub enum Predicate {
     /// power values). Gates Coven attack triggers and "activate only if …"
     /// abilities (Sigarda, Champion of Light; Dawnhart Mentor; Sungold Sentinel).
     CovenActive { who: PlayerRef },
+    /// `who` controls a creature whose power is greater than or equal to every
+    /// creature's power on the battlefield — i.e. controls the creature with
+    /// the greatest power, or one tied for it (Summon: Fenrir III "Ecliptic
+    /// Growl"). False if `who` controls no creature.
+    ControlsGreatestPowerCreature { who: PlayerRef },
     /// True when exactly one creature is attacking this combat — the
     /// CR 702.83a "attacks alone" condition that gates Exalted. Read
     /// from `GameState.attacking.len() == 1`. Outside a combat with
@@ -3000,6 +3005,13 @@ pub enum Effect {
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// CR 603.7e — "When you next cast a creature spell this turn, that
+    /// creature enters with N additional counters of `kind`." Registers a
+    /// one-shot rider on the controller (`Player.pending_creature_etb_counters`)
+    /// drained onto the next creature spell they cast this turn; unused riders
+    /// expire at cleanup. The FIN "Summon" saga chapters (Fenrir "Heavenward
+    /// Howl", Brynhildr "Gestalt Mode"-adjacent growth).
+    GrantNextCreatureSpellCounters { kind: CounterType, amount: Value },
     /// For each permanent matching `filter` whose current power exceeds its
     /// base power, put that many +1/+1 counters on it (the per-permanent
     /// difference). Sovereign Okinec Ahau's attack trigger (CR 122).

@@ -7572,3 +7572,128 @@ pub fn kefka_court_mage() -> CardDefinition {
     }
 }
 
+/// Summon: Fenrir — {2}{G} Enchantment Creature — Saga Wolf 3/2. I — search for
+/// a basic land, put it onto the battlefield tapped. II — your next creature
+/// spell this turn enters with an extra +1/+1 counter. III — draw a card if you
+/// control the creature with the greatest power (or tied).
+pub fn summon_fenrir() -> CardDefinition {
+    CardDefinition {
+        name: "Summon: Fenrir",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        saga_chapters: vec![
+            (1, Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+            (2, Effect::GrantNextCreatureSpellCounters {
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+            (3, Effect::If {
+                cond: Predicate::ControlsGreatestPowerCreature { who: PlayerRef::You },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Stiltzkin, Moogle Merchant — {W} 1/2 Moogle with lifelink. {2}, {T}: Target
+/// opponent gains control of another target permanent you control. You draw a
+/// card. (The opponent recipient is auto-bound to the lone opponent; the
+/// per-opponent choice is a multiplayer follow-up.)
+pub fn stiltzkin_moogle_merchant() -> CardDefinition {
+    CardDefinition {
+        name: "Stiltzkin, Moogle Merchant",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moogle], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GainControl {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Permanent
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    },
+                    to: Some(PlayerRef::EachOpponent),
+                    duration: Duration::Permanent,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vincent's Limit Break — {1}{B} Instant. Tiered (choose one additional cost).
+/// Until end of turn, target creature you control gains "When this creature
+/// dies, return it to the battlefield tapped" and gets the chosen base P/T:
+/// Galian Beast {0} 3/2, Death Gigas {1} 5/2, Hellmasker {3} 7/2.
+pub fn vincents_limit_break() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::SpreeMode;
+    let mode = |extra: crate::mana::ManaCost, p: i32, t: i32| {
+        let tgt = || Selector::TargetFiltered {
+            slot: 0,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        };
+        SpreeMode {
+            cost: extra,
+            effect: Effect::Seq(vec![
+                Effect::SetBasePT {
+                    what: tgt(),
+                    power: Value::Const(p),
+                    toughness: Value::Const(t),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantTriggeredAbility {
+                    what: tgt(),
+                    trigger: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                        effect: Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                                tapped: true,
+                            },
+                        },
+                    }),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }
+    };
+    CardDefinition {
+        name: "Vincent's Limit Break",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                mode(cost(&[]), 3, 2),
+                mode(cost(&[generic(1)]), 5, 2),
+                mode(cost(&[generic(3)]), 7, 2),
+            ],
+        },
+        ..Default::default()
+    }
+}
+

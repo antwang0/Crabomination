@@ -162,18 +162,19 @@ Remaining short FIN cards blocked on one primitive each:
   - *Mill "+N" replacement* — The Water Crystal's "mill that many plus four" is
     approximated by `OpponentMillDoubled`; a flat-`+N` opponent-mill replacement
     would be exact.
-  - *Next-creature-spell-enters-with-extra-counter (turn-scoped)* — a one-shot
-    of `StaticEffect::ExtraEtbCountersForCreatureCasts` (Summon: Fenrir II,
-    Torgal's first-Human rider). The continuous static ships; the "your next
-    creature this turn" flavor does not.
+  - ✅ *Next-creature-spell-enters-with-extra-counter (turn-scoped)* — shipped as
+    `Effect::GrantNextCreatureSpellCounters` + `Player.pending_creature_etb_
+    counters` (drained onto the next creature spell at ETB, cleared at cleanup;
+    Summon: Fenrir II). Torgal's first-Human rider can reuse it.
   - *Temporary attack-triggered ability granted for a turn* — "until end of
     turn, whenever a [type] attacks, draw" (Summon: Leviathan II/III).
   - Still-unimplemented FIN cards (need one of the above or interactive
     cast-time payment): Vayne's Treachery, Chocobo Kick, Quina, Reno and Rude,
-    Vaan, Stiltzkin, Kain, Torgal, Firion, Gogo, Louisoix's Sacrifice, Random
+    Vaan, Torgal, Firion, Gogo, Louisoix's Sacrifice, Random
     Encounter, Memories Returning, Triple Triad, Sin, the remaining Summon
-    Sagas (Fenrir/Leviathan/Brynhildr), Clive's Hideaway/Starting Town/Eden,
-    The Darkness Crystal, Lightning, Vincent's Limit Break, Vanille's meld.
+    Sagas (Leviathan/Brynhildr), Clive's Hideaway/Eden,
+    The Darkness Crystal, Lightning, Vanille's meld. (Kain, Stiltzkin, Fenrir,
+    Vincent's Limit Break now shipped.)
 
 ## Environment note
 

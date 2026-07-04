@@ -167,6 +167,8 @@ impl Effect {
             // CR 701.54 — untargeted; the Ring-bearer is chosen at resolution.
             Effect::RingTempts { .. } => false,
             Effect::SacrificeAtEndOfCombat { .. } => false,
+            // CR 603.7e — registers a player-scoped rider; no cast-time target.
+            Effect::GrantNextCreatureSpellCounters { .. } => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the
             // lowest-seat opponent, so no cast-time target is demanded.
             Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,

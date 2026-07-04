@@ -198,6 +198,14 @@ pub struct Player {
     /// Defaults to 0 for snapshot back-compat.
     #[serde(default)]
     pub escalating_resolutions_this_turn: u32,
+    /// CR 603.7e — pending "your next creature spell this turn enters with N
+    /// extra counters of this kind" riders (the FIN "Summon" saga chapters —
+    /// Fenrir II "Heavenward Howl", Brynhildr). Each entry is drained onto the
+    /// *next* creature spell this player casts (all pending riders stack onto
+    /// the same creature); the list clears at cleanup so an unused rider
+    /// expires with the turn. `#[serde(default)]`.
+    #[serde(default)]
+    pub pending_creature_etb_counters: Vec<(crate::card::CounterType, u32)>,
     /// CR 702.139 — true if a permanent left the battlefield under this
     /// player's control so far this turn (Revolt). Set from the battlefield-
     /// removal funnels keyed off the leaving permanent's controller; reset at
@@ -604,6 +612,7 @@ impl Player {
             creatures_entered_last_turn: Vec::new(),
             artifacts_entered_this_turn: 0,
             escalating_resolutions_this_turn: 0,
+            pending_creature_etb_counters: Vec::new(),
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,
