@@ -1049,7 +1049,20 @@ mod tests {
         }
         assert_eq!(s.avg_win_life_delta(), (1 + 1 + 1 + 40) / 4); // 10
         assert_eq!(s.win_life_delta_median(), 3, "median lands in the 1-3 bucket");
-        assert!(format_match_stats_with_win(&s).contains("p50=3"));
+        // p90 crosses into the open blowout bucket (delta 40 → lower edge 16).
+        assert_eq!(s.win_life_delta_percentile(0.9), 16, "p90 catches the blowout");
+        let rendered = format_match_stats_with_win(&s);
+        assert!(rendered.contains("p50=3") && rendered.contains("p90=16"));
+    }
+
+    #[test]
+    pub(crate) fn win_life_delta_percentile_clamps_and_handles_empty() {
+        let s = MatchStats::default();
+        assert_eq!(s.win_life_delta_percentile(0.5), 0, "no samples → 0");
+        let mut s = MatchStats::default();
+        s.observe_win_life_delta(0, &[9, 0]); // delta 9 → bucket 3 (upper edge 10)
+        assert_eq!(s.win_life_delta_percentile(-1.0), 10, "p<0 clamps to p0");
+        assert_eq!(s.win_life_delta_percentile(2.0), 10, "p>1 clamps to p100");
     }
 
     pub(crate) fn format_match_stats_with_win(s: &MatchStats) -> String {

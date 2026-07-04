@@ -3191,6 +3191,21 @@ fn summon_choco_mog_saga_creature_pumps_and_sacrifices() {
     assert!(g.battlefield_find(choco).is_none(), "sacrificed after chapter IV");
 }
 
+/// Summon: Esper Ramuh's chapter I bolts for the count of noncreature-nonland
+/// cards in your graveyard.
+#[test]
+fn summon_esper_ramuh_chapter_one_scales_with_graveyard() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // instant (noncreature nonland)
+    g.add_card_to_graveyard(0, catalog::island()); // a land — must NOT count
+    g.add_card_to_graveyard(0, catalog::sephiroths_intervention()); // sorcery — counts
+    let ramuh = g.add_card_to_battlefield(0, catalog::summon_esper_ramuh());
+    g.saga_advance(ramuh); // I — Judgment Bolt: 2 noncreature-nonland cards → 2 dmg
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "2 damage killed the 2/2");
+}
+
 /// Summon: G.F. Ifrit adds {R} on its third chapter.
 #[test]
 fn summon_gf_ifrit_chapter_three_adds_red() {

@@ -396,15 +396,16 @@ impl MatchStats {
             _ => 16,
         }
     }
-    /// Estimate the median (p50) win-by-life delta from the histogram —
-    /// robust to the blowout outliers that inflate the mean. Returns the
-    /// upper edge of the bucket holding the median sample, or 0 with no
-    /// samples.
-    pub(crate) fn win_life_delta_median(&self) -> i64 {
+    /// Estimate the p-th percentile win-by-life delta from the histogram —
+    /// robust to the blowout outliers that inflate the mean. Returns the upper
+    /// edge of the bucket holding the target sample, or 0 with no samples.
+    /// `p` is clamped to [0, 1]. Mirrors [`turn_percentile`](Self::turn_percentile).
+    pub(crate) fn win_life_delta_percentile(&self, p: f32) -> i64 {
         if self.win_life_samples == 0 {
             return 0;
         }
-        let target = self.win_life_samples.div_ceil(2);
+        let p = p.clamp(0.0, 1.0);
+        let target = ((self.win_life_samples as f32) * p).ceil().max(1.0) as u64;
         let mut acc = 0u64;
         for (i, &n) in self.win_life_delta_buckets.iter().enumerate() {
             acc = acc.saturating_add(n as u64);
@@ -413,6 +414,10 @@ impl MatchStats {
             }
         }
         Self::win_life_delta_bucket_upper_bound(5)
+    }
+    /// The median (p50) win-by-life delta.
+    pub(crate) fn win_life_delta_median(&self) -> i64 {
+        self.win_life_delta_percentile(0.5)
     }
     /// Classify one clean win as a damage win or an "alternate" win
     /// (deckout / poison / mill / win-the-game). Prefers the outcome's
@@ -888,10 +893,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         // ended in a race. Push (claude/modern_decks batch 202).
         if s.win_life_samples > 0 {
             out.push_str(&format!(
-                " avg_win_life_lead={} (σ={:.1}, p50={})",
+                " avg_win_life_lead={} (σ={:.1}, p50={}, p90={})",
                 s.avg_win_life_delta(),
                 s.win_life_delta_stddev(),
-                s.win_life_delta_median()
+                s.win_life_delta_median(),
+                s.win_life_delta_percentile(0.9)
             ));
         }
     }

@@ -5504,6 +5504,49 @@ pub fn summon_choco_mog() -> CardDefinition {
     }
 }
 
+/// Summon: Esper Ramuh — {2}{R}{R} Enchantment Creature — Saga Wizard 3/3.
+/// I — Judgment Bolt — deals damage equal to the noncreature, nonland cards in
+/// your graveyard to target creature an opponent controls. II, III — Wizards you
+/// control get +1/+0 until end of turn.
+pub fn summon_esper_ramuh() -> CardDefinition {
+    let wizards_pump = || Effect::PumpPT {
+        what: Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Wizard)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        power: Value::ONE,
+        toughness: Value::ZERO,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Summon: Esper Ramuh",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        saga_chapters: vec![
+            (1, Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::count(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+                }),
+            }),
+            (2, wizards_pump()),
+            (3, wizards_pump()),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Summon: G.F. Ifrit — {2}{R} Enchantment Creature — Saga Demon 3/2. I, II — you
 /// may discard a card; if you do, draw a card. III, IV — add {R}. Sacrificed
 /// after IV.
