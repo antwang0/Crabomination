@@ -99,6 +99,20 @@ exercising each) was elided in a compaction pass; recover it from
   poison/commander, empty-library draw, concession, "you lose" effects) so the
   server's win-kind stats read the true cause instead of guessing from final
   board state.
+- **Anthem / keyword / copy primitives (modern_decks — FIN, this run):**
+  `StaticEffect::AnthemForFilter` (fixed-filter team anthem: pump + keywords over
+  a printed `SelectionRequirement` via `AffectedPermanents::CardMatch` — Balthier
+  and Fran → Vehicles, Ardyn, the Usurper → Demons);
+  `StaticEffect::SelfHasKeywordIf` (predicate-gated self keyword — Freya Crescent /
+  Cloud, Planet's Champion "during your turn / while equipped");
+  `EquipBonus.during_your_turn_keywords` (turn-gated equip keyword — Dragoon's
+  Lance flying); `SpendRestriction::EquipmentOnly` (Freya's equip-only mana);
+  `Effect::AddCreatureTypes` (additive layer-4 type grant — Jenova's Mutant);
+  `CreateTokenCopyOf.{override_colors, enters_tapped}` (exact-color / tapped token
+  copies — Ardyn's 5/5 black Demon). Also fixed `fire_spell_cast_triggers` to
+  include statics-/equip-granted SpellCast triggers (Red Mage's Rapier, Black
+  Mage's Rod), and unified poison scaling through
+  `GameState::scaled_player_counter_count` (Winding Constrictor boosts poison).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
