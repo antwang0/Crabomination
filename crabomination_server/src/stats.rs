@@ -277,12 +277,12 @@ impl MatchStats {
 
     /// Average final turn count of decisive (won) matches, or 0 with no wins.
     pub(crate) fn avg_decisive_turns(&self) -> u64 {
-        if self.wins == 0 { 0 } else { self.decisive_turn_sum / self.wins }
+        self.decisive_turn_sum.checked_div(self.wins).unwrap_or(0)
     }
 
     /// Average final turn count of drawn matches, or 0 with no draws.
     pub(crate) fn avg_draw_turns(&self) -> u64 {
-        if self.draws == 0 { 0 } else { self.draw_turn_sum / self.draws }
+        self.draw_turn_sum.checked_div(self.draws).unwrap_or(0)
     }
     /// Bump the cumulative turn counter — called at match completion
     /// from the record paths if the caller has a final turn number.
