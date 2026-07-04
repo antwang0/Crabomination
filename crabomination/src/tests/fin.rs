@@ -3164,6 +3164,43 @@ fn jenova_dies_draw_reads_granted_mutant_type() {
     assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 = dead Mutant's power");
 }
 
+/// Excalibur II charges on lifegain and grants +1/+1 per charge counter.
+#[test]
+fn excalibur_ii_charges_on_lifegain_and_scales() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let sword = g.add_card_to_battlefield(0, catalog::excalibur_ii());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    // Gain 2 life over two events → 2 charge counters.
+    for _ in 0..2 {
+        let before = g.players[0].life;
+        g.adjust_life(0, 1);
+        let d = (g.players[0].life - before) as u32;
+        g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: d }]);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(sword).unwrap().counter_count(CounterType::Charge), 2,
+        "two lifegain events → two charge counters");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 + (+1/+1 per charge counter)");
+}
+
+/// Aettir and Priwen sets the equipped creature's base P/T to your life total.
+#[test]
+fn aettir_and_priwen_base_pt_is_life_total() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::aettir_and_priwen());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    g.players[0].life = 17;
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (17, 17), "base P/T = 17 life");
+    // Tracks life changes live.
+    g.players[0].life = 5;
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "recomputes to 5 life");
+}
+
 /// CR 707.2 — a `CreateTokenCopyOf` with `enters_tapped` mints a tapped copy.
 #[test]
 fn cr_707_2_token_copy_enters_tapped() {

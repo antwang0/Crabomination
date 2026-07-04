@@ -2430,6 +2430,12 @@ pub struct EquipBonus {
     /// untouched (the common stat-bonus Equipment/Aura case).
     #[serde(default)]
     pub set_base_pt: Option<(i32, i32)>,
+    /// When true, the host's base power and toughness are both set (layer 7b)
+    /// to the Equipment controller's life total — "equipped creature has base
+    /// power and toughness X/X, where X is your life total" (Aettir and Priwen).
+    /// Recomputed each layer pass, so it tracks life changes live.
+    #[serde(default)]
+    pub set_base_pt_controller_life: bool,
     #[serde(default)]
     pub set_card_types: Option<Vec<CardType>>,
     #[serde(default)]
@@ -2488,8 +2494,9 @@ pub struct SoulbondBonus {
 }
 
 /// Board-count scaling for an [`EquipBonus`] (CR 613 layer 7c). See
-/// `EquipBonus.scale`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// `EquipBonus.scale`. `Default` filter is the match-anything `Any` (used by
+/// the counter/graveyard-count variants, which ignore `filter`).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EquipScale {
     pub filter: SelectionRequirement,
     pub per_power: i32,

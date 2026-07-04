@@ -80,9 +80,11 @@ turn, has flying"), and `SpendRestriction::EquipmentOnly` (Freya's equip-only
 mana).
 
 Remaining short FIN cards blocked on one primitive each:
-- **Aettir and Priwen / Excalibur II** — equip bonus scaled by life total /
-  charge counters on the Equipment (`EquipScale` only counts controlled
-  permanents; add counter-on-source + dynamic-value equip scaling).
+- ✅ **Aettir and Priwen / Excalibur II** — shipped. Excalibur II rides the
+  existing `EquipScale.count_self_counters` (charge counters on the Equipment)
+  + a `LifeGained` → add-charge trigger. Aettir and Priwen uses the new
+  `EquipBonus.set_base_pt_controller_life` (base P/T set to the controller's
+  live life total, layer 7b).
 - **Delivery Moogle** — dual-zone (library *and/or* graveyard) tutor.
 - **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
   Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped

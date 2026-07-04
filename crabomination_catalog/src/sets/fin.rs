@@ -3,7 +3,7 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement, Selector, StaticAbility, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
@@ -5429,6 +5429,63 @@ pub fn self_destruct() -> CardDefinition {
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Excalibur II — {1} Legendary Equipment. Whenever you gain life, put a charge
+/// counter on Excalibur II. Equipped creature gets +1/+1 for each charge counter
+/// on Excalibur II. Equip {3}.
+pub fn excalibur_ii() -> CardDefinition {
+    CardDefinition {
+        name: "Excalibur II",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::ONE,
+            },
+        }],
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: Some(CounterType::Charge),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Aettir and Priwen — {6} Legendary Equipment. Equipped creature has base power
+/// and toughness X/X, where X is your life total. Equip {5}.
+pub fn aettir_and_priwen() -> CardDefinition {
+    CardDefinition {
+        name: "Aettir and Priwen",
+        cost: cost(&[generic(6)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt_controller_life: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

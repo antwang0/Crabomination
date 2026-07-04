@@ -4366,6 +4366,14 @@ impl GameState {
                 push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
                     Modification::SetPowerToughness(p, t));
             }
+            // Aettir and Priwen — base P/T X/X where X is the Equipment
+            // controller's life total (layer 7b). Reads life directly (no
+            // layer dependency), so it's reentrancy-safe.
+            if bonus.set_base_pt_controller_life {
+                let x = self.players[card.controller].life.max(0);
+                push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
+                    Modification::SetPowerToughness(x, x));
+            }
             if let Some(types) = &bonus.set_card_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::SetCardTypes(types.clone()));
