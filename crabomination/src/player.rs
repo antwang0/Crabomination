@@ -49,6 +49,24 @@ pub struct EpicSpell {
     pub x_value: u32,
 }
 
+/// Authoritative cause of a player's elimination, recorded on the `Player`
+/// when they lose. Mirrors the server's presentation-side `LossReason` but
+/// lives in the engine so it can be stamped at the exact SBA/effect that
+/// eliminated the seat (CR 104.3 / 704.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LossCause {
+    /// Life total 0 or less (CR 104.3a / 704.5a).
+    LifeDepleted,
+    /// Ten or more poison counters (CR 104.3c / 704.5c).
+    Poison,
+    /// Tried to draw from an empty library (CR 104.3c / 120.3).
+    Decked,
+    /// 21+ combat damage from a single commander (CR 903.10a).
+    CommanderDamage,
+    /// A "you lose the game" effect, concession, or other cause.
+    Other,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: PlayerId,
@@ -421,6 +439,14 @@ pub struct Player {
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
     pub eliminated: bool,
+    /// The authoritative reason this player was eliminated, recorded at the
+    /// moment `eliminated` flips to `true`. Lets consumers (the server's
+    /// win-kind stats) read the true cause instead of guessing from the
+    /// final board state — a "you lose the game" effect on an empty-library
+    /// seat is `Concession`/`Other`, not a deck-out. `None` while still in
+    /// the game. Defaults to `None` via `#[serde(default)]`.
+    #[serde(default)]
+    pub loss_cause: Option<LossCause>,
     /// Number of upcoming turns this player must skip. Read by the
     /// turn-advance logic in `do_cleanup` — when the engine would hand
     /// the next turn to this player, the counter is decremented and the
@@ -626,6 +652,7 @@ impl Player {
             city_blessing: false,
             max_hand_size: default_max_hand_size(),
             eliminated: false,
+            loss_cause: None,
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_combat: 0,

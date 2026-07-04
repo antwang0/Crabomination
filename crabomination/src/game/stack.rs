@@ -2873,7 +2873,19 @@ impl GameState {
                 || self.players[i].poison_counters >= 10
                 || lost_to_commander;
             if lost {
+                // Stamp the authoritative cause most-specific-first, matching
+                // the SBA order that would fire (life, then poison, then
+                // commander damage — CR 704.5a/c/v).
+                use crate::player::LossCause;
+                let cause = if self.effective_life(i) <= 0 {
+                    LossCause::LifeDepleted
+                } else if self.players[i].poison_counters >= 10 {
+                    LossCause::Poison
+                } else {
+                    LossCause::CommanderDamage
+                };
                 self.players[i].eliminated = true;
+                self.players[i].loss_cause.get_or_insert(cause);
                 newly_eliminated.push(i);
             }
         }

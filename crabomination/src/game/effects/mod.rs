@@ -10543,6 +10543,7 @@ impl GameState {
                 } else {
                     self.restore_payment_state(p, snapshot);
                     self.players[p].eliminated = true;
+                    self.players[p].loss_cause.get_or_insert(crate::player::LossCause::Other);
                     let mut sba = self.check_state_based_actions();
                     events.append(&mut sba);
                 }
@@ -12460,6 +12461,7 @@ impl GameState {
                     for (idx, pl) in self.players.iter_mut().enumerate() {
                         if idx != w {
                             pl.eliminated = true;
+                            pl.loss_cause.get_or_insert(crate::player::LossCause::Other);
                         }
                     }
                 }

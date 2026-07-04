@@ -64,15 +64,24 @@ spell's mana value); Cloud, Ex-SOLDIER rides `Effect::Attach` + `CountMatching`
 over equipped attackers. Cloud's "up to one target Equipment" ETB is a required
 target (fizzles with no Equipment).
 
-Remaining short FIN cards blocked on one primitive each (build the primitive to
-unblock a card + a roadmap item at once):
-- **Combat Tutorial** — needs the per-slot *optional* "up to one target creature
-  you control" alongside a required player target (the multi-kind-slot spell).
-- **A Realm Reborn** — needs a "other permanents you control gain '{T}: Add one
-  mana of any color'" grant-an-activated-mana-ability-to-others static.
+Shipped (modern_decks): **Combat Tutorial** — the "up to one target creature you
+control" slot rides the existing per-slot machinery (a trailing optional target
+is satisfiable with zero picks; cast validation only checks *supplied* targets).
+**A Realm Reborn** — `grant_tap_for_any_color(ControlledByYou ∩ OtherThanSource)`.
+Plus a 19-card FIN batch (Seymour Flux, Cloud of Darkness, the Wind/Fire/Earth
+Crystals, Ancient Adamantoise, Ultros, …) on the new `Effect::MayPayLife`
+(CR 119.4) and `StaticEffect::DoublePlusOneCounters` (CR 614.16 +1/+1-only
+doubler — also corrected Branching Evolution / Corpsejack Menace, which were
+over-scoped to all counter kinds via `DoubleCounters`).
+
+Remaining short FIN cards blocked on one primitive each:
 - **Aettir and Priwen / Excalibur II** — equip bonus scaled by life total /
   charge counters on the Equipment (`EquipScale` only counts controlled
   permanents; add counter-on-source + dynamic-value equip scaling).
+- **Delivery Moogle** — dual-zone (library *and/or* graveyard) tutor.
+- **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
+  Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
+  to Spree/Escalate.
 
 ## Environment note
 

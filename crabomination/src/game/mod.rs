@@ -2549,10 +2549,36 @@ impl GameState {
         if is_creature && kind == CounterType::MinusOneMinusOne {
             n = n.saturating_sub(self.minus_counter_reduction_for(ctrl));
         }
+        // +1/+1-only doublers (Branching Evolution, The Earth Crystal) compose
+        // multiplicatively with the all-kinds Doubling-Season doublers.
+        if is_creature && kind == CounterType::PlusOnePlusOne {
+            for _ in 0..self.plus_counter_doublers_for(ctrl) {
+                n = n.saturating_mul(2);
+            }
+        }
         for _ in 0..self.counter_doublers_for(ctrl) {
             n = n.saturating_mul(2);
         }
         n
+    }
+
+    /// Number of `StaticEffect::DoublePlusOneCounters` permanents `seat`
+    /// controls — each doubles a +1/+1 placement onto one of `seat`'s
+    /// creatures (Branching Evolution / The Earth Crystal). Multiplicative,
+    /// composing with the all-kinds `DoubleCounters` doublers.
+    pub fn plus_counter_doublers_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::DoublePlusOneCounters))
+                    .count() as u32
+            })
+            .sum()
     }
 
     /// Number of `StaticEffect::ExtraCounterAllKinds` permanents `seat`
@@ -6864,6 +6890,7 @@ impl GameState {
             return Vec::new();
         }
         self.players[seat].eliminated = true;
+        self.players[seat].loss_cause.get_or_insert(crate::player::LossCause::Other);
         let mut events = vec![GameEvent::PlayerConceded { player: seat }];
         // CR 800.4a — the conceding player's objects leave with them. SBAs
         // skip already-eliminated seats, so this won't fire for them there.
@@ -7268,14 +7295,17 @@ impl GameState {
                     )
                 })
         });
+        use crate::player::LossCause;
         if wins {
             for (idx, pl) in self.players.iter_mut().enumerate() {
                 if idx != p {
                     pl.eliminated = true;
+                    pl.loss_cause.get_or_insert(LossCause::Other);
                 }
             }
         } else {
             self.players[p].eliminated = true;
+            self.players[p].loss_cause.get_or_insert(LossCause::Decked);
         }
     }
 
@@ -11390,6 +11420,7 @@ fn static_effect_to_effects(
             // DoubleCounters / ExtraPlusOneCounters — read at counter-add
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters
+            | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
             | StaticEffect::ExtraCounterAllKinds
             // Damage doubling/halving — read at damage time via

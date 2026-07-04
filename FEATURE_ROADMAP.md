@@ -90,6 +90,15 @@ exercising each) was elided in a compaction pass; recover it from
   filtered at dispatch (Judge Magister Gabranth, G'raha Tia). Diamond Weapon
   rides the existing `PreventAllCombatDamageToThis` ("Immune") + a graveyard
   Affinity (`affinity_graveyard_filter: PermanentCard`).
+- **Life-cost / counter / loss primitives (modern_decks — FIN):**
+  `Effect::MayPayLife` (CR 119.4 — "you may pay N life: …", gated on life ≥ N,
+  paid as a life loss — Seymour Flux); `StaticEffect::DoublePlusOneCounters`
+  (CR 614.16 +1/+1-only counter doubler — Branching Evolution, The Earth Crystal;
+  composes multiplicatively with the all-kinds `DoubleCounters`); and an
+  authoritative `Player.loss_cause` stamped at each elimination site (SBA life/
+  poison/commander, empty-library draw, concession, "you lose" effects) so the
+  server's win-kind stats read the true cause instead of guessing from final
+  board state.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

@@ -146,7 +146,11 @@ pub fn sync_game_over_modal(
                 } else {
                     p.name.clone()
                 };
-                format!("{label}: {} life", p.life)
+                // Tag eliminated seats explicitly — a seat that decked out or
+                // conceded can be at positive life, so "3 life" alone reads as
+                // still-alive without this marker.
+                let out = if p.eliminated { " (out)" } else { "" };
+                format!("{label}: {} life{out}", p.life)
             })
             .collect();
         parts.join(" — ")

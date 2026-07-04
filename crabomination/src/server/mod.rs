@@ -280,14 +280,26 @@ fn classify_loss(p: &crate::player::Player, took_commander_damage: bool) -> Opti
     if !p.eliminated {
         return None;
     }
+    // Prefer the authoritative cause the engine stamped at elimination time —
+    // it distinguishes a genuine deck-out from a "you lose the game" effect on
+    // a seat that merely happens to have an empty library.
+    if let Some(cause) = p.loss_cause {
+        return Some(match cause {
+            crate::player::LossCause::LifeDepleted => LossReason::LifeDepleted,
+            crate::player::LossCause::Poison => LossReason::Poison,
+            crate::player::LossCause::Decked => LossReason::Decked,
+            crate::player::LossCause::CommanderDamage => LossReason::CommanderDamage,
+            crate::player::LossCause::Other => LossReason::Other,
+        });
+    }
+    // Fallback for snapshots predating `loss_cause`: infer from final state,
+    // most-specific-first (a player at ≤0 life reads as `LifeDepleted` even if
+    // their library is also empty, matching SBA order).
     if p.life <= 0 {
         Some(LossReason::LifeDepleted)
     } else if p.poison_counters >= 10 {
         Some(LossReason::Poison)
     } else if took_commander_damage {
-        // CR 903.10a — 21+ combat damage from one commander eliminates a
-        // player even at positive life; classified ahead of `Decked` so a
-        // commander kill on an empty-library seat still reads correctly.
         Some(LossReason::CommanderDamage)
     } else if p.library.is_empty() {
         Some(LossReason::Decked)

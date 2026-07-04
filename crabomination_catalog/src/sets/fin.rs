@@ -4397,3 +4397,41 @@ pub fn traveling_chocobo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Earth Crystal — {2}{G}{G} Legendary Artifact. Green spells you cast cost
+/// {1} less. If one or more +1/+1 counters would be put on a creature you
+/// control, twice that many are put on it instead. {4}{G}{G}, {T}: Distribute
+/// two +1/+1 counters among one or two target creatures you control.
+pub fn the_earth_crystal() -> CardDefinition {
+    CardDefinition {
+        name: "The Earth Crystal",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Green spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasColor(Color::Green),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "If one or more +1/+1 counters would be put on a creature you control, twice that many are put on it instead.",
+                effect: StaticEffect::DoublePlusOneCounters,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: Effect::DistributeCounters {
+                total: Value::Const(2),
+                counter: CounterType::PlusOnePlusOne,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                max_targets: 2,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

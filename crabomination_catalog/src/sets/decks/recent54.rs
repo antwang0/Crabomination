@@ -379,7 +379,7 @@ pub fn corpsejack_menace() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If one or more +1/+1 counters would be put on a creature you \
                           control, twice that many are put on it instead.",
-            effect: StaticEffect::DoubleCounters,
+            effect: StaticEffect::DoublePlusOneCounters,
         }],
         ..Default::default()
     }

@@ -594,6 +594,13 @@ pub enum StaticEffect {
     /// Each active copy adds one to a +1/+1 placement onto the controller's
     /// creatures; applied before any `DoubleCounters` multiplier.
     ExtraPlusOneCounters,
+    /// CR 614.16 multiplicative variant scoped to +1/+1 counters — "If one or
+    /// more +1/+1 counters would be put on a creature you control, twice that
+    /// many are put on it instead." Branching Evolution / Kami of Whispered
+    /// Hopes / The Earth Crystal-class. Unlike `DoubleCounters` (which doubles
+    /// *any* counter kind), this only doubles +1/+1 placements onto the
+    /// controller's creatures. Composes multiplicatively with `DoubleCounters`.
+    DoublePlusOneCounters,
     /// CR 614.16 additive variant for *every* counter kind — "If one or more
     /// counters would be put on an artifact or creature you control, that many
     /// plus one of each of those kinds are put on it instead."

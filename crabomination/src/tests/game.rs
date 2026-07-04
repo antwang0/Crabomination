@@ -7221,3 +7221,37 @@ fn tribute_question_routes_to_the_opponent() {
         1, "tribute paid: +1/+1 counter, no haste-trigger half"
     );
 }
+
+/// The engine stamps an authoritative loss cause at elimination time so the
+/// cause is known even when the final board state is ambiguous.
+#[test]
+fn loss_cause_records_authoritative_reason() {
+    use crate::player::LossCause;
+
+    // Life depletion.
+    let mut g = two_player_game();
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert_eq!(g.players[1].loss_cause, Some(LossCause::LifeDepleted));
+
+    // Poison.
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 10;
+    g.check_state_based_actions();
+    assert_eq!(g.players[1].loss_cause, Some(LossCause::Poison));
+
+    // Concession → Other, even though the seat is at full life with a full
+    // library (a final-state guess would mislabel this).
+    let mut g = two_player_game();
+    g.concede(1);
+    assert_eq!(g.players[1].loss_cause, Some(LossCause::Other));
+
+    // Deck-out.
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let mut events = vec![];
+    let _ = g.draw_one(0, &mut events);
+    g.lose_to_empty_draw(0);
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].loss_cause, Some(LossCause::Decked));
+}

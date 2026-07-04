@@ -2502,9 +2502,11 @@ fn combat_tutorial_draws_and_grows_creature() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-/// Combat Tutorial's creature slot is optional: with no creature it still draws.
+/// CR 601.2c — Combat Tutorial's "up to one target creature" slot is optional
+/// on a mixed required-player + optional-creature spell: with no creature (or a
+/// declined slot) it still resolves the required half.
 #[test]
-fn combat_tutorial_optional_creature_slot_can_be_declined() {
+fn cr_601_2c_combat_tutorial_optional_creature_slot_can_be_declined() {
     let mut g = two_player_game();
     for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
     let spell = g.add_card_to_hand(0, catalog::combat_tutorial());
@@ -2768,4 +2770,64 @@ fn traveling_chocobo_plays_bird_from_top() {
     let card = g.players[0].library.remove(idx);
     g.players[0].library.insert(0, card);
     assert!(g.library_top_playable(0, top_bird), "a Bird on top is playable");
+}
+
+/// CR 614.16 — The Earth Crystal doubles +1/+1 counter placements onto your
+/// creatures (but not other counter kinds).
+#[test]
+fn cr_614_16_earth_crystal_doubles_plus_one_counters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_earth_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // One +1/+1 counter placement is doubled to two.
+    let n = g.scaled_counter_count(0, CounterType::PlusOnePlusOne, 1, true);
+    assert_eq!(n, 2, "one +1/+1 counter becomes two");
+    // A non-+1/+1 counter is unaffected.
+    let stun = g.scaled_counter_count(0, CounterType::Stun, 1, true);
+    assert_eq!(stun, 1, "stun counters are not doubled");
+    // End to end: an AddCounter of 1 actually applies 2.
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&crate::effect::Effect::AddCounter {
+        what: crate::effect::Selector::Target(0),
+        kind: CounterType::PlusOnePlusOne,
+        amount: crate::effect::Value::ONE,
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Two +1/+1 doublers (The Earth Crystal + Branching Evolution) compose
+/// multiplicatively: one counter becomes four.
+#[test]
+fn earth_crystal_composes_with_branching_evolution() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_earth_crystal());
+    g.add_card_to_battlefield(0, catalog::branching_evolution());
+    let n = g.scaled_counter_count(0, CounterType::PlusOnePlusOne, 1, true);
+    assert_eq!(n, 4, "Earth Crystal (2x) and Branching Evolution (2x) stack to 4x");
+}
+
+/// CR 119.4 — a "you may pay N life" cost can only be paid while life ≥ N; if
+/// it can't be paid (even when accepted), the body is skipped and `else_` runs.
+#[test]
+fn cr_119_4_may_pay_life_requires_sufficient_life() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    g.players[0].life = 3;
+    let hand0 = g.players[0].hand.len();
+    // Accept the optional, but 5 life is unpayable at 3 life.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::MayPayLife {
+        description: "pay 5 life?".into(),
+        amount: Value::Const(5),
+        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        else_: Some(Box::new(Effect::LoseLife { who: Selector::You, amount: Value::ONE })),
+    }, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 2, "no 5-life payment (life stayed 3); else_ lost 1");
+    assert_eq!(g.players[0].hand.len(), hand0, "body (draw) was skipped");
 }
