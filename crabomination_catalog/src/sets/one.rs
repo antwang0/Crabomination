@@ -392,3 +392,92 @@ pub fn bonepicker_skirge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Bilious Skulldweller — {B} Creature — Phyrexian Insect 1/1 with deathtouch
+/// and toxic 1.
+pub fn bilious_skulldweller() -> CardDefinition {
+    CardDefinition {
+        name: "Bilious Skulldweller",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch, Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}
+
+/// Branchblight Stalker — {1}{G} Creature — Phyrexian Elf Scout 3/1 with toxic 2.
+pub fn branchblight_stalker() -> CardDefinition {
+    CardDefinition {
+        name: "Branchblight Stalker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Elf, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Toxic(2)],
+        ..Default::default()
+    }
+}
+
+/// Jawbone Duelist — {1}{W} Creature — Phyrexian Soldier 1/1 with double strike
+/// and toxic 1.
+pub fn jawbone_duelist() -> CardDefinition {
+    CardDefinition {
+        name: "Jawbone Duelist",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike, Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}
+
+/// Pestilent Syphoner — {1}{B} Creature — Phyrexian Insect 1/1 with flying and
+/// toxic 1.
+pub fn pestilent_syphoner() -> CardDefinition {
+    CardDefinition {
+        name: "Pestilent Syphoner",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}
+
+/// Ichorspit Basilisk — {2}{G} Creature — Phyrexian Basilisk 1/3 with deathtouch
+/// and toxic 1.
+pub fn ichorspit_basilisk() -> CardDefinition {
+    CardDefinition {
+        name: "Ichorspit Basilisk",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Basilisk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch, Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}

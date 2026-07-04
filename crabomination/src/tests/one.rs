@@ -251,3 +251,37 @@ fn fleshless_gladiator_corrupted_graveyard_return() {
     assert!(back.tapped, "returned tapped");
     assert_eq!(g.players[0].life, life0 - 1, "lost 1 life");
 }
+
+/// Branchblight Stalker's toxic 2 gives the defending player two poison counters
+/// on combat damage (CR 702.180 Toxic).
+#[test]
+fn branchblight_stalker_toxic_two_poisons() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let stalker = g.add_card_to_battlefield(0, catalog::branchblight_stalker());
+    g.clear_sickness(stalker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: stalker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "toxic 2 = two poison counters");
+}
+
+/// The toxic vanilla-ish cycle ships with its printed stats and keywords.
+#[test]
+fn one_toxic_cycle_stats_and_keywords() {
+    use crate::card::Keyword;
+    let bilious = catalog::bilious_skulldweller();
+    assert_eq!((bilious.power, bilious.toughness), (1, 1));
+    assert!(bilious.keywords.contains(&Keyword::Deathtouch) && bilious.keywords.contains(&Keyword::Toxic(1)));
+    let jawbone = catalog::jawbone_duelist();
+    assert!(jawbone.keywords.contains(&Keyword::DoubleStrike) && jawbone.keywords.contains(&Keyword::Toxic(1)));
+    let syphoner = catalog::pestilent_syphoner();
+    assert!(syphoner.keywords.contains(&Keyword::Flying) && syphoner.keywords.contains(&Keyword::Toxic(1)));
+    let basilisk = catalog::ichorspit_basilisk();
+    assert_eq!((basilisk.power, basilisk.toughness), (1, 3));
+    assert!(basilisk.keywords.contains(&Keyword::Deathtouch) && basilisk.keywords.contains(&Keyword::Toxic(1)));
+}
