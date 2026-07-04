@@ -87,13 +87,12 @@ Remaining short FIN cards blocked on one primitive each:
 - **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
   Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
   to Spree/Escalate.
-- **Ardyn, the Usurper / Sin / Jenova** — begin-combat "exile up to one target
-  creature card from a graveyard; if you do, create a token copy of it (except
-  it's a 5/5 black Demon / tapped / …)". Needs (a) a trigger targeting a card in
-  a graveyard, (b) exile-then-copy sequencing, and (c) a color override on
-  `CreateTokenCopyOf` (which already mints off graveyard/exile sources and
-  supports P/T + type overrides). Ardyn's *anthem* half ("Demons you control have
-  menace, lifelink, haste") is now shippable via `StaticEffect::AnthemForFilter`.
+- **Sin / Jenova** — begin-combat "exile up to one target creature card from a
+  graveyard; if you do, create a token copy of it (except it's tapped / …)".
+  The primitive is now shipped — Ardyn, the Usurper uses
+  `Move(Creature∩InGraveyard → Exile)` + `CreateTokenCopyOf { source: Target(0),
+  override_pt, override_colors, extra_creature_types }`. Sin/Jenova need only
+  their own override riders (tapped-entry, per-card color/type).
 
 ## Environment note
 

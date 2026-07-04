@@ -2955,6 +2955,7 @@ pub fn relms_sketching() -> CardDefinition {
             extra_creature_types: vec![],
             extra_card_types: vec![],
             override_pt: None,
+            override_colors: None,
             non_legendary: false,
             legendary: false,
         },
@@ -4820,6 +4821,59 @@ pub fn dragoons_lance() -> CardDefinition {
             during_your_turn_keywords: vec![Keyword::Flying],
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+/// Ardyn, the Usurper — {5}{B}{B}{B} 4/4 Elder Human Noble. Demons you control
+/// have menace, lifelink, and haste. Starscourge — at the beginning of combat on
+/// your turn, exile up to one target creature card from a graveyard; if you do,
+/// create a token copy of it that's a 5/5 black Demon. (The "up to one" is
+/// modeled as a required target — no-op with no graveyard creature.)
+pub fn ardyn_the_usurper() -> CardDefinition {
+    CardDefinition {
+        name: "Ardyn, the Usurper",
+        cost: cost(&[generic(5), b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Demons you control have menace, lifelink, and haste.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Demon),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Menace, Keyword::Lifelink, Keyword::Haste],
+                opponents: false,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                    ),
+                    to: ZoneDest::Exile,
+                },
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::Target(0),
+                    extra_creature_types: vec![CreatureType::Demon],
+                    extra_card_types: vec![],
+                    override_pt: Some((5, 5)),
+                    override_colors: Some(vec![Color::Black]),
+                    non_legendary: false,
+                    legendary: false,
+                },
+            ]),
+        }],
         ..Default::default()
     }
 }

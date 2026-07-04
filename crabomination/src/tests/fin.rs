@@ -2965,6 +2965,32 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Ardyn's anthem grants Demons menace/lifelink/haste; Starscourge mints a
+/// 5/5 black Demon copy of an exiled graveyard creature.
+#[test]
+fn ardyn_the_usurper_anthem_and_starscourge() {
+    let mut g = two_player_game();
+    let ardyn = g.add_card_to_battlefield(0, catalog::ardyn_the_usurper());
+    // Ardyn is a Human Noble (not a Demon), so the anthem doesn't hit it; add a
+    // Demon to check the grant.
+    let demon = g.add_card_to_battlefield(0, catalog::iron_giant()); // a Demon
+    let cp = g.computed_permanent(demon).unwrap();
+    for kw in [Keyword::Menace, Keyword::Lifelink, Keyword::Haste] {
+        assert!(cp.keywords.contains(&kw), "Demon has {kw:?}");
+    }
+    // Starscourge: a creature in the graveyard becomes a 5/5 black Demon copy.
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let _ = ardyn;
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .expect("token copy minted");
+    let tcp = g.computed_permanent(token.id).unwrap();
+    assert_eq!((tcp.power, tcp.toughness), (5, 5), "5/5 override");
+    assert!(tcp.subtypes.creature_types.contains(&crate::card::CreatureType::Demon), "is a Demon");
+    assert!(tcp.colors.contains(&crate::mana::Color::Black) && tcp.colors.len() == 1, "black only");
+}
+
 /// Lightning exiles the top card for a may-play on combat damage to a player.
 #[test]
 fn lightning_security_sergeant_impulses_on_combat_damage() {

@@ -818,6 +818,7 @@ pub fn squad_etb() -> TriggeredAbility {
         extra_creature_types: Vec::new(),
         extra_card_types: Vec::new(),
         override_pt: None,
+        override_colors: None,
         non_legendary: false,
         legendary: false,
     })
@@ -2994,6 +2995,7 @@ fn embalm_like(
             extra_creature_types: vec![crate::card::CreatureType::Zombie],
             extra_card_types: Vec::new(),
             override_pt,
+            override_colors: None,
             non_legendary: false,
             legendary: false,
         },

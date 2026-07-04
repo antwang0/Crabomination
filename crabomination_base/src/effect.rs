@@ -3177,6 +3177,13 @@ pub enum Effect {
         extra_card_types: Vec<crate::card::CardType>,
         #[serde(default)]
         override_pt: Option<(i32, i32)>,
+        /// CR 707.2 rider — the copy's color is set to these colors ("except
+        /// it's a 5/5 black Demon" — Ardyn, the Usurper). Applied as a color
+        /// indicator (CR 105.2c) plus stripping the copied cost's colored pips
+        /// (generic count preserved) so the copy is exactly these colors.
+        /// `None` keeps the source's own colors.
+        #[serde(default)]
+        override_colors: Option<Vec<crate::mana::Color>>,
         /// CR 707.2e rider — the token copy isn't legendary (Helm of the
         /// Host). Strips supertypes from the copy so the legend rule doesn't
         /// destroy it alongside a legendary host.

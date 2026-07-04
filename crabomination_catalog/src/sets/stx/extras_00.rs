@@ -805,6 +805,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     extra_creature_types: vec![CreatureType::Spirit],
                     extra_card_types: vec![],
                     override_pt: None,
+                    override_colors: None,
                     non_legendary: false,
                     legendary: false,
                 },

@@ -1297,6 +1297,7 @@ pub fn rite_of_replication() -> CardDefinition {
         extra_creature_types: vec![],
         extra_card_types: vec![],
         override_pt: None,
+        override_colors: None,
         non_legendary: false,
         legendary: false,
     };

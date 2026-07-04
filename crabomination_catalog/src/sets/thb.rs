@@ -5197,6 +5197,7 @@ pub fn nightmare_shepherd() -> CardDefinition {
                         extra_creature_types: vec![CreatureType::Nightmare],
                         extra_card_types: vec![],
                         override_pt: Some((1, 1)),
+                        override_colors: None,
                         non_legendary: false,
                         legendary: false,
                     },

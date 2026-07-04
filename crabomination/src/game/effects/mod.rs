@@ -6526,6 +6526,7 @@ impl GameState {
                 extra_creature_types,
                 extra_card_types,
                 override_pt,
+                override_colors,
                 non_legendary,
                 legendary,
             } => {
@@ -6578,6 +6579,22 @@ impl GameState {
                 if let Some((p_o, t_o)) = override_pt {
                     def.power = *p_o;
                     def.toughness = *t_o;
+                }
+                if let Some(colors) = override_colors {
+                    // Set the copy's color exactly: color indicator (CR 105.2c)
+                    // plus recolor the copied cost's colored pips to generic so
+                    // no stray source color leaks through (mana value preserved).
+                    def.color_indicator = colors.clone();
+                    let generic: u32 = def
+                        .cost
+                        .symbols
+                        .iter()
+                        .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)))
+                        .count() as u32;
+                    def.cost.symbols.retain(|s| !matches!(s, crate::mana::ManaSymbol::Colored(_)));
+                    if generic > 0 {
+                        def.cost.symbols.push(crate::mana::ManaSymbol::Generic(generic));
+                    }
                 }
                 if *non_legendary {
                     def.supertypes.clear();
