@@ -7119,3 +7119,52 @@ pub fn beatrix_loyal_general() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kain, Traitorous Dragoon — {2}{B} 2/4 Legendary Human Knight. Jump (flying
+/// during your turn). Whenever Kain deals combat damage to a player, that player
+/// gains control of Kain; you then draw that many cards, make that many tapped
+/// Treasures, and lose that much life.
+pub fn kain_traitorous_dragoon() -> CardDefinition {
+    let treasure = || {
+        let mut t = crabomination_base::tokens::treasure_token();
+        t.tapped = true;
+        t
+    };
+    CardDefinition {
+        name: "Kain, Traitorous Dragoon",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Jump — During your turn, Kain has flying.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Flying,
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainControl {
+                    what: Selector::This,
+                    to: Some(PlayerRef::Target(0)),
+                    duration: Duration::Permanent,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::TriggerEventAmount,
+                    definition: treasure(),
+                },
+                Effect::LoseLife { who: Selector::You, amount: Value::TriggerEventAmount },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

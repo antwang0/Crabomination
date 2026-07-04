@@ -4418,3 +4418,36 @@ fn beatrix_attaches_all_equipment_at_combat() {
     assert_eq!(g.battlefield_find(e1).unwrap().attached_to, Some(hero), "Equipment attached");
     assert_eq!(g.battlefield_find(e2).unwrap().attached_to, None, "non-Equipment untouched");
 }
+
+/// Kain has flying only on your turn, and handing a hit to a player donates
+/// Kain to them while paying you cards/Treasures/life equal to the damage.
+#[test]
+fn kain_jump_and_traitor_trigger() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let kain = g.add_card_to_battlefield(0, catalog::kain_traitorous_dragoon());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    // Jump: flying on your turn only.
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(kain).unwrap().keywords.contains(&Keyword::Flying), "Jump on your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(kain).unwrap().keywords.contains(&Keyword::Flying), "no flying on their turn");
+    g.active_player_idx = 0;
+    // Traitor trigger: 2 combat damage to P1 → P1 gains Kain; you draw 2,
+    // make 2 tapped Treasures, lose 2 life.
+    let hand0 = g.players[0].hand.len();
+    let life0 = g.players[0].life;
+    let eff = catalog::kain_traitorous_dragoon().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(kain, 0, Some(Target::Player(1)), 0);
+    ctx.targets = vec![Target::Player(1)];
+    ctx.event_amount = 2;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(kain).unwrap().controller, 1, "P1 gained control of Kain");
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "you drew 2");
+    assert_eq!(g.players[0].life, life0 - 2, "you lost 2 life");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Treasure" && c.controller == 0).count(),
+        2,
+        "two Treasures for you"
+    );
+}
