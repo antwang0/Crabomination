@@ -4978,6 +4978,93 @@ pub fn cloud_planets_champion() -> CardDefinition {
     }
 }
 
+/// Raubahn, Bull of Ala Mhigo — {1}{R} 2/2 Human Warrior. Ward—pay life equal to
+/// Raubahn's power. Whenever Raubahn attacks, attach up to one target Equipment
+/// you control to it. (The printed "target attacking creature" is approximated
+/// as Raubahn itself; the "up to one" is a required target.)
+pub fn raubahn_bull_of_ala_mhigo() -> CardDefinition {
+    CardDefinition {
+        name: "Raubahn, Bull of Ala Mhigo",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Ward(WardCost::LifeSourcePower)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Attach {
+                what: target_filtered(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                to: Selector::This,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Golbez, Crystal Collector — {U}{B} 1/4 Human Wizard. Whenever an artifact you
+/// control enters, surveil 1. At your end step, if you control four or more
+/// artifacts, return target creature card from your graveyard to your hand; then
+/// if you control eight or more, each opponent loses life equal to its power.
+pub fn golbez_crystal_collector() -> CardDefinition {
+    let artifacts_at_least = |n: i32| Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(
+            SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+        ),
+        n: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Golbez, Crystal Collector",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Artifact,
+                    }),
+                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                    .with_filter(artifacts_at_least(4)),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                    Effect::If {
+                        cond: artifacts_at_least(8),
+                        then: Box::new(Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Jenova, Ancient Calamity — {2}{B}{G} 1/5 Alien. At the beginning of combat on
 /// your turn, put +1/+1 counters equal to Jenova's power on up to one other
 /// target creature; it becomes a Mutant. Whenever a Mutant you control dies

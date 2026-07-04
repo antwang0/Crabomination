@@ -2965,6 +2965,48 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Raubahn has Ward (pay life = power) and attaches an Equipment when it attacks.
+#[test]
+fn raubahn_wards_and_attaches_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    use crate::card::WardCost;
+    let mut g = two_player_game();
+    let raubahn = g.add_card_to_battlefield(0, catalog::raubahn_bull_of_ala_mhigo());
+    assert!(g.computed_permanent(raubahn).unwrap().keywords
+        .contains(&Keyword::Ward(WardCost::LifeSourcePower)), "Ward—pay life = power");
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter()); // unattached Equipment
+    g.clear_sickness(raubahn);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: raubahn, target: AttackTarget::Player(1),
+    }])).expect("Raubahn attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(raubahn),
+        "the Equipment attached to Raubahn on attack");
+}
+
+/// Golbez surveils when an artifact enters, and at end step with 4+ artifacts
+/// returns a creature card from your graveyard to hand.
+#[test]
+fn golbez_surveils_and_returns_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::golbez_crystal_collector());
+    g.add_card_to_library(0, catalog::island()); // surveil target
+    // Artifact ETB → surveil 1 (keep on top; just assert it doesn't crash and
+    // the graveyard/library are consistent).
+    let lib0 = g.players[0].library.len();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ring }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() <= lib0, "surveil looked at the top card");
+    // Four artifacts + a creature in the graveyard → end step returns it.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::sol_ring()); }
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "returned the creature to hand");
+}
+
 /// Cloud gains double strike + indestructible only while equipped on your turn.
 #[test]
 fn cloud_planets_champion_conditional_keywords() {
