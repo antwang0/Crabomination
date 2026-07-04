@@ -5579,6 +5579,8 @@ static FIN: &[Factory] = &[
     super::fin::red_mages_rapier,
     super::fin::black_mages_rod,
     super::fin::dragoons_lance,
+    super::fin::machinists_arsenal,
+    super::fin::sages_nouliths,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

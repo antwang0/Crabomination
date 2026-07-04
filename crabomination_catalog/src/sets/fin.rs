@@ -4740,6 +4740,67 @@ pub fn black_mages_rod() -> CardDefinition {
     }
 }
 
+/// Machinist's Arsenal — {4}{W} Equipment. Job select. Equipped creature gets
+/// +2/+2 for each artifact you control and is an Artificer. Equip {4}.
+pub fn machinists_arsenal() -> CardDefinition {
+    CardDefinition {
+        name: "Machinist's Arsenal",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            add_creature_types: vec![CreatureType::Artificer],
+            scale: Some(crate::card::EquipScale {
+                filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                per_power: 2,
+                per_toughness: 2,
+                count_self_counters: None,
+                count_graveyard: None,
+                count_all_graveyards: None,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sage's Nouliths — {1}{U} Equipment. Job select. Equipped creature gets +1/+0,
+/// is a Cleric, and has "Whenever this creature attacks, untap target attacking
+/// creature." Equip {3}.
+pub fn sages_nouliths() -> CardDefinition {
+    CardDefinition {
+        name: "Sage's Nouliths",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            add_creature_types: vec![CreatureType::Cleric],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Untap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                    ),
+                    up_to: None,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Dragoon's Lance — {1}{W} Equipment. Job select. Equipped creature gets +1/+0,
 /// is a Knight, and has flying during your turn. Equip {4}.
 pub fn dragoons_lance() -> CardDefinition {

@@ -2965,6 +2965,40 @@ fn black_mages_rod_pings_on_noncreature_cast() {
     assert_eq!(g.players[1].life, life1 - 4, "equipped Hero pinged 1 on the noncreature cast");
 }
 
+/// Machinist's Arsenal scales +2/+2 per artifact and grants Artificer.
+#[test]
+fn machinists_arsenal_scales_per_artifact() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sol_ring()); // one artifact
+    g.move_card_to_battlefield_for_test(0, catalog::machinists_arsenal());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    // Artifacts you control: Sol Ring + Machinist's Arsenal itself = 2 → +4/+4.
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "1/1 + 2 artifacts × +2/+2");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Artificer));
+}
+
+/// Sage's Nouliths untaps a target attacking creature when its host attacks.
+#[test]
+fn sages_nouliths_untaps_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::sages_nouliths());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    g.clear_sickness(hero);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("Hero attacks");
+    drain_stack(&mut g);
+    // The only attacking creature is the Hero; its granted trigger untaps it.
+    assert!(!g.battlefield_find(hero).unwrap().tapped, "attacking Hero untapped itself");
+}
+
 /// Red Mage's Rapier's equipped creature grows +2/+0 on a noncreature cast.
 #[test]
 fn red_mages_rapier_pumps_on_noncreature_cast() {
