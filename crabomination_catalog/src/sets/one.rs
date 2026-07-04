@@ -189,6 +189,54 @@ pub fn incisor_glider() -> CardDefinition {
     }
 }
 
+/// Apostle of Invasion — {4}{W}{W} Creature — Phyrexian Angel 4/4 with flying.
+/// Corrupted (CR 702.166) — has double strike while an opponent has three or
+/// more poison counters.
+pub fn apostle_of_invasion() -> CardDefinition {
+    CardDefinition {
+        name: "Apostle of Invasion",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Corrupted — has double strike.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::DoubleStrike,
+                condition: Predicate::CorruptedActive { who: PlayerRef::You },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloated Contaminator — {2}{G} Creature — Phyrexian Beast 4/4 with trample and
+/// toxic 1. Whenever it deals combat damage to a player, proliferate.
+pub fn bloated_contaminator() -> CardDefinition {
+    CardDefinition {
+        name: "Bloated Contaminator",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Toxic(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bonepicker Skirge — {2}{B} Creature — Phyrexian Imp 2/2 with flying.
 /// Corrupted (CR 702.166) — as long as an opponent has three or more poison
 /// counters, it has deathtouch and lifelink.

@@ -123,3 +123,39 @@ fn compleated_huntmaster_sac_incubates() {
     let inc = g.battlefield.iter().find(|c| c.definition.name == "Incubator").expect("incubated");
     assert_eq!(inc.counter_count(CounterType::PlusOnePlusOne), 3);
 }
+
+/// Apostle of Invasion gains double strike only while an opponent has 3+ poison
+/// (CR 702.166 Corrupted).
+#[test]
+fn apostle_of_invasion_corrupted_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let apostle = g.add_card_to_battlefield(0, catalog::apostle_of_invasion());
+    assert!(
+        !g.computed_permanent(apostle).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "no double strike below 3 poison",
+    );
+    g.players[1].poison_counters = 3;
+    assert!(
+        g.computed_permanent(apostle).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "double strike live once Corrupted",
+    );
+}
+
+/// Bloated Contaminator poisons (toxic 1) and proliferates on combat damage.
+#[test]
+fn bloated_contaminator_toxic_and_proliferate() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bc = g.add_card_to_battlefield(0, catalog::bloated_contaminator());
+    g.clear_sickness(bc);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bc, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    // toxic 1 gives a poison counter, then the proliferate trigger bumps it to 2.
+    assert_eq!(g.players[1].poison_counters, 2, "toxic 1 + proliferate = 2 poison");
+}
