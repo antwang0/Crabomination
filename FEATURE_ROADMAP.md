@@ -126,6 +126,21 @@ exercising each) was elided in a compaction pass; recover it from
   Moogle). **Saga creatures** (Enchantment Creature — Saga) work through the
   existing saga machinery: chapters fire and the CR 714 saga rule sacrifices
   after the final chapter on a creature body (the FIN "Summon:" cycle).
+- **Tiered / granted-trigger / subtype primitives (modern_decks — FIN, this run):**
+  `Effect::Tiered { modes: Vec<SpreeMode> }` — the FIN "Choose one additional
+  cost" modal (reuses Spree's `CastSpellSpree` cast plumbing; the validator
+  enforces exactly one chosen mode — Fire/Ice/Thunder/Restoration Magic, Tifa's
+  Limit Break). `fire_combat_damage_triggers` now also fires **instance-granted**
+  (`GrantTriggeredAbility` on `granted_triggers_eot`) SelfSource combat-damage
+  triggers alongside printed/statics-granted ones (CR 603.2e — Summon: Primal
+  Odin's Zantetsuken). The `MayPay → Reflexive` path already fans out all target
+  slots (Weapons Vendor attaches Equipment + creature). New `ArtifactSubtype::Book`
+  (grimoire equipment — Summoner's Grimoire). Cards this run also exercise
+  `SacrificeHalf` edicts + `CreatureSacrificed` payoffs (Zodiark), self-animating
+  Vehicles (`sac_other_filter` + `BecomeCreature` — Phantom Train), flash tap-lock
+  Auras (`PreventUntap` + granted `CantActivateAbilities` — Stuck in Summoner's
+  Sanctum), and turn-gated equip keywords (`during_your_turn_keywords` — The
+  Masamune).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
