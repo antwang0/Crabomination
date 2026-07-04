@@ -3874,3 +3874,110 @@ fn tiered_rejects_multiple_modes() {
     });
     assert!(res.is_err(), "choosing two tiers is illegal");
 }
+
+/// Warrior's Sword: Job select mints a Hero, equips it, and grants +3/+2 Warrior.
+#[test]
+fn warriors_sword_job_select_and_bonus() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::warriors_sword());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "1/1 + 3/+2");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Warrior));
+}
+
+/// Thief's Knife draws when the equipped Hero deals combat damage to a player.
+#[test]
+fn thiefs_knife_draws_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.move_card_to_battlefield_for_test(0, catalog::thiefs_knife());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
+        .expect("Hero minted").id;
+    g.clear_sickness(hero);
+    let hand0 = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "combat damage drew a card");
+}
+
+/// Suplex mode 0 deals 3 and exiles the creature if it dies.
+#[test]
+fn suplex_damages_and_exiles() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::suplex());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Suplex");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 2/2");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != foe), "exiled, not in graveyard");
+}
+
+/// Tifa's Meteor Strikes tier doubles a creature's power and toughness.
+#[test]
+fn tifas_limit_break_doubles() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::tifas_limit_break());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![1], target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Meteor Strikes");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8), "4/4 doubled to 8/8");
+}
+
+/// Swallowed by Leviathan surveils, then counters a spell unless {1} per card in
+/// your graveyard is paid.
+#[test]
+fn swallowed_by_leviathan_counters() {
+    use crate::game::Target;
+    let mut g = two_player_game();
+    // Two cards in P0's graveyard → the tax is {2}.
+    g.add_card_to_graveyard(0, catalog::island());
+    g.add_card_to_graveyard(0, catalog::forest());
+    // P1 (active) casts a creature spell we'll counter.
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P1 casts Grizzly");
+    // P0 responds with the counter.
+    g.priority.player_with_priority = 0;
+    let counter = g.add_card_to_hand(0, catalog::swallowed_by_leviathan());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast counter");
+    drain_stack(&mut g);
+    // P1 has no mana left to pay the {2} tax → the Grizzly is countered.
+    assert!(g.battlefield_find(spell).is_none(), "Grizzly countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "went to graveyard");
+}

@@ -6236,3 +6236,126 @@ pub fn restoration_magic() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Warrior's Sword — {3}{R} Equipment. Job select. Equipped creature gets +3/+2
+/// and is a Warrior in addition to its other types. Equip {5}.
+pub fn warriors_sword() -> CardDefinition {
+    CardDefinition {
+        name: "Warrior's Sword",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 2,
+            add_creature_types: vec![CreatureType::Warrior],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Thief's Knife — {2}{U} Equipment. Job select. Equipped creature gets +1/+1,
+/// draws a card on combat damage to a player, and is a Rogue. Equip {4}.
+pub fn thiefs_knife() -> CardDefinition {
+    CardDefinition {
+        name: "Thief's Knife",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        triggered_abilities: vec![job_select_etb()],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            add_creature_types: vec![CreatureType::Rogue],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Suplex — {1}{R} Sorcery. Choose one — deal 3 to target creature and exile it
+/// if it would die this turn; or exile target artifact.
+pub fn suplex() -> CardDefinition {
+    CardDefinition {
+        name: "Suplex",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                // Install the exile-instead replacement before the damage lands.
+                Effect::ExileIfWouldDieThisTurn {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            ]),
+            Effect::Exile { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tifa's Limit Break — {G} Instant. Tiered: Somersault {0} — +2/+2; Meteor
+/// Strikes {2} — double target creature's power and toughness; Final Heaven
+/// {6}{G} — triple them. All until end of turn.
+pub fn tifas_limit_break() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let pump = |p: Value, t: Value| Effect::PumpPT {
+        what: target_filtered(SelectionRequirement::Creature),
+        power: p,
+        toughness: t,
+        duration: Duration::EndOfTurn,
+    };
+    let pow = || Value::PowerOf(Box::new(Selector::Target(0)));
+    let tou = || Value::ToughnessOf(Box::new(Selector::Target(0)));
+    CardDefinition {
+        name: "Tifa's Limit Break",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: pump(Value::Const(2), Value::Const(2)) },
+                // Double = add its current P/T.
+                SpreeMode { cost: cost(&[generic(2)]), effect: pump(pow(), tou()) },
+                // Triple = add twice its current P/T.
+                SpreeMode {
+                    cost: cost(&[generic(6), g()]),
+                    effect: pump(Value::Times(Box::new(pow()), Box::new(Value::Const(2))),
+                                 Value::Times(Box::new(tou()), Box::new(Value::Const(2)))),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Swallowed by Leviathan — {2}{U} Instant. Surveil 2, then counter target spell
+/// unless its controller pays {1} for each card in your graveyard.
+pub fn swallowed_by_leviathan() -> CardDefinition {
+    CardDefinition {
+        name: "Swallowed by Leviathan",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[]),
+                exile: false,
+                extra_generic: Some(Value::count(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                })),
+            },
+        ]),
+        ..Default::default()
+    }
+}
