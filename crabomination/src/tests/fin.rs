@@ -3191,6 +3191,27 @@ fn summon_choco_mog_saga_creature_pumps_and_sacrifices() {
     assert!(g.battlefield_find(choco).is_none(), "sacrificed after chapter IV");
 }
 
+/// Summon: G.F. Cerberus chapter II copies your next instant/sorcery.
+#[test]
+fn summon_gf_cerberus_chapter_two_copies_next_spell() {
+    let mut g = two_player_game();
+    let cerberus = g.add_card_to_battlefield(0, catalog::summon_gf_cerberus());
+    g.add_card_to_library(0, catalog::island()); // something to surveil on I
+    g.saga_advance(cerberus); // I — Surveil 1
+    drain_stack(&mut g);
+    g.saga_advance(cerberus); // II — arm "copy your next I/S"
+    drain_stack(&mut g);
+    let life1 = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lightning Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 6, "bolt + its copy = 6 damage");
+}
+
 /// Summon: Esper Ramuh's chapter I bolts for the count of noncreature-nonland
 /// cards in your graveyard.
 #[test]

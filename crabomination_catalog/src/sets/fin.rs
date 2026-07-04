@@ -5504,6 +5504,44 @@ pub fn summon_choco_mog() -> CardDefinition {
     }
 }
 
+/// Summon: G.F. Cerberus — {2}{R}{R} Enchantment Creature — Saga Dog 3/3.
+/// I — Surveil 1. II — when you next cast an instant or sorcery this turn, copy
+/// it (you may choose new targets). III — copy it twice.
+pub fn summon_gf_cerberus() -> CardDefinition {
+    let copy_next = |count: i32| Effect::OnYourNextSpellCastThisTurn {
+        body: Box::new(Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            },
+            then: Box::new(Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::Const(count),
+            }),
+            else_: Box::new(Effect::Noop),
+        }),
+    };
+    CardDefinition {
+        name: "Summon: G.F. Cerberus",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        saga_chapters: vec![
+            (1, Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+            (2, copy_next(1)),
+            (3, copy_next(2)),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Summon: Esper Ramuh — {2}{R}{R} Enchantment Creature — Saga Wizard 3/3.
 /// I — Judgment Bolt — deals damage equal to the noncreature, nonland cards in
 /// your graveyard to target creature an opponent controls. II, III — Wizards you
