@@ -1251,3 +1251,122 @@ pub fn gitaxian_anatomist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Basilica Shepherd — {3}{W}{W} Creature — Phyrexian Angel 3/3 with flying.
+/// When it enters, create two Phyrexian Mite tokens.
+pub fn basilica_shepherd() -> CardDefinition {
+    CardDefinition {
+        name: "Basilica Shepherd",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: mite_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Infectious Bite — {1}{G} Instant. Target creature you control deals damage
+/// equal to its power to target creature you don't control. Each opponent gets a
+/// poison counter.
+pub fn infectious_bite() -> CardDefinition {
+    CardDefinition {
+        name: "Infectious Bite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamageEqualToPower {
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            Effect::AddPoison { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gulping Scraptrap — {4}{B} Creature — Phyrexian Horror 4/4. When it enters or
+/// dies, proliferate.
+pub fn gulping_scraptrap() -> CardDefinition {
+    CardDefinition {
+        name: "Gulping Scraptrap",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Proliferate), on_dies(Effect::Proliferate)],
+        ..Default::default()
+    }
+}
+
+/// Deadly Derision — {2}{B}{B} Instant. Destroy target creature or planeswalker.
+/// Create a Treasure token.
+pub fn deadly_derision() -> CardDefinition {
+    CardDefinition {
+        name: "Deadly Derision",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker)),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crate::game::effects::treasure_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kill-Zone Acrobat — {2}{B} Creature — Human Soldier 3/2. Whenever it attacks,
+/// you may sacrifice another creature or artifact; if you do, it gains flying
+/// until end of turn.
+pub fn kill_zone_acrobat() -> CardDefinition {
+    CardDefinition {
+        name: "Kill-Zone Acrobat",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+            description: "sacrifice another creature or artifact".into(),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Artifact)
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}

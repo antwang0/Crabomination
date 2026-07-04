@@ -6932,6 +6932,11 @@ static ONE: &[Factory] = &[
     super::one::karumonix_the_rat_king,
     super::one::vindictive_flamestoker,
     super::one::gitaxian_anatomist,
+    super::one::basilica_shepherd,
+    super::one::infectious_bite,
+    super::one::gulping_scraptrap,
+    super::one::deadly_derision,
+    super::one::kill_zone_acrobat,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

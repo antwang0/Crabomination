@@ -770,3 +770,63 @@ fn gitaxian_anatomist_taps_and_proliferates() {
     assert!(g.battlefield.iter().find(|c| c.id == ga).unwrap().tapped, "tapped itself");
     assert_eq!(g.players[1].poison_counters, 2, "proliferated opponent poison");
 }
+
+/// Basilica Shepherd mints two Mite tokens on entry.
+#[test]
+fn basilica_shepherd_makes_two_mites() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::basilica_shepherd());
+    drain_stack(&mut g);
+    let mites = g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Mite").count();
+    assert_eq!(mites, 2, "two Mites entered");
+}
+
+/// Infectious Bite fights one-sided and poisons each opponent.
+#[test]
+fn infectious_bite_fights_and_poisons() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    resolve_targeted(&mut g, 0, catalog::infectious_bite().effect,
+        vec![Target::Permanent(mine), Target::Permanent(theirs)]);
+    assert!(g.battlefield_find(theirs).is_none(), "took 4 damage and died");
+    assert_eq!(g.players[1].poison_counters, 1, "each opponent poisoned");
+}
+
+/// Gulping Scraptrap proliferates on entry.
+#[test]
+fn gulping_scraptrap_proliferates_on_entry() {
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 1;
+    g.move_card_to_battlefield_for_test(0, catalog::gulping_scraptrap());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "entry proliferated opponent poison");
+}
+
+/// Deadly Derision destroys a creature and mints a Treasure.
+#[test]
+fn deadly_derision_destroys_and_makes_treasure() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    resolve_targeted(&mut g, 0, catalog::deadly_derision().effect, vec![Target::Permanent(victim)]);
+    assert!(g.battlefield_find(victim).is_none(), "destroyed");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure" && c.controller == 0), "made a Treasure");
+}
+
+/// Kill-Zone Acrobat sacrifices to gain flying on attack.
+#[test]
+fn kill_zone_acrobat_sac_for_flying() {
+    let mut g = two_player_game();
+    let acro = g.add_card_to_battlefield(0, catalog::kill_zone_acrobat());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.clear_sickness(acro);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: acro, target: crate::game::types::AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(acro).unwrap().keywords.contains(&Keyword::Flying), "gained flying via sacrifice");
+}
