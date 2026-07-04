@@ -66371,3 +66371,30 @@ fn leather_armor_grants_toughness_and_ward() {
     assert_eq!((cp.power, cp.toughness), (2, 3), "+0/+1");
     assert!(cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "ward granted");
 }
+
+/// Flame Jab pings any target for 1 and carries Retrace.
+#[test]
+fn flame_jab_pings_and_has_retrace() {
+    use crate::card::Keyword;
+    assert!(catalog::flame_jab().keywords.contains(&Keyword::Retrace), "has Retrace");
+    let mut g = two_player_game();
+    let life1 = g.players[1].life;
+    let eff = catalog::flame_jab().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life1 - 1, "1 damage");
+}
+
+/// Recoup grants flashback to a sorcery in your graveyard.
+#[test]
+fn recoup_grants_flashback_to_a_sorcery() {
+    let mut g = two_player_game();
+    let sorc = g.add_card_to_graveyard(0, catalog::molten_rain()); // a sorcery
+    let eff = catalog::recoup().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(sorc)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let card = g.players[0].graveyard.iter().find(|c| c.id == sorc).expect("still in gy");
+    assert!(card.granted_flashback_eot.is_some(), "flashback granted until end of turn");
+}

@@ -3081,6 +3081,8 @@ static DECKS: &[Factory] = &[
     super::decks::short_bow,
     super::decks::neurok_hoversail,
     super::decks::leather_armor,
+    super::decks::flame_jab,
+    super::decks::recoup,
     super::decks::invasion_of_zendikar,
     super::decks::invasion_of_kaladesh,
     super::decks::invasion_of_amonkhet,

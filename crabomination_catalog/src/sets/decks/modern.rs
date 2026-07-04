@@ -61379,3 +61379,40 @@ pub fn leather_armor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flame Jab — {R} sorcery with Retrace. Deal 1 damage to any target.
+pub fn flame_jab() -> CardDefinition {
+    CardDefinition {
+        name: "Flame Jab",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Retrace],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
+/// Recoup — {1}{R} sorcery with Flashback {3}{R}. Target sorcery card in your
+/// graveyard gains flashback (equal to its mana cost) until end of turn.
+pub fn recoup() -> CardDefinition {
+    CardDefinition {
+        name: "Recoup",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
+        effect: Effect::GrantFlashbackThisTurn {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Sorcery)
+                    .and(SelectionRequirement::InYourGraveyard),
+            ),
+        },
+        ..Default::default()
+    }
+}

@@ -3888,8 +3888,11 @@ impl GameState {
                 // mana cost) to each resolved graveyard card, so it can be
                 // recast this turn via the normal flashback path (pay the
                 // cost, exile on resolve). Cleared at cleanup.
+                // Accept either a graveyard `Card` ref or a `Permanent`-shaped
+                // target id (targeting resolves a gy card as `Permanent`), then
+                // look it up wherever it lives.
                 for ent in self.resolve_selector(what, ctx) {
-                    if let EntityRef::Card(cid) = ent
+                    if let Some(cid) = ent.as_card_id()
                         && let Some(card) = self.find_card_anywhere_mut(cid)
                     {
                         let fb_cost = card.definition.cost.clone();
