@@ -4825,3 +4825,44 @@ fn vincents_limit_break_death_gigas_returns_on_death() {
     let back = g.battlefield_find(cat).expect("returned to battlefield");
     assert!(back.tapped, "returned tapped");
 }
+
+/// Garnet's attack removes a lore counter from each of your Sagas and grows by
+/// one +1/+1 counter per Saga drained.
+#[test]
+fn garnet_attack_drains_sagas_and_grows() {
+    let mut g = two_player_game();
+    let garnet = g.add_card_to_battlefield(0, catalog::garnet_princess_of_alexandria());
+    let saga = g.add_card_to_battlefield(0, catalog::summon_choco_mog());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    let eff = catalog::garnet_princess_of_alexandria().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(garnet, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(
+        g.battlefield_find(garnet).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1, "one Saga drained → one +1/+1 counter",
+    );
+    assert_eq!(
+        g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore),
+        1, "saga lost a lore counter (2 → 1)",
+    );
+}
+
+/// Summon: Brynhildr's Gestalt Mode (II) gives your next creature spell haste.
+#[test]
+fn summon_brynhildr_gestalt_grants_haste() {
+    let mut g = two_player_game();
+    let bryn = g.add_card_to_battlefield(0, catalog::summon_brynhildr());
+    g.saga_advance(bryn); // I — Chain (needs a library card to exile)
+    drain_stack(&mut g);
+    g.saga_advance(bryn); // II — Gestalt Mode
+    drain_stack(&mut g);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Grizzly Bears");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).expect("bears on battlefield");
+    assert!(cp.keywords.contains(&Keyword::Haste), "next creature entered with haste");
+}

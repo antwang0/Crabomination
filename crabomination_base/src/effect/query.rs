@@ -169,6 +169,7 @@ impl Effect {
             Effect::SacrificeAtEndOfCombat { .. } => false,
             // CR 603.7e — registers a player-scoped rider; no cast-time target.
             Effect::GrantNextCreatureSpellCounters { .. } => false,
+            Effect::GrantNextCreatureSpellKeyword { .. } => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the
             // lowest-seat opponent, so no cast-time target is demanded.
             Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,

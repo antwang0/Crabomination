@@ -7572,6 +7572,48 @@ pub fn kefka_court_mage() -> CardDefinition {
     }
 }
 
+/// Garnet, Princess of Alexandria — {G}{W} 2/2 Human Noble Cleric with lifelink.
+/// Whenever Garnet attacks, remove a lore counter from each Saga you control and
+/// put a +1/+1 counter on Garnet for each one removed.
+/// (Approximation: the printed "any number" choice is modeled as all your Sagas
+/// that carry a lore counter.)
+pub fn garnet_princess_of_alexandria() -> CardDefinition {
+    let sagas_with_lore = || {
+        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::WithCounter(CounterType::Lore))
+    };
+    CardDefinition {
+        name: "Garnet, Princess of Alexandria",
+        cost: cost(&[g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::count(Selector::EachPermanent(sagas_with_lore())),
+                },
+                Effect::RemoveCounter {
+                    what: Selector::EachPermanent(sagas_with_lore()),
+                    kind: CounterType::Lore,
+                    amount: Value::ONE,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Summon: Fenrir — {2}{G} Enchantment Creature — Saga Wolf 3/2. I — search for
 /// a basic land, put it onto the battlefield tapped. II — your next creature
 /// spell this turn enters with an extra +1/+1 counter. III — draw a card if you
@@ -7603,6 +7645,40 @@ pub fn summon_fenrir() -> CardDefinition {
                 then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
                 else_: Box::new(Effect::Noop),
             }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Summon: Brynhildr — {1}{R} Enchantment Creature — Saga Knight 2/1.
+/// I — Chain — exile the top card of your library; you may play it while it
+/// remains exiled. II, III — Gestalt Mode — your next creature spell this turn
+/// enters with haste.
+/// (Approximation: chapter I's "during any turn you put a lore counter" play
+/// window is modeled as the broader `WhileExiled`.)
+pub fn summon_brynhildr() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Summon: Brynhildr",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        saga_chapters: vec![
+            (1, Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::WhileExiled,
+                pay_any_color: false,
+                uncast_penalty: None,
+            }),
+            (2, Effect::GrantNextCreatureSpellKeyword { keyword: Keyword::Haste }),
+            (3, Effect::GrantNextCreatureSpellKeyword { keyword: Keyword::Haste }),
         ],
         ..Default::default()
     }

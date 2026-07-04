@@ -385,8 +385,9 @@ impl GameState {
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     // CR 603.7e — unused "your next creature spell this turn"
-                    // counter riders expire with the turn.
+                    // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();
+                    pl.pending_creature_etb_keywords.clear();
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
@@ -930,12 +931,18 @@ impl GameState {
                         }
                     }
                     // CR 603.7e — one-shot "your next creature spell enters
-                    // with N counters" riders (FIN "Summon" saga chapters).
+                    // with N counters / these keywords" riders (FIN "Summon"
+                    // saga chapters — Fenrir II counters, Brynhildr Gestalt haste).
                     if is_creature_resolve {
                         for (kind, n) in
                             std::mem::take(&mut self.players[caster].pending_creature_etb_counters)
                         {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                        }
+                        let kws =
+                            std::mem::take(&mut self.players[caster].pending_creature_etb_keywords);
+                        for kw in kws {
+                            self.grant_keyword_eot(card_id, kw);
                         }
                     }
                     // CR 122.1 — Solemnity drops enters-with-counters.

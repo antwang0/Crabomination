@@ -3012,6 +3012,11 @@ pub enum Effect {
     /// expire at cleanup. The FIN "Summon" saga chapters (Fenrir "Heavenward
     /// Howl", Brynhildr "Gestalt Mode"-adjacent growth).
     GrantNextCreatureSpellCounters { kind: CounterType, amount: Value },
+    /// CR 603.7e — "When you next cast a creature spell this turn, that creature
+    /// gains `keyword`." One-shot rider (`Player.pending_creature_etb_keywords`)
+    /// applied to the next creature spell's permanent as it enters; expires at
+    /// cleanup (Summon: Brynhildr's "Gestalt Mode" haste).
+    GrantNextCreatureSpellKeyword { keyword: Keyword },
     /// For each permanent matching `filter` whose current power exceeds its
     /// base power, put that many +1/+1 counters on it (the per-permanent
     /// difference). Sovereign Okinec Ahau's attack trigger (CR 122).

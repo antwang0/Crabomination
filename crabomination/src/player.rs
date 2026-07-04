@@ -206,6 +206,12 @@ pub struct Player {
     /// expires with the turn. `#[serde(default)]`.
     #[serde(default)]
     pub pending_creature_etb_counters: Vec<(crate::card::CounterType, u32)>,
+    /// CR 603.7e — pending "your next creature spell this turn enters with these
+    /// keywords" riders (Summon: Brynhildr's "Gestalt Mode" haste). Applied to
+    /// the next creature spell's permanent as it enters and cleared at cleanup.
+    /// `#[serde(default)]`.
+    #[serde(default)]
+    pub pending_creature_etb_keywords: Vec<crate::card::Keyword>,
     /// CR 702.139 — true if a permanent left the battlefield under this
     /// player's control so far this turn (Revolt). Set from the battlefield-
     /// removal funnels keyed off the leaving permanent's controller; reset at
@@ -613,6 +619,7 @@ impl Player {
             artifacts_entered_this_turn: 0,
             escalating_resolutions_this_turn: 0,
             pending_creature_etb_counters: Vec::new(),
+            pending_creature_etb_keywords: Vec::new(),
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,

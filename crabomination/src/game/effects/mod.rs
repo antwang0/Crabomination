@@ -5919,6 +5919,15 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 603.7e — register a one-shot "your next creature spell this
+            // turn gains `keyword`" rider on the controller.
+            Effect::GrantNextCreatureSpellKeyword { keyword } => {
+                self.players[ctx.controller]
+                    .pending_creature_etb_keywords
+                    .push(keyword.clone());
+                Ok(())
+            }
+
             Effect::RemoveAllCounters { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()

@@ -5683,6 +5683,8 @@ static FIN: &[Factory] = &[
     super::fin::starting_town,
     super::fin::elixir,
     super::fin::yuna_hope_of_spira,
+    super::fin::garnet_princess_of_alexandria,
+    super::fin::summon_brynhildr,
     super::fin::summon_fenrir,
     super::fin::stiltzkin_moogle_merchant,
     super::fin::vincents_limit_break,

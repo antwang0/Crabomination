@@ -166,6 +166,9 @@ Remaining short FIN cards blocked on one primitive each:
     `Effect::GrantNextCreatureSpellCounters` + `Player.pending_creature_etb_
     counters` (drained onto the next creature spell at ETB, cleared at cleanup;
     Summon: Fenrir II). Torgal's first-Human rider can reuse it.
+  - ✅ *Next-creature-spell-enters-with-keyword (turn-scoped)* — shipped as
+    `Effect::GrantNextCreatureSpellKeyword` + `Player.pending_creature_etb_
+    keywords`, applied at ETB via `grant_keyword_eot` (Summon: Brynhildr Gestalt).
   - *Temporary attack-triggered ability granted for a turn* — "until end of
     turn, whenever a [type] attacks, draw" (Summon: Leviathan II/III).
   - Still-unimplemented FIN cards (need one of the above or interactive
@@ -174,7 +177,7 @@ Remaining short FIN cards blocked on one primitive each:
     Encounter, Memories Returning, Triple Triad, Sin, the remaining Summon
     Sagas (Leviathan/Brynhildr), Clive's Hideaway/Eden,
     The Darkness Crystal, Lightning, Vanille's meld. (Kain, Stiltzkin, Fenrir,
-    Vincent's Limit Break now shipped.)
+    Brynhildr, Garnet, Vincent's Limit Break now shipped.)
 
 ## Environment note
 
