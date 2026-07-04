@@ -61049,3 +61049,85 @@ pub fn barbed_shocker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sudden Impact — {3}{R} instant. Deal damage to target player equal to the
+/// number of cards in that player's hand.
+pub fn sudden_impact() -> CardDefinition {
+    CardDefinition {
+        name: "Sudden Impact",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Player),
+            amount: Value::HandSizeOf(PlayerRef::Target(0)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fissure — {3}{R}{R} sorcery. Destroy target creature or land. It can't be
+/// regenerated.
+pub fn fissure() -> CardDefinition {
+    CardDefinition {
+        name: "Fissure",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Land),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kaervek's Torch — {X}{R} sorcery. Deal X damage to any target. (The
+/// "spells targeting it cost {2} more" clause is cosmetic and omitted.)
+pub fn kaerveks_torch() -> CardDefinition {
+    CardDefinition {
+        name: "Kaervek's Torch",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Seismic Spike — {2}{R}{R} instant. Destroy target land. Add {R}{R}.
+pub fn seismic_spike() -> CardDefinition {
+    CardDefinition {
+        name: "Seismic Spike",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            crate::effect::shortcut::add_mana(vec![Color::Red, Color::Red]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Boulderfall — {6}{R}{R} sorcery. Deal 5 damage divided as you choose among
+/// any number of targets.
+pub fn boulderfall() -> CardDefinition {
+    CardDefinition {
+        name: "Boulderfall",
+        cost: cost(&[generic(6), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(5),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 5,
+        },
+        ..Default::default()
+    }
+}

@@ -66119,3 +66119,67 @@ fn barbed_shocker_wheels_the_damaged_player() {
     assert_eq!(g.players[1].hand.len(), hand_before, "discarded hand, drew that many");
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Island"), "old hand discarded");
 }
+
+/// Sudden Impact burns a player for their hand size.
+#[test]
+fn sudden_impact_burns_for_hand_size() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_hand(1, catalog::island()); }
+    let life1 = g.players[1].life;
+    let eff = catalog::sudden_impact().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life1 - 4, "4 cards in hand → 4 damage");
+}
+
+/// Fissure destroys either a creature or a land.
+#[test]
+fn fissure_destroys_creature_or_land() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eff = catalog::fissure().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(creature)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(creature).is_none(), "creature destroyed");
+}
+
+/// Kaervek's Torch deals X damage where X is the paid cost.
+#[test]
+fn kaerveks_torch_deals_x() {
+    let mut g = two_player_game();
+    let life1 = g.players[1].life;
+    let eff = catalog::kaerveks_torch().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 3);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life1 - 3, "X=3 → 3 damage");
+}
+
+/// Seismic Spike destroys a land and refunds {R}{R}.
+#[test]
+fn seismic_spike_destroys_land_and_ramps() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let eff = catalog::seismic_spike().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(land)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 2, "added RR");
+}
+
+/// Boulderfall divides 5 damage among targets (all onto one here).
+#[test]
+fn boulderfall_divides_five_damage() {
+    let mut g = two_player_game();
+    let life1 = g.players[1].life;
+    let eff = catalog::boulderfall().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life1 - 5, "all 5 damage to the sole target");
+}
