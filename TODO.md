@@ -105,14 +105,27 @@ Remaining short FIN cards blocked on one primitive each:
   `Move(Creature∩InGraveyard → Exile)` + `CreateTokenCopyOf { source: Target(0),
   override_pt, override_colors, extra_creature_types }`. Sin/Jenova need only
   their own override riders (tapped-entry, per-card color/type).
+- **FIN "Summon:" Saga-creature cycle** — the engine handles Enchantment
+  Creature — Saga bodies (chapters fire; CR 714 sacrifices after the last
+  chapter). Shipped: Choco/Mog, G.F. Ifrit, Anima, Esper Ramuh. Remaining, each
+  a straight saga_chapters build: Bahamut ({9} 9/9 fly — needs a Value for
+  "total mana value of other permanents you control"), Fat Chocobo (token w/
+  granted landfall ability), Fenrir (search + next-creature-counter + top-power
+  draw), G.F. Cerberus (surveil + copy-next-spell), Brynhildr (impulse + gestalt
+  haste), Choco/Mog done. Most reuse existing effects.
+- **"Tiered" spells** (Fire/Ice/Thunder/Restoration Magic, Limit Breaks) — still
+  want a "choose one additional cost" modal-with-per-mode-cost primitive; not yet
+  mapped to Spree/Escalate.
 
 ## Environment note
 
-The `crabomination_client` (Bevy GUI) cannot be built in the headless routine
-environment: `wayland-sys`'s build script fails (`wayland-client.pc` absent, no
-`PKG_CONFIG_PATH`). Client-only changes therefore can't be compiled/tested here
-— keep them to string/label edits verifiable by inspection, or defer to a
-desktop session (see the `verifier-client` skill).
+The `crabomination_client` (Bevy GUI) needs system libs the base image lacks.
+They install cleanly via apt in the routine environment:
+`apt-get update && apt-get install -y libwayland-dev libasound2-dev
+libudev-dev libxkbcommon-dev`. After that `cargo build/test -p
+crabomination_client` compiles (first build ~6 min). The GUI still can't be
+*run* headless (no GPU/display — see the `verifier-client` skill), but client
+code and its unit tests now compile and test here.
 
 ## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`–`recent101`)
 

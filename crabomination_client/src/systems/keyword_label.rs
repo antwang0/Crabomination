@@ -175,6 +175,17 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // (Sea Serpent, Dandân) — a conditional attacker worth flagging so the
         // player sees why it can't always be declared.
         CanAttackOnlyIfDefenderControls(_) => "Atk?",
+        // "Can attack only if you control a [permanent]" (the you-side mirror).
+        CanAttackOnlyIfYouControl(_) => "Atk?",
+        // "Can't attack/block unless you control N or more [filter]" (Topiary
+        // Stomper, Lambholt Pacifist, Olog-hai Crusher) — surface which side is
+        // gated so the player sees why it can't be declared.
+        CantAttackOrBlockUnlessYouControlCount { attack_only, block_only, .. } => {
+            if *attack_only { "Atk?" } else if *block_only { "Blk?" } else { "A/B?" }
+        }
+        // "Can't attack or block unless it has an even number of counters on it"
+        // (Sab-Sunen) — a live combat gate that flips as counters change.
+        CantAttackOrBlockUnlessEvenCounters => "Even?",
         _ => return None,
     })
 }
@@ -389,6 +400,21 @@ mod tests {
             keyword_strip(&[Keyword::CantAttackUnlessCastCreatureThisTurn]),
             "Atk?"
         );
+    }
+
+    #[test]
+    fn strip_surfaces_conditional_attack_block_gates() {
+        use crabomination::card::SelectionRequirement;
+        assert_eq!(keyword_strip(&[Keyword::CanAttackOnlyIfYouControl(Box::new(
+            SelectionRequirement::Creature))]), "Atk?");
+        assert_eq!(keyword_strip(&[Keyword::CantAttackOrBlockUnlessEvenCounters]), "Even?");
+        let gate = |a, b| Keyword::CantAttackOrBlockUnlessYouControlCount {
+            filter: Box::new(SelectionRequirement::Land),
+            min: 7, attack_only: a, block_only: b, exclude_self: false,
+        };
+        assert_eq!(keyword_strip(&[gate(true, false)]), "Atk?");
+        assert_eq!(keyword_strip(&[gate(false, true)]), "Blk?");
+        assert_eq!(keyword_strip(&[gate(false, false)]), "A/B?");
     }
 
     #[test]

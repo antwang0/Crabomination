@@ -113,6 +113,19 @@ exercising each) was elided in a compaction pass; recover it from
   include statics-/equip-granted SpellCast triggers (Red Mage's Rapier, Black
   Mage's Rod), and unified poison scaling through
   `GameState::scaled_player_counter_count` (Winding Constrictor boosts poison).
+- **LKI / equip / zone / saga primitives (modern_decks — FIN, this run):**
+  CR 603.10 granted-type death LKI — `GameState::dying_snapshot` stamps a
+  leaving permanent's *computed* (layer-4) creature types into the death
+  snapshot, and `R::HasCreatureType` reads computed types for battlefield
+  permanents, so "when a [type] you control dies" fires for granted types
+  (Jenova's Mutant); plus a dead-*subject* LKI (`resolving_lki_subject` +
+  `lki_snapshot`) so "draw equal to its power" reads the dead creature's
+  counter-boosted P/T. `EquipBonus.set_base_pt_controller_life` (host base P/T =
+  controller's live life total — Aettir and Priwen); `EquipScale` derives
+  `Default`. `Effect::SearchLibraryOrGraveyard` (dual-zone tutor — Delivery
+  Moogle). **Saga creatures** (Enchantment Creature — Saga) work through the
+  existing saga machinery: chapters fire and the CR 714 saga rule sacrifices
+  after the final chapter on a creature body (the FIN "Summon:" cycle).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
