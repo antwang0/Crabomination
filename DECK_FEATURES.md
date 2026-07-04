@@ -33,7 +33,15 @@ least one test in `crabomination/src/tests/modern.rs`. OTJ Spree spells live in
 `catalog::sets::decks::recent66` (tests `tests/recent66.rs`).
 
 All Modern-supplement cards are wired (including Karn, Scion of Urza and
-Tezzeret, Cruel Captain, on real oracle text).
+Tezzeret, Cruel Captain, on real oracle text). A later cube sweep added a batch
+of classic staples riding existing primitives — burn (Chandra's Ignition,
+Psionic Blast, Reckless Rage, Electrostatic Bolt, Kaervek's Torch, Boulderfall,
+Flame Jab), land destruction (Molten Rain, Rain of Tears/Salt, Choking Sands,
+Seismic Spike, Fissure), removal (Kill Shot, Assassinate, Afterlife,
+Excommunicate), card advantage (Weave Fate, Pilfered Plans, Aggressive Urge,
+Sudden Impact, Recoup), tokens (Bestial Menace), a fight (Wild Instincts), a
+combat wheel (Barbed Shocker), and simple Equipment (Short Bow, Neurok
+Hoversail, Leather Armor).
 
 `catalog::sets::decks::recent` adds recent-set staples (MH3/BLB/DSK/OTJ/FDN/…)
 — Questing Beast, Vaultborn Tyrant, Emberheart Challenger, Eldrazi Linebreaker,
