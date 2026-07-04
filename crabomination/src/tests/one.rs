@@ -185,3 +185,69 @@ fn sinew_dancer_corrupted_ability_gated() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).unwrap().tapped, "target creature tapped");
 }
+
+/// Vivisection Evangelist destroys an opponent's creature on ETB only when
+/// Corrupted (CR 702.166); otherwise the trigger doesn't fire.
+#[test]
+fn vivisection_evangelist_corrupted_etb_destroy() {
+    let cast = |g: &mut GameState, target: Option<Target>| {
+        let id = g.add_card_to_hand(0, catalog::vivisection_evangelist());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Vivisection Evangelist");
+        drain_stack(g);
+    };
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Not corrupted → the ETB's intervening-if fails, no destroy.
+    cast(&mut g, None);
+    assert!(g.battlefield_find(foe).is_some(), "no destroy below 3 poison");
+    // Corrupted → the ETB destroys the opponent's creature (target bound at cast).
+    g.players[1].poison_counters = 3;
+    cast(&mut g, Some(Target::Permanent(foe)));
+    assert!(g.battlefield_find(foe).is_none(), "Corrupted ETB destroyed the creature");
+}
+
+/// Ravenous Necrotitan makes you sacrifice a creature on ETB unless Corrupted.
+#[test]
+fn ravenous_necrotitan_sacrifices_unless_corrupted() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let titan = g.add_card_to_hand(0, catalog::ravenous_necrotitan());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: titan, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ravenous Necrotitan");
+    drain_stack(&mut g);
+    // Not corrupted → a creature was sacrificed (the weakest — the 2/2 bear).
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed a creature (not Corrupted)");
+}
+
+/// Fleshless Gladiator returns itself tapped from the graveyard while Corrupted,
+/// costing 1 life.
+#[test]
+fn fleshless_gladiator_corrupted_graveyard_return() {
+    let mut g = two_player_game();
+    let glad = g.add_card_to_graveyard(0, catalog::fleshless_gladiator());
+    g.players[1].poison_counters = 3; // Corrupted on
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: glad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate from graveyard");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(glad).expect("returned to battlefield");
+    assert!(back.tapped, "returned tapped");
+    assert_eq!(g.players[0].life, life0 - 1, "lost 1 life");
+}

@@ -6897,6 +6897,9 @@ static ONE: &[Factory] = &[
     super::one::apostle_of_invasion,
     super::one::bloated_contaminator,
     super::one::sinew_dancer,
+    super::one::vivisection_evangelist,
+    super::one::ravenous_necrotitan,
+    super::one::fleshless_gladiator,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

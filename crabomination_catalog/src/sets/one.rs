@@ -174,16 +174,108 @@ pub fn incisor_glider() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
-                .with_filter(Predicate::CorruptedActive { who: PlayerRef::You }),
-            effect: Effect::PumpPT {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::ONE,
-                toughness: Value::ONE,
-                duration: crate::effect::Duration::EndOfTurn,
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::CorruptedActive { who: PlayerRef::You },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: crate::effect::Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vivisection Evangelist — {3}{W}{B} Creature — Phyrexian Cleric 4/4 with
+/// vigilance. Corrupted (CR 702.166) — when it enters, if an opponent has three
+/// or more poison counters, destroy target creature or planeswalker an opponent
+/// controls.
+pub fn vivisection_evangelist() -> CardDefinition {
+    CardDefinition {
+        name: "Vivisection Evangelist",
+        cost: cost(&[generic(3), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::CorruptedActive { who: PlayerRef::You },
+            then: Box::new(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ravenous Necrotitan — {2}{B}{B} Creature — Phyrexian Horror 6/6. Corrupted
+/// (CR 702.166) — when it enters, sacrifice a creature unless an opponent has
+/// three or more poison counters.
+pub fn ravenous_necrotitan() -> CardDefinition {
+    CardDefinition {
+        name: "Ravenous Necrotitan",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::CorruptedActive { who: PlayerRef::You },
+            then: Box::new(Effect::Noop),
+            else_: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::You),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fleshless Gladiator — {1}{B} Creature — Phyrexian Skeleton 2/2. Corrupted
+/// (CR 702.166) — {2}{B}: return this card from your graveyard to the
+/// battlefield tapped and lose 1 life (only while an opponent has 3+ poison).
+pub fn fleshless_gladiator() -> CardDefinition {
+    CardDefinition {
+        name: "Fleshless Gladiator",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            condition: Some(Predicate::CorruptedActive { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }

@@ -179,6 +179,18 @@ Remaining short FIN cards blocked on one primitive each:
     The Darkness Crystal, Lightning, Vanille's meld. (Kain, Stiltzkin, Fenrir,
     Brynhildr, Garnet, Vincent's Limit Break now shipped.)
 
+## Discovered engine follow-ups (claude/modern_decks)
+
+- **Ability-word `Predicate` as an `EventSpec.filter` on a SelfSource trigger may
+  not gate.** A `SelfSource` ETB/attack trigger whose intervening-if is a
+  no-subject game-state predicate (`Predicate::CorruptedActive`) fired even when
+  the predicate was false — the Corrupted ONE cards (Vivisection Evangelist,
+  Incisor Glider) had to move the condition into the effect body
+  (`Effect::If { cond: CorruptedActive, .. }`) to gate correctly. Investigate
+  whether SelfSource ETB/attack trigger collection evaluates `EventSpec.filter`;
+  if not, either fix the collection path or document that no-subject filters must
+  be modeled as `Effect::If`.
+
 ## Environment note
 
 The `crabomination_client` (Bevy GUI) needs system libs the base image lacks.
