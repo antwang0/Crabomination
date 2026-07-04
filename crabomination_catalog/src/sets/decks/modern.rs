@@ -61269,3 +61269,113 @@ pub fn bestial_menace() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wild Instincts — {3}{G} sorcery. Target creature you control gets +2/+2 and
+/// fights target creature an opponent controls.
+pub fn wild_instincts() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Instincts",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Weave Fate — {3}{U} instant. Draw two cards.
+pub fn weave_fate() -> CardDefinition {
+    CardDefinition {
+        name: "Weave Fate",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Pilfered Plans — {1}{U}{B} sorcery. Target player mills two cards. Draw two.
+pub fn pilfered_plans() -> CardDefinition {
+    CardDefinition {
+        name: "Pilfered Plans",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: target_filtered(SelectionRequirement::Player), amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Short Bow — {2} Equipment. Equipped creature gets +1/+1 and has vigilance and
+/// reach. Equip {1}.
+pub fn short_bow() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Short Bow",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Vigilance, Keyword::Reach],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Neurok Hoversail — {1} Equipment. Equipped creature has flying. Equip {2}.
+pub fn neurok_hoversail() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Neurok Hoversail",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Leather Armor — {1} Equipment. Equipped creature gets +0/+1 and has ward {1}.
+/// Equip {0}. (The "once each turn" equip restriction is omitted.)
+pub fn leather_armor() -> CardDefinition {
+    use crate::card::{EquipBonus, WardCost};
+    CardDefinition {
+        name: "Leather Armor",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[]))],
+        equipped_bonus: Some(EquipBonus {
+            toughness: 1,
+            keywords: vec![Keyword::Ward(WardCost::generic(1))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

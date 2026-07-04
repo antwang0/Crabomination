@@ -66291,3 +66291,83 @@ fn bestial_menace_makes_three_beasts() {
         assert!(g.battlefield.iter().any(|c| c.definition.name == name), "made a {name}");
     }
 }
+
+/// Wild Instincts pumps your creature and fights an opponent's.
+#[test]
+fn wild_instincts_pumps_and_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies to 4
+    let eff = catalog::wild_instincts().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(mine), Target::Permanent(theirs)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's creature died to the fight");
+    assert!(g.battlefield_find(mine).is_some(), "your pumped 4/4 survived their 2");
+}
+
+/// Weave Fate draws two.
+#[test]
+fn weave_fate_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let hand0 = g.players[0].hand.len();
+    let eff = catalog::weave_fate().effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two");
+}
+
+/// Pilfered Plans mills a player and draws two.
+#[test]
+fn pilfered_plans_mills_then_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::forest()); }
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let gy1 = g.players[1].graveyard.len();
+    let hand0 = g.players[0].hand.len();
+    let eff = catalog::pilfered_plans().effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].graveyard.len(), gy1 + 2, "milled two");
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two");
+}
+
+/// Short Bow grants +1/+1, vigilance, and reach to the equipped creature.
+#[test]
+fn short_bow_grants_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bow = g.add_card_to_battlefield(0, catalog::short_bow());
+    g.battlefield_find_mut(bow).unwrap().attached_to = Some(hero);
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach));
+}
+
+/// Neurok Hoversail grants flying.
+#[test]
+fn neurok_hoversail_grants_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sail = g.add_card_to_battlefield(0, catalog::neurok_hoversail());
+    g.battlefield_find_mut(sail).unwrap().attached_to = Some(hero);
+    assert!(g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying), "flying granted");
+}
+
+/// Leather Armor grants +0/+1 and ward.
+#[test]
+fn leather_armor_grants_toughness_and_ward() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armor = g.add_card_to_battlefield(0, catalog::leather_armor());
+    g.battlefield_find_mut(armor).unwrap().attached_to = Some(hero);
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "+0/+1");
+    assert!(cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "ward granted");
+}
