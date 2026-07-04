@@ -7084,3 +7084,38 @@ pub fn yshtola_rhul() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Beatrix, Loyal General — {4}{W}{W} 4/4 Legendary Human Soldier, vigilance.
+/// At the beginning of combat on your turn, attach any number of Equipment you
+/// control to target creature you control (modeled as "attach all of them").
+pub fn beatrix_loyal_general() -> CardDefinition {
+    CardDefinition {
+        name: "Beatrix, Loyal General",
+        cost: cost(&[generic(4), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Attach {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}

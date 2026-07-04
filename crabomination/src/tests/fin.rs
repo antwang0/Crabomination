@@ -4401,3 +4401,20 @@ fn yshtola_rhul_blinks_and_extends_first_end_step() {
     assert!(g.battlefield_find(ally).is_some(), "creature blinked back onto the battlefield");
     assert_eq!(g.additional_end_steps, 1, "first end step banks an extra");
 }
+
+/// Beatrix attaches every Equipment you control to the chosen creature at
+/// combat.
+#[test]
+fn beatrix_attaches_all_equipment_at_combat() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let e1 = g.add_card_to_battlefield(0, catalog::genji_glove());
+    let e2 = g.add_card_to_battlefield(0, catalog::phoenix_down()); // artifact, not Equipment
+    g.add_card_to_battlefield(0, catalog::beatrix_loyal_general());
+    let eff = catalog::beatrix_loyal_general().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    ctx.targets = vec![Target::Permanent(hero)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(e1).unwrap().attached_to, Some(hero), "Equipment attached");
+    assert_eq!(g.battlefield_find(e2).unwrap().attached_to, None, "non-Equipment untouched");
+}

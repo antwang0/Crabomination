@@ -5553,6 +5553,7 @@ static FIN: &[Factory] = &[
     super::fin::ragnarok_divine_deliverance,
     super::fin::omega_heartless_evolution,
     super::fin::yshtola_rhul,
+    super::fin::beatrix_loyal_general,
     super::fin::circle_of_power,
     super::fin::unexpected_request,
     super::fin::resentful_revelation,
