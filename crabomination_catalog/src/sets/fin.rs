@@ -704,11 +704,13 @@ pub fn sazh_katzroy() -> CardDefinition {
     }
 }
 
-/// Vanille, Cheerful L'Cie — {3}{G} 3/2 Human Cleric. ETB: mill two, then return
-/// a permanent card from your graveyard to your hand. (Meld half omitted.)
+/// Vanille, Cheerful l'Cie — {3}{G} 3/2 Human Cleric. ETB: mill two, then
+/// return a permanent card from your graveyard to your hand. At your first
+/// main phase you may pay {3}{B}{G} to meld her with Fang, Fearless l'Cie
+/// into Ragnarok, Divine Deliverance.
 pub fn vanille_cheerful_lcie() -> CardDefinition {
     CardDefinition {
-        name: "Vanille, Cheerful L'Cie",
+        name: "Vanille, Cheerful l'Cie",
         cost: cost(&[generic(3), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
@@ -718,15 +720,32 @@ pub fn vanille_cheerful_lcie() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::PreCombatMain),
+                    EventScope::YourControl,
                 ),
-                to: ZoneDest::Hand(PlayerRef::You),
+                effect: Effect::MayPay {
+                    description: "Pay {3}{B}{G} to meld Vanille and Fang into Ragnarok?".into(),
+                    mana_cost: cost(&[generic(3), b(), g()]),
+                    body: Box::new(Effect::Meld {
+                        partner: "Fang, Fearless l'Cie".into(),
+                        into: "Ragnarok, Divine Deliverance".into(),
+                    }),
+                    else_: None,
+                },
             },
-        ]))],
+        ],
         ..Default::default()
     }
 }
@@ -8375,6 +8394,175 @@ pub fn quina_qu_gourmet() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Triple Triad — {3}{R}{R}{R} Enchantment. At your upkeep, each player exiles
+/// their library top; this turn you may play yours free plus each other
+/// exiled card with lesser mana value.
+pub fn triple_triad() -> CardDefinition {
+    CardDefinition {
+        name: "Triple Triad",
+        cost: cost(&[generic(3), r(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::ExileEachTopFreePlayLesser,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Choco, Seeker of Paradise — {1}{G}{W}{U} 3/5 Bird. Whenever one or more
+/// Birds you control attack, look at that many top cards: one to hand, lands
+/// tapped onto the battlefield, rest to graveyard. Landfall — +1/+0 EOT.
+pub fn choco_seeker_of_paradise() -> CardDefinition {
+    CardDefinition {
+        name: "Choco, Seeker of Paradise",
+        cost: cost(&[generic(1), g(), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec {
+                    once_per_turn: true,
+                    ..EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::HasCreatureType(CreatureType::Bird),
+                        },
+                    )
+                },
+                effect: Effect::LookTopTakeOneDeployLandsRestGraveyard {
+                    count: Value::count(Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Bird)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::IsAttacking),
+                    )),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Land,
+                    }),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Firion, Wild Rose Warrior — {2}{R} 3/3 Human Rebel Warrior. Equipped
+/// creatures you control have haste. Whenever a nontoken Equipment you
+/// control enters, mint a copy with equip {2} cheaper; sacrifice the copy at
+/// the next upkeep.
+pub fn firion_wild_rose_warrior() -> CardDefinition {
+    CardDefinition {
+        name: "Firion, Wild Rose Warrior",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Equipped creatures you control have haste.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: SelectionRequirement::IsEquipped,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Haste],
+                opponents: false,
+                only_your_turn: false,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                        .and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::TriggerSource,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                },
+                Effect::ReduceEquipCost { what: Selector::LastCreatedToken, amount: 2 },
+                Effect::SacrificeAtNextUpkeep { what: Selector::LastCreatedToken },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stolen Uniform — {U} Instant. Gain control of target Equipment until end
+/// of turn and attach it to target creature you control; it unattaches at the
+/// next end step (approximating the printed lose-control unattach rider).
+pub fn stolen_uniform() -> CardDefinition {
+    CardDefinition {
+        name: "Stolen Uniform",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                },
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Attach {
+                what: Selector::Target(1),
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::AtNextEndStep {
+                body: Box::new(Effect::Unattach { what: Selector::Target(1) }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Memories Returning — {2}{U}{U} Sorcery, Flashback {7}{U}{U}. Reveal five;
+/// alternating picks put three in your hand and two on the bottom.
+pub fn memories_returning() -> CardDefinition {
+    CardDefinition {
+        name: "Memories Returning",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(7), u(), u()]))],
+        effect: Effect::RevealFiveDraftAgainstOpponent,
         ..Default::default()
     }
 }

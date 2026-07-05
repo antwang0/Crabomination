@@ -12090,6 +12090,186 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AtNextEndStep { body } => {
+                // Capture the current targets so `Selector::Target(n)` in the
+                // body re-resolves at fire time. DelayedTrigger carries one
+                // captured target; rewrite slot references to slot 0.
+                let captured = ctx.targets.get(1).or_else(|| ctx.targets.first()).cloned();
+                let mut effect = (**body).clone();
+                if ctx.targets.len() > 1 {
+                    // Body references Target(1) — remap to the captured slot.
+                    fn remap(e: &mut Effect) {
+                        if let Effect::Unattach { what } = e
+                            && matches!(what, Selector::Target(1) | Selector::TargetFiltered { slot: 1, .. })
+                        {
+                            *what = Selector::Target(0);
+                        }
+                    }
+                    remap(&mut effect);
+                }
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::NextEndStep,
+                    effect,
+                    target: captured,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::Unattach { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.attached_to = None;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReduceEquipCost { what, amount } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let def = std::sync::Arc::make_mut(&mut c.definition);
+                        for kw in def.keywords.iter_mut() {
+                            if let crate::card::Keyword::Equip(cost) = kw {
+                                cost.reduce_generic(*amount);
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeAtNextUpkeep { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: id,
+                        kind: crate::game::types::DelayedKind::YourNextUpkeep,
+                        effect: Effect::SacrificeSource,
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::RevealFiveDraftAgainstOpponent => {
+                let p = ctx.controller;
+                let mut pool: Vec<CardId> =
+                    self.players[p].library.iter().take(5).map(|c| c.id).collect();
+                let mv = |g: &Self, id: CardId| {
+                    g.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == id)
+                        .map(|c| c.definition.cost.cmc())
+                        .unwrap_or(0)
+                };
+                // me-hand, opp-bottom, me-hand, opp-bottom, me-hand — both
+                // sides greedily take/deny the highest mana value.
+                for (i, to_hand) in [true, false, true, false, true].into_iter().enumerate() {
+                    if pool.is_empty() {
+                        break;
+                    }
+                    let _ = i;
+                    let pick = *pool.iter().max_by_key(|id| mv(self, **id)).unwrap();
+                    pool.retain(|id| *id != pick);
+                    if to_hand {
+                        self.move_card_to(
+                            pick,
+                            &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
+                            ctx,
+                            events,
+                        );
+                    } else if let Some(card) = Self::take_card(&mut self.players[p].library, pick)
+                    {
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LookTopTakeOneDeployLandsRestGraveyard { count } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let looked: Vec<CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if looked.is_empty() {
+                    return Ok(());
+                }
+                // Auto-pick to hand: highest-MV nonland first, else highest MV.
+                let pick = looked
+                    .iter()
+                    .copied()
+                    .max_by_key(|id| {
+                        self.players[p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (!c.definition.is_land(), c.definition.cost.cmc()))
+                            .unwrap_or((false, 0))
+                    })
+                    .unwrap();
+                self.move_card_to(pick, &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)), ctx, events);
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(p),
+                    tapped: true,
+                };
+                for id in looked.into_iter().filter(|id| *id != pick) {
+                    let is_land = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == id)
+                        .is_some_and(|c| c.definition.is_land());
+                    if is_land {
+                        self.move_card_to(id, &dest, ctx, events);
+                    } else {
+                        self.move_card_to(id, &crate::effect::ZoneDest::Graveyard, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileEachTopFreePlayLesser => {
+                let me = ctx.controller;
+                let granted_turn = self.turn_number;
+                let seats: Vec<usize> = (0..self.players.len())
+                    .filter(|&p| !self.players[p].eliminated)
+                    .collect();
+                let mut exiled: Vec<(usize, CardId, u32)> = Vec::new();
+                for p in seats {
+                    let Some(top_id) = self.players[p].library.first().map(|c| c.id) else {
+                        continue;
+                    };
+                    self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter().find(|c| c.id == top_id) {
+                        exiled.push((p, top_id, c.definition.cost.cmc()));
+                    }
+                }
+                let my_mv = exiled.iter().find(|(p, _, _)| *p == me).map(|(_, _, mv)| *mv);
+                for (p, id, mv) in exiled {
+                    let playable = p == me || my_mv.is_some_and(|mine| mv < mine);
+                    if playable
+                        && let Some(card) = self.find_card_anywhere_mut(id)
+                    {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: me,
+                            granted_turn,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            exile_after: false,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AddCardTypeIndefinitely { what, card_type } => {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,

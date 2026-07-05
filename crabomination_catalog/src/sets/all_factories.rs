@@ -5704,6 +5704,11 @@ static FIN: &[Factory] = &[
     super::fin::gilgamesh_master_at_arms,
     super::fin::random_encounter,
     super::fin::quina_qu_gourmet,
+    super::fin::triple_triad,
+    super::fin::choco_seeker_of_paradise,
+    super::fin::firion_wild_rose_warrior,
+    super::fin::stolen_uniform,
+    super::fin::memories_returning,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

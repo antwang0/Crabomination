@@ -2583,6 +2583,34 @@ pub enum Effect {
     /// match; the new attacker hits the same defender the triggering creature
     /// (`trigger_source`) is attacking.
     LookTopMayDeployAttacking { count: Value, filter: SelectionRequirement },
+    /// Unattach each resolved Equipment/Aura-like permanent from its host
+    /// (Stolen Uniform's end-of-theft cleanup). Auras die to SBA afterward;
+    /// Equipment simply sits unattached.
+    Unattach { what: Selector },
+    /// Run `body` at the beginning of the next end step, capturing this
+    /// resolution's slot-0/1 targets (a generic `DelayedKind::NextEndStep`
+    /// wrapper — Stolen Uniform's delayed unattach).
+    AtNextEndStep { body: Box<Effect> },
+    /// Firion — reduce the generic portion of each resolved permanent's
+    /// printed Equip cost by `amount` (stamped onto the minted token copy).
+    ReduceEquipCost { what: Selector, amount: u32 },
+    /// Register a delayed trigger sacrificing each resolved permanent at the
+    /// beginning of the controller's next upkeep (Firion's copy token).
+    SacrificeAtNextUpkeep { what: Selector },
+    /// Memories Returning — reveal the top five cards; alternating picks
+    /// (you take one to hand, an opponent bottoms one, twice each) leave you
+    /// three cards in hand and two on the bottom. Auto-heuristics: you take
+    /// the highest mana value, the opponent bottoms the highest remaining.
+    RevealFiveDraftAgainstOpponent,
+    /// Choco — look at the top `count` cards of your library; put one into
+    /// your hand (auto-pick: highest-MV nonland, else highest-MV), then put
+    /// every land card from among the rest onto the battlefield tapped and
+    /// the remainder into your graveyard.
+    LookTopTakeOneDeployLandsRestGraveyard { count: Value },
+    /// Triple Triad — each player exiles their library top. Until end of
+    /// turn the controller may play the card they own exiled this way for
+    /// free, plus each other card exiled this way with lesser mana value.
+    ExileEachTopFreePlayLesser,
     /// Random Encounter — shuffle your library, mill `amount`; put each
     /// creature card milled this way onto the battlefield with haste, and
     /// return those creatures to their owners' hands at the beginning of the

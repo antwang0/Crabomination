@@ -5353,3 +5353,157 @@ fn quina_adds_a_frog_to_token_mints() {
     assert_eq!(g.battlefield_find(quina).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Frog").count(), 0);
 }
+
+/// Triple Triad exiles each player's library top at your upkeep; your card is
+/// free-playable, opponents' cards only when cheaper than yours.
+#[test]
+fn triple_triad_grants_lesser_mv_plays() {
+    let mut g = two_player_game();
+    let tt = g.add_card_to_battlefield(0, catalog::triple_triad());
+    let mine = g.add_card_to_library(0, catalog::craw_wurm()); // MV 6
+    let theirs = g.add_card_to_library(1, catalog::lightning_bolt()); // MV 1 < 6
+    let eff = catalog::triple_triad().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(tt, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let my_card = g.exile.iter().find(|c| c.id == mine).expect("mine exiled");
+    assert_eq!(my_card.may_play_until.as_ref().map(|m| m.player), Some(0), "mine playable");
+    let their_card = g.exile.iter().find(|c| c.id == theirs).expect("theirs exiled");
+    assert_eq!(their_card.may_play_until.as_ref().map(|m| m.player), Some(0),
+        "cheaper opposing card playable by me");
+}
+
+/// Triple Triad: an opposing card with equal/greater mana value is not
+/// playable.
+#[test]
+fn triple_triad_blocks_greater_mv() {
+    let mut g = two_player_game();
+    let tt = g.add_card_to_battlefield(0, catalog::triple_triad());
+    g.add_card_to_library(0, catalog::lightning_bolt()); // mine MV 1
+    let theirs = g.add_card_to_library(1, catalog::craw_wurm()); // MV 6 ≥ 1
+    let eff = catalog::triple_triad().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(tt, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let their_card = g.exile.iter().find(|c| c.id == theirs).expect("theirs exiled");
+    assert!(their_card.may_play_until.is_none(), "bigger card not playable");
+}
+
+/// Choco's attack trigger digs as deep as you have attacking Birds: one card
+/// to hand, lands deployed tapped, the rest binned.
+#[test]
+fn choco_digs_on_bird_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let choco = g.add_card_to_battlefield(0, catalog::choco_seeker_of_paradise());
+    let eagle = g.add_card_to_battlefield(0, catalog::sea_eagle()); // second Bird
+    g.clear_sickness(choco);
+    g.clear_sickness(eagle);
+    // Top two (two attacking Birds): a wurm (→ hand) and a forest (→ battlefield).
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: choco, target: AttackTarget::Player(1) },
+        Attack { attacker: eagle, target: AttackTarget::Player(1) },
+    ])).expect("Birds attack");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wurm), "wurm to hand");
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped), "forest deployed tapped");
+    // Landfall rider: the deployed forest pumped Choco +1/+0.
+    assert_eq!(g.computed_permanent(choco).unwrap().power, 4, "3 + landfall 1");
+}
+
+/// Firion copies an entering nontoken Equipment (equip {2} cheaper) and
+/// sacrifices the copy at your next upkeep.
+#[test]
+fn firion_copies_equipment_then_sacrifices() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::firion_wild_rose_warrior());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let sword = g.add_card_to_hand(0, catalog::short_sword()); // {1}, equip {1}
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sword, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Short Sword");
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Short Sword")
+        .expect("token copy minted");
+    let equip = copy.definition.has_equip().expect("copy still has equip");
+    assert_eq!(equip.cmc(), 0, "equip 1 reduced by 2 floors at 0");
+    let copy_id = copy.id;
+    // Advance into our next upkeep — the copy goes away.
+    advance_to(&mut g, TurnStep::End);
+    while g.active_player_idx != 0 || g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(copy_id).is_none(), "copy sacrificed at upkeep");
+}
+
+/// Stolen Uniform borrows an opposing Equipment, attaches it to your
+/// creature, and unattaches it at the next end step (control reverts at
+/// cleanup).
+#[test]
+fn stolen_uniform_borrows_equipment() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(1, catalog::short_sword());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::stolen_uniform());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(sword)], mode: None, x_value: None,
+    }).expect("cast Stolen Uniform");
+    drain_stack(&mut g);
+    let eq = g.battlefield_find(sword).unwrap();
+    assert_eq!(eq.controller, 0, "stolen for the turn");
+    assert_eq!(eq.attached_to, Some(bear), "attached to my creature");
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, None, "unattached at end step");
+}
+
+/// Memories Returning drafts the top five: three to hand, two to the bottom.
+#[test]
+fn memories_returning_drafts_three_of_five() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_library(0, catalog::island()); // 6th card stays on top after
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::memories_returning());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Memories Returning");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3, "three of the five to hand");
+    assert_eq!(g.players[0].library.len(), 3, "island + two bottomed bears");
+}
+
+/// Vanille + Fang meld into Ragnarok at your first main phase for {3}{B}{G}.
+#[test]
+fn vanille_and_fang_meld_into_ragnarok() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let vanille = g.add_card_to_battlefield(0, catalog::vanille_cheerful_lcie());
+    let fang = g.add_card_to_battlefield(0, catalog::fang_fearless_lcie());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let eff = catalog::vanille_cheerful_lcie().triggered_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(vanille, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(vanille).is_none(), "Vanille exiled into the meld");
+    assert!(g.battlefield_find(fang).is_none(), "Fang exiled into the meld");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Ragnarok, Divine Deliverance"),
+        "Ragnarok on the battlefield");
+}
