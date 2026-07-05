@@ -8018,3 +8018,159 @@ pub fn noctis_prince_of_lucis() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vaan, Street Thief — {2}{R} 2/2 Human Scout. Whenever one or more Scouts,
+/// Pirates, and/or Rogues you control deal combat damage to a player, exile
+/// that player's library top; you may cast it this turn, else mint a Treasure.
+/// Whenever you cast a spell you don't own, put a +1/+1 counter on each
+/// Scout, Pirate, and Rogue you control.
+pub fn vaan_street_thief() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    use crate::effect::shortcut::mint_treasures;
+    let thief_types = || {
+        SelectionRequirement::HasCreatureType(CreatureType::Scout)
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Pirate))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Rogue))
+    };
+    CardDefinition {
+        name: "Vaan, Street Thief",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec {
+                    once_per_turn: true,
+                    ..EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                        .with_filter(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: thief_types(),
+                        })
+                },
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::Target(0),
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    uncast_penalty: Some(Box::new(mint_treasures(1))),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::CastSpellMatches(SelectionRequirement::Not(Box::new(
+                        SelectionRequirement::OwnedByYou,
+                    ))),
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        thief_types().and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Darkness Crystal — {2}{B}{B} Legendary Artifact. Black spells cost {1}
+/// less. Nontoken opponent creatures that would die are exiled instead (+2
+/// life). {4}{B}{B}, {T}: return a creature card exiled with it to the
+/// battlefield tapped under your control with two extra +1/+1 counters.
+pub fn the_darkness_crystal() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "The Darkness Crystal",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Black spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasColor(Color::Black),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "If a nontoken creature an opponent controls would die, instead exile it and you gain 2 life.",
+                effect: StaticEffect::ExileDyingOpponentCreatures {
+                    when_you_do: Some(Box::new(Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    })),
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), b(), b()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ExiledWithSource),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Summon: Leviathan — {4}{U}{U} Enchantment Creature — Saga Leviathan 6/6,
+/// ward {2}. I — return each creature that isn't a Kraken, Leviathan, Merfolk,
+/// Octopus, or Serpent to its owner's hand. II, III — until end of turn,
+/// whenever one of those types attacks, draw a card.
+pub fn summon_leviathan() -> CardDefinition {
+    let sea_types = || {
+        SelectionRequirement::HasCreatureType(CreatureType::Kraken)
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Leviathan))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Merfolk))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Octopus))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Serpent))
+    };
+    let chapter23 = || Effect::OnMatchingAttacksThisTurn {
+        filter: sea_types(),
+        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+    };
+    CardDefinition {
+        name: "Summon: Leviathan",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            creature_types: vec![CreatureType::Leviathan],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        saga_chapters: vec![
+            (1, Effect::Move {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(sea_types()))),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+            (2, chapter23()),
+            (3, chapter23()),
+        ],
+        ..Default::default()
+    }
+}

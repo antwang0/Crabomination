@@ -1504,6 +1504,10 @@ pub enum SelectionRequirement {
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
     InExile,
+    /// True when the candidate is an exile-zone card stamped
+    /// `exiled_with == source` — "target creature card exiled with [this]"
+    /// (The Darkness Crystal's recursion).
+    ExiledWithSource,
     /// True when the candidate has the greatest mana value among all
     /// permanents that match `inner` and are controlled by the same
     /// player as the candidate. Used by SOS End of the Hunt's

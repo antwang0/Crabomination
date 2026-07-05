@@ -172,6 +172,8 @@ impl Effect {
             Effect::GrantNextCreatureSpellKeyword { .. } => false,
             // Random graveyard pick at resolution — no cast-time target.
             Effect::ExileRandomGraveyardCopyTapped { .. } => false,
+            // Registers a floating trigger; no cast-time target.
+            Effect::OnMatchingAttacksThisTurn { .. } => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the
             // lowest-seat opponent, so no cast-time target is demanded.
             Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,

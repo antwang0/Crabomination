@@ -664,7 +664,7 @@ pub struct DelayedTrigger {
 }
 
 /// What kind of future event a delayed trigger waits for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DelayedKind {
     /// At the beginning of `controller`'s next upkeep.
     YourNextUpkeep,
@@ -701,6 +701,11 @@ pub enum DelayedKind {
     /// Fires per qualifying attacker (the attacker is the trigger source);
     /// expires when the controller's next turn begins.
     CreatureAttacksYouUntilYourNextTurn,
+    /// "Until end of turn, whenever a creature matching the filter attacks,
+    /// [body]" (Summon: Leviathan II/III). Fires per qualifying attacker —
+    /// any player's — with the attacker as the trigger source; the body runs
+    /// for the registering controller. Expires at cleanup.
+    MatchingCreatureAttacksThisTurn(crate::card::SelectionRequirement),
     /// "When [that permanent] leaves the battlefield, …" — fires when the
     /// watched card leaves the battlefield, any turn (not turn-scoped).
     /// Hofri Ghostforge's token rider.

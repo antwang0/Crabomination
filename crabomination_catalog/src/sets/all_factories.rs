@@ -5695,6 +5695,9 @@ static FIN: &[Factory] = &[
     super::fin::chocobo_kick,
     super::fin::sin_spiras_punishment,
     super::fin::noctis_prince_of_lucis,
+    super::fin::vaan_street_thief,
+    super::fin::the_darkness_crystal,
+    super::fin::summon_leviathan,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

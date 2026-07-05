@@ -8257,6 +8257,36 @@ impl GameState {
                     }
                 }
             }
+            // "Until end of turn, whenever a [filter] creature attacks, …"
+            // floating triggers (Summon: Leviathan II/III). Any player's
+            // qualifying attacker fires the registering controller's body.
+            let matching_watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    matches!(dt.kind, DelayedKind::MatchingCreatureAttacksThisTurn(_))
+                })
+                .cloned()
+                .collect();
+            for dt in matching_watchers {
+                let DelayedKind::MatchingCreatureAttacksThisTurn(ref filt) = dt.kind else {
+                    continue;
+                };
+                for &atk_id in &attackers {
+                    let matches = self
+                        .battlefield_find(atk_id)
+                        .is_some_and(|c| self.evaluate_requirement_on_card(filt, c, dt.controller));
+                    if matches {
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(
+                                    crate::game::effects::EntityRef::Permanent(atk_id),
+                                ))
+                                .build(),
+                        );
+                    }
+                }
+            }
         }
         // Turn-scoped "whenever a creature you control enters this turn"
         // delayed triggers (CR 603.4 — First Day of Class). Fire once per

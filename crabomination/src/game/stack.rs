@@ -521,7 +521,7 @@ impl GameState {
         let mut delayed_to_fire: Vec<DelayedFire> = Vec::new();
         let mut keep: Vec<DelayedTrigger> = Vec::new();
         for dt in std::mem::take(&mut self.delayed_triggers) {
-            let matches = match (dt.kind, step) {
+            let matches = match (&dt.kind, step) {
                 (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
                 (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => {
                     dt.controller == active
@@ -2117,6 +2117,7 @@ impl GameState {
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
                     | crate::game::types::DelayedKind::EachCombatThisTurn
+                    | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
             )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention

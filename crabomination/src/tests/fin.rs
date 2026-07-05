@@ -5077,3 +5077,134 @@ fn graveyard_artifact_cast_needs_noctis() {
         card_id: relic, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "no permission → rejected");
 }
+
+/// Vaan: a Rogue you control connecting exiles the victim's library top with a
+/// may-cast grant; casting the stolen card grows your Scouts/Pirates/Rogues.
+#[test]
+fn vaan_steals_on_tribal_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let vaan = g.add_card_to_battlefield(0, catalog::vaan_street_thief()); // Scout
+    let loot = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.clear_sickness(vaan);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: vaan, target: AttackTarget::Player(1),
+    }])).expect("Vaan attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let exiled = g.exile.iter().find(|c| c.id == loot).expect("victim's top card exiled");
+    assert!(exiled.may_play_until.is_some(), "may-cast grant stamped");
+}
+
+/// Vaan's second trigger: casting a spell you don't own puts a +1/+1 counter
+/// on each Scout/Pirate/Rogue you control.
+#[test]
+fn vaan_grows_thieves_on_stolen_cast() {
+    let mut g = two_player_game();
+    let vaan = g.add_card_to_battlefield(0, catalog::vaan_street_thief());
+    // A stolen card: owned by the opponent, in our hand.
+    let stolen = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let card = g.players[1].hand.iter().position(|c| c.id == stolen)
+        .map(|i| g.players[1].hand.remove(i)).unwrap();
+    g.players[0].hand.push(card);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: stolen, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the stolen bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(vaan).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Vaan (a Scout) got a +1/+1 counter");
+}
+
+/// The Darkness Crystal exiles dying opponent nontoken creatures (+2 life) and
+/// its ability returns the exiled card tapped under your control with two
+/// +1/+1 counters.
+#[test]
+fn darkness_crystal_exiles_then_recurs() {
+    let mut g = two_player_game();
+    let crystal = g.add_card_to_battlefield(0, catalog::the_darkness_crystal());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    g.battlefield_find_mut(victim).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "died → exiled instead");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+    // Recur it.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crystal, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate the crystal");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(victim).expect("creature returned");
+    assert_eq!(back.controller, 0, "under your control");
+    assert!(back.tapped, "enters tapped");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 2, "two extra counters");
+}
+
+/// The Darkness Crystal discounts black spells by {1}.
+#[test]
+fn darkness_crystal_discounts_black_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_darkness_crystal());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Anoint with Affliction: {1}{B} → {B} under the crystal.
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2 target
+    let spell = g.add_card_to_hand(0, catalog::anoint_with_affliction());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(small)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted cast for just {B}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == small), "bear exiled");
+}
+
+/// Summon: Leviathan chapter I bounces every non-sea creature; the Leviathan
+/// itself stays.
+#[test]
+fn summon_leviathan_chapter_one_bounces_landlubbers() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::summon_leviathan());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let merfolk = g.add_card_to_battlefield(1, catalog::merfolk_of_the_pearl_trident());
+    g.saga_advance(saga); // I
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "to owner's hand");
+    assert!(g.battlefield_find(merfolk).is_some(), "Merfolk stays");
+    assert!(g.battlefield_find(saga).is_some(), "the Leviathan stays");
+}
+
+/// Summon: Leviathan chapter II: until end of turn a sea-type attacking draws
+/// you a card — even an opponent's.
+#[test]
+fn summon_leviathan_chapter_two_draws_on_sea_attacks() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::summon_leviathan());
+    g.add_card_to_library(0, catalog::island());
+    let merfolk = g.add_card_to_battlefield(0, catalog::merfolk_of_the_pearl_trident());
+    g.clear_sickness(merfolk);
+    g.saga_advance(saga); // I
+    drain_stack(&mut g);
+    g.saga_advance(saga); // II — register the floating trigger
+    drain_stack(&mut g);
+    let hand = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: merfolk, target: AttackTarget::Player(1),
+    }])).expect("Merfolk attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew off the sea attack");
+}

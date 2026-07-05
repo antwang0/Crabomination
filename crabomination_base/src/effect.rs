@@ -3717,6 +3717,11 @@ pub enum Effect {
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.
     OnAttackedUntilYourNextTurn { body: Box<Effect> },
+    /// "Until end of turn, whenever a creature matching `filter` attacks,
+    /// [body]" — registers a turn-scoped floating trigger fired by any
+    /// player's qualifying attacker; the attacker is bound as
+    /// `Selector::TriggerSource`. Summon: Leviathan II/III.
+    OnMatchingAttacksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
     /// "Sacrifice a [filter] with the greatest mana value" picker.
     /// Mirrors `Sacrifice` but the candidate sort prefers maximum CMC.
     /// Used by Soul Shatter ("Each opponent sacrifices a creature or

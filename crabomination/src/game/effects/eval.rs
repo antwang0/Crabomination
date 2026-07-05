@@ -1987,6 +1987,9 @@ impl GameState {
                         .enumerate()
                         .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == *cid)),
                     R::InExile => self.exile.iter().any(|c| c.id == *cid),
+                    R::ExiledWithSource => source.is_some_and(|s| {
+                        self.exile.iter().any(|c| c.id == *cid && c.exiled_with == Some(s))
+                    }),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
                     // (b) have an MV ≥ every other matching permanent under
@@ -2242,6 +2245,8 @@ impl GameState {
                 .enumerate()
                 .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == card.id)),
             R::InExile => self.exile.iter().any(|c| c.id == card.id),
+            // Source-relative; this card-only path has no source id.
+            R::ExiledWithSource => card.exiled_with.is_some(),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
             // surface this filter).

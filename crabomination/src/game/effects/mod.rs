@@ -10225,6 +10225,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnMatchingAttacksThisTurn { filter, body } => {
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(
+                        filter.clone(),
+                    ),
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
             Effect::ClashWithOpponent { on_win } => {
                 // CR 701.30 — both reveal the top card; each may bottom it
                 // (seat-routed yes/no, so a networked human gets the prompt;
