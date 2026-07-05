@@ -3310,7 +3310,7 @@ pub fn crawling_filth() -> CardDefinition {
 }
 
 /// Rag Dealer — {B} Human Rogue 1/1. {2}{B}, {T}: Exile up to three target
-/// cards from a single graveyard. (Modeled as up to three from any graveyards.)
+/// cards from a single graveyard.
 pub fn rag_dealer() -> CardDefinition {
     CardDefinition {
         name: "Rag Dealer",
@@ -3322,7 +3322,7 @@ pub fn rag_dealer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(2), b()]),
-            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(3) },
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(3), of: None, single: true },
             ..Default::default()
         }],
         ..Default::default()
@@ -3355,7 +3355,6 @@ pub fn mistblade_shinobi() -> CardDefinition {
 
 /// Skullsnatcher — {1}{B} Rat Ninja 2/1. Ninjutsu {B}. Whenever it deals combat
 /// damage to a player, exile up to two target cards from that player's graveyard.
-/// (Modeled as up to two from any graveyards.)
 pub fn skullsnatcher() -> CardDefinition {
     CardDefinition {
         name: "Skullsnatcher",
@@ -3367,7 +3366,11 @@ pub fn skullsnatcher() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[b()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(2) },
+            effect: Effect::ExileUpToNFromGraveyards {
+                count: Value::Const(2),
+                of: Some(PlayerRef::Target(0)),
+                single: false,
+            },
         }],
         ..Default::default()
     }

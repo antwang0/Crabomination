@@ -34693,8 +34693,8 @@ fn thorn_of_amethyst_taxes_only_noncreature_spells() {
     let bear_id = g.add_card_to_hand(0, catalog::grizzly_bears());
     let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let bear = g.players[0].hand.iter().find(|c| c.id == bear_id).unwrap().clone();
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "noncreature taxed");
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bear, None), 0, "creature untaxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt, None, 0), 1, "noncreature taxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bear, None, 0), 0, "creature untaxed");
 }
 
 #[test]
@@ -34705,8 +34705,8 @@ fn lodestone_golem_taxes_nonartifact_spells() {
     let sol_id = g.add_card_to_hand(0, catalog::sol_ring());
     let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let sol = g.players[0].hand.iter().find(|c| c.id == sol_id).unwrap().clone();
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "nonartifact taxed");
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &sol, None), 0, "artifact untaxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt, None, 0), 1, "nonartifact taxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &sol, None, 0), 0, "artifact untaxed");
 }
 
 #[test]
@@ -60624,10 +60624,10 @@ fn jubilant_skybonder_taxes_opponent_spells_targeting_flyers() {
     let bolt = g.players[1].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let at_flyer = crate::game::Target::Permanent(skybonder);
     let at_ground = crate::game::Target::Permanent(ground);
-    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_flyer)), 2, "flyer taxed by 2");
-    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_ground)), 0, "ground creature untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_flyer), 0), 2, "flyer taxed by 2");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_ground), 0), 0, "ground creature untaxed");
     // The controller's own spells are never taxed.
-    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_flyer)), 0, "own spells untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_flyer), 0), 0, "own spells untaxed");
 }
 
 /// Lavabrink Venturer's ETB choice grants protection from the chosen parity:
@@ -66410,4 +66410,92 @@ fn recoup_grants_flashback_to_a_sorcery() {
     g.resolve_effect(&eff, &ctx).unwrap();
     let card = g.players[0].graveyard.iter().find(|c| c.id == sorc).expect("still in gy");
     assert!(card.granted_flashback_eot.is_some(), "flashback granted until end of turn");
+}
+
+/// Fireball divides X evenly (rounded down) among the chosen targets and
+/// costs {1} more per target beyond the first.
+#[test]
+fn fireball_divides_evenly_and_taxes_extra_targets() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fireball());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: Some(5),
+    })
+    .expect("X=5 two-target Fireball castable for R plus 6 (X + per-target tax)");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "tax consumed the 6th generic");
+    assert_eq!(g.players[1].life, 18, "player takes 5/2 = 2");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear takes 2 and dies");
+}
+
+/// A two-target Fireball without mana for the per-target {1} tax is rejected.
+#[test]
+fn fireball_extra_target_tax_must_be_paid() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fireball());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: Some(5),
+    }).is_err(), "X=5 + extra target needs R plus 6, only 5 generic available");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "cast reverted to hand");
+}
+
+/// Return to Dust exiles two targets during your main phase; the second
+/// target slot is rejected off-main-phase (single target still fine).
+#[test]
+fn return_to_dust_second_target_gated_on_main_phase() {
+    let mut g = two_player_game();
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let a1 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let a2 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::return_to_dust());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a1)),
+        additional_targets: vec![Target::Permanent(a2)],
+        mode: None,
+        x_value: None,
+    }).expect("two targets legal in caster's main phase");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a1) && g.exile.iter().any(|c| c.id == a2),
+        "both artifacts exiled");
+
+    // Off-main-phase: two targets rejected, one target accepted (instant).
+    let a3 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let a4 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id2 = g.add_card_to_hand(0, catalog::return_to_dust());
+    g.step = crate::game::TurnStep::Upkeep;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id2,
+        target: Some(Target::Permanent(a3)),
+        additional_targets: vec![Target::Permanent(a4)],
+        mode: None,
+        x_value: None,
+    }).is_err(), "second target only during your main phase");
+    g.perform_action(GameAction::CastSpell {
+        card_id: id2,
+        target: Some(Target::Permanent(a3)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("single target castable at instant speed");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a3), "single target exiled");
 }

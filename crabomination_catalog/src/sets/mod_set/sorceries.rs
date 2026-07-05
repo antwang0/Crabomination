@@ -939,17 +939,18 @@ pub fn commune_with_nature() -> CardDefinition {
     }
 }
 
-/// Fireball — {X}{R} Sorcery. Deals X damage to any target. (The "divide
-/// among additional targets for {1} more each" rider is not modeled; the
-/// common single-target line is faithful.)
+/// Fireball — {X}{R} Sorcery. Costs {1} more per target beyond the first;
+/// deals X damage divided evenly, rounded down, among any number of targets.
 pub fn fireball() -> CardDefinition {
     CardDefinition {
         name: "Fireball",
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
-            amount: Value::XFromCost,
+        cost_per_extra_target: 1,
+        effect: Effect::DealDamageDividedEvenly {
+            total: Value::XFromCost,
+            filter: SelectionRequirement::Any,
+            max_targets: 10,
         },
         ..Default::default()
     }

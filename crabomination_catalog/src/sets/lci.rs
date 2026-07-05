@@ -3565,7 +3565,7 @@ pub fn digsite_conservator() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             sorcery_speed: true,
-            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(4) },
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(4), of: None, single: false },
             ..Default::default()
         }],
         triggered_abilities: vec![on_dies(Effect::MayPay {

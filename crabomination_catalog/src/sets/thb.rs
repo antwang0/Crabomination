@@ -4193,6 +4193,8 @@ pub fn erebos_s_intervention() -> CardDefinition {
             ]),
             Effect::ExileUpToNFromGraveyards {
                 count: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
+                of: None,
+                single: false,
             },
         ]),
         ..Default::default()
@@ -4966,7 +4968,7 @@ pub fn the_binding_of_the_titans() -> CardDefinition {
         },
         saga_chapters: vec![
             (1, Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) }),
-            (2, Effect::ExileUpToNFromGraveyards { count: Value::Const(2) }),
+            (2, Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: false }),
             (
                 3,
                 Effect::Move {

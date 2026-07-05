@@ -177,12 +177,16 @@ pub(crate) fn extra_cost_for_spell(
     caster: usize,
     card: &crate::card::CardInstance,
     target: Option<&crate::game::Target>,
+    extra_targets: usize,
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut tax = 0u32;
     if state.players[caster].first_spell_tax_charges > 0 {
         tax += 1;
     }
+    // "Costs {N} more for each target beyond the first" (Fireball) — each
+    // filled additional target slot charges the card's per-target rider.
+    tax += card.definition.cost_per_extra_target * extra_targets as u32;
     // "Costs {N} more if it targets a [filter]" (Vanish into Eternity).
     if let Some((filter, n)) = &card.definition.cost_increase_if_targets
         && let Some(t) = target
@@ -4273,6 +4277,17 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // "If you cast this spell during your main phase, you may [pick an
+        // extra target]" (Return to Dust) — extra slots only on the caster's
+        // own main phase.
+        if card.definition.extra_targets_main_phase_only
+            && !additional_targets.is_empty()
+            && !(self.active_player_idx == p && self.step.is_main_phase())
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // CR 601.2b — additional cast costs ("As an additional cost to cast
         // this spell, sacrifice / discard …"). Validate payability up front
         // so an unpayable spell reverts to hand before any mana is spent;
@@ -4340,7 +4355,7 @@ impl GameState {
         {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(amt));
         }
-        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref(), additional_targets.len());
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -6445,7 +6460,7 @@ impl GameState {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
         }
-        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref(), additional_targets.len());
         if tax > 0 {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(tax));
@@ -6809,7 +6824,7 @@ impl GameState {
         } else {
             alt.mana_cost.clone()
         };
-        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref(), additional_targets.len());
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }

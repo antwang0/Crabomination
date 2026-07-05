@@ -2052,6 +2052,16 @@ pub struct CardDefinition {
     /// target at cast time.
     #[serde(default)]
     pub cost_increase_if_targets: Option<(SelectionRequirement, u32)>,
+    /// "This spell costs {N} more to cast for each target beyond the first"
+    /// (Fireball). Charged off the chosen target-slot count at cast time by
+    /// `extra_cost_for_spell`.
+    #[serde(default)]
+    pub cost_per_extra_target: u32,
+    /// "If you cast this spell during your main phase, you may [target one
+    /// additional …]" (Return to Dust). Casts with filled extra target slots
+    /// are rejected outside the caster's own main phase.
+    #[serde(default)]
+    pub extra_targets_main_phase_only: bool,
     /// Gate on casting via Flashback ("Corrupted — … this card has flashback"
     /// — Viral Spawning). Checked at the graveyard-cast gate.
     #[serde(default)]

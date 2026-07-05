@@ -1913,6 +1913,30 @@ impl GameState {
                 Ok(())
             }
 
+            // "Divided evenly, rounded down" (Fireball) — each still-present
+            // target takes total/n; the remainder is lost. No decision.
+            Effect::DealDamageDividedEvenly { total, .. } => {
+                let amt = self.evaluate_value(total, ctx).max(0) as u32;
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| match t {
+                        Target::Player(p) => *p < self.players.len(),
+                        Target::Permanent(id) => self.battlefield_find(*id).is_some(),
+                    })
+                    .cloned()
+                    .collect();
+                if amt == 0 || targets.is_empty() { return Ok(()); }
+                let per = amt / targets.len() as u32;
+                if per == 0 { return Ok(()); }
+                for t in &targets {
+                    self.deal_damage_to_from(target_to_entity(t), per, ctx.source, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::SupportCounters { .. } => {
                 // CR 701.32 — put one +1/+1 counter on each still-present
                 // target creature (up to N targets, supplied per slot).
@@ -8011,8 +8035,8 @@ impl GameState {
 
             Effect::Champion { filter } => self.resolve_champion(filter, ctx, events),
 
-            Effect::ExileUpToNFromGraveyards { count } => {
-                self.resolve_exile_up_to_n_from_graveyards(count, ctx, events)
+            Effect::ExileUpToNFromGraveyards { count, of, single } => {
+                self.resolve_exile_up_to_n_from_graveyards(count, of.as_ref(), *single, ctx, events)
             }
 
             Effect::ExileTopMintPerChosenColor { who, amount, token } => {
@@ -14511,6 +14535,8 @@ impl GameState {
     fn resolve_exile_up_to_n_from_graveyards(
         &mut self,
         count: &crate::effect::Value,
+        of: Option<&crate::effect::PlayerRef>,
+        single: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
@@ -14519,11 +14545,15 @@ impl GameState {
         if n == 0 {
             return Ok(());
         }
-        let candidates: Vec<(CardId, String)> = self
+        // `of` pins the graveyard to one player ("that player's graveyard").
+        let scope: Option<usize> = of.and_then(|p| self.resolve_player(p, ctx));
+        let candidates: Vec<(CardId, String, usize)> = self
             .players
             .iter()
-            .flat_map(|p| p.graveyard.iter())
-            .map(|c| (c.id, c.definition.name.to_string()))
+            .enumerate()
+            .filter(|(i, _)| scope.is_none_or(|s| s == *i))
+            .flat_map(|(i, p)| p.graveyard.iter().map(move |c| (c, i)))
+            .map(|(c, i)| (c.id, c.definition.name.to_string(), i))
             .collect();
         if candidates.is_empty() {
             return Ok(());
@@ -14531,15 +14561,22 @@ impl GameState {
         let answer = self.decider.decide(&Decision::ChooseCards {
             source: ctx.source.unwrap_or(CardId(0)),
             prompt: format!("Exile up to {n} cards from graveyards"),
-            candidates: candidates.clone(),
+            candidates: candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
             min: 0,
             max: n,
         });
         if let DecisionAnswer::Cards(ids) = answer {
+            // `single` restricts all picks to one graveyard: the first pick's
+            // owner locks the choice, later off-graveyard picks are dropped.
+            let mut lock: Option<usize> = None;
             for cid in ids.into_iter().take(n as usize) {
-                if candidates.iter().any(|(c, _)| *c == cid) {
-                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                let Some((_, _, owner)) = candidates.iter().find(|(c, _, _)| *c == cid) else {
+                    continue;
+                };
+                if single && *lock.get_or_insert(*owner) != *owner {
+                    continue;
                 }
+                self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
             }
         }
         Ok(())

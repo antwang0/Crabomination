@@ -2264,7 +2264,7 @@ pub fn arashin_sunshield() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::ExileUpToNFromGraveyards { count: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: false })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[w()]),

@@ -54589,7 +54589,7 @@ pub fn faerie_macabre() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             from_hand: true,
             discard_self_cost: true,
-            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(2) },
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: false },
             ..Default::default()
         }],
         ..Default::default()

@@ -248,7 +248,7 @@ impl Effect {
             Effect::DestroyTargets { .. } => true,
             Effect::DealHalfLifeDamage { .. } => false,
             Effect::Champion { .. } => false,
-            Effect::ExileUpToNFromGraveyards { count } => value_has_target(count),
+            Effect::ExileUpToNFromGraveyards { count, .. } => value_has_target(count),
             Effect::SpellTaxUntilYourNextTurn { .. } => false,
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::ManifestDread { .. } => false,
@@ -346,6 +346,7 @@ impl Effect {
             }
             // Divided damage always targets (one or more chosen targets).
             Effect::DealDamageDivided { .. } => true,
+            Effect::DealDamageDividedEvenly { .. } => true,
             Effect::SupportCounters { .. } => true,
             Effect::DistributeCounters { .. } => true,
             Effect::ApplyToTargets { .. } => true,
@@ -757,6 +758,7 @@ impl Effect {
                 _ => None,
             }),
             Effect::DealDamageDivided { filter, .. }
+            | Effect::DealDamageDividedEvenly { filter, .. }
             | Effect::DistributeCounters { filter, .. }
             | Effect::DestroyTargetsPolymorph { filter }
             | Effect::ApplyToTargets { filter, .. }
@@ -1166,6 +1168,10 @@ impl Effect {
                 Value::Const(n) => format!("deal {n} damage divided among targets"),
                 _ => "deal damage divided among targets".into(),
             },
+            Effect::DealDamageDividedEvenly { total, .. } => match total {
+                Value::Const(n) => format!("deal {n} damage divided evenly among targets"),
+                _ => "deal damage divided evenly among targets".into(),
+            },
             Effect::DistributeCounters { total, counter, .. } => match total {
                 Value::Const(n) => format!("distribute {n} {counter:?} counters among targets"),
                 _ => "distribute counters among targets".into(),
@@ -1417,7 +1423,8 @@ impl Effect {
             // Divided damage allows player targets only when its filter can
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
-            Effect::DealDamageDivided { filter, .. } => filter.can_match_player(),
+            Effect::DealDamageDivided { filter, .. }
+            | Effect::DealDamageDividedEvenly { filter, .. } => filter.can_match_player(),
             Effect::ApplyToTargets { filter, .. } => filter.can_match_player(),
             // Support / distribute put counters on creatures only — never players.
             Effect::SupportCounters { .. } => false,
@@ -1714,6 +1721,7 @@ impl Effect {
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
                 Effect::DealDamageDivided { filter, max_targets, .. }
+                | Effect::DealDamageDividedEvenly { filter, max_targets, .. }
                 | Effect::DistributeCounters { filter, max_targets, .. } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
@@ -1945,6 +1953,7 @@ impl Effect {
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
+            | Effect::DealDamageDividedEvenly { max_targets, .. }
             | Effect::SupportCounters { max_targets, .. }
             | Effect::ApplyToTargets { max_targets, .. }
             | Effect::DistributeCounters { max_targets, .. } => Some(*max_targets),

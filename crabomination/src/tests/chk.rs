@@ -3917,3 +3917,45 @@ fn tallowisp_tutors_an_aura_on_spiritcraft() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura tutored to hand");
 }
+
+/// Rag Dealer's "from a single graveyard": picks after the first are locked
+/// to the first pick's owner; off-graveyard picks are dropped.
+#[test]
+fn rag_dealer_locks_picks_to_a_single_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dealer = g.add_card_to_battlefield(0, catalog::rag_dealer());
+    g.clear_sickness(dealer);
+    let own = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![own, opp])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dealer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == own), "first pick exiled");
+    assert!(!g.exile.iter().any(|c| c.id == opp), "cross-graveyard pick dropped");
+}
+
+/// Skullsnatcher exiles only from the damaged player's graveyard.
+#[test]
+fn skullsnatcher_scoped_to_damaged_players_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ninja = g.add_card_to_battlefield(0, catalog::skullsnatcher());
+    let own = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.clear_sickness(ninja);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![own, theirs])]));
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ninja, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.id == own), "own graveyard out of scope");
+    assert!(g.exile.iter().any(|c| c.id == theirs), "damaged player's card exiled");
+}

@@ -309,18 +309,18 @@ pub fn aura_of_silence() -> CardDefinition {
     }
 }
 
-/// Return to Dust — {2}{W}{W} Sorcery. "Exile target artifact or enchantment."
-/// (The "if you cast this at sorcery speed, you may exile up to one additional"
-/// rider is simplified to a single target.)
+/// Return to Dust — {2}{W}{W} Instant. Exile target artifact or enchantment;
+/// if cast during your main phase, you may exile up to one additional target.
 pub fn return_to_dust() -> CardDefinition {
     CardDefinition {
         name: "Return to Dust",
         cost: cost(&[generic(2), w(), w()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-            ),
+        card_types: vec![CardType::Instant],
+        extra_targets_main_phase_only: true,
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
         },
         ..Default::default()
     }

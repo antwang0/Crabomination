@@ -2151,6 +2151,15 @@ pub enum Effect {
         filter: SelectionRequirement,
         max_targets: u8,
     },
+    /// "Deals N damage divided evenly, rounded down, among any number of
+    /// targets" (Fireball). Same slot shape as `DealDamageDivided`, but each
+    /// chosen target takes `total / n` — no `DivideDamage` decision; the
+    /// remainder is lost per the printed rounding.
+    DealDamageDividedEvenly {
+        total: Value,
+        filter: SelectionRequirement,
+        max_targets: u8,
+    },
     /// Two creatures fight: each deals damage equal to its current
     /// power to the other simultaneously. Both creatures take damage
     /// and die simultaneously to SBA. `attacker` is typically
@@ -3987,10 +3996,14 @@ pub enum Effect {
     /// sacrifice the source if you exile nothing. Mistbind Clique,
     /// Changeling Hero.
     Champion { filter: SelectionRequirement },
-    /// Exile up to `count` cards from any graveyards, chosen by the
-    /// controller (Faerie Macabre). A `wants_ui` controller picks via
-    /// `ChooseCards`; the auto path takes the highest-MV opponent cards.
-    ExileUpToNFromGraveyards { count: Value },
+    /// Exile up to `count` cards from graveyards, chosen by the controller
+    /// (Faerie Macabre). `of` restricts candidates to one player's graveyard
+    /// ("that player's graveyard" — Skullsnatcher); `single` restricts the
+    /// picks to a single graveyard ("from a single graveyard" — Rag Dealer:
+    /// picks after the first must share the first pick's owner). A
+    /// `wants_ui` controller picks via `ChooseCards`; the auto path takes
+    /// the highest-MV opponent cards.
+    ExileUpToNFromGraveyards { count: Value, of: Option<PlayerRef>, single: bool },
     /// Choose a color, exile the top `amount` cards of `who`'s library, and
     /// create one `token` per exiled card of the chosen color (Oona, Queen
     /// of the Fae).
