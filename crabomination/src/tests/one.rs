@@ -3852,14 +3852,13 @@ fn monument_to_perfection_transformation() {
 
 // ── ONE wave 8: the set closes out ───────────────────────────────────────────
 
-/// Capricious Hellraiser is {3} cheaper at nine cards and free-casts an
-/// exiled noncreature spell.
+/// Capricious Hellraiser is {3} cheaper at nine cards, exiles three random
+/// graveyard cards, and casts a *copy* of one (the original stays exiled).
 #[test]
 fn capricious_hellraiser_ritual() {
     let mut g = two_player_game();
-    g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    for _ in 0..8 {
-        g.add_card_to_graveyard(0, catalog::forest());
+    for _ in 0..9 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
     }
     let life1 = g.players[1].life;
     g.step = crate::game::types::TurnStep::PreCombatMain;
@@ -3873,10 +3872,10 @@ fn capricious_hellraiser_ritual() {
         card_id: hell, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("discounted to {R}{R}{R}");
     drain_stack(&mut g);
-    // Three graveyard cards were exiled; if the Bolt was among them it was
-    // free-cast at an opposing target.
     assert_eq!(g.players[0].graveyard.len(), 6, "three cards exiled");
-    assert_eq!(g.players[1].life, life1 - 3, "free Bolt resolved");
+    assert_eq!(g.players[1].life, life1 - 3, "the free copy resolved");
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Lightning Bolt").count(), 3,
+        "the original stays in exile (a copy was cast)");
 }
 
 /// Blade of Shared Souls lets its bearer copy another creature you control.

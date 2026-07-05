@@ -7737,7 +7737,8 @@ pub fn cache_grab() -> CardDefinition {
             Effect::MillThenToHand {
                 amount: Value::Const(4),
                 filter: SelectionRequirement::PermanentCard,
-            },
+            otherwise: None,
+        },
             Effect::If {
                 cond: Predicate::SelectorExists(Selector::ControlledBy {
                     who: PlayerRef::You,

@@ -94,7 +94,8 @@ impl Effect {
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::SharingNameWith(i) => sel_has_target(i),
-                Selector::Take { inner, count } => {
+                Selector::Take { inner, count }
+                | Selector::TakeRandom { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
                 Selector::TakeWithSumCap { inner, cap, value_of_each } => {
@@ -282,7 +283,6 @@ impl Effect {
             Effect::CastFromHandWithoutPaying { .. } => false,
             Effect::PreventNextDamageFromChosenSource { .. } => false,
             Effect::RevealTopPayOrTake { .. } => false,
-            Effect::LookTopKeepOneRestToGraveyard { .. } => false,
             Effect::DigForLandToBattlefield { .. } => false,
             Effect::Tribute { otherwise, .. } => otherwise.requires_target(),
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
@@ -756,7 +756,8 @@ impl Effect {
                 Selector::EachPermanent(f) => Some(f),
                 Selector::CardsInZone { filter, .. } => Some(filter),
                 Selector::TargetFiltered { filter, .. } => Some(filter),
-                Selector::Take { inner, .. } => sel_filter(inner),
+                Selector::Take { inner, .. }
+                | Selector::TakeRandom { inner, .. } => sel_filter(inner),
                 Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
                 _ => None,
             }
@@ -1610,7 +1611,8 @@ impl Effect {
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::SharingNameWith(i) => sel_find(i, slot),
-                Selector::Take { inner, .. } => sel_find(inner, slot),
+                Selector::Take { inner, .. }
+                | Selector::TakeRandom { inner, .. } => sel_find(inner, slot),
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 _ => None,
             }

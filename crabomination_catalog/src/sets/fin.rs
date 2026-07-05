@@ -2807,7 +2807,8 @@ pub fn clives_hideaway() -> CardDefinition {
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
-                },
+                copy: false,
+            },
                 ..Default::default()
             },
         ],
@@ -4705,7 +4706,8 @@ pub fn quistis_trepe() -> CardDefinition {
             ),
             source_zone: crate::card::Zone::Graveyard,
             exile_after: true,
-        })],
+                copy: false,
+            })],
         ..Default::default()
     }
 }
@@ -4727,6 +4729,7 @@ pub fn town_greeter() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MillThenToHand {
             amount: Value::Const(4),
             filter: SelectionRequirement::Land,
+            otherwise: None,
         })],
         ..Default::default()
     }
@@ -5311,7 +5314,8 @@ pub fn seifer_almasy() -> CardDefinition {
                     ),
                     source_zone: crate::card::Zone::Graveyard,
                     exile_after: true,
-                },
+                copy: false,
+            },
             },
         ],
         ..Default::default()

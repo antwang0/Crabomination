@@ -256,6 +256,9 @@ pub enum Selector {
     /// evaluated against the controller's resolution context, so values
     /// like `Value::CountersOn(...)` work as expected.
     Take { inner: Box<Selector>, count: Box<Value> },
+    /// Like `Take` but picks `count` entities uniformly at random instead of
+    /// the first in resolution order (Capricious Hellraiser's random exile).
+    TakeRandom { inner: Box<Selector>, count: Box<Value> },
 
     /// Walk `inner` in iteration order, accumulating `value_of_each`
     /// per entity, and take entities greedily while the running sum
@@ -2398,7 +2401,14 @@ pub enum Effect {
     /// `filter` from among those milled this way into their hand (the
     /// controller chooses; nothing happens if none qualify). Cache Grab
     /// ("mill four, then return a permanent card milled this way to hand").
-    MillThenToHand { amount: Value, filter: SelectionRequirement },
+    MillThenToHand {
+        amount: Value,
+        filter: SelectionRequirement,
+        /// Runs when no milled card matched (Patient Naturalist's "if you
+        /// can't, create a Treasure").
+        #[serde(default)]
+        otherwise: Option<Box<Effect>>,
+    },
     /// Like [`MillThenToHand`] but the controller may take *up to* `take`
     /// matching cards (not just one). `take` is a [`Value`] so it can scale
     /// with game state — Gather the Pack's spell mastery ("put up to two
@@ -3732,6 +3742,10 @@ pub enum Effect {
         source_zone: crate::card::Zone,
         #[serde(default)]
         exile_after: bool,
+        /// Cast a *copy* of the card instead — the original stays put
+        /// (Capricious Hellraiser, CR 707.12).
+        #[serde(default)]
+        copy: bool,
     },
     /// "You may cast a [filter] spell from your hand without paying its
     /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to

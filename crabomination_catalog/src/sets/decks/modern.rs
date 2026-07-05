@@ -32130,7 +32130,8 @@ pub fn daring_waverider() -> CardDefinition {
             ),
             source_zone: Zone::Graveyard,
             exile_after: true,
-        })],
+                copy: false,
+            })],
         ..Default::default()
     }
 }
@@ -52294,6 +52295,7 @@ pub fn bring_to_light() -> CardDefinition {
                 what: Selector::LastMoved,
                 source_zone: crate::card::Zone::Exile,
                 exile_after: false,
+                copy: false,
             },
         ]),
         ..Default::default()
@@ -57046,7 +57048,8 @@ pub fn vadrok_apex_of_thunder() -> CardDefinition {
             ),
             source_zone: crate::card::Zone::Graveyard,
             exile_after: false,
-        })],
+                copy: false,
+            })],
         ..Default::default()
     }
 }

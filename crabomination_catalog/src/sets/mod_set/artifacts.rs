@@ -1497,6 +1497,7 @@ pub fn isochron_scepter() -> CardDefinition {
                 },
                 source_zone: Zone::Exile,
                 exile_after: false,
+                copy: false,
             },
             ..Default::default()
         }],

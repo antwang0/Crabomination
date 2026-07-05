@@ -6803,6 +6803,7 @@ pub fn roving_actuator() -> CardDefinition {
                 ),
                 source_zone: crate::card::Zone::Graveyard,
                 exile_after: true,
+                copy: false,
             },
         }],
         ..Default::default()

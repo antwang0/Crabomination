@@ -2956,7 +2956,7 @@ impl GameState {
 
             Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
 
-            Effect::MillThenToHand { amount, filter } => {
+            Effect::MillThenToHand { amount, filter, otherwise } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
                 let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
@@ -2977,7 +2977,12 @@ impl GameState {
                         && crate::game::layers::requirement_matches_card(filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
-                if cands.is_empty() { return Ok(()); }
+                if cands.is_empty() {
+                    if let Some(otherwise) = otherwise {
+                        return self.run_effect(otherwise, ctx, events);
+                    }
+                    return Ok(());
+                }
                 let source = ctx.source.unwrap_or(CardId(0));
                 let answer = self.decider.decide(&Decision::ChooseCards {
                     source,
@@ -13207,6 +13212,7 @@ impl GameState {
                 what,
                 source_zone,
                 exile_after,
+                copy,
             } => {
                 // Resolve `what` to a single card in `source_zone`, ask
                 // the controller via OptionalTrigger, and on yes hand
@@ -13257,16 +13263,52 @@ impl GameState {
                     ctx.controller,
                     Some(card_id),
                 );
+                // CR 707.12 — `copy` casts a materialized copy (the original
+                // stays put); the copy ceases to exist off the stack.
+                let cast_id = if *copy {
+                    let copy_id = self.next_id();
+                    let inst = crate::card::CardInstance::new(
+                        copy_id,
+                        (*card_def).clone(),
+                        ctx.controller,
+                    );
+                    self.players[ctx.controller].hand.push(inst);
+                    copy_id
+                } else {
+                    card_id
+                };
+                let cast_zone = if *copy { crate::card::Zone::Hand } else { *source_zone };
                 let cast_events = self.cast_card_for_free(
                     ctx.controller,
-                    card_id,
-                    *source_zone,
+                    cast_id,
+                    cast_zone,
                     auto_target,
                     vec![],
                     None,
                     None,
                     *exile_after,
-                )?;
+                );
+                let cast_events = match cast_events {
+                    Ok(evs) => evs,
+                    Err(e) => {
+                        if *copy {
+                            // Unmaterialize the rejected copy.
+                            self.players[ctx.controller].hand.retain(|c| c.id != cast_id);
+                            return Ok(());
+                        }
+                        return Err(e);
+                    }
+                };
+                if *copy {
+                    for item in self.stack.iter_mut().rev() {
+                        if let crate::game::types::StackItem::Spell { card, .. } = item
+                            && card.id == cast_id
+                        {
+                            card.is_token = true;
+                            break;
+                        }
+                    }
+                }
                 events.extend(cast_events);
                 Ok(())
             }
@@ -14111,6 +14153,18 @@ impl GameState {
                     return vec![];
                 }
                 let mut all = self.resolve_selector(inner, ctx);
+                all.truncate(n);
+                all
+            }
+
+            Selector::TakeRandom { inner, count } => {
+                use rand::seq::SliceRandom;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return vec![];
+                }
+                let mut all = self.resolve_selector(inner, ctx);
+                all.shuffle(&mut rand::rng());
                 all.truncate(n);
                 all
             }

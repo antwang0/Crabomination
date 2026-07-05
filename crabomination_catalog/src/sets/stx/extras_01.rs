@@ -516,7 +516,8 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
                         what: Selector::LastMoved,
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,
-                    },
+                copy: false,
+            },
                 ]),
                 ..Default::default()
             },

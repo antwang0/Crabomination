@@ -236,3 +236,37 @@ fn kitsa_loots_and_has_prowess() {
     assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one — net zero");
     assert!(catalog::kitsa_otterball_elite().keywords.contains(&Keyword::Prowess));
 }
+
+/// Kitsa's copy activation is gated on power 3+; with two +1/+1 counters it
+/// copies your instant on the stack.
+#[test]
+fn kitsa_copies_your_spell_at_power_three() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let kitsa = g.add_card_to_battlefield(0, catalog::kitsa_otterball_elite());
+    g.clear_sickness(kitsa);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Under power 3: rejected before costs.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt on the stack");
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: kitsa, ability_index: 1, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], x_value: None,
+    }).is_err(), "power 1 — activation rejected");
+    // At power 3 the copy fires: the bolt hits twice.
+    g.battlefield_find_mut(kitsa).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kitsa, ability_index: 1, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], x_value: None,
+    }).expect("copy the bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 6, "original + copy resolved");
+}

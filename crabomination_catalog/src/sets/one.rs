@@ -7335,7 +7335,7 @@ pub fn capricious_hellraiser() -> CardDefinition {
         }],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Move {
-                what: Selector::Take {
+                what: Selector::TakeRandom {
                     inner: Box::new(Selector::EachMatching {
                         zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
                         filter: SelectionRequirement::Any,
@@ -7344,12 +7344,14 @@ pub fn capricious_hellraiser() -> CardDefinition {
                 },
                 to: ZoneDest::Exile,
             },
+            // Cast a *copy* — the exiled original stays put (CR 707.12).
             Effect::CastWithoutPayingImmediate {
                 what: Selector::ExiledThisResolution {
                     filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
                 },
                 source_zone: crate::card::Zone::Exile,
-                exile_after: true,
+                exile_after: false,
+                copy: true,
             },
         ]))],
         ..Default::default()

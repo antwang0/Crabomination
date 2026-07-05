@@ -82,6 +82,7 @@ pub fn ostrich_horse() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MillThenToHand {
             amount: Value::Const(3),
             filter: SelectionRequirement::Land,
+            otherwise: None,
         })],
         ..Default::default()
     }

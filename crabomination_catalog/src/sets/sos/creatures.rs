@@ -5015,6 +5015,7 @@ pub fn the_dawning_archaic() -> CardDefinition {
                 ),
                 source_zone: Zone::Graveyard,
                 exile_after: true,
+                copy: false,
             },
         }],
         ..Default::default()

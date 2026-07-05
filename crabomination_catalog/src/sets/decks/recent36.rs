@@ -160,7 +160,9 @@ pub fn trackers_instincts() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(2), u()]))],
-        effect: Effect::MillThenToHand { amount: Value::Const(4), filter: SelectionRequirement::Creature },
+        effect: Effect::MillThenToHand { amount: Value::Const(4), filter: SelectionRequirement::Creature,
+            otherwise: None,
+        },
         ..Default::default()
     }
 }

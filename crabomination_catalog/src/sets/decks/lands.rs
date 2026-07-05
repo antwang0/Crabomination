@@ -513,7 +513,8 @@ pub fn shelldock_isle() -> CardDefinition {
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
-                },
+                copy: false,
+            },
                 ..Default::default()
             },
         ],
@@ -550,7 +551,8 @@ fn lorwyn_hideaway_land(
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
-                },
+                copy: false,
+            },
                 ..Default::default()
             },
         ],

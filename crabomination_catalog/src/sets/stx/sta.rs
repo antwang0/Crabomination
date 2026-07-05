@@ -150,7 +150,8 @@ pub fn mizzixs_mastery() -> CardDefinition {
         what,
         source_zone: Zone::Exile,
         exile_after: false,
-    };
+                copy: false,
+            };
     CardDefinition {
         name: "Mizzix's Mastery",
         cost: cost(&[generic(3), r()]),

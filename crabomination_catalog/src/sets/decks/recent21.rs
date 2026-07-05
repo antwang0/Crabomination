@@ -163,6 +163,7 @@ pub fn patient_naturalist() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MillThenToHand {
             amount: Value::Const(3),
             filter: SelectionRequirement::Land,
+            otherwise: Some(Box::new(crate::effect::shortcut::mint_treasures(1))),
         })],
         ..Default::default()
     }

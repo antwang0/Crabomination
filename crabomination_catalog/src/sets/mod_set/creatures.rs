@@ -3899,6 +3899,7 @@ pub fn torrential_gearhulk() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::HasCardType(CardType::Instant)),
                 source_zone: Zone::Graveyard,
                 exile_after: true,
+                copy: false,
             },
         }],
         ..Default::default()

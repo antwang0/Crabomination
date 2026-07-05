@@ -180,3 +180,16 @@ fn rumbling_rockslide_scales_with_lands() {
     cast_at(&mut g, rr, Target::Permanent(foe));
     assert!(g.battlefield_find(foe).is_none(), "4 lands → 4 damage kills the 4/4");
 }
+
+/// Patient Naturalist mints a Treasure when no land is among the milled three.
+#[test]
+fn patient_naturalist_treasure_fallback() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.move_card_to_battlefield_for_test(0, catalog::patient_naturalist());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "no land milled → Treasure");
+}

@@ -375,14 +375,33 @@ pub fn kitsa_otterball_elite() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Prowess],
         triggered_abilities: vec![crate::effect::shortcut::prowess()],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-            ]),
-            ..Default::default()
-        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            // {2}{U}, {T}: copy target I/S you control — only at power ≥ 3.
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), u()]),
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::PowerOf(Box::new(Selector::This)),
+                    Value::Const(3),
+                )),
+                effect: Effect::CopySpell {
+                    what: target_filtered(
+                        SelectionRequirement::IsSpellOnStack
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    count: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

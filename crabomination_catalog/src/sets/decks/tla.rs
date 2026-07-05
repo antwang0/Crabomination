@@ -2110,7 +2110,8 @@ pub fn sparring_dummy() -> CardDefinition {
             effect: Effect::MillThenToHand {
                 amount: Value::ONE,
                 filter: SelectionRequirement::Land,
-            },
+            otherwise: None,
+        },
             ..Default::default()
         }],
         ..Default::default()
