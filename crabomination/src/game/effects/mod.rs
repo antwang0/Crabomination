@@ -12160,6 +12160,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EncoreTokens => {
+                let p = ctx.controller;
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(def) = self
+                    .exile
+                    .iter()
+                    .find(|c| c.id == src)
+                    .or_else(|| self.battlefield.iter().find(|c| c.id == src))
+                    .map(|c| (*c.definition).clone())
+                else {
+                    return Ok(());
+                };
+                let opps: Vec<usize> = (0..self.players.len())
+                    .filter(|&q| !self.players[q].eliminated && !self.same_team(q, p))
+                    .collect();
+                for _ in opps {
+                    let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
+                    self.grant_keyword_eot(tid, Keyword::Haste);
+                    if let Some(c) = self.battlefield_find_mut(tid) {
+                        // CR 701.38-style requirement: the token attacks (an
+                        // opponent) this turn if able.
+                        c.goaded_by.push(p);
+                    }
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: tid,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::SacrificeSource,
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::RevealFiveDraftAgainstOpponent => {
                 let p = ctx.controller;
                 let mut pool: Vec<CardId> =

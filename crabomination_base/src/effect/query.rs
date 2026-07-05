@@ -184,6 +184,7 @@ impl Effect {
             Effect::Unattach { what } => sel_has_target(what),
             Effect::AtNextEndStep { body } => body.requires_target(),
             Effect::RevealFiveDraftAgainstOpponent => false,
+            Effect::EncoreTokens => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the
             // lowest-seat opponent, so no cast-time target is demanded.
             Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,

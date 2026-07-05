@@ -3005,6 +3005,21 @@ fn embalm_like(
     }
 }
 
+/// Encore (CR 702.141): "[Cost], Exile this card from your graveyard: For
+/// each opponent, create a token that's a copy of this card that attacks
+/// that opponent this turn if able. The tokens gain haste. Sacrifice them at
+/// the beginning of the next end step. Activate only as a sorcery."
+pub fn encore(cost: crate::mana::ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        from_graveyard: true,
+        exile_self_cost: true,
+        effect: Effect::EncoreTokens,
+        ..Default::default()
+    }
+}
+
 /// Scavenge (CR 702.97): "[cost], Exile this card from your graveyard: Put a
 /// number of +1/+1 counters equal to this card's power on target creature.
 /// Activate only as a sorcery." Rides the gy-activation + exile-self-cost path;

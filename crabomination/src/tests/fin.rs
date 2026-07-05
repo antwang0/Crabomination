@@ -5507,3 +5507,31 @@ fn vanille_and_fang_meld_into_ragnarok() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Ragnarok, Divine Deliverance"),
         "Ragnarok on the battlefield");
 }
+
+/// CR 712.16/712.17: a melded permanent leaving the battlefield leaves as
+/// both component cards — killing Ragnarok yields Vanille AND Fang in the
+/// graveyard.
+#[test]
+fn cr_712_17_melded_permanent_leaves_as_both_cards() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let vanille = g.add_card_to_battlefield(0, catalog::vanille_cheerful_lcie());
+    g.add_card_to_battlefield(0, catalog::fang_fearless_lcie());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let eff = catalog::vanille_cheerful_lcie().triggered_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(vanille, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let ragnarok = g.battlefield.iter()
+        .find(|c| c.definition.name == "Ragnarok, Divine Deliverance").unwrap().id;
+    g.battlefield_find_mut(ragnarok).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let names: Vec<&str> = g.players[0].graveyard.iter().map(|c| c.definition.name).collect();
+    assert!(names.contains(&"Vanille, Cheerful l'Cie"), "Vanille in the graveyard");
+    assert!(names.contains(&"Fang, Fearless l'Cie"), "Fang in the graveyard");
+    assert!(!names.contains(&"Ragnarok, Divine Deliverance"), "no melded ghost card");
+}

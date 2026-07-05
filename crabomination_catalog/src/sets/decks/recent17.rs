@@ -500,7 +500,9 @@ pub fn feral_throwback() -> CardDefinition {
 }
 
 /// Kilnmouth Dragon — {5}{R}{R} Dragon 5/5 with flying and Amplify 3 (Dragon).
+/// {T}: deals damage equal to its +1/+1 counters to any target.
 pub fn kilnmouth_dragon() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
         name: "Kilnmouth Dragon",
         cost: cost(&[generic(5), r(), r()]),
@@ -510,6 +512,17 @@ pub fn kilnmouth_dragon() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         enters_with_counters: amplify(3, CreatureType::Dragon),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

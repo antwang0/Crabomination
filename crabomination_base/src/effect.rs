@@ -2597,6 +2597,11 @@ pub enum Effect {
     /// Register a delayed trigger sacrificing each resolved permanent at the
     /// beginning of the controller's next upkeep (Firion's copy token).
     SacrificeAtNextUpkeep { what: Selector },
+    /// CR 702.141 Encore — for each opponent, create a token copy of the
+    /// source (read from exile after the encore cost exiled it) that attacks
+    /// that opponent this turn if able (goad-style requirement). The tokens
+    /// gain haste and are sacrificed at the beginning of the next end step.
+    EncoreTokens,
     /// Memories Returning — reveal the top five cards; alternating picks
     /// (you take one to hand, an opponent bottoms one, twice each) leave you
     /// three cards in hand and two on the bottom. Auto-heuristics: you take
