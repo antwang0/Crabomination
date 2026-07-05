@@ -8708,22 +8708,26 @@ impl GameState {
         // hand when flagged `from_hand` (Spirit Guides' exile-to-pitch mana
         // abilities). We scan battlefield first; if missing, fall back to
         // graveyards then hands (any player's; ownership is verified below).
-        let (source_in_gy, source_in_hand, source_owner) = {
+        let (source_in_gy, source_in_hand, source_in_exile, source_owner) = {
             let on_bf = self.battlefield.iter().any(|c| c.id == card_id);
             if on_bf {
-                (false, false, None)
+                (false, false, false, None)
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.graveyard.iter().any(|c| c.id == card_id))
             {
-                (true, false, Some(o))
+                (true, false, false, Some(o))
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.hand.iter().any(|c| c.id == card_id))
             {
-                (false, true, Some(o))
+                (false, true, false, Some(o))
+            } else if let Some(owner) =
+                self.exile.iter().find(|c| c.id == card_id).map(|c| c.owner)
+            {
+                (false, false, true, Some(owner))
             } else {
                 return Err(GameError::CardNotOnBattlefield(card_id));
             }
@@ -8738,6 +8742,11 @@ impl GameState {
         } else if source_in_hand {
             let owner = source_owner.unwrap();
             self.players[owner].hand.iter()
+                .find(|c| c.id == card_id)
+                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
+                .ok_or(GameError::AbilityIndexOutOfBounds)?
+        } else if source_in_exile {
+            self.exile.iter()
                 .find(|c| c.id == card_id)
                 .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
                 .ok_or(GameError::AbilityIndexOutOfBounds)?
@@ -8799,6 +8808,8 @@ impl GameState {
             } else if source_in_hand {
                 self.players[source_owner.unwrap()].hand.iter()
                     .find(|c| c.id == card_id).map(|c| &c.definition)
+            } else if source_in_exile {
+                self.exile.iter().find(|c| c.id == card_id).map(|c| &c.definition)
             } else {
                 self.battlefield.iter().find(|c| c.id == card_id).map(|c| &c.definition)
             };
@@ -8814,11 +8825,14 @@ impl GameState {
         if source_in_hand && !ability.from_hand {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
+        if source_in_exile && !ability.from_exile {
+            return Err(GameError::CardNotOnBattlefield(card_id));
+        }
 
         // Only the controller (or graveyard/hand owner) can activate abilities,
         // except abilities flagged `opponents_only` (CR 602.5 — Detention
         // Vortex's escape clause), which only an opponent of the controller may.
-        if source_in_gy || source_in_hand {
+        if source_in_gy || source_in_hand || source_in_exile {
             if source_owner != Some(p) {
                 return Err(GameError::NotYourPriority);
             }
@@ -9019,7 +9033,7 @@ impl GameState {
         // payments / illegal targets don't burn the per-turn budget.
         // (Graveyard activations don't track per-card once-per-turn state
         // since the card may move between zones; the gate is no-op.)
-        if !source_in_gy && !source_in_hand && ability.once_per_turn {
+        if !source_in_gy && !source_in_hand && !source_in_exile && ability.once_per_turn {
             let perm = self
                 .battlefield
                 .iter()
@@ -9043,7 +9057,7 @@ impl GameState {
         // CR 702.177 — Exhaust: an exhaust ability can be activated only once
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.
-        if !source_in_gy && !source_in_hand && ability.exhaust {
+        if !source_in_gy && !source_in_hand && !source_in_exile && ability.exhaust {
             let perm = self
                 .battlefield
                 .iter()
@@ -9659,7 +9673,7 @@ impl GameState {
         // a permanent), so we reject any `tap_cost: true` ability from a
         // graveyard source as a guard against malformed card definitions.
         if ability.tap_cost {
-            if source_in_gy || source_in_hand {
+            if source_in_gy || source_in_hand || source_in_exile {
                 return Err(GameError::CardIsTapped(card_id));
             }
             let perm = self

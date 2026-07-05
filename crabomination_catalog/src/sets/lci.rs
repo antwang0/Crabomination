@@ -5210,7 +5210,7 @@ pub fn sage_of_days() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::LookTopKeepOneRestToGraveyard { count: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::LookTopKeepOneRestToGraveyard { count: Value::Const(3), who: None })],
         ..Default::default()
     }
 }

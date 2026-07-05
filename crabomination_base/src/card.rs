@@ -381,6 +381,8 @@ pub enum CounterType {
     /// Fate counter — Oblivion Stone's bookkeeping marker; permanents with
     /// one survive its destroy-everything activation.
     Fate,
+    /// Soot counter — Smokestack's per-upkeep sacrifice tally.
+    Soot,
     /// Void counter — Dauthi Voidwalker's stamp on opponents' cards its
     /// replacement exiles; its sacrifice ability frees one for a free play.
     Void,

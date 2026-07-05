@@ -2582,8 +2582,14 @@ pub enum Effect {
     /// "Look at the top `count` cards; put one back on top and the rest into
     /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
     /// picker) keeps one revealed card on top; the rest are milled. Shares the
-    /// `ImpulsePending` machinery with `keep_on_top: true`.
-    LookTopKeepOneRestToGraveyard { count: Value },
+    /// `ImpulsePending` machinery with `keep_on_top: true`. With
+    /// `who: Some(..)` the effect reads another player's library instead and
+    /// auto-picks (lowest MV kept on an opponent's — Dimir Charm mode 3).
+    LookTopKeepOneRestToGraveyard {
+        count: Value,
+        #[serde(default)]
+        who: Option<PlayerRef>,
+    },
     /// Remove all counters from the selected permanent; the controller's
     /// next spell this turn costs {1} less per counter removed (Mutated
     /// Cultist's cast trigger — the "or opponent" half is dropped).
@@ -2999,6 +3005,10 @@ pub enum Effect {
     /// an opponent's) — the controller's choice is a deferred UI follow-up.
     HauntCreature { body: Box<Effect> },
     Tap     { what: Selector },
+    /// "That player taps `amount` untapped permanents matching `filter` they
+    /// control" (Tangle Wire). Auto-pick: lands, then other noncreatures,
+    /// then creatures by ascending power. Taps as many as exist when short.
+    PlayerTapsUntapped { who: PlayerRef, filter: SelectionRequirement, amount: Value },
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },

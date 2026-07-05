@@ -55,8 +55,8 @@ pub fn gruul_charm() -> CardDefinition {
 }
 
 /// Dimir Charm — {U}{B} Instant. Choose one — counter target sorcery; or
-/// destroy target creature with power 2 or less; or mill the top of target
-/// player's library (the look-and-keep-one is approximated as mill 2).
+/// destroy target creature with power 2 or less; or look at target player's
+/// top three, put one back, the rest into their graveyard.
 pub fn dimir_charm() -> CardDefinition {
     CardDefinition {
         name: "Dimir Charm",
@@ -71,7 +71,10 @@ pub fn dimir_charm() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2))),
             },
-            Effect::Mill { who: target_filtered(SelectionRequirement::Player), amount: Value::Const(2) },
+            Effect::LookTopKeepOneRestToGraveyard {
+                count: Value::Const(3),
+                who: Some(PlayerRef::Target(0)),
+            },
         ]),
         ..Default::default()
     }

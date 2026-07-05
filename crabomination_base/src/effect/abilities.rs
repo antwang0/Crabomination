@@ -1428,6 +1428,12 @@ pub struct ActivatedAbility {
     /// literal initializations pick up the new field automatically.
     #[serde(default)]
     pub from_graveyard: bool,
+    /// True if this ability is activated from the **exile zone** (the card
+    /// must be owned by the activator). Squee, the Immortal's "cast from
+    /// exile" half rides the same Move-to-battlefield approximation as
+    /// `from_graveyard`. Defaults to false via `#[serde(default)]`.
+    #[serde(default)]
+    pub from_exile: bool,
     /// True if activating this ability exiles the source as part of
     /// its cost. Used together with `from_graveyard: true` for cards
     /// whose printed cost line reads "Exile this card from your

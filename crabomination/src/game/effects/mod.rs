@@ -4588,6 +4588,72 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerTapsUntapped { who, filter, amount } => {
+                // Tangle Wire: `who` taps N untapped matching permanents.
+                // Auto-pick lands first, then other noncreatures, then
+                // creatures by ascending power.
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                let mut candidates: Vec<(u8, i32, CardId)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && !c.tapped)
+                    .filter(|c| {
+                        crate::game::layers::requirement_matches_card(filter, c, seat)
+                    })
+                    .map(|c| {
+                        let class = if c.definition.is_land() {
+                            0
+                        } else if !c.definition.is_creature() {
+                            1
+                        } else {
+                            2
+                        };
+                        (class, c.power(), c.id)
+                    })
+                    .collect();
+                candidates.sort();
+                for (_, _, cid) in candidates.into_iter().take(n) {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.tapped = true;
+                        events.push(GameEvent::PermanentTapped { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LookTopKeepOneRestToGraveyard { who: Some(who), count } => {
+                // Dimir Charm mode 3. Auto-pick: keep the lowest-MV card on
+                // an opponent's library, the highest on your own.
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let n = (self.evaluate_value(count, ctx).max(0) as usize)
+                    .min(self.players[seat].library.len());
+                if n == 0 {
+                    return Ok(());
+                }
+                let mut top: Vec<crate::card::CardInstance> =
+                    self.players[seat].library.drain(..n).collect();
+                let opp = !self.same_team(seat, ctx.controller);
+                let keep = top
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|(_, c)| {
+                        let mv = c.definition.cost.cmc() as i64;
+                        if opp { -mv } else { mv }
+                    })
+                    .map(|(i, _)| i)
+                    .unwrap();
+                let kept = top.remove(keep);
+                self.players[seat].library.insert(0, kept);
+                for card in top {
+                    let cid = card.id;
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: seat, card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CycleRecurFromGraveyard { threshold } => {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let Some(src) = ctx.source else { return Ok(()) };
@@ -8749,7 +8815,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopKeepOneRestToGraveyard { count } => {
+            Effect::LookTopKeepOneRestToGraveyard { count, who: None } => {
                 use crate::decision::Decision;
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

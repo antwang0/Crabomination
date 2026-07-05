@@ -155,7 +155,8 @@ impl Effect {
             | Effect::ChannelLifeForMana
             | Effect::Venture
             | Effect::DoubleYourSourcesDamageThisTurn
-            | Effect::ReturnSelfTransformedAttached => false,
+            | Effect::ReturnSelfTransformedAttached
+            | Effect::PlayerTapsUntapped { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,
@@ -180,6 +181,9 @@ impl Effect {
             Effect::OnMatchingAttacksThisTurn { .. } => false,
             Effect::CopyAbility { what, .. } => sel_has_target(what),
             Effect::StaggerPlayerUntilYourNextTurn { who } => player_has_target(who),
+            Effect::LookTopKeepOneRestToGraveyard { who, .. } => {
+                who.as_ref().is_some_and(player_has_target)
+            }
             Effect::LookTopPutMatchingOntoBattlefield { .. } => false,
             Effect::MillDeployCreaturesUntilEndStep { .. } => false,
             Effect::ExileEachTopFreePlayLesser => false,
