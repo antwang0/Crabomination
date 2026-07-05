@@ -393,6 +393,10 @@ pub enum CounterType {
     /// Oil counter — a generic resource counter on Phyrexian permanents,
     /// spent by activated abilities (Glistener Seer, Migloz).
     Oil,
+    /// Blight counter — Ultima, Origin of Oblivion. A blighted land loses
+    /// all land types and abilities and has "{T}: Add {C}" while the
+    /// counter remains (`StaticEffect::BlightedLandsNeutralized`).
+    Blight,
     /// Valor counter — the MID/VOW Adversary cycle's "pay-any-number-of-times"
     /// counter, scaling a `PumpPTPerCounterOnSource` team anthem (Intrepid
     /// Adversary).

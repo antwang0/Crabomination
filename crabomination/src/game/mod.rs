@@ -1196,6 +1196,12 @@ pub struct GameState {
     /// (Burrenton Forge-Tender's chosen source). Cleared at cleanup.
     #[serde(default)]
     pub(crate) damage_prevented_sources: Vec<CardId>,
+    /// Lightning, Army of One's Stagger — `(victim, registrant)` pairs: until
+    /// the registrant's next turn, damage to the victim or a permanent they
+    /// control is doubled (applied in `scale_damage_to`). Cleared as the
+    /// registrant's turn begins.
+    #[serde(default)]
+    pub(crate) staggered_damage_players: Vec<(usize, usize)>,
     /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
     /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
     /// "{C}: Target creature can't block this creature this turn"). Cleared at
@@ -1550,6 +1556,7 @@ impl Clone for GameState {
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
+            staggered_damage_players: self.staggered_damage_players.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
@@ -1695,6 +1702,7 @@ impl GameState {
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
             turn_scoped_spell_taxes: Vec::new(),
+            staggered_damage_players: Vec::new(),
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
             attack_despite_defender_this_turn: Vec::new(),
@@ -3291,6 +3299,9 @@ impl GameState {
         let mut d = self.damage_doublers();
         let mut h = self.damage_halvers();
         if let Some(p) = affected {
+            // Stagger (Lightning, Army of One): damage to a staggered player
+            // or their permanents is doubled until the registrant's next turn.
+            d += self.staggered_damage_players.iter().filter(|(v, _)| *v == p).count() as u32;
             for c in &self.battlefield {
                 for sa in &c.definition.static_abilities {
                     match &sa.effect {
@@ -4841,6 +4852,43 @@ impl GameState {
                     c.definition.is_land()
                         && c.definition.name == name
                         && !self.same_team(c.controller, card.controller)
+                })
+                .map(|c| c.id)
+                .collect();
+            if hit.is_empty() {
+                continue;
+            }
+            for (layer, modification) in [
+                (Layer::L4Type, Modification::SetLandTypes(vec![])),
+                (Layer::L6Ability, Modification::RemoveAllAbilities),
+            ] {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(hit.clone()),
+                    layer,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification,
+                });
+            }
+        }
+        // Ultima — lands with a blight counter lose all land types and
+        // abilities (the "{T}: Add {C}" half rides a `GrantActivatedAbility`
+        // over `WithCounter(Blight)` lands).
+        for card in &self.battlefield {
+            let has = card.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::BlightedLandsNeutralized)
+            });
+            if !has {
+                continue;
+            }
+            let hit: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.definition.is_land()
+                        && c.counter_count(crate::card::CounterType::Blight) > 0
                 })
                 .map(|c| c.id)
                 .collect();
@@ -11779,6 +11827,7 @@ fn static_effect_to_effects(
             // NamedLandsNeutralized — live-resolved in
             // `gather_continuous_effects_inner` (needs the source's named_card).
             | StaticEffect::NamedLandsNeutralized
+            | StaticEffect::BlightedLandsNeutralized
             // GrantActivatedAbility — surfaced as a virtual activated ability
             // in `activate_ability`; not a characteristic layer effect.
             | StaticEffect::GrantActivatedAbility { .. }

@@ -5208,3 +5208,79 @@ fn summon_leviathan_chapter_two_draws_on_sea_attacks() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew off the sea attack");
 }
+
+/// Gogo copies a target triggered/activated ability on the stack X times: a
+/// 1-damage ping copied twice resolves for 3 total.
+#[test]
+fn gogo_copies_an_ability_x_times() {
+    let mut g = two_player_game();
+    let gogo = g.add_card_to_battlefield(0, catalog::gogo_master_of_mimicry());
+    let scamp = g.add_card_to_battlefield(0, catalog::sawblade_scamp()); // {T}, oil: 1 dmg each opp
+    g.battlefield_find_mut(scamp).unwrap().add_counters(CounterType::Oil, 1);
+    g.clear_sickness(scamp);
+    g.clear_sickness(gogo);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate the ping");
+    // Copy it twice with Gogo (X=2 → pay {2}{2}).
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gogo, ability_index: 0, target: Some(Target::Permanent(scamp)),
+        additional_targets: vec![], x_value: Some(2),
+    }).expect("Gogo copies");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "original + two copies = 3 damage");
+}
+
+/// Lightning's Stagger: after she connects, further damage to that player is
+/// doubled until your next turn.
+#[test]
+fn lightning_army_of_one_staggers_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let lightning = g.add_card_to_battlefield(0, catalog::lightning_army_of_one());
+    g.clear_sickness(lightning);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lightning, target: AttackTarget::Player(1),
+    }])).expect("Lightning attacks");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let life = g.players[1].life;
+    // A 3-damage bolt now hits for 6.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "staggered: 3 damage doubled to 6");
+}
+
+/// A blighted land loses its land types and printed abilities under Ultima,
+/// and its granted "{T}: Add {C}" replaces them; the colorless mirror adds a
+/// second {C}.
+#[test]
+fn ultima_blights_lands_and_doubles_colorless() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ultima_origin_of_oblivion());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.battlefield_find_mut(forest).unwrap().add_counters(CounterType::Blight, 1);
+    let cp = g.computed_permanent(forest).expect("blighted forest");
+    assert!(cp.subtypes.land_types.is_empty(), "lost its land types");
+    // Our own blighted land taps for {C}{C} (granted {T}:Add{C} + mirror).
+    let mine = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(mine).unwrap().add_counters(CounterType::Blight, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let printed = g.battlefield_find(mine).unwrap().definition.activated_abilities.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mine, ability_index: printed, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("tap blighted land for colorless");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "one C plus the mirrored C");
+}

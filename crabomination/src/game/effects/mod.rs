@@ -7331,6 +7331,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopyAbility { what, times } => {
+                let n = self.evaluate_value(times, ctx).max(0);
+                let targets = self.resolve_selector(what, ctx);
+                for t in &targets {
+                    let Some(cid) = t.as_permanent_id() else { continue };
+                    let found = self.stack.iter().rev().find(|si| {
+                        matches!(si, StackItem::Trigger { source, .. } if *source == cid)
+                    });
+                    if let Some(item) = found {
+                        let copy = item.clone();
+                        for _ in 0..n {
+                            self.stack.push(copy.clone());
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SacrificeAllMatching { who, filter } => {
                 for ent in self.resolve_selector(who, ctx) {
                     let EntityRef::Player(p) = ent else { continue };
@@ -10237,6 +10255,13 @@ impl GameState {
                     bound_token: None,
                     fires_once: false,
                 });
+                Ok(())
+            }
+
+            Effect::StaggerPlayerUntilYourNextTurn { who } => {
+                if let Some(victim) = self.resolve_player(who, ctx) {
+                    self.staggered_damage_players.push((victim, ctx.controller));
+                }
                 Ok(())
             }
 

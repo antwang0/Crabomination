@@ -3444,6 +3444,11 @@ pub enum Effect {
     },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
+    /// Gogo — copy target activated or triggered ability on the stack
+    /// `times` times (the selector resolves to the ability's *source*
+    /// permanent, mirroring `CounterAbility`). Copies keep the original's
+    /// targets; the printed "you may choose new targets" is auto-kept.
+    CopyAbility { what: Selector, times: Value },
     /// Copy target spell **unless** its caster pays `mana_cost`. Used by
     /// Wandering Archaic ("Whenever an opponent casts an instant or sorcery
     /// spell, that player may pay {2}. If they don't, you may copy the
@@ -3722,6 +3727,10 @@ pub enum Effect {
     /// player's qualifying attacker; the attacker is bound as
     /// `Selector::TriggerSource`. Summon: Leviathan II/III.
     OnMatchingAttacksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
+    /// Stagger (Lightning, Army of One) — until your next turn, if a source
+    /// would deal damage to `who` or a permanent they control, it deals
+    /// double that damage instead (CR 614.5-style replacement).
+    StaggerPlayerUntilYourNextTurn { who: PlayerRef },
     /// "Sacrifice a [filter] with the greatest mana value" picker.
     /// Mirrors `Sacrifice` but the candidate sort prefers maximum CMC.
     /// Used by Soul Shatter ("Each opponent sacrifices a creature or

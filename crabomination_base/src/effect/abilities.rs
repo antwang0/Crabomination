@@ -36,6 +36,9 @@ pub enum ExtraManaKind {
     Fixed(crate::mana::Color),
     /// The source's ETB-chosen color (Utopia Sprawl).
     ChosenColor,
+    /// One {C}, only when the tap produced colorless mana (Ultima's
+    /// "whenever you tap a land for {C}, add an additional {C}").
+    MirrorColorless,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1070,6 +1073,11 @@ pub enum StaticEffect {
     /// types and abilities. Pair with a `GrantActivatedAbility` over
     /// `NamedBySource` lands for the "{T}: Add one mana of any color" half.
     NamedLandsNeutralized,
+    /// Ultima, Origin of Oblivion — every land carrying a blight counter
+    /// loses all land types and abilities while this source remains. Pair
+    /// with a `GrantActivatedAbility` over `WithCounter(Blight)` lands for
+    /// the "{T}: Add {C}" half.
+    BlightedLandsNeutralized,
     /// Necrotic Ooze — "As long as this is on the battlefield, it has all
     /// activated abilities of all creature cards in all graveyards." Surfaced
     /// by `granted_abilities_for` (which walks every graveyard for creature

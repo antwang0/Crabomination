@@ -1281,6 +1281,16 @@ impl crate::game::GameState {
             })
             .collect();
         for (src_id, extra) in grants {
+            // Colorless-only mirror: fires only when the tap produced {C}.
+            if matches!(extra, ExtraManaKind::MirrorColorless) {
+                if resolved.iter().any(|e| matches!(e,
+                    GameEvent::ColorlessManaAdded { player, .. } if *player == p))
+                {
+                    self.players[p].mana_pool.add_colorless(1);
+                    events.push(GameEvent::ColorlessManaAdded { player: p, source: Some(src_id) });
+                }
+                continue;
+            }
             let color = match extra {
                 ExtraManaKind::Fixed(c) => Some(c),
                 ExtraManaKind::ChosenColor => self
@@ -1290,6 +1300,8 @@ impl crate::game::GameState {
                     GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
                     _ => None,
                 }),
+                // Handled above (colorless-only fast path).
+                ExtraManaKind::MirrorColorless => continue,
             };
             match color {
                 Some(c) => {

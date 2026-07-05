@@ -8174,3 +8174,115 @@ pub fn summon_leviathan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gogo, Master of Mimicry — {2}{U} 2/4 Wizard. {X}{X}, {T}: copy target
+/// activated or triggered ability you control X times.
+/// (Copies keep the original's targets; the "can't be copied" rider on this
+/// ability itself is unmodeled.)
+pub fn gogo_master_of_mimicry() -> CardDefinition {
+    CardDefinition {
+        name: "Gogo, Master of Mimicry",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[x(), x()]),
+            effect: Effect::CopyAbility {
+                what: target_filtered(
+                    SelectionRequirement::HasAbilityOnStack
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                times: Value::XFromCost,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lightning, Army of One — {1}{R}{W} 3/2 Human Soldier with first strike,
+/// trample, lifelink. Stagger — whenever she deals combat damage to a player,
+/// until your next turn, damage to that player or their permanents is doubled.
+pub fn lightning_army_of_one() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning, Army of One",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Trample, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::StaggerPlayerUntilYourNextTurn { who: PlayerRef::Target(0) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ultima, Origin of Oblivion — {5} 4/4 God with flying. Whenever Ultima
+/// attacks, put a blight counter on target land; blighted lands lose all land
+/// types and abilities and have "{T}: Add {C}". Whenever you tap a land for
+/// {C}, add an additional {C}.
+pub fn ultima_origin_of_oblivion() -> CardDefinition {
+    use crate::effect::ExtraManaKind;
+    CardDefinition {
+        name: "Ultima, Origin of Oblivion",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Land),
+                kind: CounterType::Blight,
+                amount: Value::ONE,
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "A land with a blight counter on it loses all land types and abilities and has \"{T}: Add {C}.\"",
+                effect: StaticEffect::BlightedLandsNeutralized,
+            },
+            StaticAbility {
+                description: "A land with a blight counter on it has \"{T}: Add {C}.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::WithCounter(CounterType::Blight)),
+                    ),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::Colorless(Value::ONE),
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+            StaticAbility {
+                description: "Whenever you tap a land for {C}, add an additional {C}.",
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: false,
+                    filter: SelectionRequirement::ControlledByYou,
+                    extra: ExtraManaKind::MirrorColorless,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

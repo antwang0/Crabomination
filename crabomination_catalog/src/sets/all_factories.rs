@@ -5698,6 +5698,9 @@ static FIN: &[Factory] = &[
     super::fin::vaan_street_thief,
     super::fin::the_darkness_crystal,
     super::fin::summon_leviathan,
+    super::fin::gogo_master_of_mimicry,
+    super::fin::lightning_army_of_one,
+    super::fin::ultima_origin_of_oblivion,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

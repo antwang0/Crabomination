@@ -1847,6 +1847,9 @@ impl GameState {
         // "Opponents can't cast spells named X until your next turn"
         // (Academic Probation mode 0) expires as the lock owner's turn begins.
         self.players[p].opponents_cant_cast_named.clear();
+        // Stagger damage-doubling windows expire as the registrant's turn
+        // begins (Lightning, Army of One).
+        self.staggered_damage_players.retain(|(_, reg)| *reg != p);
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {
