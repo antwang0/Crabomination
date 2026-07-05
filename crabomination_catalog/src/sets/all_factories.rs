@@ -7083,6 +7083,8 @@ static ONE: &[Factory] = &[
     super::one::veil_of_assimilation,
     super::one::urabrasks_anointer,
     super::one::planar_disruption,
+    super::one::cruel_grimnarch,
+    super::one::awaken_the_sleeper,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

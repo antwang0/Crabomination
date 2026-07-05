@@ -2610,3 +2610,42 @@ fn porcelain_zealot_toxic_bonus() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(toxic).unwrap().power, 3, "1 + 2 (toxic bonus)");
 }
+
+// ── Grafted tests from the parallel session ──────────────────────────────────
+
+/// Cruel Grimnarch gains 4 when the opponent has no card to discard.
+#[test]
+fn cruel_grimnarch_gains_on_empty_hand() {
+    let mut g = two_player_game();
+    g.players[1].hand.clear();
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::cruel_grimnarch());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "gained 4 off the empty hand");
+}
+
+/// Awaken the Sleeper steals, untaps, hastes, and may smash Equipment.
+#[test]
+fn awaken_the_sleeper_steals_and_smashes() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let stolen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(1, catalog::short_sword());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(stolen);
+    g.battlefield_find_mut(stolen).unwrap().tapped = true;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::awaken_the_sleeper());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(stolen)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(stolen).unwrap();
+    assert_eq!(c.controller, 0, "stolen");
+    assert!(!c.tapped, "untapped");
+    assert!(g.battlefield_find(sword).is_none(), "equipment destroyed");
+}

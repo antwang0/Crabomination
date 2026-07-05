@@ -4702,3 +4702,66 @@ pub fn planar_disruption() -> CardDefinition {
         ..Default::default()
     }
 }
+
+
+// ── Grafted from the parallel session's commons batch ───────────────────────
+
+/// Cruel Grimnarch — {5}{B} 5/5 Phyrexian Cleric with deathtouch. ETB: each
+/// opponent discards; you gain 4 life per opponent who couldn't.
+pub fn cruel_grimnarch() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Grimnarch",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::HandSizeOf(PlayerRef::EachOpponent),
+                Value::ONE,
+            ),
+            then: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+                random: false,
+            }),
+            else_: Box::new(gain_life(4)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Awaken the Sleeper — {3}{R} Sorcery. Threaten target creature (untap,
+/// haste); you may destroy all Equipment attached to it.
+pub fn awaken_the_sleeper() -> CardDefinition {
+    CardDefinition {
+        name: "Awaken the Sleeper",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::MayDo {
+                description: "Destroy all Equipment attached to it?".into(),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::AttachedToMe(Box::new(Selector::Target(0))),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
