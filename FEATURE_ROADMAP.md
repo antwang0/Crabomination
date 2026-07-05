@@ -28,7 +28,8 @@ exercising each) was elided in a compaction pass; recover it from
   Modular/Graft/Outlast/Renown/Bloodthirst/Monstrosity/Devour/Amass); cast-mode
   + alt-cost (Kicker/Casualty/Connive/Offspring/Plot/Saddle/Blitz/Spectacle/
   Escalate/Spree/Buyback/Bestow/Foretell/Suspend/Flashback/Madness/Escape/Adventure/
-  Cascade/Storm/Convoke/Delve/Squad); Frenzy (702.35 combat rule) and Read Ahead
+  Cascade/Storm/Convoke/Delve/Squad/Encore); action Kicker (702.33f —
+  `kicker_action_cost` non-mana kicker); Frenzy (702.35 combat rule) and Read Ahead
   (702.155 Saga starting-chapter choice); plus Fading/Vanishing, Cumulative Upkeep, Echo,
   Dredge, Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift,
   Unleash, Devoid, Ingest, Absorb, Warp, Station (CR 702.184/721 — charge-counter
@@ -263,8 +264,9 @@ Each unblocks a large swath of cards.
    returns when the monarchy moves rather than when the source leaves; Palace Jailer).
 5. 🟡 **Copy of a permanent (clone).** `Effect::BecomeCopyOf` +
    `enters_as_copy` ship Clone, Phantasmal Image, Mirror Image, Stunt Double;
-   token copies via `CreateTokenCopyOf`. Remaining: continuous layer-1
-   "becomes a copy" effects (Helm of the Host loop, Mirrorform aura).
+   token copies via `CreateTokenCopyOf`; continuous "becomes a copy" ✅
+   (`BecomeCopyOfFor` — Mirrorform, Vesuva). Remaining: Helm of the Host's
+   per-combat mint is approximated (no layer-1 continuous copy).
 6. ✅ **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
    `CopySpellMayChooseTargets` (new-target choice) — Storm cards, Reverberate, Fork.
 

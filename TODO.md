@@ -8,176 +8,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
-## Discovered follow-ups — Final Fantasy (`sets::fin`)
+## Final Fantasy (`sets::fin`) — COMPLETE
 
-The `fin` set is a live, growing catalog (enumerate the gaps with
-`python3 scripts/fin_gaps.py` — it diffs `set:fin` against the **whole**
-catalog, since FIN cards are split across `sets::fin` and
-`sets::decks::recent27`; a fin.rs-only check reports false gaps). Primitives
-shipped for it include `EventKind::AnyCounterAdded`, `DynamicPt::
-CreaturesYouControl`, `EventKind::ScriedOrSurveiled` (scry/surveil-matters —
-Matoya), `DynamicPt::BasePlusNoncreatureNonlandInControllerGraveyard`
-(Xande), and `EventKind::CreatureOrArtifactDied` /
-`GameEvent::PermanentDied` (Judge Magister Gabranth, G'raha Tia).
-
-Follow-up primitives:
-- **Scry-only / surveil-only triggers** — `GameEvent::ScriedOrSurveiled` carries
-  a `surveil` bool, but only the combined `EventKind::ScriedOrSurveiled` exists.
-  Add scry-only / surveil-only `EventKind`s (gated on the bool) if a card wants
-  just one half.
-- **Optional player-target edicts / control-swap combat riders** — Reno and Rude
-  (exile top + sac-to-play), Kain (combat-damage control swap).
-
-Documented per-card approximations: Zidane (the "opponent gains control from
-you → Treasure" rider dropped), Vanille (meld half omitted), Y'shtola (the
-"a player lost ≥4 life → draw" end-step half omitted), Rydia (Summon Saga-
-reanimation activated ability omitted), Squall (the "creature *spell* you
-control targeted" half dropped).
-
-Deferred FIN cards wanting primitives not yet built:
-- **Transform DFCs** — ✅ **Cecil (Dark Knight // Redeemed Paladin)** and ✅
-  **Kefka (Court Mage // Ruler of Ruin)** ship: both are in-place transformers
-  (`Effect::Transform { This }` + `back_face`), so they needed no new zone-hop
-  primitive. Cecil rides the new `Predicate::PlayerLifeAtMostHalfStarting`;
-  Kefka's back rides the existing `Predicate::IsTurnOf(You)` ("during your turn")
-  over a `LifeLost`/`OpponentControl` trigger. Still deferred: Terra (Trance
-  Saga), Clive (Ifrit) and Garland (Chaos) — those transform via an
-  *activated/triggered exile-and-return-transformed* from graveyard/battlefield,
-  the pattern still unbuilt — and Bahamut/Dion (meld).
-- **Gilgamesh, Master-at-Arms** — dig top-6, put Equipment onto the battlefield,
-  reflexive attach.
-- **Jenova / Sin / Summon Sagas** — Mutant-type riders, random-exile-copy loops,
-  and stun-gated saga chapters with draw-per-tapped counts.
-- **Turn-gated conditional equip bonus** — Dragoon's Lance's "During your turn,
-  equipped creature has flying." `ConditionalEquipBonus` gates on a host
-  *filter*, not a turn/predicate; needs a predicate-gated variant (would also
-  cover Cloud, Planet's Champion's "during your turn, while equipped, double
-  strike + indestructible").
-- **Excalibur II / Aettir and Priwen** — equip bonuses scaled by counters on the
-  Equipment / by a player's life total; `EquipScale` only counts controlled
-  permanents. Add counter-on-source and dynamic-value equip scaling.
-- **Dual-zone tutor** — Delivery Moogle searches library *and/or* graveyard for
-  an artifact; `Effect::Search` is single-zone.
-- **Optional "up to one target"** — Cloud, Ex-SOLDIER / Ambrosia Whiteheart model
-  their "up to one target" ETB as a required target (per-slot optional-target
-  marker still unbuilt — also blocks Explosive Entry, Jukai Preserver).
-
-Shipped since: Cid, Timeless Artificer + Warrior of Light (anthem) ride the new
-`StaticEffect::PumpTeamByControlledPermanents` (team anthem scaled by a
-controlled/graveyard count); Warrior's impulse rides `RevealUntilFind` +
-`ManaValueLessThanEventAmount` (a SpellCast trigger's event amount is the cast
-spell's mana value); Cloud, Ex-SOLDIER rides `Effect::Attach` + `CountMatching`
-over equipped attackers. Cloud's "up to one target Equipment" ETB is a required
-target (fizzles with no Equipment).
-
-Shipped (modern_decks): **Combat Tutorial** — the "up to one target creature you
-control" slot rides the existing per-slot machinery (a trailing optional target
-is satisfiable with zero picks; cast validation only checks *supplied* targets).
-**A Realm Reborn** — `grant_tap_for_any_color(ControlledByYou ∩ OtherThanSource)`.
-Plus a 19-card FIN batch (Seymour Flux, Cloud of Darkness, the Wind/Fire/Earth
-Crystals, Ancient Adamantoise, Ultros, …) on the new `Effect::MayPayLife`
-(CR 119.4) and `StaticEffect::DoublePlusOneCounters` (CR 614.16 +1/+1-only
-doubler — also corrected Branching Evolution / Corpsejack Menace, which were
-over-scoped to all counter kinds via `DoubleCounters`).
-Also shipped: `StaticEffect::AnthemForFilter` (fixed-filter team anthem —
-Balthier and Fran → Vehicles +1/+1 vigilance/reach), `StaticEffect::
-SelfHasKeywordIf` (predicate-gated self keyword — Freya Crescent's "during your
-turn, has flying"), and `SpendRestriction::EquipmentOnly` (Freya's equip-only
-mana).
-
-Transform-DFC + short-card batch (modern_decks, this run): **Cecil, Dark
-Knight // Redeemed Paladin** (`Predicate::PlayerLifeAtMostHalfStarting`, new),
-**Kefka, Court Mage // Ruler of Ruin** (`Predicate::IsTurnOf(You)` —
-"during your turn" trigger gate), **Galuf's Final Act** (`GrantTriggeredAbility`
-death rider), **Clash of the Eikons** (choose-one-or-more `ChooseN`),
-**Louisoix's Sacrifice** (`SacrificeOrPay` + counter noncreature spell),
-**Clive's Hideaway** and **Starting Town** (Town lands: Hideaway 4 /
-pay-1-life-any-color), **Elixir** (new `Effect::ShuffleFilteredGraveyardInto
-LibraryGainLife`), and **Yuna, Hope of Spira** (new `AnthemForFilter.
-only_your_turn` turn-gated team anthem + `SelfHasKeywordIf` for herself +
-end-step finality-counter reanimate). Still-missing single-faced FIN (need a
-new primitive or richer wiring): Eden (mill-then-may-sac-self reflexive return —
-wants an `Effect::MaySacrificeSource { then }`), Chocobo Kick / Vayne's
-Treachery (non-mana Kicker — sac / return-land as the kicked cost; wants an
-optional non-mana additional cost that sets the kicked flag), the Summon Sagas
-(Fenrir/Leviathan/Brynhildr — "when you next cast a creature spell" chapter
-riders), Gilgamesh, Vaan, Choco, Random Encounter (put-milled-creatures-onto-
-battlefield), Memories Returning.
-
-Remaining short FIN cards blocked on one primitive each:
-- ✅ **Aettir and Priwen / Excalibur II** — shipped. Excalibur II rides the
-  existing `EquipScale.count_self_counters` (charge counters on the Equipment)
-  + a `LifeGained` → add-charge trigger. Aettir and Priwen uses the new
-  `EquipBonus.set_base_pt_controller_life` (base P/T set to the controller's
-  live life total, layer 7b).
-- ✅ **Delivery Moogle** — shipped. `Effect::SearchLibraryOrGraveyard` pools
-  candidates from both zones; `SearchPending.include_graveyard` takes the pick
-  from whichever zone holds it.
-- **The "Tiered" spells** (Fire/Ice/Thunder/Restoration/Tifa's/Vincent's Limit
-  Break) — "choose one additional cost" modal-with-per-mode-cost; not yet mapped
-  to Spree/Escalate.
-- ✅ **Granted-type death LKI (CR 603.10)** — shipped. `GameState::dying_snapshot`
-  stamps a leaving permanent's *computed* creature types (layer 4) into the death
-  snapshot, and `R::HasCreatureType` reads computed types for battlefield
-  permanents, so "when a [type] you control dies" fires for creatures that gained
-  the type from a continuous effect (Jenova's granted Mutant). Also stashes the
-  dead *subject*'s LKI (`resolving_lki_subject` + `lki_snapshot`) so
-  "draw cards equal to its power" reads its counter-boosted power, not the
-  graveyard's printed value.
-- **Sin / Jenova** — begin-combat "exile up to one target creature card from a
-  graveyard; if you do, create a token copy of it (except it's tapped / …)".
-  The primitive is now shipped — Ardyn, the Usurper uses
-  `Move(Creature∩InGraveyard → Exile)` + `CreateTokenCopyOf { source: Target(0),
-  override_pt, override_colors, extra_creature_types }`. Sin/Jenova need only
-  their own override riders (tapped-entry, per-card color/type).
-- **FIN "Summon:" Saga-creature cycle** — the engine handles Enchantment
-  Creature — Saga bodies (chapters fire; CR 714 sacrifices after the last
-  chapter). Shipped: Choco/Mog, G.F. Ifrit, Anima, Esper Ramuh, Bahamut, Fat
-  Chocobo, G.F. Cerberus, Shiva, Titan, Primal Garuda, Primal Odin. Remaining,
-  each a straight saga_chapters build: Fenrir (search + next-creature-counter +
-  top-power draw), Brynhildr (impulse + gestalt haste), Leviathan (mass bounce +
-  delayed "whenever [type] attacks, draw"). Fenrir/Brynhildr chapter II each want
-  a one-shot "your next creature spell's permanent enters with a +1/+1 counter /
-  gains haste" primitive; Leviathan II/III want a floating-until-EOT attack
-  trigger.
-- **"Tiered" spells** — `Effect::Tiered { modes: Vec<SpreeMode> }` ships (reuses
-  Spree's `CastSpellSpree` cast plumbing; the cast validator enforces exactly one
-  chosen mode). Fire/Ice/Thunder/Restoration Magic are wired. Remaining: Limit
-  Breaks with a *shared preamble + chosen base P/T* (Vincent's Limit Break — the
-  tier picks a P/T that a common effect then applies) need a "chosen-tier value"
-  read at resolution. Client UX: Tiered cards ride the Spree per-mode picker, so
-  the UI still lets you tick multiple tiers (server rejects) — add a one-mode
-  radio for Tiered.
-- **FIN primitives still wanted (noticed this run, deferred):**
-  - *Free-cast-from-hand by mana value* — "you may cast a spell from your hand
-    with mana value ≤ N without paying its cost" (Buster Sword's combat rider;
-    dropped there — it currently just draws).
-  - *Cross-player impulse* — "exile the top card of *that player's* library, you
-    may play it" gated on a sacrifice (Reno and Rude, Vaan, Street Thief). Needs
-    `ExileTopAndGrantMayPlay`-style with `who: Target(player)` + a sac gate.
-  - *Kicker with a non-mana cost* — "Kicker—Sacrifice/Return a land" (Vayne's
-    Treachery sac-kicker, Chocobo Kick return-land kicker). Only mana kicker ships.
-  - *Token-creation replacement that adds a token* — "if a token would be created,
-    that token plus a Frog is created instead" (Quina, Qu Gourmet).
-  - *Mill "+N" replacement* — The Water Crystal's "mill that many plus four" is
-    approximated by `OpponentMillDoubled`; a flat-`+N` opponent-mill replacement
-    would be exact.
-  - ✅ *Next-creature-spell-enters-with-extra-counter (turn-scoped)* — shipped as
-    `Effect::GrantNextCreatureSpellCounters` + `Player.pending_creature_etb_
-    counters` (drained onto the next creature spell at ETB, cleared at cleanup;
-    Summon: Fenrir II). Torgal's first-Human rider can reuse it.
-  - ✅ *Next-creature-spell-enters-with-keyword (turn-scoped)* — shipped as
-    `Effect::GrantNextCreatureSpellKeyword` + `Player.pending_creature_etb_
-    keywords`, applied at ETB via `grant_keyword_eot` (Summon: Brynhildr Gestalt).
-  - *Temporary attack-triggered ability granted for a turn* — "until end of
-    turn, whenever a [type] attacks, draw" (Summon: Leviathan II/III).
-  - Still-unimplemented FIN cards (need one of the above or interactive
-    cast-time payment): Vayne's Treachery, Chocobo Kick, Quina, Reno and Rude,
-    Vaan, Torgal, Firion, Gogo, Louisoix's Sacrifice, Random
-    Encounter, Memories Returning, Triple Triad, Sin, the remaining Summon
-    Sagas (Leviathan/Brynhildr), Clive's Hideaway/Eden,
-    The Darkness Crystal, Lightning, Vanille's meld. (Kain, Stiltzkin, Fenrir,
-    Brynhildr, Garnet, Vincent's Limit Break now shipped.)
+Every single-faced FIN card is implemented (`python3 scripts/fin_gaps.py`
+reports 0 missing), including the Vanille ↔ Fang meld into Ragnarok
+(`Effect::Meld`). Remaining known approximations, each documented on its
+factory doc comment:
+- Zidane (opponent-gains-control → Treasure rider dropped), Y'shtola
+  (lost-4-life end-step draw omitted), Rydia (Summon-Saga reanimation
+  activated ability omitted), Squall (creature-*spell*-targeted half dropped).
+- Gogo's "this ability can't be copied" rider unmodeled; copies keep targets.
+- Memories Returning / Choco / Gilgamesh picks are auto-heuristics (no
+  interactive multi-pick UI yet).
+- Stolen Uniform's lose-control unattach is modeled as a next-end-step
+  unattach.
+- Bahamut/Dion meld pair still wants a second `Effect::Meld` card wiring.
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
@@ -197,19 +42,12 @@ Primitives shipped this run: `Keyword::HexproofExceptColors`,
 `SelectionRequirement::HasToxic` (+ `CardInstance::has_toxic`),
 `DynamicPt::BasePlusCountersOnSelf`. Cards still blocked on one primitive each:
 
-- **Necrogen Communion** (aura): "when enchanted creature dies, return that card
-  to the battlefield **under your control**." No effect returns a just-died
-  creature to the battlefield under the aura-controller. Add
-  `Effect::ReturnDiedToBattlefieldUnderYourControl { what }` reading the death
-  LKI → owner's graveyard card.
-- **Furnace Punisher**: "at each player's upkeep, deal 2 to that player unless
-  they control two or more basic lands." Needs a per-upkeep-player damage target
-  + a `Predicate` counting that player's basic lands.
-- **Voltage Surge**: optional additional sacrifice cost with a "if the cost was
-  paid, 4 damage instead" rider — an optional-cost / conditional-magnitude split.
-- **Anoint with Affliction** (recent): the Corrupted rider is dropped (base mode
-  caps target at MV 3). Faithful version needs a "target's controller has 3+
-  poison" predicate to widen the exile.
+All four previously-blocked ONE cards ship: Necrogen Communion (the
+Minion's-Return `EnchantedBySource` reanimate), Furnace Punisher
+(`SelectorCountAtLeast` over the upkeep player's basics), Voltage Surge
+(`kicker_action_cost` optional sacrifice, CR 702.33f), and a faithful Anoint
+with Affliction (`SelectionRequirement::ControllerCorrupted`). Enumerate
+remaining set gaps with `python3 scripts/set_gaps.py one`.
 
 ## Environment note
 
