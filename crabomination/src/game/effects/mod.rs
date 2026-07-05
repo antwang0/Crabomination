@@ -6448,6 +6448,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleYourSourcesDamageThisTurn => {
+                self.players[ctx.controller].double_your_source_damage_this_turn = true;
+                Ok(())
+            }
+
             Effect::WeldArtifacts { what } => {
                 // Goblin Welder: the target artifact's controller sacrifices
                 // it and returns an artifact card from their graveyard

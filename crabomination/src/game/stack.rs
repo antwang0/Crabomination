@@ -435,7 +435,8 @@ impl GameState {
             EventScope::FromYourGraveyard => false, // walked separately below
             EventScope::YourPermanentTargetedByOpponent
             | EventScope::YourCreatureTargeted
-            | EventScope::EnchantedBySource => false, // event-based
+            | EventScope::EnchantedBySource
+            | EventScope::YourSourceDamagedOpponent => false, // event-based
             EventScope::ControllerAttackedByOpponent => false, // combat-based
         };
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
@@ -1911,6 +1912,8 @@ impl GameState {
             pl.permanents_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.
             pl.dealt_combat_damage_to_player_this_turn = false;
+            // Quest for Pure Flame's turn-scoped source-damage doubling.
+            pl.double_your_source_damage_this_turn = false;
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.

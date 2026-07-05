@@ -1437,6 +1437,9 @@ pub enum GameEvent {
         to_player: Option<usize>,
         to_card: Option<CardId>,
         combat: bool,
+        /// Controller of the damage's source (None when unattributable).
+        /// Powers "a source you control deals damage to …" scoping.
+        from_controller: Option<usize>,
     },
     /// Some or all of a damage event was prevented by a shield (CR 615.13).
     /// `amount` is the prevented portion.

@@ -306,6 +306,16 @@ impl GameState {
         if amount == 0 {
             return;
         }
+        // Damage-source attribution: the source permanent's controller, or
+        // the resolving spell's caster (mirrors `scale_damage_to`).
+        let from_controller = source.and_then(|s| {
+            self.battlefield_find(s)
+                .map(|c| c.controller)
+                .or_else(|| match &self.resolving_source {
+                    Some((id, caster, _)) if *id == s => Some(*caster),
+                    _ => None,
+                })
+        });
         // CR 615.7 — "prevent all damage [chosen source] would deal this
         // turn" (Burrenton Forge-Tender), unless prevention is off (615.12).
         if let Some(src) = source
@@ -425,10 +435,11 @@ impl GameState {
                         to_player: Some(p),
                         to_card: None,
                         combat: false,
+                        from_controller,
                     });
                 } else {
                     let applied = self.adjust_life_applied(p, -(amount as i32));
-                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false });
+                    events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false, from_controller });
                     let lost = (-applied).max(0) as u32;
                     if lost > 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: lost });
@@ -487,6 +498,7 @@ impl GameState {
                             to_player: None,
                             to_card: Some(cid),
                             combat: false,
+                            from_controller,
                         });
                         events.push(GameEvent::LoyaltyChanged {
                             card_id: cid,
@@ -536,6 +548,7 @@ impl GameState {
                         to_player: None,
                         to_card: Some(cid),
                         combat: false,
+                        from_controller,
                     });
                     let is_creature = c.definition.is_creature();
                     if source_exiles_damaged && is_creature {

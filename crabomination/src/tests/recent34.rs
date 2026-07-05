@@ -111,6 +111,7 @@ fn quest_for_the_holy_relic_tutors_an_equipment_to_play() {
     let mut g = two_player_game();
     let quest = g.add_card_to_battlefield(0, catalog::quest_for_the_holy_relic());
     g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 5);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let equip = g.add_card_to_library(0, catalog::bonesplitter()); // an Equipment to find
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(equip))]));
     g.priority.player_with_priority = 0;
@@ -120,8 +121,11 @@ fn quest_for_the_holy_relic_tutors_an_equipment_to_play() {
         x_value: None,
     }).expect("remove 5 quest counters + sacrifice");
     drain_stack(&mut g);
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bonesplitter"),
-        "Equipment fetched onto the battlefield");
+    assert_eq!(
+        g.battlefield_find(equip).expect("Equipment fetched onto the battlefield").attached_to,
+        Some(bear),
+        "fetched Equipment enters attached to your creature"
+    );
 }
 
 #[test]

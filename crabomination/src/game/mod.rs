@@ -361,6 +361,9 @@ mod tests_recent103;
 #[path = "../tests/recent104.rs"]
 mod tests_recent104;
 #[cfg(test)]
+#[path = "../tests/quests.rs"]
+mod tests_quests;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -3408,6 +3411,13 @@ impl GameState {
                     }
                 }
             }
+        }
+        // Quest for Pure Flame — the source's controller doubles all damage
+        // their sources deal this turn (CR 614.5, any permanent or player).
+        if let Some((src_ctrl, _)) = &source_info
+            && self.players[*src_ctrl].double_your_source_damage_this_turn
+        {
+            d += 1;
         }
         amount.saturating_mul(1 << d.min(16)) >> h.min(16)
     }

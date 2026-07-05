@@ -51,6 +51,8 @@ pub(crate) fn event_matches_spec(
             EventKind::PlayerDealtNoncombatDamage,
             GameEvent::DamageDealt { to_player: Some(_), combat: false, .. },
         ) => true,
+        // Any damage to a player, combat or not (Quest for Pure Flame).
+        (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
@@ -328,6 +330,12 @@ pub(crate) fn event_matches_spec(
         }
         EventScope::FromYourGraveyard => event_actor(state, event)
             .is_some_and(|p| p == source.owner),
+        EventScope::YourSourceDamagedOpponent => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if state.same_team(*fc, source.controller)
+                    && !state.same_team(*p, source.controller)
+        ),
         EventScope::YourPermanentTargetedByOpponent => {
             // The targeted permanent must be controlled by the trigger's
             // controller, and the caster must be an opponent. Battle Mammoth.
@@ -619,6 +627,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourPermanentTargetedByOpponent
         | EventScope::YourCreatureTargeted
         | EventScope::EnchantedBySource
+        | EventScope::YourSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent => false,
     }
 }

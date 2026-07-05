@@ -501,8 +501,8 @@ Cards confirmed absent and deferred this run for want of a mechanic:
   land"). `Keyword::Buyback` only carries a `ManaCost`; needs a buyback variant
   that pays a sacrifice at cast time and still sets `bought_back`. Touches the
   central cast pipeline.
-- **Goblin Welder / Daretti, Scrap Savant** — artifact-swap (sacrifice one,
-  reanimate another) needs a two-target gy↔bf swap effect.
+- **Daretti, Scrap Savant** — Goblin Welder's swap ships (`Effect::WeldArtifacts`);
+  Daretti wants the same effect as a loyalty ability plus the discard/draw +1.
 - **Dark Depths / Smokestack / Tangle Wire** — ice/soot/fade counter engines.
 
 ## Discovered follow-ups — TDM/DFT staples (`decks::recent29`/`recent30`)
@@ -2020,11 +2020,8 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     opponents control enter detained" variant (Lavinia of the Tenth) is ⏳.
 
 - ⏳ **Discovered this run (coin-flip / artifact batch — deferred cards):**
-  - **Goblin Welder** (CR 701.16) — needs a simultaneous "sacrifice target
-    artifact a player controls + return target artifact card from that
-    player's graveyard to the battlefield" swap (two linked targets on an
-    activated ability; the gy card enters under that player's control even
-    when it's an opponent's). No clean reanimate-opponent's-gy primitive yet.
+  - ✅ **Goblin Welder** ships (`Effect::WeldArtifacts` — the gy half is
+    auto-picked, highest MV, rather than a second target).
   - **Squee, the Immortal** — needs a static "you may cast this from your
     graveyard or from exile" permission (a real cast onto the stack, unlike
     Gravecrawler's `from_graveyard` Move approximation).
@@ -3275,14 +3272,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Sin-style random exiles faithful.
 
 - ⏳ **recent34–38 follow-ups / deferred cards (this run):**
-  - Quest cycle remainder: **Quest for Pure Flame** (needs a turn-scoped
-    "double all damage from your sources" replacement — no primitive yet),
-    **Quest for the Nihil Stone** (each-opponent-upkeep intervening-`if` on
-    "that player has no cards in hand AND 2+ quest counters"), **Quest for
-    Ula's Temple** (look-at-top conditional reveal + end-step deploy from hand).
-  - **Quest for the Holy Relic** drops the "attach it to a creature you
-    control" rider — wants a search-to-battlefield-**attached** primitive (also
-    helps Stoneforge-style tutors).
+  - ✅ Quest cycle complete (`decks::quests`): Pure Flame
+    (`Effect::DoubleYourSourcesDamageThisTurn` + the new
+    `EventScope::YourSourceDamagedOpponent` over `DamageDealt.from_controller`),
+    Nihil Stone, Ula's Temple, and the Holy Relic attach rider
+    (Search → `Attach { LastMoved, GreatestPowerYouControl }`).
   - Approximations still to revisit: Pir's Whim (full friend/foe vote →
     you=friend/opponents=foe), Three Dreams (different-names search dropped).
     ✅ Gather the Pack (spell mastery's 2nd creature via `Effect::MillThenToHandN`
@@ -3291,9 +3285,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     (Ascend + city's-blessing opponents-only), Yahenni's Expertise (MV≤3 free
     cast via `CastFromHandWithoutPaying`), and Goblin Assault ("Goblins attack
     each combat" via `GrantKeyword(MustAttack)`) are now faithful.
-  - Still missing, need new primitives: **Pulmonic Sliver** (graveyard→library
-    replacement static), **Goblin Welder** / **Gilt-Leaf Archdruid** /
-    **Pyromancer Ascension** / **Twilight Prophet**. ✅ Bonehoard
+  - ✅ Pulmonic Sliver (`StaticEffect::DiesToLibraryTopInstead`), Goblin
+    Welder, Gilt-Leaf Archdruid, Pyromancer Ascension, and Twilight Prophet
+    (`RevealTopToHandLoseMv.you_gain`) all ship now. ✅ Bonehoard
     (`EquipScale.count_all_graveyards`), **Necropolis Fiend**
     (`ActivatedAbility.exile_other_x` — {X},{T}, exile X from gy: −X/−X), and
     **Caustic Bronco** (`RevealTopToHandLoseMv { who }`) now ship.
@@ -3311,8 +3305,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     cost; the bonus 4 life is gated on controlling a Dragon instead.
   - **Deferred — need new primitives:** Necropolis Fiend ({X},{T}, exile X from
     gy: −X/−X — activated abilities have no `{X}` cost + Value-count gy-exile);
-    Pulmonic Sliver ("Slivers may go to library top instead of graveyard" —
-    a graveyard→library replacement static); Bonehoard (living-weapon equip
+    Bonehoard (living-weapon equip
     +X/+X where X = creature cards in all graveyards — `EquipScale` counts
     battlefield permanents, not graveyards); Dromoka's Command (mode "prevent
     all damage target instant/sorcery would deal" — no prevent-spell-damage
@@ -3351,8 +3344,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   discard-X exile-and-play); Valgavoth (opponent-graveyard-exile replacement +
   play-from-exile-paying-life); Battle Cry Goblin (Pack tactics — "if you
   attacked with total power ≥ N this combat"); Goblin Recruiter (search any
-  number + arrange on top); Gilt-Leaf Archdruid (tap-seven-untapped-Druids cost
-  + gain control of all lands); Divergent Transformations / Seeds-cycle's last
+  number + arrange on top); Divergent Transformations / Seeds-cycle's last
   Undaunted card (polymorph-reveal-until-creature).
 
 - ⏳ **Equipment-matters follow-ups** (`decks::recent12`): a

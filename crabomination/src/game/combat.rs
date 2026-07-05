@@ -1645,6 +1645,7 @@ impl GameState {
                 let kws = &cp.keywords;
                 Some(AttackerInfo {
                     id: cp.id,
+                    controller: cp.controller,
                     target: atk.target,
                     defender_player,
                     power: combat_damage_value(cp),
@@ -1866,6 +1867,7 @@ impl GameState {
                             to_player: None,
                             to_card: Some(blocker_id),
                             combat: true,
+                            from_controller: Some(atk.controller),
                         });
                         creature_damage.push((atk.id, blocker_id, dealt as u32));
                     }
@@ -1978,6 +1980,7 @@ impl GameState {
                                     to_player: None,
                                     to_card: Some(atk.id),
                                     combat: true,
+                                    from_controller: Some(bc.controller),
                                 });
                             }
                         }
@@ -2176,6 +2179,7 @@ impl GameState {
                         to_player: None,
                         to_card: Some(redirect),
                         combat: true,
+                        from_controller: Some(atk.controller),
                     });
                     return;
                 }
@@ -2188,6 +2192,7 @@ impl GameState {
                         to_player: Some(p),
                         to_card: None,
                         combat: true,
+                        from_controller: Some(atk.controller),
                     });
                     let amount = (-applied).max(0) as u32;
                     events.push(GameEvent::LifeLost {
@@ -2258,6 +2263,7 @@ impl GameState {
                         to_player: None,
                         to_card: Some(pw_id),
                         combat: true,
+                        from_controller: Some(atk.controller),
                     });
                     events.push(GameEvent::LoyaltyChanged {
                         card_id: pw_id,
@@ -2279,6 +2285,7 @@ impl GameState {
                         to_player: None,
                         to_card: Some(b_id),
                         combat: true,
+                        from_controller: Some(atk.controller),
                     });
                 }
             }
@@ -2627,6 +2634,7 @@ fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
 /// during the loop.
 struct AttackerInfo {
     id: CardId,
+    controller: usize,
     target: AttackTarget,
     defender_player: usize,
     power: i32,

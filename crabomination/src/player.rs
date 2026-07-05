@@ -294,6 +294,10 @@ pub struct Player {
     /// `fire_combat_damage_to_player_triggers`, reset at the turn boundary.
     #[serde(default)]
     pub dealt_combat_damage_to_player_this_turn: bool,
+    /// CR 614.5 — "sources you control deal double damage this turn" (Quest
+    /// for Pure Flame). Read in `scale_damage_to`, reset at the turn boundary.
+    #[serde(default)]
+    pub double_your_source_damage_this_turn: bool,
     /// CR 700.13 — this player has committed a crime this turn (cast a spell or
     /// activated an ability targeting an opponent / their stuff). Set when a
     /// `CommittedCrime` event fires, reset at the turn boundary. Powers
@@ -663,6 +667,7 @@ impl Player {
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
             dealt_combat_damage_to_player_this_turn: false,
+            double_your_source_damage_this_turn: false,
             committed_crime_this_turn: false,
             descended_this_turn: false,
             descend_count_this_turn: 0,

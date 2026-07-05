@@ -143,9 +143,8 @@ pub fn quest_for_ancient_secrets() -> CardDefinition {
 
 /// Quest for the Holy Relic — {W} Enchantment. Whenever you cast a creature
 /// spell, put a quest counter. Remove five quest counters and sacrifice it:
-/// search your library for an Equipment card and put it onto the battlefield.
-/// (The "attach it to a creature you control" rider is dropped — no
-/// search-to-battlefield-attached primitive yet.)
+/// fetch an Equipment onto the battlefield attached to a creature you control
+/// (auto-pick: your greatest-power creature).
 pub fn quest_for_the_holy_relic() -> CardDefinition {
     use crate::card::ArtifactSubtype;
     CardDefinition {
@@ -160,11 +159,17 @@ pub fn quest_for_the_holy_relic() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::Quest, 5)),
             sac_cost: true,
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::Attach {
+                    what: Selector::LastMoved,
+                    to: Selector::GreatestPowerYouControl,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

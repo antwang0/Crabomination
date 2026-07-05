@@ -1487,6 +1487,10 @@ pub enum EventKind {
     /// noncombat damage" (Chandra's Spitfire). The amount rides in via
     /// `Value::TriggerEventAmount`.
     PlayerDealtNoncombatDamage,
+    /// A player was dealt damage (combat or not). Pair with
+    /// `EventScope::YourSourceDamagedOpponent` for "whenever a source you
+    /// control deals damage to an opponent" (Quest for Pure Flame).
+    PlayerDamaged,
     /// A player gained life.
     LifeGained,
     /// CR 701.22/701.42 — a player scried or surveiled (a nonzero peek that
@@ -1706,6 +1710,10 @@ pub enum EventScope {
     /// for triggers with this scope; the trigger's effective controller
     /// is the graveyard owner.
     FromYourGraveyard,
+    /// A `PlayerDamaged` event whose source is controlled by the trigger's
+    /// controller and whose damaged player is an opponent of them ("a source
+    /// you control deals damage to an opponent" — Quest for Pure Flame).
+    YourSourceDamagedOpponent,
     /// A permanent **you control** (any, including the source) becomes the
     /// target of a spell or ability an **opponent** controls. Used with
     /// `EventKind::BecameTarget` — Battle Mammoth. Unlike SelfSource, the
@@ -3261,6 +3269,10 @@ pub enum Effect {
     /// Gain control of the resolved permanents for as long as the effect's
     /// source remains on the battlefield (Sower of Temptation).
     GainControlWhileSourceRemains { what: Selector },
+    /// CR 614.5 — "If any source you control would deal damage … this turn,
+    /// it deals double that damage instead." Sets the controller's
+    /// turn-scoped flag read by `scale_damage_to` (Quest for Pure Flame).
+    DoubleYourSourcesDamageThisTurn,
     /// Goblin Welder: target artifact's controller simultaneously sacrifices
     /// it and returns an artifact card from their graveyard to the
     /// battlefield. The graveyard half is auto-picked (highest mana value).

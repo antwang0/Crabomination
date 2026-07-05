@@ -2792,7 +2792,7 @@ fn screaming_nemesis_redirects_damage() {
     g.dispatch_triggers_for_events(&[crate::game::GameEvent::DamageDealt {
         amount: 3,
         to_card: Some(nem),
-        to_player: None, combat: false,
+        to_player: None, combat: false, from_controller: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 3, "redirected 3 to the opponent");
