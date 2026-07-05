@@ -267,11 +267,11 @@ server affordance `spreeable` + client highlight), **Read Ahead** (CR 702.155 �
 **Frenzy** as a first-class `Keyword::Frenzy(n)` combat rule (CR 702.35; Frenzy
 Sliver now a real lord). 8 Spree spells + 13 OTJ staples with tests.
 Still deferred:
-- **Spree client per-mode UI** — the engine takes `spree_modes` + per-mode
-  targets, and `spreeable_hand` flags castable Spree cards, but the Bevy client
-  still needs a mode-checkbox + per-mode target picker (today only the cheapest
-  single mode is probed for the highlight). Cast-time target *validation* for
-  Spree is deferred to resolution (each mode re-checks its own targets).
+- **Spree client per-mode UI** — ✅ shipped: right-click a spreeable card
+  opens a mode picker (checkboxes; radio for Tiered via
+  `KnownCard.spree_single_mode`) and casts `CastSpellSpree`. Remaining:
+  per-mode *target* picking for multi-target mode sets (today the single
+  armed targeting pass covers one target).
 - **Spree/Escalate cast-time mode selection** for bots/auto-target — bots don't
   yet choose Spree modes, so a bot casting a Spree spell resolves the default
   (cheapest) mode only.

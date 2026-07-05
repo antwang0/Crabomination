@@ -1179,7 +1179,6 @@ fn adaptive_sporesinger_proliferates() {
 /// Against All Odds mode 2 reanimates a small artifact/creature.
 #[test]
 fn against_all_odds_reanimates_small() {
-    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
     let mine = g.add_card_to_battlefield(0, catalog::ornithopter()); // flicker target
@@ -1188,7 +1187,6 @@ fn against_all_odds_reanimates_small() {
     let spell = g.add_card_to_hand(0, catalog::against_all_odds());
     g.players[0].mana_pool.add(crate::mana::Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
-    let _ = ScriptedDecider::new([DecisionAnswer::Bool(true)]); // default picks = both modes
     g.perform_action(GameAction::CastSpell {
         card_id: spell, target: Some(Target::Permanent(mine)),
         additional_targets: vec![Target::Permanent(dead)], mode: None, x_value: None,
@@ -1205,8 +1203,6 @@ fn bladegraft_aspirant_discounts_equipment() {
     g.add_card_to_battlefield(0, catalog::bladegraft_aspirant());
     g.step = crate::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    let saw = g.add_card_to_hand(0, catalog::bone_saw()); // {1}? — actually {0}; use short_sword {1}
-    let _ = saw;
     let sword = g.add_card_to_hand(0, catalog::short_sword()); // {1} → free
     g.perform_action(GameAction::CastSpell {
         card_id: sword, target: None, additional_targets: vec![], mode: None, x_value: None,
