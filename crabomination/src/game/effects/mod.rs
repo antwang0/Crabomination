@@ -6026,6 +6026,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantLoyaltyTwiceThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.loyalty_twice_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
             // CR 122.1b — Add a keyword counter to `what`. The host gains
             // the named keyword while at least one counter of this kind
             // is present (applied as a layer-6 grant in
@@ -6608,6 +6619,7 @@ impl GameState {
                 enters_tapped,
                 non_legendary,
                 legendary,
+                extra_keywords,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;
@@ -6681,6 +6693,11 @@ impl GameState {
                 if *legendary && !def.supertypes.contains(&crate::card::Supertype::Legendary) {
                     def.supertypes.push(crate::card::Supertype::Legendary);
                 }
+                for kw in extra_keywords.iter() {
+                    if !def.keywords.contains(kw) {
+                        def.keywords.push(kw.clone());
+                    }
+                }
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, *enters_tapped, events);
                 }
@@ -6712,6 +6729,7 @@ impl GameState {
                     )?;
                     self.run_effect(
                         &Effect::CreateTokenCopyOf {
+                            extra_keywords: vec![],
                             who: PlayerRef::You,
                             count: crate::effect::Value::ONE,
                             source: Selector::Target(0),
@@ -12290,6 +12308,49 @@ impl GameState {
                         duration: EffectDuration::Indefinite,
                         modification: Modification::AddCardType(card_type.clone()),
                     });
+                }
+                Ok(())
+            }
+
+            Effect::BecomeTreasure { what } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    for (layer, m) in [
+                        (
+                            Layer::L4Type,
+                            Modification::SetCardTypes(vec![crate::card::CardType::Artifact]),
+                        ),
+                        (
+                            Layer::L4Type,
+                            Modification::SetArtifactSubtypes(vec![
+                                crate::card::ArtifactSubtype::Treasure,
+                            ]),
+                        ),
+                        (Layer::L6Ability, Modification::RemoveAllAbilities),
+                    ] {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer,
+                            sublayer: None,
+                            duration: EffectDuration::Indefinite,
+                            modification: m,
+                        });
+                    }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.granted_activated_abilities.push(crate::effect::ActivatedAbility {
+                            tap_cost: true,
+                            sac_cost: true,
+                            effect: Effect::AddMana {
+                                who: crate::effect::PlayerRef::You,
+                                pool: crate::effect::ManaPayload::AnyOneColor(crate::effect::Value::ONE),
+                            },
+                            ..Default::default()
+                        });
+                    }
                 }
                 Ok(())
             }

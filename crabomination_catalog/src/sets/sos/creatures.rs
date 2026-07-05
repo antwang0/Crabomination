@@ -3550,6 +3550,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::This,

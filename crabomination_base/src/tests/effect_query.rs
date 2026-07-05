@@ -67,6 +67,7 @@ fn targeted_effects_carry_slot_filters() {
         },
         Effect::NameCreatureType { what: tgt() },
         Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: crate::effect::PlayerRef::You,
             count: Value::Const(1),
             source: tgt(),

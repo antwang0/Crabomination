@@ -537,7 +537,7 @@ fn remaining_cost_label(
     for sym in &cost.symbols {
         let colored = match sym {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
-            ManaSymbol::Hybrid(a, _) => Some(*a),
+            ManaSymbol::Hybrid(a, _) | ManaSymbol::PhyrexianHybrid(a, _) => Some(*a),
             ManaSymbol::MonoHybrid(_, c) => Some(*c),
             ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => {
                 generic += n;

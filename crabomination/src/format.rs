@@ -392,6 +392,7 @@ fn cost_has_duplicate_symbol(c: &CardDefinition) -> bool {
             ManaSymbol::Hybrid(a, b) => format!("H{a:?}{b:?}"),
             ManaSymbol::MonoHybrid(n, col) => format!("M{n}{col:?}"),
             ManaSymbol::Phyrexian(col) => format!("P{col:?}"),
+            ManaSymbol::PhyrexianHybrid(a, b) => format!("PH{a:?}{b:?}"),
             ManaSymbol::Generic(_) => "generic".into(),
             ManaSymbol::Colorless(_) => "colorless".into(),
             ManaSymbol::Snow => "snow".into(),
@@ -506,7 +507,7 @@ fn union_cost_identity(out: &mut ColorSet, def: &CardDefinition) {
     for s in &def.cost.symbols {
         match s {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => out.insert(*c),
-            ManaSymbol::Hybrid(a, b) => {
+            ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
                 out.insert(*a);
                 out.insert(*b);
             }

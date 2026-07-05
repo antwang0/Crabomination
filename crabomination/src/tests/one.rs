@@ -3118,3 +3118,193 @@ fn serum_core_chimera_oil_loop() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "3 damage killed the drake");
 }
+
+// ── ONE planeswalkers: Compleated (CR 702.150) + friends ─────────────────────
+
+fn cast_pw(g: &mut GameState, def: crate::card::CardDefinition) -> CardId {
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, def);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast planeswalker");
+    drain_stack(g);
+    id
+}
+
+/// CR 702.150: paying Jace's {U/P} with mana gives full loyalty.
+#[test]
+fn compleated_full_mana_full_loyalty() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let jace = cast_pw(&mut g, catalog::jace_the_perfected_mind());
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 5);
+}
+
+/// CR 702.150c: paying the {U/P} with 2 life drops Jace to 3 loyalty.
+#[test]
+fn compleated_life_paid_two_fewer_loyalty() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    let jace = cast_pw(&mut g, catalog::jace_the_perfected_mind());
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life for the pip");
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 3);
+}
+
+/// Nissa's two {G/P} pips paid with life cost 4 loyalty total.
+#[test]
+fn compleated_nissa_double_pip() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    let nissa = cast_pw(&mut g, catalog::nissa_ascended_animist());
+    assert_eq!(g.players[0].life, life - 4);
+    assert_eq!(g.battlefield_find(nissa).unwrap().counter_count(CounterType::Loyalty), 3);
+}
+
+/// Lukka's {R/G/P} pays from either color; green here.
+#[test]
+fn phyrexian_hybrid_pays_either_color() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    let lukka = cast_pw(&mut g, catalog::lukka_bound_to_ruin());
+    assert_eq!(g.players[0].life, life, "no life paid — green covered the pip");
+    assert_eq!(g.battlefield_find(lukka).unwrap().counter_count(CounterType::Loyalty), 5);
+}
+
+/// Vraska −9 tops the opponent up to exactly nine poison counters.
+#[test]
+fn vraska_minus_nine_tops_up_poison() {
+    let mut g = two_player_game();
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_betrayals_sting());
+    g.battlefield_find_mut(vraska).unwrap().counters.insert(CounterType::Loyalty, 10);
+    g.players[1].poison_counters = 4;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska, ability_index: 2, target: Some(Target::Player(1)), x_value: None,
+    }).expect("-9");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 9);
+}
+
+/// Vraska −2 turns a creature into an abilityless Treasure artifact.
+#[test]
+fn vraska_minus_two_treasureifies() {
+    let mut g = two_player_game();
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_betrayals_sting());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska, ability_index: 1, target: Some(Target::Permanent(angel)), x_value: None,
+    }).expect("-2");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.card_types.contains(&CardType::Artifact) && !cp.card_types.contains(&CardType::Creature),
+        "now a noncreature artifact");
+    assert!(cp.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure));
+    assert!(!cp.keywords.contains(&crate::card::Keyword::Flying), "abilities wiped");
+}
+
+/// Kaito's trigger bounces the dealer and unlocks a second loyalty activation.
+#[test]
+fn kaito_bounce_grants_double_loyalty() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let kaito = g.add_card_to_battlefield(0, catalog::kaito_dancing_shadow());
+    let priest = g.add_card_to_battlefield(0, catalog::necrogen_rotpriest());
+    g.clear_sickness(priest);
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: priest, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(priest).is_none(), "dealer bounced to hand");
+    g.step = crate::game::types::TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let zero = |g: &mut GameState| g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: kaito, ability_index: 1, target: None, x_value: None,
+    });
+    zero(&mut g).expect("first activation");
+    drain_stack(&mut g);
+    zero(&mut g).expect("second activation allowed this turn");
+    drain_stack(&mut g);
+    assert!(zero(&mut g).is_err(), "third rejected");
+}
+
+/// Kaya −3 exiles an enchantment and leaves a 1/1 flying Spirit copy.
+#[test]
+fn kaya_minus_three_spirit_copy() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let kaya = g.add_card_to_battlefield(0, catalog::kaya_intangible_slayer());
+    let ench = g.add_card_to_battlefield(1, catalog::phyrexian_awakening());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: kaya, ability_index: 2, target: Some(Target::Permanent(ench)), x_value: None,
+    }).expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment exiled");
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Awakening")
+        .expect("token copy minted");
+    let cp = g.computed_permanent(copy.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// The Eternal Wanderer −4: each player keeps one creature.
+#[test]
+fn eternal_wanderer_minus_four_keeps_one_each() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::the_eternal_wanderer());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw, ability_index: 2, target: None, x_value: None,
+    }).expect("-4");
+    drain_stack(&mut g);
+    for p in 0..2 {
+        let count = g.battlefield.iter()
+            .filter(|c| c.controller == p && c.definition.is_creature()).count();
+        assert_eq!(count, 1, "player {p} kept exactly one creature");
+    }
+}
+
+/// Nahiri 0 mints a hasty copy of a graveyard Equipment, exiled at end step.
+#[test]
+fn nahiri_zero_copies_from_graveyard() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let nahiri = g.add_card_to_battlefield(0, catalog::nahiri_the_unforgiving());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: nahiri, ability_index: 2, target: Some(Target::Permanent(dead)), x_value: None,
+    }).expect("0");
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("token copy");
+    assert!(g.computed_permanent(copy.id).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead), "original exiled");
+}

@@ -9426,7 +9426,13 @@ impl GameState {
         }
         // CR 606.3 — once per turn, or twice with Urza, Planeswalker's
         // printed override.
-        let allowed = if self.battlefield[pos].definition.loyalty_twice_each_turn { 2 } else { 1 };
+        let allowed = if self.battlefield[pos].definition.loyalty_twice_each_turn
+            || self.battlefield[pos].loyalty_twice_this_turn
+        {
+            2
+        } else {
+            1
+        };
         if self.battlefield[pos].loyalty_uses_this_turn >= allowed {
             return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
         }

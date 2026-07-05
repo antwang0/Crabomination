@@ -812,6 +812,7 @@ pub fn unearth(cost: crate::mana::ManaCost) -> ActivatedAbility {
 /// `Keyword::Squad(cost)` on the card.
 pub fn squad_etb() -> TriggeredAbility {
     etb(Effect::CreateTokenCopyOf {
+        extra_keywords: vec![],
         who: PlayerRef::You,
         count: Value::SquadCount,
         source: Selector::This,
@@ -2990,6 +2991,7 @@ fn embalm_like(
         from_graveyard: true,
         exile_self_cost: true,
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: Selector::This,

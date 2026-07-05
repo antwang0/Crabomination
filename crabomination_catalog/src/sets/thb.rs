@@ -5191,6 +5191,7 @@ pub fn nightmare_shepherd() -> CardDefinition {
                 description: "Exile it to make a 1/1 Nightmare copy?".into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::CreateTokenCopyOf {
+                        extra_keywords: vec![],
                         who: PlayerRef::You,
                         count: Value::ONE,
                         source: Selector::TriggerSource,

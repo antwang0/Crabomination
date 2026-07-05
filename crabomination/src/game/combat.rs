@@ -2377,7 +2377,10 @@ impl GameState {
             .find(|c| c.id == source)
             .map(|c| c.controller);
 
-        let mut triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
+        // (source, effect, controller, intervening-if, bind_dealer): the last
+        // flag binds the damage dealer as the body's `TriggerSource` (the
+        // Phase-1.5 listener pattern — Kaito's "return one of them to hand").
+        let mut triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>, bool)> = self
             .battlefield
             .iter()
             .find(|c| c.id == source)
@@ -2405,7 +2408,7 @@ impl GameState {
                                     | crate::effect::EventScope::AnyPlayer
                             )
                     })
-                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
+                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone(), false))
                     .collect()
             })
             .unwrap_or_default();
@@ -2433,7 +2436,13 @@ impl GameState {
                                 | crate::effect::EventScope::AnyPlayer
                         )
                     {
-                        triggers.push((trig_source, t.effect.clone(), atk_ctrl, t.event.filter.clone()));
+                        triggers.push((
+                            trig_source,
+                            t.effect.clone(),
+                            atk_ctrl,
+                            t.event.filter.clone(),
+                            false,
+                        ));
                     }
                 }
             }
@@ -2452,7 +2461,7 @@ impl GameState {
                 }
                 for t in &bonus.triggered_abilities {
                     if t.event.kind == kind {
-                        triggers.push((source, t.effect.clone(), atk_ctrl, t.event.filter.clone()));
+                        triggers.push((source, t.effect.clone(), atk_ctrl, t.event.filter.clone(), false));
                     }
                 }
             }
@@ -2475,7 +2484,7 @@ impl GameState {
                     if t.event.kind == kind
                         && matches!(t.event.scope, crate::effect::EventScope::YourControl)
                     {
-                        triggers.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
+                        triggers.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone(), true));
                     }
                 }
             }
@@ -2503,6 +2512,7 @@ impl GameState {
                                 t.effect.clone(),
                                 gy_card.owner,
                                 t.event.filter.clone(),
+                                false,
                             ));
                         }
                     }
@@ -2519,7 +2529,7 @@ impl GameState {
         {
             for enc in &self.exile {
                 if enc.encoded_on == Some(source) {
-                    triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None));
+                    triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false));
                 }
             }
             // CR 701.54c (level 4+) — "Whenever your Ring-bearer deals combat
@@ -2535,11 +2545,12 @@ impl GameState {
                     },
                     atk_ctrl,
                     None,
+                    false,
                 ));
             }
         }
 
-        for (trig_source, effect, controller, filter) in triggers {
+        for (trig_source, effect, controller, filter, bind_dealer) in triggers {
             // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
             // a creature you control *with toxic* deals combat damage…" —
             // Necrogen Rotpriest). `TriggerSource` in the filter reads the
@@ -2573,9 +2584,12 @@ impl GameState {
             } else {
                 Some(default_target.clone())
             };
+            let dealer = bind_dealer
+                .then_some(crate::game::effects::EntityRef::Permanent(source));
             self.stack.push(
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
+                    .trigger_source(dealer)
                     // CR 119.3 — the damage dealt, so Value::TriggerEventAmount
                     // riders scale by the hit (Visions of Brutality).
                     .event_amount(damage_amount)

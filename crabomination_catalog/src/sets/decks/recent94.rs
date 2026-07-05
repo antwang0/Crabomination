@@ -44,6 +44,7 @@ pub fn bloodforged_battle_axe() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::This,

@@ -928,8 +928,19 @@ impl GameState {
                 // / blinked planeswalker enters with full base loyalty rather
                 // than its last-known (possibly 0) value.
                 if card.definition.is_planeswalker() && card.definition.base_loyalty > 0 {
-                    card.counters
-                        .insert(CounterType::Loyalty, card.definition.base_loyalty);
+                    // CR 702.150c — a Compleated planeswalker cast with life
+                    // enters with two fewer loyalty counters per {C/P} paid
+                    // with life (2 life each, so the reduction = life paid).
+                    let loyalty = card
+                        .definition
+                        .base_loyalty
+                        .saturating_sub(card.compleated_life_paid);
+                    card.compleated_life_paid = 0;
+                    if loyalty > 0 {
+                        card.counters.insert(CounterType::Loyalty, loyalty);
+                    } else {
+                        card.counters.remove(&CounterType::Loyalty);
+                    }
                 }
                 // CR 310.7 — a Battle enters with defense counters equal to its
                 // printed defense, and (CR 310.6) its controller chooses an

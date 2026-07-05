@@ -616,6 +616,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].artifacts_entered_this_turn as i32)
                 .unwrap_or(0),
+            Value::PoisonCountersOf(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].poison_counters as i32)
+                .unwrap_or(0),
             Value::CreaturesDiedThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)

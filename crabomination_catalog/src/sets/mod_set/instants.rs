@@ -1120,6 +1120,7 @@ pub fn cackling_counterpart() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(flashback)],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(

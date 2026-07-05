@@ -5748,3 +5748,517 @@ pub fn serum_core_chimera() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── ONE planeswalkers (CR 702.150 Compleated + the uncompleated four) ────────
+
+use crate::card::PlaneswalkerSubtype;
+use crate::effect::LoyaltyAbility;
+use crate::mana::phyrexian_hybrid;
+
+/// A 3/3 green Phyrexian Beast token with toxic 1 (Lukka −1, Goliath Hatchery).
+fn beast_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Phyrexian Beast".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Toxic(1)],
+        ..Default::default()
+    }
+}
+
+fn target_player() -> Selector {
+    target_filtered(SelectionRequirement::Player)
+}
+
+/// Jace, the Perfected Mind — {2}{U}{U/P}, Compleated, loyalty 5. +1: up to one
+/// creature gets -3/-0 until your next turn. −2: mill 3, draw 3 if a graveyard
+/// holds 20+, else 1. −X: target player mills 3X.
+pub fn jace_the_perfected_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Jace, the Perfected Mind",
+        cost: cost(&[generic(2), u(), phyrexian(Color::Blue)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Compleated],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-3),
+                    toughness: Value::Const(0),
+                    duration: Duration::UntilYourNextUntap,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Mill { who: target_player(), amount: Value::Const(3) },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(Value::MaxGraveyardSize, Value::Const(20)),
+                        then: Box::new(draw(3)),
+                        else_: Box::new(draw(1)),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                x_cost: true,
+                effect: Effect::Mill {
+                    who: target_player(),
+                    amount: Value::Times(Box::new(Value::Const(3)), Box::new(Value::XFromCost)),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Vraska, Betrayal's Sting — {4}{B}{B/P}, Compleated, loyalty 6. 0: draw,
+/// lose 1, proliferate. −2: a creature becomes a Treasure. −9: target player
+/// is topped up to nine poison counters.
+pub fn vraska_betrayals_sting() -> CardDefinition {
+    CardDefinition {
+        name: "Vraska, Betrayal's Sting",
+        cost: cost(&[generic(4), b(), phyrexian(Color::Black)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Vraska],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Compleated],
+        base_loyalty: 6,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    draw(1),
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                    Effect::Proliferate,
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::BecomeTreasure {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -9,
+                effect: Effect::AddPoison {
+                    who: target_player(),
+                    amount: Value::NonNeg(Box::new(Value::Diff(
+                        Box::new(Value::Const(9)),
+                        Box::new(Value::PoisonCountersOf(PlayerRef::Target(0))),
+                    ))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lukka, Bound to Ruin — {2}{R}{R/G/P}{G}, Compleated, loyalty 5. +1: add
+/// {R}{G} for creatures. −1: a 3/3 toxic Beast. −4: greatest-power damage
+/// divided among creatures and planeswalkers.
+pub fn lukka_bound_to_ruin() -> CardDefinition {
+    CardDefinition {
+        name: "Lukka, Bound to Ruin",
+        cost: cost(&[generic(2), r(), phyrexian_hybrid(Color::Red, Color::Green), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Lukka],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Compleated],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::Colors(vec![
+                            Color::Red,
+                            Color::Green,
+                        ])),
+                        crate::mana::SpendRestriction::CreatureSpellsOrAbilities,
+                    ),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: beast_token(),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::DealDamageDivided {
+                    total: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    max_targets: 5,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nahiri, the Unforgiving — {1}{R}{R/W/P}{W}, Compleated, loyalty 5.
+/// +1: a creature must attack until your next turn / loot. 0: exile a creature
+/// or Equipment card from your graveyard for a hasty copy, exiled at end step.
+pub fn nahiri_the_unforgiving() -> CardDefinition {
+    CardDefinition {
+        name: "Nahiri, the Unforgiving",
+        cost: cost(&[generic(1), r(), phyrexian_hybrid(Color::Red, Color::White), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Nahiri],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Compleated],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::MustAttack,
+                    duration: Duration::UntilYourNextUntap,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    draw(1),
+                ]),
+                ..Default::default()
+            },
+            // (The "mana value less than Nahiri's loyalty" cap is dropped.)
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: target_filtered(
+                            SelectionRequirement::InYourGraveyard.and(
+                                SelectionRequirement::Creature.or(
+                                    SelectionRequirement::HasArtifactSubtype(
+                                        ArtifactSubtype::Equipment,
+                                    ),
+                                ),
+                            ),
+                        ),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![Keyword::Haste],
+                    },
+                    Effect::ExileLastCreatedTokensAtNextEndStep,
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nissa, Ascended Animist — {3}{G}{G}{G/P}{G/P}, Compleated, loyalty 7.
+/// +1: an X/X Horror where X is her loyalty. −1: naturalize. −7: your team
+/// gets +1/+1 per Forest and trample.
+pub fn nissa_ascended_animist() -> CardDefinition {
+    let forests = || {
+        Value::CountOf(Box::new(Selector::EachPermanent(
+            SelectionRequirement::HasLandType(crate::card::LandType::Forest)
+                .and(SelectionRequirement::ControlledByYou),
+        )))
+    };
+    CardDefinition {
+        name: "Nissa, Ascended Animist",
+        cost: cost(&[generic(3), g(), g(), phyrexian(Color::Green), phyrexian(Color::Green)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Nissa],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Compleated],
+        base_loyalty: 7,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Phyrexian Horror".into(),
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+                            ..Default::default()
+                        },
+                        dynamic_pt: Some((
+                            Value::LoyaltyOf(Box::new(Selector::This)),
+                            Value::LoyaltyOf(Box::new(Selector::This)),
+                        )),
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        power: forests(),
+                        toughness: forests(),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kaya, Intangible Slayer — {3}{W}{W}{B}{B}, hexproof, loyalty 6. +2: drain 3.
+/// 0: draw two, opponents scry. −3: exile a creature or enchantment; non-Aura
+/// leaves behind a 1/1 flying Spirit copy.
+pub fn kaya_intangible_slayer() -> CardDefinition {
+    CardDefinition {
+        name: "Kaya, Intangible Slayer",
+        cost: cost(&[generic(3), w(), w(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Kaya],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Hexproof],
+        base_loyalty: 6,
+        loyalty_abilities: vec![
+            LoyaltyAbility { loyalty_cost: 2, effect: drain(3), ..Default::default() },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    draw(2),
+                    Effect::Scry { who: PlayerRef::EachOpponent, amount: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::If {
+                        cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: SelectionRequirement::HasEnchantmentSubtype(
+                                crate::card::EnchantmentSubtype::Aura,
+                            ),
+                        })),
+                        then: Box::new(Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            source: Selector::Target(0),
+                            extra_creature_types: vec![CreatureType::Spirit],
+                            extra_card_types: vec![CardType::Creature],
+                            override_pt: Some((1, 1)),
+                            override_colors: Some(vec![Color::White]),
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            extra_keywords: vec![Keyword::Flying],
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                        ),
+                        to: ZoneDest::Exile,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kaito, Dancing Shadow — {2}{U}{B}, loyalty 3. Combat damage from your
+/// creatures may bounce the dealer for double loyalty activations. +1: detain.
+/// 0: draw. −2: a deathtouch Drone whose exit drains 2.
+pub fn kaito_dancing_shadow() -> CardDefinition {
+    CardDefinition {
+        name: "Kaito, Dancing Shadow",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Kaito],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        // Fires per damaging creature (the printed batch is "one or more").
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Return the creature to hand for double loyalty use?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                    },
+                    Effect::GrantLoyaltyTwiceThisTurn { what: Selector::This },
+                ])),
+            },
+        }],
+        loyalty_abilities: vec![
+            // Printed: "can't attack or block until your next turn" —
+            // modeled as detain (also locks abilities).
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Detain { what: target_filtered(SelectionRequirement::Creature) },
+                ..Default::default()
+            },
+            LoyaltyAbility { loyalty_cost: 0, effect: draw(1), ..Default::default() },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Drone".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Artifact, CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Drone],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Deathtouch],
+                        triggered_abilities: vec![TriggeredAbility {
+                            event: EventSpec::new(
+                                EventKind::PermanentLeavesBattlefield,
+                                EventScope::SelfSource,
+                            ),
+                            effect: drain(2),
+                        }],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Eternal Wanderer — {4}{W}{W}, loyalty 5. +1: flicker until the next end
+/// step. 0: a double-strike Samurai. −4: each player keeps one creature.
+pub fn the_eternal_wanderer() -> CardDefinition {
+    CardDefinition {
+        name: "The Eternal Wanderer",
+        cost: cost(&[generic(4), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ExileReturnNextEndStep {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                    ),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Samurai".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Samurai],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::DoubleStrike],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::EachPlayerKeepsOneSacrificeRest {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    filter: SelectionRequirement::Creature,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

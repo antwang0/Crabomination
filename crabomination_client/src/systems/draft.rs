@@ -831,7 +831,7 @@ fn color_sort_key(def: &crabomination::card::CardDefinition) -> (u8, u8, u32, St
         match sym {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => colors[color_idx(*c)] = true,
             ManaSymbol::MonoHybrid(_, c) => colors[color_idx(*c)] = true,
-            ManaSymbol::Hybrid(a, b) => {
+            ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
                 colors[color_idx(*a)] = true;
                 colors[color_idx(*b)] = true;
             }
@@ -1259,7 +1259,7 @@ fn compute_pick_stats(picks: &[CardFactory]) -> PickStats {
                 ManaSymbol::MonoHybrid(_, c) => {
                     s.colors[color_idx(*c)] += 1;
                 }
-                ManaSymbol::Hybrid(a, b) => {
+                ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
                     s.colors[color_idx(*a)] += 1;
                     s.colors[color_idx(*b)] += 1;
                 }

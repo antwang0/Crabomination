@@ -870,6 +870,21 @@ impl GameState {
                     // Stamp the cast cost so ETB riders can read it after the
                     // spell leaves the stack (Astelli Reclaimer's MV-≤-X return).
                     card.cast_mana_spent = mana_spent;
+                    // CR 702.150c — a Compleated planeswalker cast with life
+                    // enters with two fewer loyalty per pip paid with life.
+                    if card.compleated_life_paid > 0 && card.definition.is_planeswalker() {
+                        let loyalty = card
+                            .definition
+                            .base_loyalty
+                            .saturating_sub(card.compleated_life_paid);
+                        card.compleated_life_paid = 0;
+                        if loyalty > 0 {
+                            card.counters
+                                .insert(crate::card::CounterType::Loyalty, loyalty);
+                        } else {
+                            card.counters.remove(&crate::card::CounterType::Loyalty);
+                        }
+                    }
                     let room_door = card.definition.room.as_ref().map(|_| {
                         usize::from(card.split_cast == Some(1))
                     });

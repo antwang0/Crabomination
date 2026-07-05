@@ -127,6 +127,7 @@ pub fn rally_the_galadhrim() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Conspire],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(

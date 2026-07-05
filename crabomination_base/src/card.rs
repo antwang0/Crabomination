@@ -566,6 +566,10 @@ pub enum Keyword {
     /// same combat-damage poison rider as Toxic (the wording differs but the
     /// effect is identical), so it folds into the same combat path.
     Poisonous(u32),
+    /// Compleated (CR 702.150) — if any of this planeswalker's Phyrexian
+    /// pips were paid with life, it enters with two fewer loyalty counters
+    /// per 2 life paid (tracked via `CardInstance.compleated_life_paid`).
+    Compleated,
     Defender,
     /// CR 702.147 — Decayed. "This creature can't block. When it attacks,
     /// sacrifice it at end of combat." Common on Zombie tokens (MID/VOW).
@@ -3384,6 +3388,9 @@ pub struct CardInstance {
     /// CR 606.3 — loyalty activations so far this turn (normally capped at
     /// one; two with `CardDefinition.loyalty_twice_each_turn`).
     pub loyalty_uses_this_turn: u8,
+    /// One-turn "activate loyalty abilities twice" grant (Kaito, Dancing
+    /// Shadow's combat-damage rider). Cleared at end-of-turn cleanup.
+    pub loyalty_twice_this_turn: bool,
     /// True if this card was cast via an evoke alternative cost — it will
     /// be sacrificed on ETB after its ETB triggers fire.
     pub evoked: bool,
@@ -3653,6 +3660,10 @@ pub struct CardInstance {
     /// player's turn). `None` for the common undetained case. Round-trips with
     /// `#[serde(default)]`.
     pub detained_by: Option<usize>,
+    /// CR 702.150 — life paid to Phyrexian pips while casting a Compleated
+    /// planeswalker. Consumed (and cleared) when it enters, dropping the
+    /// starting loyalty by this amount. 0 otherwise.
+    pub compleated_life_paid: u32,
     /// CR 712.16 — the two component cards of a melded permanent. Non-empty
     /// only on a melded object; when it leaves the battlefield, the parts go
     /// to that zone instead and the melded shell ceases to exist.
@@ -3746,6 +3757,7 @@ impl CardInstance {
             cloaked: false,
             is_token: false,
             loyalty_uses_this_turn: 0,
+            loyalty_twice_this_turn: false,
             evoked: false,
             dashed: false,
             cast_from_suspend: false,
@@ -3798,6 +3810,7 @@ impl CardInstance {
             entered_turn: None,
             battlefield_timestamp: 0,
             detained_by: None,
+            compleated_life_paid: 0,
             meld_parts: Vec::new(),
             mutate_stack: Vec::new(),
             mutate_onto: None,
@@ -4099,6 +4112,7 @@ impl CardInstance {
         self.power_bonus = 0;
         self.toughness_bonus = 0;
         self.loyalty_uses_this_turn = 0;
+        self.loyalty_twice_this_turn = false;
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
         self.granted_keywords_eot_ts.clear();
@@ -4229,6 +4243,8 @@ struct CardInstanceWire {
     is_token: bool,
     #[serde(default)]
     loyalty_uses_this_turn: u8,
+    #[serde(default)]
+    loyalty_twice_this_turn: bool,
     evoked: bool,
     #[serde(default)]
     dashed: bool,
@@ -4364,6 +4380,9 @@ struct CardInstanceWire {
     /// `None`.
     #[serde(default)]
     detained_by: Option<usize>,
+    /// CR 702.150 Compleated life payment. `#[serde(default)]`.
+    #[serde(default)]
+    compleated_life_paid: u32,
     /// CR 712.16 melded-component cards. `#[serde(default)]` so older
     /// snapshots load as empty.
     #[serde(default)]
@@ -4432,6 +4451,7 @@ impl serde::Serialize for CardInstance {
             flipped: self.flipped,
             is_token: self.is_token,
             loyalty_uses_this_turn: self.loyalty_uses_this_turn,
+            loyalty_twice_this_turn: self.loyalty_twice_this_turn,
             evoked: self.evoked,
             dashed: self.dashed,
             cast_from_suspend: self.cast_from_suspend,
@@ -4478,6 +4498,7 @@ impl serde::Serialize for CardInstance {
             entered_turn: self.entered_turn,
             battlefield_timestamp: self.battlefield_timestamp,
             detained_by: self.detained_by,
+            compleated_life_paid: self.compleated_life_paid,
             meld_parts: self.meld_parts.clone(),
             mutate_stack: self.mutate_stack.clone(),
             mutate_onto: self.mutate_onto,
@@ -4554,6 +4575,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         }
         c.is_token = wire.is_token;
         c.loyalty_uses_this_turn = wire.loyalty_uses_this_turn;
+        c.loyalty_twice_this_turn = wire.loyalty_twice_this_turn;
         c.evoked = wire.evoked;
         c.dashed = wire.dashed;
         c.cast_from_suspend = wire.cast_from_suspend;
@@ -4604,6 +4626,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.entered_turn = wire.entered_turn;
         c.battlefield_timestamp = wire.battlefield_timestamp;
         c.detained_by = wire.detained_by;
+        c.compleated_life_paid = wire.compleated_life_paid;
         c.meld_parts = wire.meld_parts;
         c.mutate_stack = wire.mutate_stack;
         c.mutate_onto = wire.mutate_onto;

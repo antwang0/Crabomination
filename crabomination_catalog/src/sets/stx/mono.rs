@@ -796,6 +796,7 @@ pub fn replication_technique() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(

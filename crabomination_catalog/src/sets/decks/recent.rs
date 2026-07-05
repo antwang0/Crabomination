@@ -2613,6 +2613,7 @@ pub fn vaultborn_tyrant() -> CardDefinition {
                         filter: SelectionRequirement::NotToken,
                     }),
                 effect: Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::This,
@@ -4060,6 +4061,7 @@ pub fn stormsplitter() -> CardDefinition {
             ),
             effect: Effect::Seq(vec![
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::This,
@@ -4855,6 +4857,7 @@ pub fn pawpatch_recruit() -> CardDefinition {
             etb(Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::This,
@@ -5109,6 +5112,7 @@ pub fn coiling_rebirth() -> CardDefinition {
                 Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
                 reanimate,
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::Target(0),
@@ -10004,6 +10008,7 @@ pub fn croaking_counterpart() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(3), g(), u()]))],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(SelectionRequirement::Creature),
@@ -10414,6 +10419,7 @@ pub fn necroduality() -> CardDefinition {
                         .and(SelectionRequirement::IsToken.negate()),
                 }),
             effect: Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: Selector::TriggerSource,

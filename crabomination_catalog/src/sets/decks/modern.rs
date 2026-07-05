@@ -11858,6 +11858,7 @@ pub fn saheeli_rai() -> CardDefinition {
     use crate::effect::{DelayedTriggerKind, Duration};
     let copy_friendly = || Effect::Seq(vec![
         Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(
@@ -17858,6 +17859,7 @@ pub fn thundertrap_trainer() -> CardDefinition {
             etb(Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::This,
@@ -21479,6 +21481,7 @@ pub fn esikas_chariot() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: target_filtered(
@@ -25092,6 +25095,7 @@ pub fn helm_of_the_host() -> CardDefinition {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::AttachedTo(Box::new(Selector::This)),
@@ -26608,6 +26612,7 @@ pub fn followed_footsteps() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
             effect: Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: Selector::AttachedTo(Box::new(Selector::This)),
@@ -34734,6 +34739,7 @@ pub fn kiki_jiki_mirror_breaker() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: target_filtered(
@@ -40253,6 +40259,7 @@ pub fn stolen_identity() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: target_filtered(
@@ -43462,6 +43469,7 @@ pub fn reflection_of_kiki_jiki() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: target_filtered(
@@ -45647,6 +45655,7 @@ pub fn splinter_twin() -> CardDefinition {
                     tap_cost: true,
                     effect: Effect::Seq(vec![
                         Effect::CreateTokenCopyOf {
+                            extra_keywords: vec![],
                             who: PlayerRef::You,
                             count: Value::Const(1),
                             source: Selector::This,
@@ -47515,6 +47524,7 @@ pub fn scute_swarm() -> CardDefinition {
                 n: Value::Const(6),
             },
             then: Box::new(Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: Selector::This,
@@ -47605,6 +47615,7 @@ pub fn pack_rat() -> CardDefinition {
             mana_cost: cost(&[generic(2), b()]),
             discard_cost: Some((SelectionRequirement::Any, 1)),
             effect: Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: Selector::This,
@@ -47938,6 +47949,7 @@ pub fn ocelot_pride() -> CardDefinition {
                                         .and(SelectionRequirement::EnteredThisTurn),
                                 ),
                                 body: Box::new(Effect::CreateTokenCopyOf {
+                                    extra_keywords: vec![],
                                     who: PlayerRef::You,
                                     count: Value::Const(1),
                                     source: Selector::TriggerSource,
@@ -50343,6 +50355,7 @@ pub fn springheart_nantuko() -> CardDefinition {
                         Selector::This,
                     ))),
                     then: Box::new(Effect::CreateTokenCopyOf {
+                        extra_keywords: vec![],
                         who: PlayerRef::You,
                         count: Value::Const(1),
                         source: Selector::AttachedTo(Box::new(Selector::This)),
@@ -51636,6 +51649,7 @@ pub fn fractured_identity() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::EachPlayerExceptControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
                 source: target_filtered(
@@ -53370,6 +53384,7 @@ pub fn tempt_with_reflections() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::TemptingOffer {
             body: Box::new(Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: target_filtered(
@@ -57495,6 +57510,7 @@ pub fn mythos_of_illuna() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(SelectionRequirement::Permanent),

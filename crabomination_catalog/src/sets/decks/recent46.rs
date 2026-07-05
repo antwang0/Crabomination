@@ -95,6 +95,7 @@ pub fn bramble_sovereign() -> CardDefinition {
                 description: "Pay {1}{G} to copy that creature.".into(),
                 mana_cost: cost(&[generic(1), g()]),
                 body: Box::new(Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     count: Value::Const(1),
                     source: Selector::TriggerSource,

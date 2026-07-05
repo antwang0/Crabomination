@@ -3936,6 +3936,7 @@ pub fn joo_dee_one_of_many() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::ONE,
                     source: Selector::This,
@@ -5049,6 +5050,7 @@ pub fn ember_island_production() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
             Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::ONE,
                 source: target_filtered(
@@ -5063,6 +5065,7 @@ pub fn ember_island_production() -> CardDefinition {
                 legendary: false,
             },
             Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::ONE,
                 source: target_filtered(

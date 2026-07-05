@@ -1291,6 +1291,7 @@ pub fn conflagrate() -> CardDefinition {
 pub fn rite_of_replication() -> CardDefinition {
     use crate::card::Predicate;
     let copy = |n: i32| Effect::CreateTokenCopyOf {
+        extra_keywords: vec![],
         who: PlayerRef::You,
         count: Value::Const(n),
         source: target_filtered(SelectionRequirement::Creature),

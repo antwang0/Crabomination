@@ -4424,6 +4424,14 @@ impl GameState {
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt);
 
+        // CR 702.150 — Compleated: remember the life paid to Phyrexian pips so
+        // the planeswalker enters with that much less loyalty.
+        if receipt.side_effects.life_lost > 0
+            && card.definition.keywords.contains(&crate::card::Keyword::Compleated)
+        {
+            card.compleated_life_paid = receipt.side_effects.life_lost;
+        }
+
         // Delve payment succeeded — exile the chosen graveyard cards now
         // (CR 702.66: they're exiled as part of paying the cost). Bumps the
         // per-turn exile tally so "if cards were exiled this turn" payoffs see
@@ -7920,6 +7928,16 @@ impl GameState {
                     // Pool covers it if available; otherwise paid with life — no tapping.
                     let have = avail.entry(*c).or_default();
                     if *have > 0 { *have -= 1; }
+                }
+                ManaSymbol::PhyrexianHybrid(a, b) => {
+                    // Either color from the pool; otherwise paid with life.
+                    let have_a = avail.entry(*a).or_default();
+                    if *have_a > 0 {
+                        *have_a -= 1;
+                    } else {
+                        let have_b = avail.entry(*b).or_default();
+                        if *have_b > 0 { *have_b -= 1; }
+                    }
                 }
                 ManaSymbol::MonoHybrid(n, c) => {
                     // {n/C}: spend a matching colored mana if on hand;

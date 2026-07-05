@@ -3152,6 +3152,7 @@ pub fn relms_sketching() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::ONE,
             source: target_filtered(
@@ -5495,6 +5496,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                     to: ZoneDest::Exile,
                 },
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::ONE,
                     source: Selector::Target(0),
@@ -8502,6 +8504,7 @@ pub fn firion_wild_rose_warrior() -> CardDefinition {
                 }),
             effect: Effect::Seq(vec![
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::ONE,
                     source: Selector::TriggerSource,

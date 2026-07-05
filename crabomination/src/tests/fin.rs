@@ -3439,6 +3439,7 @@ fn cr_707_2_token_copy_enters_tapped() {
         crate::card::CardId(0), 0, Some(Target::Permanent(src)),
     );
     g.resolve_effect(&crate::effect::Effect::CreateTokenCopyOf {
+        extra_keywords: vec![],
         who: crate::effect::PlayerRef::You,
         count: crate::effect::Value::ONE,
         source: crate::effect::Selector::Target(0),

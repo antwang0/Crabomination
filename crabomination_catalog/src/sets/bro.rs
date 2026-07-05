@@ -240,6 +240,7 @@ pub fn skitterbeam_battalion() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SourceWasCast,
             then: Box::new(Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 source: Selector::This,

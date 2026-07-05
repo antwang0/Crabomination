@@ -139,6 +139,10 @@ pub enum ManaSymbol {
     Hybrid(Color, Color),
     /// {C/P}: pay the colored cost or 2 life.
     Phyrexian(Color),
+    /// {A/B/P}: pay either color or 2 life (CR 107.4f — Lukka's {R/G/P},
+    /// Nahiri's {R/W/P}). Mana value 1; counts as both colors for color
+    /// identity.
+    PhyrexianHybrid(Color, Color),
     /// {n/C}: monocolored hybrid — pay either {n} generic mana or one
     /// mana of the given color (e.g. {2/R}). Mana value is `n`
     /// (CR 202.3f). Used by the SOS "Archaic" Avatar cycle.
@@ -170,6 +174,7 @@ impl ManaCost {
                 ManaSymbol::Colorless(n) => *n,
                 ManaSymbol::Hybrid(_, _) => 1,
                 ManaSymbol::Phyrexian(_) => 1,
+                ManaSymbol::PhyrexianHybrid(_, _) => 1,
                 // CR 202.3f: monocolored hybrid MV is the generic amount.
                 ManaSymbol::MonoHybrid(n, _) => *n,
                 ManaSymbol::Snow => 1,
@@ -202,7 +207,7 @@ impl ManaCost {
                 ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => {
                     seen[idx(*c)] = true;
                 }
-                ManaSymbol::Hybrid(a, b) => {
+                ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
                     seen[idx(*a)] = true;
                     seen[idx(*b)] = true;
                 }
@@ -247,6 +252,13 @@ impl ManaCost {
                 ManaSymbol::Phyrexian(c) => {
                     s.push_str(&format!("{{{}/P}}", color_pip_letter(*c)));
                 }
+                ManaSymbol::PhyrexianHybrid(a, b) => {
+                    s.push_str(&format!(
+                        "{{{}/{}/P}}",
+                        color_pip_letter(*a),
+                        color_pip_letter(*b),
+                    ));
+                }
                 ManaSymbol::MonoHybrid(n, c) => {
                     s.push_str(&format!("{{{}/{}}}", n, color_pip_letter(*c)));
                 }
@@ -266,7 +278,7 @@ impl ManaCost {
                     if !result.contains(c) => {
                         result.push(*c);
                     }
-                ManaSymbol::Hybrid(a, b) => {
+                ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
                     if !result.contains(a) {
                         result.push(*a);
                     }
@@ -361,6 +373,7 @@ impl ManaCost {
                 ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => generic_pool += *n,
                 ManaSymbol::Hybrid(..)
                 | ManaSymbol::Phyrexian(_)
+                | ManaSymbol::PhyrexianHybrid(..)
                 | ManaSymbol::MonoHybrid(..)
                 | ManaSymbol::Snow => generic_pool += 1,
                 ManaSymbol::X => {}
@@ -807,12 +820,25 @@ impl ManaPool {
 
         // Pass 4: phyrexian pips (pay color if available, else 2 life)
         for sym in &cost.symbols {
-            if let ManaSymbol::Phyrexian(c) = sym {
-                if tmp.amount(*c) > 0 {
-                    *tmp.slot_mut(*c) -= 1;
-                } else {
-                    side_effects.life_lost += 2;
+            match sym {
+                ManaSymbol::Phyrexian(c) => {
+                    if tmp.amount(*c) > 0 {
+                        *tmp.slot_mut(*c) -= 1;
+                    } else {
+                        side_effects.life_lost += 2;
+                    }
                 }
+                // {A/B/P}: either color, else 2 life (CR 107.4f).
+                ManaSymbol::PhyrexianHybrid(a, b) => {
+                    if tmp.amount(*a) > 0 {
+                        *tmp.slot_mut(*a) -= 1;
+                    } else if tmp.amount(*b) > 0 {
+                        *tmp.slot_mut(*b) -= 1;
+                    } else {
+                        side_effects.life_lost += 2;
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -1126,6 +1152,10 @@ pub fn phyrexian(color: Color) -> ManaSymbol {
 
 pub fn mono_hybrid(n: u32, color: Color) -> ManaSymbol {
     ManaSymbol::MonoHybrid(n, color)
+}
+
+pub fn phyrexian_hybrid(a: Color, b: Color) -> ManaSymbol {
+    ManaSymbol::PhyrexianHybrid(a, b)
 }
 
 pub fn snow_mana() -> ManaSymbol {

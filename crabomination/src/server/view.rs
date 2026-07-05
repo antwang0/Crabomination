@@ -1495,6 +1495,7 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
             ManaSymbol::Colorless(n) => format!("{{{n}}}"),
             ManaSymbol::Hybrid(a, b) => format!("{{{a}/{b}}}"),
             ManaSymbol::Phyrexian(c) => format!("{{{c}/P}}"),
+            ManaSymbol::PhyrexianHybrid(a, b) => format!("{{{a}/{b}/P}}"),
             ManaSymbol::MonoHybrid(n, c) => format!("{{{n}/{c}}}"),
             ManaSymbol::Snow => "{S}".into(),
             ManaSymbol::X => "{X}".into(),

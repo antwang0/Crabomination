@@ -98,6 +98,8 @@ pub enum Modification {
     SetCreatureTypes(Vec<CreatureType>),
     AddLandType(LandType),
     SetLandTypes(Vec<LandType>),
+    /// Vraska, Betrayal's Sting's −2 — "becomes a Treasure artifact".
+    SetArtifactSubtypes(Vec<crate::card::ArtifactSubtype>),
     /// CR 205.4 — grant a supertype (Legendary, etc.). Used by the Ring's
     /// level-1 emblem (CR 701.54c — "your Ring-bearer is legendary").
     AddSupertype(Supertype),
@@ -476,6 +478,7 @@ fn compute_permanent_pass(
                 }
             }
             Modification::SetLandTypes(lts) => subtypes.land_types = lts.clone(),
+            Modification::SetArtifactSubtypes(ats) => subtypes.artifact_subtypes = ats.clone(),
 
             // Layer 5
             Modification::AddColor(c) => {

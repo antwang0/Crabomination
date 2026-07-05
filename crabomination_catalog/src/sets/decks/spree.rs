@@ -253,6 +253,7 @@ pub fn three_steps_ahead() -> CardDefinition {
             mode(
                 cost(&[generic(3)]),
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::ONE,
                     source: target_filtered(

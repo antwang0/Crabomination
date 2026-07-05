@@ -687,6 +687,7 @@ pub fn sublime_epiphany() -> CardDefinition {
                 },
                 // Mode 3: Create a token that's a copy of target creature you control.
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: target_filtered(

@@ -2123,6 +2123,7 @@ pub fn echocasting_symposium() -> CardDefinition {
         },
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: target_filtered(
@@ -2255,6 +2256,7 @@ pub fn applied_geometry() -> CardDefinition {
         // copy-permanent primitive exists.
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: crate::effect::shortcut::target_filtered(

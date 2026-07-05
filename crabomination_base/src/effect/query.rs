@@ -558,6 +558,9 @@ impl Effect {
             }
             Effect::RemoveAllCounters { what } => sel_has_target(what),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
+            Effect::GrantLoyaltyTwiceThisTurn { what } | Effect::BecomeTreasure { what } => {
+                sel_has_target(what)
+            }
             Effect::Proliferate => false,
             Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what } => sel_has_target(what),
@@ -820,6 +823,8 @@ impl Effect {
             | Effect::RemoveCounter { what, .. }
             | Effect::RemoveAllCounters { what }
             | Effect::SetLoyalty { what, .. }
+            | Effect::GrantLoyaltyTwiceThisTurn { what }
+            | Effect::BecomeTreasure { what }
             | Effect::AddKeywordCounter { what, .. }
             | Effect::RemoveKeywordCounter { what, .. }
             | Effect::AddRandomMissingCounter { what, .. } => sel_filter(what),
@@ -1843,6 +1848,8 @@ impl Effect {
                 | Effect::GainActivatedAbility { what, .. }
                 | Effect::AddCardTypeIndefinitely { what, .. }
                 | Effect::SetLoyalty { what, .. }
+                | Effect::GrantLoyaltyTwiceThisTurn { what }
+                | Effect::BecomeTreasure { what }
                 | Effect::BecomeChosenColor { what, .. }
                 | Effect::BecomeColor { what, .. }
                 | Effect::BecomeCreatureType { what, .. }

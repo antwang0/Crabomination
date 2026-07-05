@@ -560,6 +560,9 @@ pub enum Value {
     /// Artifacts that entered the battlefield under the player's control this
     /// turn (`Player.artifacts_entered_this_turn`) — Malcator's end-step gate.
     ArtifactsEnteredThisTurn(PlayerRef),
+    /// The player's poison counters (Vraska's −9 "counters equal to the
+    /// difference" top-up).
+    PoisonCountersOf(PlayerRef),
     /// Two raised to the inner value, clamped to a sane upper bound (≤30).
     /// Used by SOS Mathemagics — "target player draws 2ˣ cards" — so the
     /// X-cost bombshell scales correctly at the small/medium values
@@ -3118,6 +3121,15 @@ pub enum Effect {
     /// the `Loyalty` counter count outright rather than adding/removing.
     /// Geyadrone Dihada's +1 loyalty-reset rider.
     SetLoyalty { what: Selector, value: Value },
+    /// "You may activate loyalty abilities of ~ twice this turn rather than
+    /// only once" — Kaito, Dancing Shadow's combat-damage rider. Sets the
+    /// resolved planeswalkers' `loyalty_twice_this_turn` (cleared at cleanup).
+    GrantLoyaltyTwiceThisTurn { what: Selector },
+    /// Vraska, Betrayal's Sting's −2 — "[what] becomes a Treasure artifact
+    /// with '{T}, Sacrifice: add one mana of any color' and loses all other
+    /// card types and abilities" (layer 4 type swap + layer 6 ability wipe +
+    /// a granted sac-for-mana ability, all while it stays on the battlefield).
+    BecomeTreasure { what: Selector },
     /// CR 122.1b — Add a keyword counter to `what`. The host gains the
     /// named keyword while at least one counter of this kind is present
     /// (applied as a layer-6 grant in `compute_battlefield`). Removed
@@ -3349,6 +3361,10 @@ pub enum Effect {
         /// legendary (Adagia, Windswept Bastion's "except it's legendary").
         #[serde(default)]
         legendary: bool,
+        /// Keywords layered on top of the copy ("with flying" — Kaya's Spirit
+        /// copy, Kinzu's toxic 1 copy).
+        #[serde(default)]
+        extra_keywords: Vec<crate::card::Keyword>,
     },
     /// Create `count` token copies of the permanent resolved by `source`
     /// (controlled by `who`), each gaining haste until end of turn and

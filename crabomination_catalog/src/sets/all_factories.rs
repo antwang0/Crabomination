@@ -7108,6 +7108,14 @@ static ONE: &[Factory] = &[
     super::one::nahiris_sacrifice,
     super::one::atraxas_skitterfang,
     super::one::serum_core_chimera,
+    super::one::jace_the_perfected_mind,
+    super::one::vraska_betrayals_sting,
+    super::one::lukka_bound_to_ruin,
+    super::one::nahiri_the_unforgiving,
+    super::one::nissa_ascended_animist,
+    super::one::kaya_intangible_slayer,
+    super::one::kaito_dancing_shadow,
+    super::one::the_eternal_wanderer,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

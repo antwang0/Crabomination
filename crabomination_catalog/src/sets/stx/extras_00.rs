@@ -799,6 +799,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
                 Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: Selector::TriggerSource,

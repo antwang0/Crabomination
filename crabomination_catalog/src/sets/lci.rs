@@ -2836,6 +2836,7 @@ pub fn self_reflection() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
         effect: Effect::CreateTokenCopyOf {
+            extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(

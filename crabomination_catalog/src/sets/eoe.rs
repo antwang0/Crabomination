@@ -5023,6 +5023,7 @@ pub fn adagia_windswept_bastion() -> CardDefinition {
             tap_cost: true,
             sorcery_speed: true,
             effect: Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: target_filtered(
