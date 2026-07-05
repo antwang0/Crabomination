@@ -42,6 +42,7 @@ mod config;
 mod history;
 mod slots;
 mod stats;
+mod status;
 
 use config::{deck_overrides, pairing_timeout_from_env, usize_from_env_min, Format};
 use config::{DEFAULT_MAX_CONNS, DEFAULT_MAX_CONNS_PER_IP};
@@ -74,6 +75,8 @@ fn main() {
         );
     }
     let slots = SlotManager::new(global_conns, per_ip_conns);
+    // Optional HTTP telemetry (CRAB_STATUS_BIND): /healthz + /status.
+    status::spawn_from_env(Instant::now(), slots.clone());
 
     let listener = match TcpListener::bind(&bind) {
         Ok(l) => l,

@@ -81,7 +81,8 @@ use systems::quality::{
     EscConsumed, SettingsOpen,
 };
 use systems::ui::{
-    exile_browser, graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, hover_card_preview,
+    exile_browser, graveyard_browser, graveyard_card_hover_name, graveyard_recast_click,
+    highlight_hovered_cards, hover_card_preview,
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
@@ -692,7 +693,7 @@ fn main() {
         )
         .add_systems(
             Update,
-            graveyard_card_hover_name
+            (graveyard_card_hover_name, graveyard_recast_click)
                 .after(graveyard_browser)
                 .run_if(in_state(AppState::InGame)),
         )

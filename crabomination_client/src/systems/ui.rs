@@ -30,10 +30,27 @@ pub struct GraveyardBrowser;
 pub struct ExileBrowser;
 
 /// One card tile inside the graveyard browser. Stores the card's
-/// display name so the hover-name-tooltip system can render it.
+/// display name so the hover-name-tooltip system can render it, and an
+/// optional graveyard-recast action for click-to-cast tiles.
 #[derive(Component)]
 pub struct GraveyardCardItem {
     pub name: String,
+    /// `Some` when this is the viewer's own castable graveyard card —
+    /// clicking the tile submits the recast (Flashback / Mayhem / Harmonize /
+    /// Disturb / Retrace / Escape) with auto-chosen targets.
+    pub recast: Option<(crabomination::card::CardId, GraveyardRecast)>,
+}
+
+/// Which graveyard-cast action a browser tile submits on click.
+#[derive(Clone, Copy)]
+pub enum GraveyardRecast {
+    Flashback,
+    Mayhem,
+    Harmonize,
+    Disturb,
+    Retrace,
+    /// Escape with this many other graveyard cards to exile (auto-picked).
+    Escape(u32),
 }
 
 /// Marker for the live name tooltip rendered above the graveyard
@@ -1128,27 +1145,30 @@ pub fn graveyard_browser(
             .unwrap_or_else(|| format!("Player {owner}"));
         let owner_label = format!("{owner_name}'s");
 
-        // (name, recast-badge): badge is "Flashback {N}" / "Retrace" for
-        // cards castable from the graveyard, surfaced from the view's new
-        // recast flags so players can see their options at a glance.
-        let card_names: Vec<(String, Option<String>)> = view.0.as_ref()
+        // (name, recast-badge, click-to-cast): badge is "Flashback {N}" /
+        // "Retrace" for cards castable from the graveyard; when the browser
+        // shows the viewer's own graveyard the tile also carries the recast
+        // action so clicking it casts the card.
+        let own_graveyard = view.0.as_ref().is_some_and(|cv| cv.your_seat == owner);
+        let card_names: Vec<(String, Option<String>, Option<(crabomination::card::CardId, GraveyardRecast)>)> =
+            view.0.as_ref()
             .map(|cv| cv.players[owner].graveyard.iter().map(|c| {
-                let badge = if let Some(fb) = &c.flashback_cost {
-                    Some(format!("Flashback {{{}}}", fb.cmc()))
+                let (badge, recast) = if let Some(fb) = &c.flashback_cost {
+                    (Some(format!("Flashback {{{}}}", fb.cmc())), Some(GraveyardRecast::Flashback))
                 } else if let Some(mh) = &c.mayhem_cost {
-                    Some(format!("Mayhem {{{}}}", mh.cmc()))
+                    (Some(format!("Mayhem {{{}}}", mh.cmc())), Some(GraveyardRecast::Mayhem))
                 } else if let Some(hm) = &c.harmonize_cost {
-                    Some(format!("Harmonize {{{}}}", hm.cmc()))
+                    (Some(format!("Harmonize {{{}}}", hm.cmc())), Some(GraveyardRecast::Harmonize))
                 } else if let Some(db) = &c.disturb_cost {
-                    Some(format!("Disturb {{{}}}", db.cmc()))
+                    (Some(format!("Disturb {{{}}}", db.cmc())), Some(GraveyardRecast::Disturb))
                 } else if let Some((esc, n)) = &c.escape {
-                    Some(format!("Escape {{{}}} +{n} exile", esc.cmc()))
+                    (Some(format!("Escape {{{}}} +{n} exile", esc.cmc())), Some(GraveyardRecast::Escape(*n)))
                 } else if c.retrace {
-                    Some("Retrace".to_string())
+                    (Some("Retrace".to_string()), Some(GraveyardRecast::Retrace))
                 } else {
-                    None
+                    (None, None)
                 };
-                (c.name.clone(), badge)
+                (c.name.clone(), badge, recast.filter(|_| own_graveyard).map(|r| (c.id, r)))
             }).collect())
             .unwrap_or_default();
         let count = card_names.len();
@@ -1234,7 +1254,7 @@ pub fn graveyard_browser(
                             Pickable::IGNORE,
                         ))
                         .with_children(|grid| {
-                            for (name, badge) in &card_names {
+                            for (name, badge, recast) in &card_names {
                                 let path = scryfall::card_asset_path(name);
                                 let texture: Handle<Image> = asset_server.load(&path);
                                 // Each tile is a Button so Bevy's
@@ -1255,7 +1275,10 @@ pub fn graveyard_browser(
                                         height: Val::Px(BROWSER_CARD_HEIGHT),
                                         ..default()
                                     },
-                                    GraveyardCardItem { name: name.clone() },
+                                    GraveyardCardItem {
+                                        name: name.clone(),
+                                        recast: recast.clone(),
+                                    },
                                 ))
                                 .with_children(|tile| {
                                     tile.spawn((
@@ -1486,7 +1509,7 @@ pub fn exile_browser(
                                 height: Val::Px(BROWSER_CARD_HEIGHT),
                                 ..default()
                             },
-                            GraveyardCardItem { name: name.clone() },
+                            GraveyardCardItem { name: name.clone(), recast: None },
                         ))
                         .with_children(tile_children);
                     }
@@ -1584,6 +1607,68 @@ pub fn pile_tooltip(
         for (entity, _) in &existing {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+/// Click-to-cast for the viewer's own castable graveyard tiles: submits the
+/// recast action carried by the tile (targets are auto-chosen server-side;
+/// Escape auto-picks its exile fodder) and closes the browser.
+pub fn graveyard_recast_click(
+    items: Query<(&Interaction, &GraveyardCardItem), Changed<Interaction>>,
+    mut state: ResMut<GraveyardBrowserState>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<crate::net_plugin::NetOutbox>>,
+) {
+    let Some(outbox) = outbox else { return };
+    for (interaction, item) in &items {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let Some((card_id, recast)) = &item.recast else { continue };
+        use crabomination::game::GameAction;
+        let action = match recast {
+            GraveyardRecast::Flashback => GameAction::CastFlashback {
+                card_id: *card_id, target: None, additional_targets: vec![],
+                mode: None, x_value: None,
+            },
+            GraveyardRecast::Mayhem => GameAction::CastMayhem {
+                card_id: *card_id, target: None, additional_targets: vec![],
+                mode: None, x_value: None,
+            },
+            GraveyardRecast::Harmonize => GameAction::CastHarmonize {
+                card_id: *card_id, tap_creature: None, target: None,
+                additional_targets: vec![], mode: None, x_value: None,
+            },
+            GraveyardRecast::Disturb => GameAction::CastDisturb {
+                card_id: *card_id, target: None, additional_targets: vec![],
+            },
+            GraveyardRecast::Retrace => GameAction::CastRetrace {
+                card_id: *card_id, target: None, additional_targets: vec![],
+                mode: None, x_value: None,
+            },
+            GraveyardRecast::Escape(n) => {
+                // Auto-pick the first N *other* cards of the viewer's
+                // graveyard as the exile payment.
+                let exile_cards: Vec<crabomination::card::CardId> = view.0.as_ref()
+                    .map(|cv| {
+                        cv.players[state.owner].graveyard.iter()
+                            .filter(|c| c.id != *card_id)
+                            .take(*n as usize)
+                            .map(|c| c.id)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                if exile_cards.len() < *n as usize {
+                    continue; // not enough fodder — leave the browser open
+                }
+                GameAction::CastEscape {
+                    card_id: *card_id, exile_cards, target: None,
+                    additional_targets: vec![], mode: None, x_value: None,
+                }
+            }
+        };
+        outbox.submit(action);
+        state.open = false;
     }
 }
 
