@@ -3301,6 +3301,101 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 509.4 — mint a token already blocking the targeted attacker.
+            Effect::CreateTokenBlocking { definition, .. } => {
+                let Some(Target::Permanent(attacker)) = ctx.targets.first().cloned() else {
+                    return Ok(());
+                };
+                if !self.attacking.iter().any(|a| a.attacker == attacker) {
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::CreateToken {
+                        who: crate::effect::PlayerRef::You,
+                        count: crate::effect::Value::Const(1),
+                        definition: definition.clone(),
+                    },
+                    ctx,
+                    events,
+                )?;
+                let Some(token) = self.last_created_token else { return Ok(()) };
+                self.block_map.insert(token, attacker);
+                if !self.blocked_attackers.contains(&attacker) {
+                    self.blocked_attackers.push(attacker);
+                }
+                events.push(GameEvent::BlockerDeclared { blocker: token, attacker });
+                Ok(())
+            }
+
+            Effect::Venture => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                // Enter the first room of a chosen dungeon, or advance to a
+                // chosen next room; branch picks ride `Decision::ChooseMode`.
+                let (dungeon, room_idx) = match self.players[p].dungeon.clone() {
+                    None => {
+                        let names = crabomination_base::dungeons::dungeon_names();
+                        let answer = self.decider.decide(&Decision::ChooseMode {
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            num_modes: names.len(),
+                            mode_texts: names.iter().map(|n| n.to_string()).collect(),
+                        });
+                        let pick = match answer {
+                            DecisionAnswer::Mode(m) if m < names.len() => m,
+                            _ => 0,
+                        };
+                        (names[pick].to_string(), 0u8)
+                    }
+                    Some((name, at)) => {
+                        let Some(def) = crabomination_base::dungeons::dungeon_by_name(&name) else {
+                            return Ok(());
+                        };
+                        let next = def.rooms[at as usize].next;
+                        let next_idx = match next {
+                            [] => return Ok(()), // final room already resolved
+                            [only] => *only,
+                            options => {
+                                let answer = self.decider.decide(&Decision::ChooseMode {
+                                    source: ctx.source.unwrap_or(CardId(0)),
+                                    num_modes: options.len(),
+                                    mode_texts: options
+                                        .iter()
+                                        .map(|i| def.rooms[*i as usize].name.to_string())
+                                        .collect(),
+                                });
+                                match answer {
+                                    DecisionAnswer::Mode(m) if m < options.len() => options[m],
+                                    _ => options[0],
+                                }
+                            }
+                        };
+                        (name, next_idx)
+                    }
+                };
+                let Some(def) = crabomination_base::dungeons::dungeon_by_name(&dungeon) else {
+                    return Ok(());
+                };
+                let room = &def.rooms[room_idx as usize];
+                self.players[p].dungeon = Some((dungeon.clone(), room_idx));
+                events.push(GameEvent::DungeonRoomEntered {
+                    player: p,
+                    dungeon: dungeon.clone(),
+                    room: room.name.to_string(),
+                });
+                // Resolve the room ability inline (the stack round-trip is
+                // elided — see `base::dungeons`).
+                let room_effect = room.effect.clone();
+                let final_room = room.next.is_empty();
+                let sub = EffectContext { targets: vec![], ..ctx.clone() };
+                self.run_effect(&room_effect, &sub, events)?;
+                if final_room {
+                    self.players[p].dungeons_completed += 1;
+                    self.players[p].dungeon = None;
+                    events.push(GameEvent::DungeonCompleted { player: p });
+                }
+                Ok(())
+            }
+
             Effect::Fateseal { who, amount } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 // CR 701.29 — look at the top N of the targeted opponent's

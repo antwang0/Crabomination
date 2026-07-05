@@ -108,10 +108,12 @@ Thalia, Heretic Cathar ✅ (enters-tapped static; never had this gap). The
 Quandrix/Prismari rows are fabricated `_b###` synthesized cards — moot.
 
 ### 6. No additional-cost-with-life/exile · no Phyrexian mana (riders dropped / folded into resolution)
-~~Deep Analysis (pay 3 life)~~ ✅ **FIXED** (`AdditionalCastCost::PayLife`, CR 119.4 —
-wired into the flashback cost map) · Resurgent Belief (exile a gy card) · Necrotic Fumes ·
-Final Payment · Birthing Pod & Mox Diamond ({G/P}, land-discard) · Vicious Rivalry ·
-Mana Vault (pay {4} skip) · Channel.
+Mostly **solved**: Deep Analysis ✅ (`PayLife`) · Resurgent Belief ✅ (flashback
+gy-exile rider) · Necrotic Fumes ✅ (`ExilePermanent`) · Final Payment ✅
+(`SacrificeOrPayLife`) · Mana Vault ✅ (upkeep may-pay-{4} untap + draw-step
+burn) · Channel ✅ (real life-for-{C} via the payment funnel). Remaining:
+Birthing Pod & Mox Diamond ({G/P} pip on an activation, land-discard) ·
+Vicious Rivalry.
 
 ### 7. Whole keyword mechanics unmodeled (each = a cluster)
 - **Learn** → modeled as Draw 1 (Reduce // Rubble, Mascot Interpretation, the Lessons cycle, Quandrix Field Trip).
@@ -162,7 +164,6 @@ Paradox Surveyor · Conjurer's Bauble.
 | ~~Silverquill Penkeeper~~ ✅ **FIXED** | silverquill.rs:14312 | now `magecraft(Effect::Discard { EachOpponent })` — matches its own documented "each opponent discards" intent (was Drain 1) |
 | ~~Silverquill Wordweaver~~ ✅ **FIXED** | silverquill.rs:14653 | now `etb(Effect::Discard { EachOpponent })` (was Drain 2) |
 | ~~Witherbloom Necromancer~~ ✅ **FIXED** | witherbloom.rs:10706 | now `on_other_dies(MayPay { {1} → Move(TriggerSource → battlefield) })` — real reanimate-the-just-died-creature (was Drain 1), same mechanism as Minion's Return |
-| Channel | modern.rs:11313 | "pay 1 life instead of {1} EOT" → one-shot lose-1-add-{C} |
 | ~~Echocasting Symposium~~ ✅ | sos/sorceries.rs | already on `CreateTokenCopyOf` (doc was stale) |
 | ~~Rush of Knowledge~~ ✅ | stx/mono.rs | `Value::HighestManaValueAmong` (was hardcoded draw 4) |
 

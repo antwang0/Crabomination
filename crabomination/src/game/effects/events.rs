@@ -53,6 +53,7 @@ pub(crate) fn event_matches_spec(
         ) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
+        (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
         (EventKind::PoisonAdded, GameEvent::PoisonAdded { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
@@ -441,6 +442,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::RingTempted { player, .. }
         | GameEvent::CommittedCrime { player }
+        | GameEvent::DungeonRoomEntered { player, .. }
+        | GameEvent::DungeonCompleted { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
         // Player-directed damage: the damaged player is the event actor
         // (a card-directed DamageDealt has to_player: None → falls through).
@@ -541,6 +544,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::ColorlessManaAdded { player, .. }
+        | GameEvent::DungeonCompleted { player }
         | GameEvent::PoisonAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),

@@ -1462,6 +1462,10 @@ pub enum GameEvent {
     CommittedCrime { player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
+    /// CR 701.49 — `player` ventured into `room` of `dungeon`.
+    DungeonRoomEntered { player: usize, dungeon: String, room: String },
+    /// CR 701.49d — `player` completed a dungeon.
+    DungeonCompleted { player: usize },
     /// CR 705.1 — `player` lost a coin flip (Karplusan Minotaur,
     /// Goblin Bomb).
     CoinFlipLost { player: usize },

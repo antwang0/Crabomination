@@ -4328,6 +4328,15 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // "Cast only during combat after blockers are declared" (Flash
+        // Foliage).
+        if card.definition.cast_only_after_blockers
+            && !(self.step.is_combat_phase() && self.blockers_declared)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // CR 601.2b — additional cast costs ("As an additional cost to cast
         // this spell, sacrifice / discard …"). Validate payability up front
         // so an unpayable spell reverts to hand before any mana is spent;

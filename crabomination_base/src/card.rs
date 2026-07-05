@@ -2062,6 +2062,10 @@ pub struct CardDefinition {
     /// are rejected outside the caster's own main phase.
     #[serde(default)]
     pub extra_targets_main_phase_only: bool,
+    /// "Cast this spell only during combat after blockers are declared"
+    /// (Flash Foliage). Checked at the cast gate.
+    #[serde(default)]
+    pub cast_only_after_blockers: bool,
     /// Gate on casting via Flashback ("Corrupted — … this card has flashback"
     /// — Viral Spawning). Checked at the graveyard-cast gate.
     #[serde(default)]

@@ -1913,6 +1913,10 @@ pub enum GameEventWire {
     CommittedCrime { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
     CoinFlipWon { player: usize },
+    /// Wire mirror of `GameEvent::DungeonRoomEntered` (CR 701.49).
+    DungeonRoomEntered { player: usize, dungeon: String, room: String },
+    /// Wire mirror of `GameEvent::DungeonCompleted` (CR 701.49d).
+    DungeonCompleted { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipLost` (CR 705.1).
     CoinFlipLost { player: usize },
     /// Wire mirror of `GameEvent::DiceRolled` (CR 706.6). `high` is the
@@ -2079,6 +2083,16 @@ impl From<&GameEvent> for GameEventWire {
                 GameEventWire::CommittedCrime { player: *player }
             }
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
+            GameEvent::DungeonRoomEntered { player, dungeon, room } => {
+                GameEventWire::DungeonRoomEntered {
+                    player: *player,
+                    dungeon: dungeon.clone(),
+                    room: room.clone(),
+                }
+            }
+            GameEvent::DungeonCompleted { player } => {
+                GameEventWire::DungeonCompleted { player: *player }
+            }
             GameEvent::CoinFlipLost { player } => GameEventWire::CoinFlipLost { player: *player },
             GameEvent::DiceRolled { player, count, high } => {
                 GameEventWire::DiceRolled { player: *player, count: *count, high: *high }
@@ -2338,6 +2352,10 @@ impl GameEventWire {
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
             E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
+            E::DungeonRoomEntered { player, dungeon, room } => {
+                format!("{} ventures into {room} ({dungeon})", pn(*player))
+            }
+            E::DungeonCompleted { player } => format!("{} completed a dungeon", pn(*player)),
             E::CoinFlipLost { player } => format!("{} lost a coin flip", pn(*player)),
             E::DiceRolled { player, count, high } => {
                 if *count == 1 {

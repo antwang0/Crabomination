@@ -206,6 +206,13 @@ pub struct Player {
     /// converts life into the shortfall on demand. Reset at cleanup.
     #[serde(default)]
     pub channel_life_for_mana: bool,
+    /// CR 309 — the dungeon this player is currently in: (name, room index).
+    /// `None` between dungeons; venturing with `None` enters a new dungeon.
+    #[serde(default)]
+    pub dungeon: Option<(String, u8)>,
+    /// CR 701.49d — dungeons this player has completed this game.
+    #[serde(default)]
+    pub dungeons_completed: u32,
     /// Number of times an "Nth time this turn" landfall ability this player
     /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
     /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
@@ -639,6 +646,8 @@ impl Player {
             multicolored_spells_cast_this_turn: 0,
             oil_activity_this_turn: false,
             channel_life_for_mana: false,
+            dungeon: None,
+            dungeons_completed: 0,
             escalating_resolutions_this_turn: 0,
             pending_creature_etb_counters: Vec::new(),
             pending_creature_etb_keywords: Vec::new(),

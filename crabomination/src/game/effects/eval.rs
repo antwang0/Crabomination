@@ -297,6 +297,9 @@ impl GameState {
             Value::TriggerEventAmount => ctx.event_amount as i32,
             Value::LastDieRoll => self.last_die_roll as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
+            Value::DungeonsCompleted => {
+                self.players[ctx.controller].dungeons_completed as i32
+            }
             Value::ControllerExperience => self.players[ctx.controller].experience as i32,
             Value::MutateCount => ctx
                 .trigger_source

@@ -397,6 +397,9 @@ pub enum Value {
     XFromCost,
     /// Number of spells cast this turn by controller (Storm).
     StormCount,
+    /// Dungeons the effect's controller has completed this game
+    /// (CR 701.49d — "you've completed a dungeon" gates read ≥ 1).
+    DungeonsCompleted,
     /// The controller's current experience-counter count (Ezuri's "X is the
     /// number of experience counters you have").
     ControllerExperience,
@@ -1490,6 +1493,9 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
+    /// CR 701.49 — a player completed a dungeon (the final room's ability
+    /// resolved). "Whenever you complete a dungeon" (Dungeon Crawler).
+    DungeonCompleted,
     /// CR 701.34 — a player proliferated. Fires once per proliferate
     /// instance (so a Tekuthal-doubled proliferate fires payoffs twice);
     /// the proliferating player is the event actor. "Whenever you
@@ -2470,6 +2476,17 @@ pub enum Effect {
     /// attack or block and its activated abilities can't be activated until
     /// the detainer's next turn (cleared at that turn's start). Lyev Skyknight.
     Detain { what: Selector },
+    /// CR 509.4 — create `definition` under your control *blocking* the
+    /// attacking creature in target slot 0 (`filter` should require an
+    /// attacker — Flash Foliage). No-op if the target isn't attacking; the
+    /// token joins the block map and marks the attacker blocked.
+    CreateTokenBlocking { definition: crate::card::TokenDefinition, filter: SelectionRequirement },
+    /// CR 701.49 — Venture into the dungeon: enter the first room of a
+    /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the
+    /// next room; room abilities resolve inline (`base::dungeons`).
+    /// Resolving the final room completes the dungeon
+    /// (`Player.dungeons_completed`, `EventKind::DungeonCompleted`).
+    Venture,
     /// CR 701.29 — *fateseal N*: look at the top `amount` cards of each
     /// targeted opponent's library and put any number of them on the bottom
     /// (the rest stay on top). The library-side mirror of Scry. AutoDecider

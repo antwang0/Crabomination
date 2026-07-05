@@ -151,7 +151,7 @@ impl Effect {
             }
         }
         match self {
-            Effect::Noop | Effect::ChannelLifeForMana => false,
+            Effect::Noop | Effect::ChannelLifeForMana | Effect::Venture => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,
@@ -347,6 +347,7 @@ impl Effect {
             // Divided damage always targets (one or more chosen targets).
             Effect::DealDamageDivided { .. } => true,
             Effect::DealDamageDividedEvenly { .. } => true,
+            Effect::CreateTokenBlocking { .. } => true,
             Effect::SupportCounters { .. } => true,
             Effect::DistributeCounters { .. } => true,
             Effect::ApplyToTargets { .. } => true,
@@ -757,7 +758,8 @@ impl Effect {
                 Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
                 _ => None,
             }),
-            Effect::DealDamageDivided { filter, .. }
+            Effect::CreateTokenBlocking { filter, .. }
+            | Effect::DealDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. }
             | Effect::DistributeCounters { filter, .. }
             | Effect::DestroyTargetsPolymorph { filter }

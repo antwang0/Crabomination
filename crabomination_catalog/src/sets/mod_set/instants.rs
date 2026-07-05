@@ -1718,3 +1718,34 @@ pub fn dramatic_reversal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flash Foliage — {2}{G} Instant. Cast only during combat after blockers are
+/// declared. Create a 1/1 green Saproling blocking target creature attacking
+/// you; draw a card.
+pub fn flash_foliage() -> CardDefinition {
+    CardDefinition {
+        name: "Flash Foliage",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        cast_only_after_blockers: true,
+        effect: Effect::Seq(vec![
+            Effect::CreateTokenBlocking {
+                definition: TokenDefinition {
+                    name: "Saproling".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Saproling],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
