@@ -3182,6 +3182,10 @@ pub enum Effect {
     /// a `CreateToken` inside a `Seq` for "create N transient tokens, exile
     /// them at the next end step" (Valduk, Keeper of the Flame).
     ExileLastCreatedTokensAtNextEndStep,
+    /// Sacrifice-flavored sibling: "Sacrifice that token at the beginning of
+    /// the next end step" (Urabrask's Forge) — dies-triggers fire, unlike the
+    /// exile variant.
+    SacrificeLastCreatedTokensAtNextEndStep,
     /// Incubate N (CR 701.53): create an Incubator double-faced token under
     /// `who`'s control with `amount` +1/+1 counters on it.
     Incubate { who: PlayerRef, amount: Value },

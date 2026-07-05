@@ -1997,3 +1997,332 @@ fn free_from_flesh_pump_and_oil() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Oil), 2);
 }
+
+// ── Oil-counter package (wave 3) ─────────────────────────────────────────────
+
+/// Trawler Drake grows +1/+1 per oil; a noncreature cast adds oil.
+#[test]
+fn trawler_drake_grows_with_oil() {
+    let mut g = two_player_game();
+    let drake = g.move_card_to_battlefield_for_test(0, catalog::trawler_drake());
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(drake).unwrap().power, 1, "enters with one oil");
+    let slash = g.add_card_to_hand(0, catalog::hexgold_slash());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: slash, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(drake).unwrap().power, 2, "cast added an oil");
+}
+
+/// Exuberant Fuseling gets +1/+0 (not +1/+1) per oil and oils up on deaths.
+#[test]
+fn exuberant_fuseling_power_only_oil() {
+    let mut g = two_player_game();
+    let fus = g.move_card_to_battlefield_for_test(0, catalog::exuberant_fuseling());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(fus).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "ETB oil: +1/+0 over 0/1");
+    // Another creature dies → +1 oil.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve_for(&mut g, 0, crate::effect::Effect::Destroy {
+        what: crate::effect::Selector::EachPermanent(
+            crate::card::SelectionRequirement::HasCreatureType(crate::card::CreatureType::Bear),
+        ),
+    });
+    let _ = bear;
+    let cp = g.computed_permanent(fus).unwrap();
+    assert!(cp.power >= 2, "death added oil (power {})", cp.power);
+}
+
+/// Serum Sovereign converts an oil into a draw + scry.
+#[test]
+fn serum_sovereign_oil_to_draw() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let ss = g.add_card_to_battlefield(0, catalog::serum_sovereign());
+    if let Some(c) = g.battlefield_find_mut(ss) { c.add_counters(CounterType::Oil, 1); }
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ss, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1);
+    assert_eq!(g.battlefield_find(ss).unwrap().counter_count(CounterType::Oil), 0);
+}
+
+/// Ichor Synthesizer goes +2/+0 unblockable at four oil.
+#[test]
+fn ichor_synthesizer_threshold() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let ics = g.add_card_to_battlefield(0, catalog::ichor_synthesizer());
+    assert_eq!(g.computed_permanent(ics).unwrap().power, 1);
+    if let Some(c) = g.battlefield_find_mut(ics) { c.add_counters(CounterType::Oil, 4); }
+    let cp = g.computed_permanent(ics).unwrap();
+    assert_eq!(cp.power, 3, "+2/+0 at 4 oil");
+    assert!(cp.keywords.contains(&Keyword::Unblockable));
+}
+
+/// Tablet of Compleation's gated abilities respect the oil thresholds.
+#[test]
+fn tablet_of_compleation_gates() {
+    let mut g = two_player_game();
+    let tab = g.add_card_to_battlefield(0, catalog::tablet_of_compleation());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // {T}: Add {C} requires 2+ oil — rejected fresh.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: tab, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "colorless tap gated below 2 oil");
+    if let Some(c) = g.battlefield_find_mut(tab) { c.add_counters(CounterType::Oil, 2); }
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tab, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("2 oil unlocks {T}: Add {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+}
+
+/// Urabrask's Forge mints an X/1 (X = oil) trample-haste Horror at combat and
+/// sacrifices it at the end step.
+#[test]
+fn urabrasks_forge_token_lifecycle() {
+    let mut g = two_player_game();
+    let forge = g.add_card_to_battlefield(0, catalog::urabrasks_forge());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let horror = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Horror")
+        .expect("Horror minted");
+    assert_eq!(g.battlefield_find(forge).unwrap().counter_count(CounterType::Oil), 1);
+    assert_eq!(g.computed_permanent(horror.id).unwrap().power, 1, "X = 1 oil");
+    let horror_id = horror.id;
+    // Next end step: sacrificed (a real sacrifice, not an exile).
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(horror_id).is_none(), "token sacrificed at end step");
+    assert!(g.exile.iter().all(|c| c.id != horror_id), "sacrificed, not exiled");
+}
+
+/// Watchful Blisterzoa draws per oil on death (LKI counter read).
+#[test]
+fn watchful_blisterzoa_death_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let bz = g.move_card_to_battlefield_for_test(0, catalog::watchful_blisterzoa());
+    drain_stack(&mut g);
+    if let Some(c) = g.battlefield_find_mut(bz) { c.add_counters(CounterType::Oil, 1); } // 2 total
+    let hand0 = g.players[0].hand.len();
+    g.resolve_effect(
+        &crate::effect::Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &crate::game::effects::EffectContext {
+            targets: vec![Target::Permanent(bz)],
+            ..crate::game::effects::EffectContext::for_ability(bz, 0, None)
+        },
+    ).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew per oil counter");
+}
+
+/// Magmatic Sprinter stays by shedding two oil, bounces when dry.
+#[test]
+fn magmatic_sprinter_end_step() {
+    let mut g = two_player_game();
+    let ms = g.add_card_to_battlefield(0, catalog::magmatic_sprinter());
+    if let Some(c) = g.battlefield_find_mut(ms) { c.add_counters(CounterType::Oil, 2); }
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ms).is_some(), "shed two oil and stayed");
+    assert_eq!(g.battlefield_find(ms).unwrap().counter_count(CounterType::Oil), 0);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ms).is_none(), "no oil left — bounced");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Magmatic Sprinter"));
+}
+
+/// Evolved Spinoderm swaps hexproof for trample as its oil drains, then dies.
+#[test]
+fn evolved_spinoderm_oil_curve() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let sp = g.move_card_to_battlefield_for_test(0, catalog::evolved_spinoderm());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(sp).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Hexproof) && !cp.keywords.contains(&Keyword::Trample));
+    if let Some(c) = g.battlefield_find_mut(sp) { c.remove_counters(CounterType::Oil, 3); } // 1 left
+    let cp = g.computed_permanent(sp).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Trample) && !cp.keywords.contains(&Keyword::Hexproof));
+    // Upkeep: shed the last oil → sacrificed.
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sp).is_none(), "dry Spinoderm sacrificed");
+}
+
+/// Eye of Malcator animates into a 4/4 when another artifact enters.
+#[test]
+fn eye_of_malcator_animates() {
+    let mut g = two_player_game();
+    let eye = g.add_card_to_battlefield(0, catalog::eye_of_malcator());
+    assert!(g.computed_permanent(eye).unwrap().card_types.iter().all(|t| *t != crate::card::CardType::Creature));
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentEntered { card_id: stone }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(eye).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "animated");
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// Vat of Rebirth reanimates for four oil at sorcery speed.
+#[test]
+fn vat_of_rebirth_reanimates() {
+    let mut g = two_player_game();
+    let vat = g.add_card_to_battlefield(0, catalog::vat_of_rebirth());
+    if let Some(c) = g.battlefield_find_mut(vat) { c.add_counters(CounterType::Oil, 4); }
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vat, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dead), "creature reanimated");
+}
+
+/// Gleeful Demolition: your own artifact yields three Goblins; an opponent's
+/// yields none.
+#[test]
+fn gleeful_demolition_goblins_only_for_yours() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let gd = g.add_card_to_hand(0, catalog::gleeful_demolition());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: gd, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Goblin").count(), 3);
+}
+
+/// Testament Bearer's death fills the hand from the top three.
+#[test]
+fn testament_bearer_death_dig() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let tb = g.add_card_to_battlefield(0, catalog::testament_bearer());
+    let hand0 = g.players[0].hand.len();
+    let gy0 = g.players[0].graveyard.len();
+    g.resolve_effect(
+        &crate::effect::Effect::SacrificePermanent { what: crate::effect::Selector::Target(0) },
+        &crate::game::effects::EffectContext {
+            targets: vec![Target::Permanent(tb)],
+            ..crate::game::effects::EffectContext::for_ability(tb, 0, None)
+        },
+    ).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "one to hand");
+    // Testament Bearer itself + two milled cards.
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 3, "rest to graveyard");
+}
+
+/// Plague Nurse spreads toxic 1 to your other toxic creatures — total toxic
+/// stacks in combat poison.
+#[test]
+fn plague_nurse_toxic_boost() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let nurse = g.add_card_to_battlefield(0, catalog::plague_nurse());
+    let sting = g.add_card_to_battlefield(0, catalog::bilious_skulldweller()); // toxic 1
+    g.clear_sickness(sting);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nurse, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sting, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "toxic 1 + granted toxic 1 = 2 poison");
+}
+
+/// Nimraiser Paladin's ETB only fetches MV ≤ 3 creature cards.
+#[test]
+fn nimraiser_paladin_reanimate_gate() {
+    let mut g = two_player_game();
+    let cheap = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_graveyard(0, catalog::serra_angel()); // MV 5
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(cheap)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::nimraiser_paladin());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "MV 2 creature returned to hand");
+}
+
+/// Escaped Experiment shrinks a defender by your artifact count.
+#[test]
+fn escaped_experiment_attack_debuff() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let ex = g.add_card_to_battlefield(0, catalog::escaped_experiment());
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.clear_sickness(ex);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ex, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    // Experiment (artifact creature) + Mind Stone = 2 artifacts → -2/-0.
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 2, "4 - 2 = 2");
+}
+
+/// Myr Convert taps + pays 2 life for any color.
+#[test]
+fn myr_convert_life_for_mana() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_battlefield(0, catalog::myr_convert());
+    g.clear_sickness(myr);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+}
+
+/// Feed the Infection drains only through the Corrupted gate.
+#[test]
+fn feed_the_infection_corrupted_gate() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    resolve_for(&mut g, 0, catalog::feed_the_infection().effect);
+    assert_eq!(g.players[1].life, 20, "no poison — no drain");
+    assert_eq!(g.players[0].life, 17, "lost 3");
+    g.players[1].poison_counters = 3;
+    resolve_for(&mut g, 0, catalog::feed_the_infection().effect);
+    assert_eq!(g.players[1].life, 17, "Corrupted — opponent lost 3");
+}

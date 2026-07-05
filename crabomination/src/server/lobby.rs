@@ -265,11 +265,12 @@ impl LobbyManager {
             // the channel + running-match registry, not lobby state); they
             // never reach the manager. Game traffic from a browsing connection
             // is ignored.
+            // Lobby-phase chat: relayed to the sender's lobby-mates.
+            ClientMsg::Chat { text } => self.chat(conn, &text),
             ClientMsg::Resume { .. }
             | ClientMsg::ListSpectatable
             | ClientMsg::SpectateMatch { .. }
             | ClientMsg::SubmitAction(_)
-            | ClientMsg::Chat { .. }
             | ClientMsg::Debug(_) => LobbyOutcome::default(),
         }
     }
@@ -362,6 +363,29 @@ impl LobbyManager {
         lobby.seats.push(Slot::Bot);
         self.notify_members(lobby_id, &mut out);
         self.push_browser_list(&mut out);
+        out
+    }
+
+    /// In-lobby chat: sanitize and relay to every human member of the
+    /// sender's lobby as `ServerMsg::Chat`, stamped with the sender's seat
+    /// index + display name. Browsers not seated in a lobby are ignored.
+    fn chat(&mut self, conn: ConnId, text: &str) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let Some(&lobby_id) = self.conn_lobby.get(&conn) else { return out };
+        let Some(text) = super::sanitize_chat(text) else { return out };
+        let Some(lobby) = self.lobbies.iter().find(|l| l.id == lobby_id) else { return out };
+        let Some((seat, name)) = lobby.seats.iter().enumerate().find_map(|(i, s)| match s {
+            Slot::Human { conn: c, name } if *c == conn => Some((i, name.clone())),
+            _ => None,
+        }) else {
+            return out;
+        };
+        let msg = ServerMsg::Chat { seat, name, text };
+        for s in &lobby.seats {
+            if let Slot::Human { conn: c, .. } = s {
+                out.send(*c, msg.clone());
+            }
+        }
         out
     }
 
@@ -873,6 +897,32 @@ mod tests {
             &out.sends[0].1,
             ServerMsg::LobbyList { lobbies } if lobbies.is_empty()
         ));
+    }
+
+    #[test]
+    fn lobby_chat_relays_to_members_only() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        m.register(ConnId(2));
+        m.register(ConnId(3)); // a browser outside the lobby
+        m.handle(ConnId(1), ClientMsg::CreateLobby {
+            name: "chatty".into(),
+            format: LobbyFormat::Modern,
+        });
+        let lobby_id = m.lobbies[0].id;
+        m.handle(ConnId(2), ClientMsg::JoinLobby { lobby_id });
+        let out = m.handle(ConnId(1), ClientMsg::Chat { text: "  gl\u{7} hf  ".into() });
+        // Sanitized text relayed to both members, not the browser.
+        let recipients: Vec<ConnId> = out.sends.iter().map(|(c, _)| *c).collect();
+        assert!(recipients.contains(&ConnId(1)) && recipients.contains(&ConnId(2)));
+        assert!(!recipients.contains(&ConnId(3)), "browsers outside the lobby hear nothing");
+        assert!(out.sends.iter().all(|(_, msg)| matches!(
+            msg,
+            ServerMsg::Chat { seat: 0, text, .. } if text == "gl hf"
+        )));
+        // A browser not in any lobby chats into the void.
+        let out = m.handle(ConnId(3), ClientMsg::Chat { text: "hello?".into() });
+        assert!(out.sends.is_empty());
     }
 
     #[test]

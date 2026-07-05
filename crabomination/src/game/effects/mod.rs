@@ -10889,6 +10889,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeLastCreatedTokensAtNextEndStep => {
+                for tok in self.last_created_tokens.clone() {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: tok,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::SacrificePermanent { what: Selector::This },
+                        target: None,
+                        bound_token: Some(tok),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::OnYourNextNamedSpellThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {

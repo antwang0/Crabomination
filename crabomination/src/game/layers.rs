@@ -484,9 +484,15 @@ fn compute_permanent_pass(
             Modification::SetColors(cs) => colors = cs.clone(),
             Modification::LoseAllColors => colors.clear(),
 
-            // Layer 6
+            // Layer 6. Duplicate grants of a binary keyword collapse to one,
+            // but Toxic/Poisonous instances are cumulative (CR 702.180b /
+            // 702.70b — "total toxic value" sums every instance; Plague
+            // Nurse's granted toxic 1 stacks with a printed toxic 1).
             Modification::AddKeyword(kw) => {
-                if !keywords.contains(kw) { keywords.push(kw.clone()); }
+                let cumulative = matches!(kw, Keyword::Toxic(_) | Keyword::Poisonous(_));
+                if cumulative || !keywords.contains(kw) {
+                    keywords.push(kw.clone());
+                }
             }
             Modification::RemoveKeyword(kw) => keywords.retain(|k| k != kw),
             Modification::RemoveAllAbilities => {

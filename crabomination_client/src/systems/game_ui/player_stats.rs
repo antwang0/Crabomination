@@ -718,6 +718,11 @@ pub fn update_player_stats_chips(
         if p.void_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Void, "✦ void".to_string());
         }
+        // ONE Corrupted (CR 702.166) — lit while an opponent has 3+ poison,
+        // so this player's Corrupted payoffs are online.
+        if cv.players.iter().any(|q| q.team != p.team && q.poison_counters >= 3) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::AbilityWord, "✦ corrupted".to_string());
+        }
         // Ability-word conditions — lit while the payoff is online, so cards
         // gated on Threshold / Metalcraft / Ferocious / Hellbent / Formidable
         // are easy to read at a glance.

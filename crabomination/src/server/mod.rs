@@ -811,7 +811,7 @@ fn run_match_inner(
 
 /// Sanitize an inbound chat line: strip control characters, trim, and
 /// clamp to 200 chars (on a char boundary). `None` for an empty result.
-fn sanitize_chat(raw: &str) -> Option<String> {
+pub(crate) fn sanitize_chat(raw: &str) -> Option<String> {
     let cleaned: String = raw
         .chars()
         .filter(|c| !c.is_control())

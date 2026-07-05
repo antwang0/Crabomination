@@ -23,6 +23,7 @@ pub struct LobbyUiPlugin;
 impl Plugin for LobbyUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<LobbyCreateFormat>()
+            .init_resource::<LobbyChatLog>()
             .add_systems(OnEnter(AppState::Lobby), (connect_to_lobby_server, spawn_lobby_browser))
             .add_systems(OnExit(AppState::Lobby), despawn_lobby_browser)
             .add_systems(
@@ -31,11 +32,23 @@ impl Plugin for LobbyUiPlugin {
                     rebuild_lobby_list,
                     rebuild_spectate_list,
                     update_lobby_status,
+                    update_lobby_chat,
                     update_format_label,
                     update_bot_controls_visibility,
                     handle_lobby_buttons,
                     watch_match_start,
                 )
+                    .run_if(in_state(AppState::Lobby)),
+            )
+            // Lobby-phase chat shares the in-match input bar ('T' → type →
+            // Enter); the server relays it to the lobby's members.
+            .add_systems(
+                Update,
+                (
+                    crate::systems::chat::handle_chat_input,
+                    crate::systems::chat::sync_chat_ui,
+                )
+                    .chain()
                     .run_if(in_state(AppState::Lobby)),
             );
     }
@@ -77,6 +90,14 @@ struct LobbyRefreshButton;
 struct LobbyBackButton;
 #[derive(Component)]
 struct LobbyStatusText;
+
+/// Last few lobby-phase chat lines, drained from [`ChatInbox`] while in the
+/// lobby (in-match they go to the game log instead).
+#[derive(Resource, Default)]
+struct LobbyChatLog(Vec<String>);
+
+#[derive(Component)]
+struct LobbyChatText;
 /// Row holding the host-only controls (add/remove bot, start); shown only to
 /// the lobby host (seat 0).
 #[derive(Component)]
@@ -186,6 +207,13 @@ fn spawn_lobby_browser(
                     tf(13.0),
                     TextColor(theme::TEXT_SECONDARY),
                     LobbyStatusText,
+                ));
+
+                p.spawn((
+                    Text::new(""),
+                    tf(12.0),
+                    TextColor(theme::TEXT_INFO),
+                    LobbyChatText,
                 ));
 
                 // Scrollable-ish list container (children rebuilt on update).
@@ -510,6 +538,37 @@ fn update_lobby_status(lobby: Res<LobbyState>, mut q: Query<&mut Text, With<Lobb
         format!("{} open lobb{}", lobby.lobbies.len(), if lobby.lobbies.len() == 1 { "y" } else { "ies" })
     };
     text.0 = msg;
+}
+
+/// Drain relayed chat into the lobby panel (last six lines) and hint at the
+/// hotkey while seated in a lobby.
+fn update_lobby_chat(
+    mut inbox: ResMut<crate::net_plugin::ChatInbox>,
+    mut log: ResMut<LobbyChatLog>,
+    lobby: Res<LobbyState>,
+    mut q: Query<&mut Text, With<LobbyChatText>>,
+) {
+    let changed = !inbox.0.is_empty();
+    for (_seat, name, text) in inbox.0.drain(..) {
+        log.0.push(format!("💬 {name}: {text}"));
+        if log.0.len() > 6 {
+            log.0.remove(0);
+        }
+    }
+    if !changed && !lobby.is_changed() {
+        return;
+    }
+    let Ok(mut text) = q.single_mut() else { return };
+    let mut body = log.0.join("\n");
+    if lobby.joined.is_some() {
+        if !body.is_empty() {
+            body.push('\n');
+        }
+        body.push_str("(T to chat)");
+    }
+    if text.0 != body {
+        text.0 = body;
+    }
 }
 
 fn update_format_label(

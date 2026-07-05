@@ -785,6 +785,8 @@ pub fn evolving_adaptive() -> CardDefinition {
         toughness: 0,
         enters_with_counters: Some((CounterType::Oil, Value::ONE)),
         dynamic_pt: Some(DynamicPt::BasePlusCountersOnSelf {
+            per_p: 1,
+            per_t: 1,
             counter_type: CounterType::Oil,
             base_p: 0,
             base_t: 0,
@@ -3253,6 +3255,1058 @@ pub fn cephalopod_sentry() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         dynamic_pt: Some(DynamicPt::ArtifactsControlledPower { base_p: 0, base_t: 5 }),
+        ..Default::default()
+    }
+}
+
+// ── Oil-counter engine cards + more commons ──────────────────────────────────
+
+/// "Whenever you cast a noncreature spell, put an oil counter on this."
+fn oil_on_noncreature_cast() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+        effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+    }
+}
+
+/// "Whenever another creature or artifact you control is put into a graveyard
+/// from the battlefield, put an oil counter on this."
+fn oil_on_another_dying() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureOrArtifactDied, EventScope::AnotherOfYours),
+        effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+    }
+}
+
+/// Trawler Drake — {2}{U} 0/0 flying; enters with an oil counter; +1/+1 per
+/// oil; noncreature casts add oil.
+pub fn trawler_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Trawler Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Drake],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::Oil, Value::ONE)),
+        dynamic_pt: Some(DynamicPt::BasePlusCountersOnSelf {
+            counter_type: CounterType::Oil, base_p: 0, base_t: 0, per_p: 1, per_t: 1,
+        }),
+        triggered_abilities: vec![oil_on_noncreature_cast()],
+        ..Default::default()
+    }
+}
+
+/// Necrosquito — {3}{B} 0/0 flying; enters with two oil; +1/+1 per oil;
+/// another creature/artifact dying adds oil.
+pub fn necrosquito() -> CardDefinition {
+    CardDefinition {
+        name: "Necrosquito",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        dynamic_pt: Some(DynamicPt::BasePlusCountersOnSelf {
+            counter_type: CounterType::Oil, base_p: 0, base_t: 0, per_p: 1, per_t: 1,
+        }),
+        triggered_abilities: vec![oil_on_another_dying()],
+        ..Default::default()
+    }
+}
+
+/// Exuberant Fuseling — {R} 0/1 trample; +1/+0 per oil; ETB and another
+/// creature/artifact dying add oil.
+pub fn exuberant_fuseling() -> CardDefinition {
+    CardDefinition {
+        name: "Exuberant Fuseling",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        dynamic_pt: Some(DynamicPt::BasePlusCountersOnSelf {
+            counter_type: CounterType::Oil, base_p: 0, base_t: 1, per_p: 1, per_t: 0,
+        }),
+        triggered_abilities: vec![
+            etb(Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE }),
+            oil_on_another_dying(),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Serum Sovereign — {4}{U} 4/4 flying; noncreature casts add oil; {U},
+/// remove an oil: draw, then scry 2.
+pub fn serum_sovereign() -> CardDefinition {
+    CardDefinition {
+        name: "Serum Sovereign",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Sphinx],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![oil_on_noncreature_cast()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ichor Synthesizer — {1}{U} 1/3; noncreature casts add oil; at 4+ oil it
+/// gets +2/+0 and can't be blocked.
+pub fn ichor_synthesizer() -> CardDefinition {
+    CardDefinition {
+        name: "Ichor Synthesizer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![oil_on_noncreature_cast()],
+        static_abilities: vec![StaticAbility {
+            description: "At four or more oil counters: +2/+0 and can't be blocked.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+                    Value::Const(4),
+                ),
+                power: 2,
+                toughness: 0,
+                keywords: vec![Keyword::Unblockable],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gitaxian Raptor — {2}{U} 1/4 flying; enters with three oil; remove an oil:
+/// +1/-1 until end of turn.
+pub fn gitaxian_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Gitaxian Raptor",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::Oil, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Furnace Strider — {4}{R} 4/5; enters with two oil; remove an oil: target
+/// creature you control gains haste until end of turn.
+pub fn furnace_strider() -> CardDefinition {
+    CardDefinition {
+        name: "Furnace Strider",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Norn's Wellspring — {1}{W}. Your creatures dying scry 1 + add oil; {1},
+/// {T}, remove two oil: draw a card.
+pub fn norns_wellspring() -> CardDefinition {
+    CardDefinition {
+        name: "Norn's Wellspring",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Oil, 2)),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vat of Rebirth — {B}. Another artifact/creature dying adds oil; {2}{B},
+/// {T}, remove four oil: reanimate a creature card (sorcery-only).
+pub fn vat_of_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Vat of Rebirth",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![oil_on_another_dying()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            remove_counter_cost: Some((CounterType::Oil, 4)),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tablet of Compleation — {2}. {T}: add an oil counter. {T}: Add {C} (2+
+/// oil). {1}, {T}: draw (5+ oil).
+pub fn tablet_of_compleation() -> CardDefinition {
+    let oil_at_least = |n: i32| {
+        Predicate::ValueAtLeast(
+            Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+            Value::Const(n),
+        )
+    };
+    CardDefinition {
+        name: "Tablet of Compleation",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(oil_at_least(2)),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                condition: Some(oil_at_least(5)),
+                effect: draw(1),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Font of Progress — {U}. Enters with two oil; {3}, {T}: target player mills
+/// X, X = oil counters on this.
+pub fn font_of_progress() -> CardDefinition {
+    CardDefinition {
+        name: "Font of Progress",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Incubation Sac — {G}. Enters with three oil; {4}, {T}, remove an oil: make
+/// a 3/3 Golem (sorcery-only).
+pub fn incubation_sac() -> CardDefinition {
+    CardDefinition {
+        name: "Incubation Sac",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::Oil, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Phyrexian Golem".into(),
+                    power: 3,
+                    toughness: 3,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Urabrask's Forge — {2}{R}. At combat on your turn: add an oil counter,
+/// then mint an X/1 trample haste Horror (X = oil), sacrificed at end step.
+pub fn urabrasks_forge() -> CardDefinition {
+    let oil = Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil };
+    CardDefinition {
+        name: "Urabrask's Forge",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Phyrexian Horror".into(),
+                        power: 0,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Red],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Trample, Keyword::Haste],
+                        dynamic_pt: Some((oil.clone(), Value::ONE)),
+                        ..Default::default()
+                    },
+                },
+                Effect::SacrificeLastCreatedTokensAtNextEndStep,
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Watchful Blisterzoa — {4}{U}{U} 4/4 flying; enters with an oil counter;
+/// dies: draw cards equal to its oil counters.
+pub fn watchful_blisterzoa() -> CardDefinition {
+    CardDefinition {
+        name: "Watchful Blisterzoa",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Jellyfish],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::Oil, Value::ONE)),
+        triggered_abilities: vec![on_dies(Effect::Draw {
+            who: Selector::You,
+            amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Magmatic Sprinter — {2}{R} 3/2 haste. ETB: two oil on your artifact or
+/// creature; your end step: bounce it unless it sheds two oil.
+pub fn magmatic_sprinter() -> CardDefinition {
+    CardDefinition {
+        name: "Magmatic Sprinter",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::Oil,
+                amount: Value::Const(2),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+                        Value::Const(2),
+                    ),
+                    then: Box::new(Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::Oil,
+                        amount: Value::Const(2),
+                    }),
+                    else_: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lattice-Blade Mantis — {3}{G} 4/3; enters with two oil; on attack, may
+/// shed an oil to untap it and get +1/+1 until end of turn.
+pub fn lattice_blade_mantis() -> CardDefinition {
+    CardDefinition {
+        name: "Lattice-Blade Mantis",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        triggered_abilities: vec![on_attack(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+                Value::ONE,
+            ),
+            then: Box::new(Effect::MayDo {
+                description: "Remove an oil counter to untap and pump?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::RemoveCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+                    Effect::Untap { what: Selector::This, up_to: None },
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Forgehammer Centurion — {2}{R} 3/2; another creature/artifact dying adds
+/// oil; on attack, may shed two oil: target creature can't block this turn.
+pub fn forgehammer_centurion() -> CardDefinition {
+    CardDefinition {
+        name: "Forgehammer Centurion",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![
+            oil_on_another_dying(),
+            on_attack(Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+                    Value::Const(2),
+                ),
+                then: Box::new(Effect::MayDo {
+                    description: "Remove two oil counters: a creature can't block this turn?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::Const(2) },
+                        Effect::Reflexive {
+                            body: Box::new(Effect::CantBlockSourceThisTurn {
+                                target: target_filtered(SelectionRequirement::Creature),
+                            }),
+                        },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Predation Steward — {1}{G} 2/2; enters with two oil; {2}{G}, {T}, remove
+/// an oil: target creature +2/+2 until end of turn (sorcery-only).
+pub fn predation_steward() -> CardDefinition {
+    CardDefinition {
+        name: "Predation Steward",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Evolved Spinoderm — {2}{G}{G} 5/5; enters with four oil; trample at ≤ 2
+/// oil, hexproof otherwise; upkeep sheds an oil, sacrificed when dry.
+pub fn evolved_spinoderm() -> CardDefinition {
+    let oil = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil };
+    CardDefinition {
+        name: "Evolved Spinoderm",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(4))),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Trample as long as it has two or fewer oil counters.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::Trample,
+                    condition: Predicate::ValueAtMost(oil(), Value::Const(2)),
+                },
+            },
+            StaticAbility {
+                description: "Otherwise, hexproof.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::Hexproof,
+                    condition: Predicate::ValueAtLeast(oil(), Value::Const(3)),
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(oil(), Value::Const(0)),
+                    then: Box::new(Effect::SacrificePermanent { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eye of Malcator — {2}{U}. ETB scry 2; another artifact entering animates
+/// it into a 4/4 Phyrexian Eye until end of turn.
+pub fn eye_of_malcator() -> CardDefinition {
+    CardDefinition {
+        name: "Eye of Malcator",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Artifact,
+                    }),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Phyrexian, CreatureType::Eye],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mandible Justiciar — {1}{W} 2/1 lifelink; another artifact entering gives
+/// it +1/+1 until end of turn.
+pub fn mandible_justiciar() -> CardDefinition {
+    CardDefinition {
+        name: "Mandible Justiciar",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Escaped Experiment — {1}{U} 2/1; on attack, an opponent's creature gets
+/// -X/-0 until end of turn, X = your artifact count.
+pub fn escaped_experiment() -> CardDefinition {
+    CardDefinition {
+        name: "Escaped Experiment",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Diff(
+                Box::new(Value::Const(0)),
+                Box::new(Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ))),
+            ),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Meldweb Strider — {4}{U} Vehicle 5/5 vigilance; enters with an oil
+/// counter; remove an oil: becomes a creature until end of turn. Crew 3.
+pub fn meldweb_strider() -> CardDefinition {
+    CardDefinition {
+        name: "Meldweb Strider",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance, Keyword::Crew(3)],
+        enters_with_counters: Some((CounterType::Oil, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(5),
+                toughness: Value::Const(5),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ribskiff — {4} Vehicle 4/4, toxic 2; ETB draw a card. Crew 3.
+pub fn ribskiff() -> CardDefinition {
+    CardDefinition {
+        name: "Ribskiff",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Toxic(2), Keyword::Crew(3)],
+        triggered_abilities: vec![etb(draw(1))],
+        ..Default::default()
+    }
+}
+
+/// Gleeful Demolition — {R} Sorcery. Destroy target artifact; if you
+/// controlled it, create three 1/1 red Phyrexian Goblins.
+pub fn gleeful_demolition() -> CardDefinition {
+    CardDefinition {
+        name: "Gleeful Demolition",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: SelectionRequirement::ControlledByYou,
+            },
+            then: Box::new(Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: phyrexian_goblin_token(),
+                },
+            ])),
+            else_: Box::new(Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Testament Bearer — {3}{B} 4/1; dies: look at the top three, one to hand,
+/// rest to graveyard.
+pub fn testament_bearer() -> CardDefinition {
+    CardDefinition {
+        name: "Testament Bearer",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: true,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Meldweb Curator — {3}{U} 3/4; ETB: up to one target instant or sorcery
+/// card from your graveyard goes on top of your library.
+pub fn meldweb_curator() -> CardDefinition {
+    CardDefinition {
+        name: "Meldweb Curator",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .and(SelectionRequirement::InYourGraveyard),
+            ),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nimraiser Paladin — {4}{B} 4/4, toxic 2; ETB: return a creature card with
+/// mana value ≤ 3 from your graveyard to your hand.
+pub fn nimraiser_paladin() -> CardDefinition {
+    CardDefinition {
+        name: "Nimraiser Paladin",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Toxic(2)],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stinging Hivemaster — {2}{B} 3/2, toxic 1; dies: create a Phyrexian Mite.
+pub fn stinging_hivemaster() -> CardDefinition {
+    CardDefinition {
+        name: "Stinging Hivemaster",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: mite_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Flensing Raptor — {2}{W} 2/2 flying, toxic 1; ETB: another target toxic
+/// creature you control gets +1/+1 and flying until end of turn.
+pub fn flensing_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Flensing Raptor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Toxic(1)],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasToxic)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Myr Kinsmith — {4} 3/1; ETB: search your library for a Myr card to hand.
+pub fn myr_kinsmith() -> CardDefinition {
+    CardDefinition {
+        name: "Myr Kinsmith",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Myr),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Myr Convert — {2} 2/1, toxic 1; {T}, pay 2 life: add one mana of any color.
+pub fn myr_convert() -> CardDefinition {
+    CardDefinition {
+        name: "Myr Convert",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Myr],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Toxic(1)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            life_cost: 2,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Myr Custodian — {3} 2/3; ETB: scry 2, then each opponent may scry 1.
+pub fn myr_custodian() -> CardDefinition {
+    CardDefinition {
+        name: "Myr Custodian",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry { who: PlayerRef::EachOpponent, amount: Value::ONE },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Feed the Infection — {3}{B} Sorcery. Draw three, lose 3. Corrupted — each
+/// opponent with three or more poison counters loses 3 life (1v1: gated on
+/// the Corrupted check).
+pub fn feed_the_infection() -> CardDefinition {
+    CardDefinition {
+        name: "Feed the Infection",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            draw(3),
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::If {
+                cond: Predicate::CorruptedActive { who: PlayerRef::You },
+                then: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Plague Nurse — {3}{G} 3/4, toxic 2; {2}{G}: other toxic creatures you
+/// control gain toxic 1 until end of turn (once per turn).
+pub fn plague_nurse() -> CardDefinition {
+    CardDefinition {
+        name: "Plague Nurse",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Toxic(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            once_per_turn: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasToxic)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Toxic(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dune Mover — {2} 2/1, toxic 1; ETB: may search a basic land, then shuffle
+/// and put it on top.
+pub fn dune_mover() -> CardDefinition {
+    CardDefinition {
+        name: "Dune Mover",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+        })],
         ..Default::default()
     }
 }

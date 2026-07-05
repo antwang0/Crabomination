@@ -5619,9 +5619,9 @@ impl GameState {
                     }).map(|c| c.definition.cost.cmc() as i32).max().unwrap_or(0);
                     (base_p + greatest, base_t)
                 }
-                crate::card::DynamicPt::BasePlusCountersOnSelf { counter_type, base_p, base_t } => {
+                crate::card::DynamicPt::BasePlusCountersOnSelf { counter_type, base_p, base_t, per_p, per_t } => {
                     let n = card.counter_count(counter_type) as i32;
-                    (base_p + n, base_t + n)
+                    (base_p + n * per_p, base_t + n * per_t)
                 }
                 crate::card::DynamicPt::ControllerHandSize => {
                     let n = self.players[card.controller].hand.len() as i32;

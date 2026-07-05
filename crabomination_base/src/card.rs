@@ -2719,11 +2719,21 @@ pub enum DynamicPt {
     /// where X is the greatest mana value among other artifacts you control"
     /// (Emissary Escort, base 0/4).
     BasePlusGreatestOtherArtifactMv { base_p: i32, base_t: i32 },
-    /// P/T = base + one for each `counter_type` counter on this permanent
-    /// itself. "gets +1/+1 for each oil counter on it" (Evolving Adaptive,
-    /// base 0/0).
-    BasePlusCountersOnSelf { counter_type: CounterType, base_p: i32, base_t: i32 },
+    /// P/T = base + `per_p`/`per_t` for each `counter_type` counter on this
+    /// permanent itself. "+1/+1 per oil" (Evolving Adaptive, per 1/1) or
+    /// "+1/+0 per oil" (Exuberant Fuseling, per 1/0). `per_*` default to 1.
+    BasePlusCountersOnSelf {
+        counter_type: CounterType,
+        base_p: i32,
+        base_t: i32,
+        #[serde(default = "one_i32")]
+        per_p: i32,
+        #[serde(default = "one_i32")]
+        per_t: i32,
+    },
 }
+
+fn one_i32() -> i32 { 1 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
 /// player chooses to cast via this path. Models pitch (Force of Will,
