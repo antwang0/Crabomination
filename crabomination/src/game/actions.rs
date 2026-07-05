@@ -3769,17 +3769,20 @@ impl GameState {
         if self.players[p].wants_ui
             && convoke_creatures.is_empty()
             && delve_cards.is_empty()
-            && !kicked
             && !buyback
             && !bestow
             && !entwine
             && room_door.is_none()
         {
-            let card_info = self.players[p]
-                .hand
-                .iter()
-                .find(|c| c.id == card_id)
-                .map(|c| (c.definition.name.to_string(), c.definition.additional_cast_cost.clone()));
+            let card_info = self.players[p].hand.iter().find(|c| c.id == card_id).map(|c| {
+                let mut costs = c.definition.additional_cast_cost.clone();
+                // A kicked cast pays the action kicker too — offer its
+                // sacrifice choice alongside the printed additional costs.
+                if kicked && let Some(kc) = &c.definition.kicker_action_cost {
+                    costs.push(kc.clone());
+                }
+                (c.definition.name.to_string(), costs)
+            });
             if let Some((name, costs)) = card_info {
                 for cost in &costs {
                     match cost {
@@ -3815,6 +3818,7 @@ impl GameState {
                                         additional_targets,
                                         mode,
                                         x_value,
+                                        kicked,
                                     },
                                 });
                                 return Ok(vec![]);
@@ -3853,6 +3857,7 @@ impl GameState {
                                         additional_targets,
                                         mode,
                                         x_value,
+                                        kicked,
                                     },
                                 });
                                 return Ok(vec![]);
@@ -4500,14 +4505,18 @@ impl GameState {
         if sac.controller != caster {
             return false;
         }
-        card.definition.additional_cast_cost.iter().any(|cost| {
-            let filter = match cost {
-                crate::card::AdditionalCastCost::SacrificePermanent { filter, .. } => filter,
-                crate::card::AdditionalCastCost::SacrificeOrPay { filter, .. } => filter,
-                _ => return false,
-            };
-            self.evaluate_requirement_static(filter, &Target::Permanent(sac_id), caster, None)
-        })
+        card.definition
+            .additional_cast_cost
+            .iter()
+            .chain(card.definition.kicker_action_cost.iter())
+            .any(|cost| {
+                let filter = match cost {
+                    crate::card::AdditionalCastCost::SacrificePermanent { filter, .. } => filter,
+                    crate::card::AdditionalCastCost::SacrificeOrPay { filter, .. } => filter,
+                    _ => return false,
+                };
+                self.evaluate_requirement_static(filter, &Target::Permanent(sac_id), caster, None)
+            })
     }
 
     /// Pick the `count` lowest-power permanents from `candidates` (by id) —

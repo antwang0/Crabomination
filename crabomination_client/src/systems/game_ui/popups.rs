@@ -916,3 +916,235 @@ pub fn handle_split_cast_buttons(
         return;
     }
 }
+
+// ── Spree / Tiered mode picker (CR 702.172) ─────────────────────────────────
+
+#[derive(Component)]
+pub struct SpreeModal;
+
+#[derive(Component)]
+pub struct SpreeModeToggle {
+    pub index: usize,
+}
+
+/// Marker on a mode row's tick text so toggles update in place.
+#[derive(Component)]
+pub struct SpreeModeTick {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct SpreeConfirmButton;
+
+#[derive(Component)]
+pub struct SpreeCancelButton;
+
+/// Spawn or despawn the Spree/Tiered mode picker based on `SpreeCastState`.
+pub fn spawn_spree_cast_modal(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    state: Res<crate::game::SpreeCastState>,
+    existing: Query<Entity, With<SpreeModal>>,
+) {
+    let want_open = state.pending.is_some();
+    let is_open = !existing.is_empty();
+    if want_open == is_open {
+        return;
+    }
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    let Some(spell_id) = state.pending else { return };
+    let Some(cv) = &view.0 else { return };
+    let name = cv
+        .players
+        .get(cv.your_seat)
+        .and_then(|p| {
+            p.hand.iter().find_map(|h| match h {
+                crabomination::net::HandCardView::Known(k) if k.id == spell_id => {
+                    Some(k.name.clone())
+                }
+                _ => None,
+            })
+        })
+        .unwrap_or_default();
+    let instructions = if state.single_mode {
+        "Choose exactly one tier:"
+    } else {
+        "Choose one or more modes:"
+    };
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            SpreeModal,
+        ))
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(8.0),
+                    align_items: AlignItems::Stretch,
+                    min_width: Val::Px(380.0),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new(format!("Cast {name} — {instructions}")),
+                    ui_fonts.tf(15.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                ));
+                for (i, label) in state.labels.iter().enumerate() {
+                    let ticked = state.selected.get(i).copied().unwrap_or(false);
+                    panel
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                                column_gap: Val::Px(8.0),
+                                ..default()
+                            },
+                            BackgroundColor(theme::BUTTON_INFO_BG),
+                            SpreeModeToggle { index: i },
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new(if ticked { "[x]" } else { "[ ]" }),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                SpreeModeTick { index: i },
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                            b.spawn((
+                                Text::new(label.clone()),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                        });
+                }
+                panel
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            justify_content: JustifyContent::Center,
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_INFO_BG),
+                        SpreeConfirmButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Cast"),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+                panel
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            justify_content: JustifyContent::Center,
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_DANGER_BG),
+                        SpreeCancelButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Cancel"),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+            });
+        });
+}
+
+/// Toggle / confirm / cancel handling for the Spree mode picker. Confirm
+/// submits directly for untargeted spells; targeted ones arm the targeting
+/// cursor with the chosen modes so the click-submit routes through
+/// `CastSpellSpree`.
+pub fn handle_spree_cast_buttons(
+    mut state: ResMut<crate::game::SpreeCastState>,
+    mut targeting: ResMut<TargetingState>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    toggle_q: Query<(&Interaction, &SpreeModeToggle), Changed<Interaction>>,
+    confirm_q: Query<&Interaction, (Changed<Interaction>, With<SpreeConfirmButton>)>,
+    cancel_q: Query<&Interaction, (Changed<Interaction>, With<SpreeCancelButton>)>,
+    mut ticks: Query<(&mut Text, &SpreeModeTick)>,
+) {
+    if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
+        state.pending = None;
+        return;
+    }
+    for (interaction, btn) in &toggle_q {
+        if *interaction == Interaction::Pressed && btn.index < state.selected.len() {
+            if state.single_mode {
+                // Tiered — radio: picking one clears the rest.
+                let was = state.selected[btn.index];
+                for v in state.selected.iter_mut() {
+                    *v = false;
+                }
+                state.selected[btn.index] = !was;
+            } else {
+                state.selected[btn.index] = !state.selected[btn.index];
+            }
+            for (mut t, tick) in &mut ticks {
+                let on = state.selected.get(tick.index).copied().unwrap_or(false);
+                *t = Text::new(if on { "[x]" } else { "[ ]" });
+            }
+        }
+    }
+    if confirm_q.iter().any(|i| *i == Interaction::Pressed)
+        && let Some(spell_id) = state.pending
+    {
+        let modes: Vec<u8> = state
+            .selected
+            .iter()
+            .enumerate()
+            .filter_map(|(i, on)| on.then_some(i as u8))
+            .collect();
+        if modes.is_empty() {
+            return; // CR 702.172: at least one mode must be chosen.
+        }
+        let needs_target = view.0.as_ref().is_some_and(|cv| {
+            cv.players.get(cv.your_seat).is_some_and(|p| {
+                p.hand.iter().any(|h| matches!(h,
+                    crabomination::net::HandCardView::Known(k)
+                    if k.id == spell_id && k.needs_target))
+            })
+        });
+        if needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = Some(spell_id);
+            targeting.back_face_pending = false;
+            targeting.pending_spree_modes = Some(modes);
+        } else if let Some(outbox) = &outbox {
+            outbox.submit(GameAction::CastSpellSpree {
+                card_id: spell_id, spree_modes: modes, target: None,
+                additional_targets: vec![], x_value: None,
+            });
+        }
+        state.pending = None;
+    }
+}

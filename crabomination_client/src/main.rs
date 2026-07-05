@@ -343,6 +343,7 @@ fn main() {
         .insert_resource(AltCastState::default())
         .insert_resource(game::SplitCastState::default())
         .insert_resource(game::PayTimesState::default())
+        .insert_resource(game::SpreeCastState::default())
         .insert_resource(FlippedHandCards::default())
         .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
@@ -842,6 +843,8 @@ fn main() {
             (
                 systems::game_ui::handle_pay_times_buttons,
                 systems::game_ui::spawn_pay_times_modal,
+                systems::game_ui::handle_spree_cast_buttons,
+                systems::game_ui::spawn_spree_cast_modal,
             )
                 .chain()
                 .after(handle_game_input)

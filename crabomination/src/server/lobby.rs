@@ -190,6 +190,13 @@ impl LobbyOutcome {
     }
 }
 
+/// Flood gate: a connection may issue at most this many lobby commands per
+/// [`FLOOD_WINDOW`]; exceeding it flags the connection for disconnection
+/// (create/leave loops otherwise amplify into a LobbyList broadcast to every
+/// browser per command).
+const FLOOD_MAX: usize = 40;
+const FLOOD_WINDOW: Duration = Duration::from_secs(5);
+
 /// Pure lobby state machine. See the module docs.
 #[derive(Default)]
 pub struct LobbyManager {
@@ -201,6 +208,9 @@ pub struct LobbyManager {
     /// Connection → display name (from `JoinMatch`), captured into a seat's
     /// `Slot::Human` when the connection creates or joins a lobby.
     conn_name: HashMap<ConnId, String>,
+    /// Connection → recent command timestamps inside [`FLOOD_WINDOW`]
+    /// (the sliding-window flood gate behind [`Self::note_command`]).
+    conn_cmd_times: HashMap<ConnId, Vec<Instant>>,
     next_id: u64,
 }
 
@@ -264,9 +274,20 @@ impl LobbyManager {
         }
     }
 
+    /// Record one lobby command from `conn` at `now`; returns `false` once
+    /// the connection exceeds the sliding-window flood budget ([`FLOOD_MAX`]
+    /// per [`FLOOD_WINDOW`]) — the driver then drops it.
+    pub fn note_command(&mut self, conn: ConnId, now: Instant) -> bool {
+        let times = self.conn_cmd_times.entry(conn).or_default();
+        times.retain(|t| now.duration_since(*t) < FLOOD_WINDOW);
+        times.push(now);
+        times.len() <= FLOOD_MAX
+    }
+
     /// A connection dropped. Remove it from any lobby (tidying or notifying as
     /// needed) and forget it.
     pub fn disconnect(&mut self, conn: ConnId) -> LobbyOutcome {
+        self.conn_cmd_times.remove(&conn);
         let mut out = self.remove_from_lobby(conn, false);
         self.conns.remove(&conn);
         self.conn_name.remove(&conn);
@@ -572,6 +593,26 @@ pub fn serve_lobbies<G: Send + 'static>(
         for id in ids {
             loop {
                 let recv = channels.get(&id).map(|(c, _)| c.rx.try_recv());
+                if matches!(recv, Some(Ok(_))) && !mgr.note_command(id, Instant::now()) {
+                    // Flooding the lobby — drop the connection (frees its slot).
+                    channels.remove(&id);
+                    eprintln!(
+                        "lobby: conn {} dropped for command flooding ({} online)",
+                        id.0,
+                        channels.len()
+                    );
+                    let outcome = mgr.disconnect(id);
+                    apply(
+                        &mut channels,
+                        outcome,
+                        &on_match_end,
+                        &mut registry,
+                        &mut running,
+                        &mut next_match_id,
+                        &done_tx,
+                    );
+                    break;
+                }
                 match recv {
                     Some(Ok(ClientMsg::Resume { token })) => {
                         // Driver-level: route this connection back into a match.
@@ -1368,5 +1409,29 @@ mod tests {
         drop(c1);
         drop(new_tx);
         let _ = driver.join();
+    }
+}
+
+#[cfg(test)]
+mod flood_tests {
+    use super::*;
+
+    /// The flood gate admits a normal command rate and trips past FLOOD_MAX
+    /// commands inside the window; an idle stretch resets the budget.
+    #[test]
+    fn note_command_trips_on_flood_and_recovers() {
+        let mut mgr = LobbyManager::new();
+        let c = ConnId(7);
+        let t0 = Instant::now();
+        for _ in 0..FLOOD_MAX {
+            assert!(mgr.note_command(c, t0), "within budget");
+        }
+        assert!(!mgr.note_command(c, t0), "41st command in the window trips");
+        // After the window slides past, the budget refills.
+        let later = t0 + FLOOD_WINDOW + Duration::from_millis(1);
+        assert!(mgr.note_command(c, later), "budget resets after the window");
+        // Disconnect clears the bookkeeping.
+        mgr.disconnect(c);
+        assert!(!mgr.conn_cmd_times.contains_key(&c));
     }
 }

@@ -119,7 +119,7 @@ fn evaluate_permanent(
         R::IsToken => perm.is_token,
         R::NotToken => !perm.is_token,
         R::HasKeyword(kw) => perm.keywords.contains(kw),
-        R::HasToxic => perm.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Toxic(_))),
+        R::HasToxic => perm.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Toxic(_))),
         R::PowerAtMost(n) => perm.card_types.contains(&CardType::Creature) && perm.power <= *n,
         R::PowerAtLeast(n) => perm.card_types.contains(&CardType::Creature) && perm.power >= *n,
         R::ToughnessAtMost(n) => {

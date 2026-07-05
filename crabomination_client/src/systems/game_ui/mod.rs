@@ -22,7 +22,8 @@ pub use player_stats::{
 };
 pub use popups::{
     handle_ability_menu, handle_alt_cast_buttons, handle_pay_times_buttons,
-    handle_split_cast_buttons, spawn_ability_menu, spawn_alt_cast_modal, spawn_pay_times_modal,
+    handle_split_cast_buttons, handle_spree_cast_buttons, spawn_ability_menu,
+    spawn_alt_cast_modal, spawn_pay_times_modal, spawn_spree_cast_modal,
     spawn_split_cast_modal, trigger_reveal_animation,
 };
 
@@ -85,6 +86,7 @@ pub struct GameInputResources<'w> {
     pub modal_cast: ResMut<'w, crate::game::PendingModalCast>,
     pub pay_times: ResMut<'w, crate::game::PayTimesState>,
     pub split_cast: ResMut<'w, crate::game::SplitCastState>,
+    pub spree_cast: ResMut<'w, crate::game::SpreeCastState>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -3670,6 +3672,7 @@ pub fn handle_game_input(
                             targeting.pending_gift,
                             targeting.pending_omen,
                             targeting.pending_kicked,
+                            targeting.pending_spree_modes.clone(),
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3722,6 +3725,7 @@ pub fn handle_game_input(
                             targeting.pending_gift,
                             targeting.pending_omen,
                             targeting.pending_kicked,
+                            targeting.pending_spree_modes.clone(),
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3787,6 +3791,7 @@ pub fn handle_game_input(
                             targeting.pending_gift,
                             targeting.pending_omen,
                             targeting.pending_kicked,
+                            targeting.pending_spree_modes.clone(),
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3843,6 +3848,15 @@ pub fn handle_game_input(
                         r.pay_times.pending =
                             Some((card_id, crate::game::PayTimesMechanic::Multikicker));
                         r.pay_times.times = 1;
+                    } else if cv.spreeable_hand.contains(&card_id)
+                        && !k.spree_mode_labels.is_empty()
+                    {
+                        // CR 702.172 — right-click a Spree/Tiered card opens
+                        // the mode picker; confirm casts via CastSpellSpree.
+                        r.spree_cast.pending = Some(card_id);
+                        r.spree_cast.labels = k.spree_mode_labels.clone();
+                        r.spree_cast.selected = vec![false; k.spree_mode_labels.len()];
+                        r.spree_cast.single_mode = k.spree_single_mode;
                     } else if cv.splittable_right_hand.contains(&card_id) {
                         r.split_cast.pending = Some(card_id);
                     } else if k.has_gift {
@@ -4276,6 +4290,7 @@ pub fn handle_game_input(
 
 /// Build the cast action for a pending spell-targeting session, honoring the
 /// MDFC back-face flag and any Squad / Replicate / Multikicker pay-times rider.
+#[allow(clippy::too_many_arguments)]
 fn build_pending_cast(
     card_id: CardId,
     target: Option<Target>,
@@ -4286,7 +4301,14 @@ fn build_pending_cast(
     gift: bool,
     omen: bool,
     kicked: bool,
+    spree_modes: Option<Vec<u8>>,
 ) -> GameAction {
+    // CR 702.172 — a Spree/Tiered cast carries its chosen mode indices.
+    if let Some(spree_modes) = spree_modes {
+        return GameAction::CastSpellSpree {
+            card_id, spree_modes, target, additional_targets: vec![], x_value: None,
+        };
+    }
     // CR 702.165 — a promised Gift is its own cast action; it can't combine
     // with the split / pay-times / back-face shapes.
     if gift {
@@ -4341,6 +4363,7 @@ fn cancel_targeting(
     targeting.pending_equip_source = None;
     targeting.pending_prepare_source = None;
     targeting.pending_pay_times = None;
+    targeting.pending_spree_modes = None;
     targeting.pending_split = None;
     targeting.pending_gift = false;
     targeting.pending_omen = false;

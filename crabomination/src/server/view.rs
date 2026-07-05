@@ -843,6 +843,16 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .omen
             .as_ref()
             .is_some_and(|o| o.effect.requires_target()),
+        spree_mode_labels: match &card.definition.effect {
+            crate::effect::Effect::Spree { modes } | crate::effect::Effect::Tiered { modes } => {
+                modes
+                    .iter()
+                    .map(|m| format!("{} — {}", m.cost.summary(), m.effect.effect_short_text()))
+                    .collect()
+            }
+            _ => Vec::new(),
+        },
+        spree_single_mode: matches!(&card.definition.effect, crate::effect::Effect::Tiered { .. }),
         station_next_threshold: {
             let charges = card.counter_count(crate::card::CounterType::Charge);
             card.definition

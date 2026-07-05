@@ -965,6 +965,11 @@ pub(crate) enum ResumeContext {
         additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
+        /// The suspended cast was kicked (CR 702.33 — the replay re-invokes
+        /// `cast_spell_kicked`, so an action-kicker sacrifice choice
+        /// round-trips without dropping the kick).
+        #[serde(default)]
+        kicked: bool,
     },
     /// CR 601.2g — a `wants_ui` payer is answering "spend your floating mana,
     /// or tap lands instead?" before a mana payment (a cast, flashback,

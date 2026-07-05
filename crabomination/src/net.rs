@@ -939,6 +939,15 @@ pub struct KnownCard {
     /// threshold it hasn't yet reached (so the client can show "Station → N"
     /// progress next to its charge counters). `None` for non-station cards or
     /// once every band is active. Pair with the `Charge` entry in `counters`.
+    /// CR 702.172 Spree / FIN Tiered — one "[cost] — [effect]" label per
+    /// additional mode; empty for non-Spree cards. Feeds the client's
+    /// mode-pick modal on a `CastSpellSpree` cast.
+    #[serde(default)]
+    pub spree_mode_labels: Vec<String>,
+    /// True for Tiered spells: exactly one mode may be chosen (radio, not
+    /// checkboxes).
+    #[serde(default)]
+    pub spree_single_mode: bool,
     #[serde(default)]
     pub station_next_threshold: Option<u32>,
     /// CR 721 — current charge-counter count on this Station card (mirror of

@@ -9779,6 +9779,7 @@ impl GameState {
                 additional_targets,
                 mode,
                 x_value,
+                kicked,
             } => {
                 // CR 601.2b — the caster paid an additional cost choice. The
                 // answer type says which: a permanent target (sacrifice) or a
@@ -9802,9 +9803,14 @@ impl GameState {
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
                 // Priority is still the caster's (we never advanced it), so
-                // `cast_spell` reads the right actor. Any cost failure (e.g.
-                // mana shortfall) surfaces as a normal cast error.
-                return self.cast_spell(card_id, target, additional_targets, mode, x_value);
+                // the cast reads the right actor. Any cost failure (e.g.
+                // mana shortfall) surfaces as a normal cast error. A kicked
+                // suspend replays kicked (CR 702.33).
+                return if kicked {
+                    self.cast_spell_kicked(card_id, target, additional_targets, mode, x_value)
+                } else {
+                    self.cast_spell(card_id, target, additional_targets, mode, x_value)
+                };
             }
             ResumeContext::ActionFloatConfirm { actor, action } => {
                 // CR 601.2g — the payer chose whether to spend floating mana.

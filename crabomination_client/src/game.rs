@@ -168,6 +168,10 @@ pub struct TargetingState {
     /// routes through the matching `CastSpell*` action. Set by the
     /// pay-times stepper.
     pub pending_pay_times: Option<(u32, PayTimesMechanic)>,
+    /// When `Some`, the pending cast is a Spree/Tiered spell with these
+    /// chosen mode indices — the eventual submit routes through
+    /// `GameAction::CastSpellSpree`. Set by the spree mode-picker modal.
+    pub pending_spree_modes: Option<Vec<u8>>,
     /// When `Some`, the pending cast is a split-card half (CR 709) — the
     /// eventual submit routes through `CastSplitRight` / `CastSplitFused`.
     /// Set by the half-picker modal.
@@ -280,6 +284,21 @@ pub struct AltCastState {
 pub struct SplitCastState {
     /// The split hand card whose half-picker modal is open.
     pub pending: Option<CardId>,
+}
+
+/// Spree / Tiered mode picker (CR 702.172). Set when the user right-clicks
+/// a spreeable hand card; the modal toggles modes (radio for Tiered) and
+/// submits `CastSpellSpree` with the chosen indices.
+#[derive(Resource, Default)]
+pub struct SpreeCastState {
+    /// The Spree hand card whose mode picker is open.
+    pub pending: Option<CardId>,
+    /// One "[cost] — [effect]" label per mode (from the server view).
+    pub labels: Vec<String>,
+    /// Which modes are currently ticked.
+    pub selected: Vec<bool>,
+    /// Tiered: exactly one mode may be chosen.
+    pub single_mode: bool,
 }
 
 /// Squad / Replicate / Multikicker "pay N times" stepper (CR 702.157 /
