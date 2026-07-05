@@ -370,7 +370,9 @@ Each unblocks a large swath of cards.
   time" activation riders.
 - 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
   legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
-  (704.5n — host fails the printed enchant filter). Remaining: Battle/Dungeon
+  (704.5n — host fails the printed enchant filter). Dungeons ✅ (CR 309/701.49
+  — `base::dungeons`, `Effect::Venture`, `decks::afr`; rooms resolve inline).
+  Remaining: Battle/Dungeon
   SBAs.
 
 ## Tier 3 — Object model & zones
@@ -723,7 +725,9 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **Action-log replay viewer** (snapshots + `GameEvent` stream are the
   foundation).
-- ⏳ **Game history / match results** persistence.
+- ✅ **Game history / match results persistence** — `CRAB_MATCH_LOG` appends
+  one JSON line per finished match (lobby/bot/pair paths;
+  `crabomination_server::history`).
 - ⏳ **Export game to shareable file** (formalize the audit-snapshot workflow).
 - ⏳ **In-game "what happened" log filtering** (by player/zone/type).
 

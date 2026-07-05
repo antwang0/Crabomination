@@ -16354,7 +16354,7 @@ fn channel_converts_life_into_generic_mana_until_eot() {
     assert!(g.battlefield.iter().any(|c| c.id == big), "Wurmcoil deployed");
     // The flag expires at cleanup.
     g.step = crate::game::TurnStep::End;
-    g.advance_step(Vec::new());
+    let _ = g.advance_step(Vec::new());
     assert!(!g.players[0].channel_life_for_mana, "Channel expires at end of turn");
 }
 
