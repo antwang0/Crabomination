@@ -1277,7 +1277,7 @@ pub fn graveyard_browser(
                                     },
                                     GraveyardCardItem {
                                         name: name.clone(),
-                                        recast: recast.clone(),
+                                        recast: *recast,
                                     },
                                 ))
                                 .with_children(|tile| {

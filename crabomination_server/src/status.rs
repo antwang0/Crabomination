@@ -12,10 +12,7 @@ use crate::stats::{format_duration, format_match_stats, match_stats};
 
 /// Render the full status body. Split from the serving loop for testing.
 fn render_status(started: Instant, slots: &SlotManager) -> String {
-    let stats_snapshot = {
-        let s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.clone()
-    };
+    let stats_snapshot = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
     let sl = slots.snapshot();
     format!(
         "crabomination_server\nuptime: {}\n{}\nconnections: {} current, {} peak, \
