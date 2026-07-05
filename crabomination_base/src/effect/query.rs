@@ -157,6 +157,7 @@ impl Effect {
             | Effect::Venture
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::ReturnSelfTransformedAttached
+            | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.

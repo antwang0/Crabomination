@@ -2128,6 +2128,7 @@ impl GameState {
         self.end_steps_this_turn = 0;
         self.additional_upkeep_steps = 0;
         self.upkeep_steps_this_turn = 0;
+        self.graveyard_from_battlefield_this_turn.clear();
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;
@@ -3171,6 +3172,7 @@ impl GameState {
             if resolved == crate::card::Zone::Graveyard {
                 self.permanents_to_graveyard_this_turn =
                     self.permanents_to_graveyard_this_turn.saturating_add(1);
+                self.graveyard_from_battlefield_this_turn.insert(id);
                 // CR 700.4 — record the death for the batched `PermanentDied`
                 // synthesis (dispatch drains this into "creature or artifact
                 // you control dies" triggers). CreatureDied already covers

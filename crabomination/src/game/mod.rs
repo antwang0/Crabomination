@@ -370,6 +370,9 @@ mod tests_recent105;
 #[path = "../tests/recent106.rs"]
 mod tests_recent106;
 #[cfg(test)]
+#[path = "../tests/recent107.rs"]
+mod tests_recent107;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -783,6 +786,10 @@ pub struct GameState {
     /// copy counts; reset at each turn's untap step.
     #[serde(default)]
     pub permanents_to_graveyard_this_turn: u32,
+    /// Cards put into a graveyard **from the battlefield** this turn (CR —
+    /// Second Sunrise's restore set). Cleared at cleanup.
+    #[serde(default)]
+    pub graveyard_from_battlefield_this_turn: std::collections::HashSet<CardId>,
     /// Cards that entered the battlefield from a graveyard — or were cast
     /// from one — this turn. Stamped at the gy→battlefield move funnel and
     /// at every cast-from-graveyard site; read by
@@ -1528,6 +1535,9 @@ impl Clone for GameState {
             expend_prev_total: self.expend_prev_total,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
+            graveyard_from_battlefield_this_turn: self
+                .graveyard_from_battlefield_this_turn
+                .clone(),
             entered_from_graveyard_this_turn: self.entered_from_graveyard_this_turn.clone(),
             entered_from_exile_this_turn: self.entered_from_exile_this_turn.clone(),
             delayed_triggers: self.delayed_triggers.clone(),
@@ -1678,6 +1688,7 @@ impl GameState {
             expend_prev_total: 0,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
+            graveyard_from_battlefield_this_turn: Default::default(),
             entered_from_graveyard_this_turn: std::collections::HashSet::new(),
             entered_from_exile_this_turn: std::collections::HashSet::new(),
             delayed_triggers: Vec::new(),

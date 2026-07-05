@@ -764,6 +764,9 @@ pub enum Predicate {
     /// CR 700.6 — `who` has the city's blessing. "As long as you have the
     /// city's blessing, …" (Ascend payoffs).
     HasCityBlessing { who: PlayerRef },
+    /// `who` has discarded a card this turn (Asmoranomardicadaistinaculdacar's
+    /// alternative-cost gate). Reads `Player.discarded_this_turn`.
+    DiscardedThisTurn { who: PlayerRef },
     /// CR 731 — it's currently day.
     IsDay,
     /// CR 731 — it's currently night.
@@ -2785,6 +2788,10 @@ pub enum Effect {
     /// to your hand" — Charmbreaker Devils). No player choice; stops early if
     /// the graveyard runs out of matches.
     ReturnRandomFromGraveyard { who: PlayerRef, filter: SelectionRequirement, count: Value },
+    /// Second Sunrise — each player returns to the battlefield all artifact,
+    /// creature, enchantment, and land cards in their graveyard that were put
+    /// there from the battlefield this turn.
+    SecondSunrise,
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle every card matching `filter` from `who`'s graveyard into their

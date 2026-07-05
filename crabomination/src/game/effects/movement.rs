@@ -687,6 +687,10 @@ impl GameState {
             if !card.definition.is_land() {
                 self.nonland_permanent_left_bf_this_turn = true;
             }
+            // Second Sunrise's restore set — battlefield → graveyard moves.
+            if matches!(resolved_dest, ZoneDest::Graveyard) {
+                self.graveyard_from_battlefield_this_turn.insert(cid);
+            }
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);
             if let Some((card_id, controller)) = leaver {

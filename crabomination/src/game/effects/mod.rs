@@ -4659,6 +4659,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SecondSunrise => {
+                // Each player returns their A/C/E/land graveyard cards that
+                // came from the battlefield this turn.
+                use crate::card::CardType;
+                let ids: Vec<(usize, CardId)> = self
+                    .players
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(seat, pl)| {
+                        pl.graveyard
+                            .iter()
+                            .filter(|c| {
+                                self.graveyard_from_battlefield_this_turn.contains(&c.id)
+                                    && c.definition.card_types.iter().any(|t| {
+                                        matches!(
+                                            t,
+                                            CardType::Artifact
+                                                | CardType::Creature
+                                                | CardType::Enchantment
+                                                | CardType::Land
+                                        )
+                                    })
+                            })
+                            .map(move |c| (seat, c.id))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                for (seat, cid) in ids {
+                    self.move_card_to(
+                        cid,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: PlayerRef::Seat(seat),
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::CycleRecurFromGraveyard { threshold } => {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let Some(src) = ctx.source else { return Ok(()) };

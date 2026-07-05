@@ -850,6 +850,9 @@ impl GameState {
                 // turn's spell-mana total from below `n` up to at least `n`.
                 self.expend_prev_total < *n && ctx.event_amount >= *n
             }
+            Predicate::DiscardedThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| !self.players[p].discarded_this_turn.is_empty()),
             Predicate::HasCityBlessing { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
