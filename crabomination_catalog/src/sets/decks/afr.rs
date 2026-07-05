@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// "You've completed a dungeon" (CR 701.49d).
 fn completed_a_dungeon() -> Predicate {
@@ -627,6 +627,165 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+
+
+
+
+/// Priest of Ancient Lore — {2}{W} Dwarf Cleric 2/1. ETB: gain 1 life, draw.
+pub fn priest_of_ancient_lore() -> CardDefinition {
+    CardDefinition {
+        name: "Priest of Ancient Lore",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+
+/// Circle of Dreams Druid — {G}{G}{G} Elf Druid 2/1. {T}: Add {G} for each
+/// creature you control.
+pub fn circle_of_dreams_druid() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Circle of Dreams Druid",
+        cost: cost(&[g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::CountOf(Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou),
+                    ))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Manticore — {3}{B} Manticore 2/1, flash, flying. ETB: destroy target
+/// opponent creature that was dealt damage this turn.
+pub fn manticore() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Manticore",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Manticore], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(
+                R::Creature.and(R::ControlledByOpponent).and(R::DealtDamageThisTurn),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Plundering Barbarian — {2}{R} Dwarf Barbarian 2/2. ETB, choose one:
+/// destroy target artifact, or create a Treasure.
+pub fn plundering_barbarian() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Plundering Barbarian",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Barbarian],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::treasure_token(),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Half-Elf Monk — {3}{W} Human Elf Monk 1/4, vigilance. {1}{W}, {T}: Tap
+/// target creature.
+pub fn half_elf_monk() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Half-Elf Monk",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Elf, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dwarfhold Champion — {1}{W} Dwarf Warrior 3/1. +0/+2 while equipped.
+pub fn dwarfhold_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Dwarfhold Champion",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is equipped, it gets +0/+2.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsEquipped,
+                },
+                power: 0,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
         ..Default::default()
     }
 }

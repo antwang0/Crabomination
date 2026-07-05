@@ -432,3 +432,130 @@ fn ellywick_ventures_and_emblem_anthems() {
     assert_eq!((b.power, b.toughness), (4, 4), "+2/+2 from the emblem");
     assert!(b.keywords.contains(&crate::card::Keyword::Trample), "trample granted");
 }
+
+// ── AFR wave 3 ──────────────────────────────────────────────────────────────
+
+/// Priest of Ancient Lore ETBs into a life and a card.
+#[test]
+fn priest_of_ancient_lore_gains_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let priest = g.add_card_to_hand(0, catalog::priest_of_ancient_lore());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: priest, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast priest");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1);
+    assert_eq!(g.players[0].hand.len(), hand, "cast the priest (-1), drew (+1)");
+}
+
+/// Circle of Dreams Druid taps for {G} per creature you control.
+#[test]
+fn circle_of_dreams_druid_scales_with_creatures() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::circle_of_dreams_druid());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(druid);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 3,
+        "druid + two bears = {{G}}{{G}}{{G}}");
+}
+
+/// Manticore's ETB kill only hits a creature already damaged this turn.
+#[test]
+fn manticore_finishes_a_damaged_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::wurmcoil_engine());
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&crate::effect::Effect::DealDamage {
+        to: crate::effect::Selector::EachPermanent(
+            crate::card::SelectionRequirement::HasCreatureType(crate::card::CreatureType::Wurm),
+        ),
+        amount: crate::effect::Value::Const(1),
+    }, &ctx).unwrap();
+    let mant = g.add_card_to_hand(0, catalog::manticore());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mant, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash in");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big), "damaged Wurmcoil destroyed");
+}
+
+/// Plundering Barbarian mode 1 mints a Treasure.
+#[test]
+fn plundering_barbarian_pries_open_a_treasure() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let barb = g.add_card_to_hand(0, catalog::plundering_barbarian());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: barb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast barbarian");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "Treasure minted");
+}
+
+/// Half-Elf Monk taps a creature for {1}{W}, {T}.
+#[test]
+fn half_elf_monk_taps_target() {
+    let mut g = two_player_game();
+    let monk = g.add_card_to_battlefield(0, catalog::half_elf_monk());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(monk);
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: monk, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("tap the bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+}
+
+/// Dwarfhold Champion is 3/1, and 3/3 while equipped.
+#[test]
+fn dwarfhold_champion_tougher_while_equipped() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::dwarfhold_champion());
+    let torch = g.add_card_to_battlefield(0, catalog::delvers_torch());
+    let c = g.computed_permanent(champ).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 1));
+    g.step = crate::game::TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: torch, target: champ }).expect("equip");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(champ).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "+1/+1 torch and +0/+2 while-equipped");
+}
+
+/// Werewolf Pack Leader draws only on a 6+ total power attack (pack tactics).
+#[test]
+fn werewolf_pack_leader_pack_tactics() {
+    let mut g = two_player_game();
+    let leader = g.add_card_to_battlefield(0, catalog::werewolf_pack_leader());
+    let wurm = g.add_card_to_battlefield(0, catalog::wurmcoil_engine());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.clear_sickness(leader);
+    g.clear_sickness(wurm);
+    let hand = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: leader, target: AttackTarget::Player(1) },
+        Attack { attacker: wurm, target: AttackTarget::Player(1) },
+    ])).expect("attack with 9 power");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "pack tactics drew");
+}

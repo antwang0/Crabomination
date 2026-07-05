@@ -14622,22 +14622,27 @@ fn murmuring_mystic_makes_a_bird_on_instant() {
         "casting an instant mints a Bird");
 }
 
+/// Pack tactics (real gate): a lone 3-power attack draws nothing; 6+ total
+/// attacking power draws.
 #[test]
-fn werewolf_pack_leader_draws_when_attacking_with_three() {
+fn werewolf_pack_leader_draws_on_six_power_attack() {
     let mut g = two_player_game();
     let leader = g.add_card_to_battlefield(0, catalog::werewolf_pack_leader());
-    g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
     g.add_card_to_library(0, catalog::island());
-    g.battlefield.iter_mut().find(|c| c.id == leader).unwrap().summoning_sick = false;
+    for id in [leader, angel] {
+        g.battlefield.iter_mut().find(|c| c.id == id).unwrap().summoning_sick = false;
+    }
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     let hand_before = g.players[0].hand.len();
-    g.declare_attackers(vec![Attack { attacker: leader, target: AttackTarget::Player(1) }])
-        .expect("attacks");
+    g.declare_attackers(vec![
+        Attack { attacker: leader, target: AttackTarget::Player(1) },
+        Attack { attacker: angel, target: AttackTarget::Player(1) },
+    ]).expect("attacks");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1,
-        "drew a card (controls 3+ creatures)");
+        "3 + 4 attacking power meets pack tactics");
 }
 
 #[test]

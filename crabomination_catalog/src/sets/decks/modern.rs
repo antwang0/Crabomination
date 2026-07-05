@@ -10549,9 +10549,9 @@ pub fn murmuring_mystic() -> CardDefinition {
     }
 }
 
-/// Werewolf Pack Leader — {G}{G}, 3/3 Wolf. Whenever it attacks, if you
-/// control three or more creatures, draw a card. {3}{G}{G}: it gets +1/+1
-/// and can't be blocked this turn.
+/// Werewolf Pack Leader — {G}{G} Human Werewolf 3/3. Pack tactics — attacks
+/// with total power 6+: draw a card. {3}{G}: +2/+0 and trample until end of
+/// turn (printed "base 5/3, isn't a Human" approximated as the pump).
 pub fn werewolf_pack_leader() -> CardDefinition {
     CardDefinition {
         name: "Werewolf Pack Leader",
@@ -10565,30 +10565,24 @@ pub fn werewolf_pack_leader() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
-                Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
-                    ),
-                    n: Value::Const(3),
-                },
+                Predicate::AttackedWithTotalPowerAtLeast { who: PlayerRef::You, at_least: 6 },
             ),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         activated_abilities: vec![crate::effect::ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(3), g(), g()]),
+            mana_cost: cost(&[generic(3), g()]),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,
-                    power: Value::Const(1),
-                    toughness: Value::Const(1),
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
                     duration: Duration::EndOfTurn,
                 },
                 Effect::GrantKeyword {
                     what: Selector::This,
-                    keyword: Keyword::Unblockable,
+                    keyword: Keyword::Trample,
                     duration: Duration::EndOfTurn,
                 },
             ]),
@@ -10631,8 +10625,7 @@ pub fn village_rites() -> CardDefinition {
 }
 
 /// Power Word Kill — {1}{B} Instant. Destroy target non-Angel, non-Demon,
-/// non-Dragon creature. (The printed "non-God" clause is dropped — no God
-/// creature type in the engine yet.)
+/// non-Devil, non-Dragon creature.
 pub fn power_word_kill() -> CardDefinition {
     use crate::card::CreatureType as CT;
     CardDefinition {
@@ -10644,6 +10637,7 @@ pub fn power_word_kill() -> CardDefinition {
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasCreatureType(CT::Angel).negate())
                     .and(SelectionRequirement::HasCreatureType(CT::Demon).negate())
+                    .and(SelectionRequirement::HasCreatureType(CT::Devil).negate())
                     .and(SelectionRequirement::HasCreatureType(CT::Dragon).negate()),
             ),
         },
