@@ -379,14 +379,9 @@ pub fn inspired_idea() -> CardDefinition {
 /// "Return all enchantment cards from your graveyard to the battlefield.
 /// / Flashback—{4}{W}, exile a card from your graveyard."
 ///
-/// Push (modern_decks) NEW: white enchantment-recursion finisher. Wired as
-/// a mass `Move(all enchantment cards from your graveyard → battlefield)`
-/// via `Selector::CardsInZone`. The Flashback half is approximated as a
-/// plain `Keyword::Flashback` at {4}{W} — the printed "exile a card from
-/// your graveyard" additional cost is engine-wide ⏳ (no alt-cost-with-
-/// gy-exile primitive; same gap as Soaring Stoneglider's alt cost).
-/// At regular cost it's a one-shot reanimator for any enchantment-heavy
-/// shell — at Flashback it's a 5-mana follow-up reuse.
+/// Mass `Move(all enchantment cards from your graveyard → battlefield)`.
+/// The Flashback's "exile a card from your graveyard" additional cost is
+/// wired via the name-keyed flashback rider (`flashback_additional_costs`).
 pub fn resurgent_belief() -> CardDefinition {
     CardDefinition {
         name: "Resurgent Belief",

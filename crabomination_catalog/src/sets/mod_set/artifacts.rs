@@ -1311,10 +1311,10 @@ pub fn the_great_henge() -> CardDefinition {
     }
 }
 
-/// Mana Vault — {0} Artifact. Doesn't untap during your untap step. "{T}: Add
-/// {C}{C}{C}." "{4}: Untap this artifact." "At the beginning of your upkeep, if
-/// Mana Vault is tapped, it deals 1 damage to you." (The "you may pay {4}" to
-/// avoid the damage is collapsed to always taking it — the usual line.)
+/// Mana Vault — {1} Artifact. Doesn't untap during your untap step. "{T}: Add
+/// {C}{C}{C}." "At the beginning of your upkeep, you may pay {4}. If you do,
+/// untap it." "At the beginning of your draw step, if it's tapped, it deals
+/// 1 damage to you."
 pub fn mana_vault() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     use crate::effect::Predicate;
@@ -1336,23 +1336,36 @@ pub fn mana_vault() -> CardDefinition {
                 },
                 ..Default::default()
             },
-            ActivatedAbility {
-                mana_cost: cost(&[generic(4)]),
-                effect: Effect::Untap { what: Selector::This, up_to: None },
-                ..Default::default()
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::Tapped,
+                    },
+                    then: Box::new(Effect::MayPay {
+                        description: "Pay {4} to untap Mana Vault?".into(),
+                        mana_cost: cost(&[generic(4)]),
+                        body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                        else_: None,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::Tapped,
+                    },
+                    then: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(1) }),
+                    else_: Box::new(Effect::Noop),
+                },
             },
         ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::If {
-                cond: Predicate::EntityMatches {
-                    what: Selector::This,
-                    filter: SelectionRequirement::Tapped,
-                },
-                then: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(1) }),
-                else_: Box::new(Effect::Noop),
-            },
-        }],
         ..Default::default()
     }
 }

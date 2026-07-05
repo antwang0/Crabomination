@@ -324,11 +324,11 @@ fn necrotic_fumes_sacrifices_and_exiles() {
     })
     .expect("Necrotic Fumes castable for {1}{B}{B}");
     drain_stack(&mut g);
-    // P0's bear should be sacrificed (in P0's graveyard).
+    // P0's bear is exiled as the additional cost.
     assert!(!g.battlefield.iter().any(|c| c.id == fodder),
-        "Fodder should be sacrificed off the battlefield");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
-        "Fodder should be in P0's graveyard");
+        "Fodder should be exiled off the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == fodder),
+        "Fodder should be in exile (exile-as-cost, not a sacrifice)");
     // Target should be exiled (not in graveyard).
     assert!(!g.battlefield.iter().any(|c| c.id == target),
         "Target should be exiled off the battlefield");
@@ -810,11 +810,8 @@ fn spirit_summoning_creates_a_three_two_lifelink_spirit() {
 
 // ── Doc-only promotions covered by characterization tests ──────────────────
 
-/// Necrotic Fumes: even though the additional cost (sacrifice a creature)
-/// is folded into resolution rather than cast-time, the gameplay outcome
-/// matches: one of your creatures is sacrificed AND the targeted creature
-/// is exiled. This characterization locks in the behaviour so the
-/// "doc-only ✅" promotion doesn't regress.
+/// Necrotic Fumes: the additional cost exiles one of your creatures and
+/// the targeted creature is exiled by the body.
 #[test]
 fn necrotic_fumes_sacrifices_one_and_exiles_target() {
     let mut g = two_player_game();
@@ -833,11 +830,11 @@ fn necrotic_fumes_sacrifices_one_and_exiles_target() {
     .expect("Necrotic Fumes castable for {2}{B}{B}");
     drain_stack(&mut g);
 
-    // Your creature is in graveyard.
+    // Your creature is exiled as the cost.
     assert!(!g.battlefield.iter().any(|c| c.id == fodder),
-        "Your bear (fodder) should be sacrificed off the battlefield");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
-        "Your bear should be in your graveyard (sacrifice)");
+        "Your bear (fodder) should be exiled off the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == fodder),
+        "Your bear should be in exile (exile-as-cost)");
     // Target is exiled.
     assert!(!g.battlefield.iter().any(|c| c.id == victim),
         "Target should be off the battlefield (exiled)");

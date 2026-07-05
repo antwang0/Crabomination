@@ -2246,6 +2246,11 @@ pub enum Effect {
     /// to (Skullcrack, Sulfurous Blast's flashback rider, future
     /// one-turn lifegain locks).
     LifeGainLockThisTurn { who: Selector },
+    /// Channel — until end of turn the controller may pay 1 life per point
+    /// of colorless shortfall when paying costs ("you may pay 1 life: add
+    /// {C}"). Sets `Player.channel_life_for_mana`; the payment funnel
+    /// converts on demand.
+    ChannelLifeForMana,
     /// Permanently set `Player.cannot_gain_life` on each player the selector
     /// resolves to — "that player can't gain life for the rest of the game"
     /// (Screaming Nemesis, Everlasting Torment, Witch of the Moors). Sticks

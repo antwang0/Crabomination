@@ -656,11 +656,8 @@ pub fn sage_of_the_beyond() -> CardDefinition {
 /// return target instant or sorcery card from your graveyard to your
 /// hand. Activate only once each turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Approximated as a Magecraft
-/// trigger that returns an auto-picked IS card from gy to hand. The
-/// "only once each turn" rider is engine-wide ⏳ (no per-trigger
-/// once-per-turn flag — same gap as Brain in a Jar's M-style limit).
-/// The "may" is wired via `Effect::MayDo`. Tests:
+/// Magecraft trigger (once each turn) that returns an auto-picked I/S
+/// card from graveyard to hand; the "may" rides `Effect::MayDo`. Tests:
 /// `frostpyre_arcanist_magecraft_returns_is_from_graveyard`,
 /// `frostpyre_arcanist_is_a_five_mana_four_four_elemental_wizard`.
 pub fn frostpyre_arcanist() -> CardDefinition {
@@ -674,7 +671,8 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         },
         power: 2,
         toughness: 5,
-        triggered_abilities: vec![magecraft(Effect::MayDo {
+        triggered_abilities: vec![{
+            let mut t = magecraft(Effect::MayDo {
             description: "Return target instant or sorcery card from your graveyard to your hand.".into(),
             body: Box::new(Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -685,7 +683,10 @@ pub fn frostpyre_arcanist() -> CardDefinition {
                 }),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
-        })],
+        });
+            t.event = t.event.once_per_turn();
+            t
+        }],
         ..Default::default()
     }
 }
@@ -1263,14 +1264,9 @@ pub fn stormwild_capridor() -> CardDefinition {
 /// "As an additional cost to cast this spell, sacrifice a creature or
 /// enchantment or pay 5 life. Destroy target creature or planeswalker."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): The printed "additional
-/// cost: sac creature/enchantment OR pay 5 life" is approximated as
-/// `life_cost: 5` on the casting (auto-pays 5 life as the simpler
-/// path; the sac-enchantment alternative requires a multi-mode
-/// cost-pick UI). The destroy half wires cleanly via `Effect::Destroy`
-/// against a `Creature ∨ Planeswalker` target. At 2 mana + 5 life,
-/// this is a flexible silver-bullet removal for Silverquill control
-/// shells.
+/// The additional cost rides `AdditionalCastCost::SacrificeOrPayLife`
+/// (auto path: sac a matching token, else pay 5 life, else sac the
+/// cheapest match).
 /// Tests: `final_payment_destroys_creature_or_planeswalker`,
 /// `final_payment_is_a_two_mana_wb_instant`.
 pub fn final_payment() -> CardDefinition {
@@ -1278,17 +1274,15 @@ pub fn final_payment() -> CardDefinition {
         name: "Final Payment",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPayLife {
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            life: 5,
+        }],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             ),
         },
-        // Approximate the additional cost via alt-cost life payment. The,
-        // engine's alternative_cost lets us layer the "pay 5 life" as a,
-        // pre-flight gate; AutoDecider always commits to the alt cost,
-        // since it's strictly the cheaper path in most boards. The,
-        // "sac a creature or enchantment" alternative is omitted (no,
-        // alt-cost-with-sac primitive).,
         ..Default::default()
     }
 }

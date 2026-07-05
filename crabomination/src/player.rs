@@ -201,6 +201,11 @@ pub struct Player {
     /// graveyard. Reset at cleanup.
     #[serde(default)]
     pub oil_activity_this_turn: bool,
+    /// Channel — until end of turn this player may pay 1 life per missing
+    /// generic/colorless mana ("pay 1 life: add {C}"). The payment funnel
+    /// converts life into the shortfall on demand. Reset at cleanup.
+    #[serde(default)]
+    pub channel_life_for_mana: bool,
     /// Number of times an "Nth time this turn" landfall ability this player
     /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
     /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
@@ -633,6 +638,7 @@ impl Player {
             artifacts_entered_this_turn: 0,
             multicolored_spells_cast_this_turn: 0,
             oil_activity_this_turn: false,
+            channel_life_for_mana: false,
             escalating_resolutions_this_turn: 0,
             pending_creature_etb_counters: Vec::new(),
             pending_creature_etb_keywords: Vec::new(),

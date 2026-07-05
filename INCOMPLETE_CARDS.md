@@ -70,11 +70,13 @@ is also the idiom for a deliberate "you may … (or decline)" option.
 Fix the primitive → fix the whole cluster.
 
 ### 1. No multi-target / "up to N targets" / "divided as you choose" prompt
-Mostly **solved** via `Effect::ApplyToTargets` (up to N) and
-`Effect::DealDamageDivided` (divide). Done: Elemental Expressionism (bounce ≤2),
-Daring Diversion (4 divided). Remaining: Fireball (any-number split) · Return to
-Dust (conditional 2nd target) · Yosei (taps all → up-to-5) · Rag Dealer ·
-Skullsnatcher · Pull from the Grave · Rabid Attack.
+**Solved** via `Effect::ApplyToTargets` (up to N), `Effect::DealDamageDivided`
+(divide as you choose), and `Effect::DealDamageDividedEvenly` + per-extra-target
+cast tax (Fireball). Return to Dust ✅ (real instant, main-phase-gated 2nd
+target), Rag Dealer ✅ (single-graveyard lock), Skullsnatcher ✅ (that player's
+graveyard), Pull from the Grave / Rabid Attack ✅ (were stale rows). Remaining:
+Yosei (taps all of that player's permanents instead of "up to five target" —
+needs a player-slot-dependent permanent multi-slot).
 
 ### 2. No "choose two of four" modal selection (player can't pick modes)
 **Sublime Epiphany** now has all five modes real (CounterAbility +
@@ -100,8 +102,10 @@ defending player) · Harsh Annotation · Kemuri-Onna · Emeritus of Truce // STP
 Channeled Force · several CHK Ninjas.
 
 ### 5. No "first/Nth spell this turn" / "no card drawn this turn" gate (over-triggers)
-Thalia, Heretic Cathar · Quandrix Mathwarden / Spellmage / Streamcaller ·
-Prismari Mage-Mentor · Frostpyre Arcanist · Quandrix Field Trip.
+**Stale** — `Predicate::SpellsCastThisTurn{Equals,AtLeast}` + `EventSpec::
+once_per_turn` ship. Frostpyre Arcanist ✅ (once-each-turn rider wired).
+Thalia, Heretic Cathar ✅ (enters-tapped static; never had this gap). The
+Quandrix/Prismari rows are fabricated `_b###` synthesized cards — moot.
 
 ### 6. No additional-cost-with-life/exile · no Phyrexian mana (riders dropped / folded into resolution)
 ~~Deep Analysis (pay 3 life)~~ ✅ **FIXED** (`AdditionalCastCost::PayLife`, CR 119.4 —

@@ -386,6 +386,7 @@ impl GameState {
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.multicolored_spells_cast_this_turn = 0;
                     pl.oil_activity_this_turn = false;
+                    pl.channel_life_for_mana = false;
                     // CR 603.7e — unused "your next creature spell this turn"
                     // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();

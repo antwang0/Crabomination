@@ -2423,6 +2423,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChannelLifeForMana => {
+                self.players[ctx.controller].channel_life_for_mana = true;
+                Ok(())
+            }
+
             Effect::LifeGainLockGame { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {

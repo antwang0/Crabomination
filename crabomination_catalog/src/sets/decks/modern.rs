@@ -11415,30 +11415,15 @@ pub fn demonic_consultation() -> CardDefinition {
     }
 }
 
-/// Channel — {G} Sorcery (Kamigawa). "Until end of turn, you may pay
-/// 1 life rather than pay {1}." Approximated as a one-shot "lose 1
-/// life and add {C} once" tap, since the engine has no "pay life
-/// instead of mana" alternative-payment primitive.
-///
-/// The printed spell is a static "this turn" replacement on mana
-/// payments. Our shipping body folds the alt-payment into a single
-/// resolve: pay 1 life + add {1} once. Re-cast the spell to ramp
-/// further.
+/// Channel — {G}{G} Sorcery. "Until end of turn, you may pay 1 life: add
+/// {C}." The payment funnel converts life 1:1 into any colorless shortfall
+/// while the turn-scoped flag is up.
 pub fn channel() -> CardDefinition {
     CardDefinition {
         name: "Channel",
         cost: cost(&[g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(1)),
-            },
-        ]),
+        effect: Effect::ChannelLifeForMana,
         ..Default::default()
     }
 }

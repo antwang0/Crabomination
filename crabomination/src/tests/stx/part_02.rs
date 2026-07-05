@@ -4238,3 +4238,82 @@ fn cunning_rhetoric_drains_on_opp_cast() {
     assert_eq!(g.players[0].life, life_us_before - 3 + 1, "drain gain 1");
     assert_eq!(g.players[1].life, life_opp_before - 1, "drain loss 1");
 }
+
+/// Frostpyre Arcanist's return fires only once each turn (CR 603.3d).
+#[test]
+fn frostpyre_arcanist_only_once_each_turn() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::frostpyre_arcanist());
+    let gy1 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let gy2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    for b in [b1, b2] {
+        g.perform_action(GameAction::CastSpell {
+            card_id: b,
+            target: Some(crate::game::types::Target::Player(1)),
+            additional_targets: vec![],
+            mode: None, x_value: None,
+        }).expect("Bolt castable");
+        drain_stack(&mut g);
+    }
+    let returned = [gy1, gy2].iter()
+        .filter(|id| g.players[0].hand.iter().any(|c| c.id == **id))
+        .count();
+    assert_eq!(returned, 1, "second Magecraft this turn suppressed");
+}
+
+/// Resurgent Belief's flashback exiles a card from your graveyard as the
+/// printed additional cost — and never the flashback card itself.
+#[test]
+fn resurgent_belief_flashback_exiles_a_graveyard_card() {
+    let mut g = two_player_game();
+    let belief = g.add_card_to_graveyard(0, catalog::resurgent_belief());
+    let fodder = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: belief, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("flashback for {4}{W} + exile a gy card");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fodder), "gy card exiled as the cost");
+    assert!(g.exile.iter().any(|c| c.id == belief), "Belief itself exiled after flashback");
+}
+
+/// Resurgent Belief's flashback is unannounceable with an empty graveyard
+/// (no card to exile for the additional cost).
+#[test]
+fn resurgent_belief_flashback_needs_an_exile_target() {
+    let mut g = two_player_game();
+    let belief = g.add_card_to_graveyard(0, catalog::resurgent_belief());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: belief, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no other gy card to exile - flashback rejected");
+}
+
+/// Final Payment's additional cost: pays 5 life when no token is up.
+#[test]
+fn final_payment_pays_five_life_without_token_fodder() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::final_payment());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable for {W}{B} + 5 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 5, "paid 5 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "target destroyed");
+}

@@ -16326,24 +16326,31 @@ fn wall_of_roots_taps_for_green_with_pump_cost() {
         "Wall of Roots's activation cost shrinks its toughness by 1");
 }
 
+/// Channel: until end of turn, generic shortfall can be paid with life 1:1.
 #[test]
-fn channel_pays_one_life_for_one_mana() {
+fn channel_converts_life_into_generic_mana_until_eot() {
     let mut g = two_player_game();
     let ch = g.add_card_to_hand(0, catalog::channel());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    let life_before = g.players[0].life;
-    let pool_before = g.players[0].mana_pool.total();
+    g.players[0].mana_pool.add(Color::Green, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: ch, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Channel castable for {G}");
+    .expect("Channel castable for {G}{G}");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before - 1, "Channel costs 1 life");
-    // Cast spends {G}{G} (2); the synthesized body adds 1 colorless → net -1.
-    assert_eq!(g.players[0].mana_pool.total(), pool_before - 1,
-        "Channel adds {{1}} colorless after paying its {{G}}{{G}} cast cost");
+    // No mana left; a {6} Colossus is now payable with 6 life.
+    let big = g.add_card_to_hand(0, catalog::wurmcoil_engine());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Channel converts 6 life into the generic cost");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 6, "paid 6 life for the {{6}} cost");
+    assert!(g.battlefield.iter().any(|c| c.id == big), "Wurmcoil deployed");
+    // The flag expires at cleanup.
+    g.step = crate::game::TurnStep::End;
+    g.advance_step(Vec::new());
+    assert!(!g.players[0].channel_life_for_mana, "Channel expires at end of turn");
 }
 
 #[test]
@@ -37964,10 +37971,10 @@ fn the_great_henge_mana_life_and_etb_payoff() {
     assert_eq!(g.players[0].library.len(), lib_before - 1, "Henge drew a card");
 }
 
-/// Mana Vault taps for {C}{C}{C}, doesn't untap, and deals 1 to you at upkeep
-/// while tapped.
+/// Mana Vault taps for {C}{C}{C}, doesn't untap, offers the upkeep {4}
+/// untap, and burns 1 at the draw step while tapped.
 #[test]
-fn mana_vault_taps_for_three_and_burns_at_upkeep() {
+fn mana_vault_taps_for_three_and_burns_at_draw_step() {
     let mut g = two_player_game();
     let mv = g.add_card_to_battlefield(0, catalog::mana_vault());
     g.clear_sickness(mv);
@@ -37976,12 +37983,31 @@ fn mana_vault_taps_for_three_and_burns_at_upkeep() {
     }).expect("tap Mana Vault");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 3, "added {{C}}{{C}}{{C}}");
+    g.players[0].mana_pool = Default::default();
     g.do_untap();
     assert!(g.battlefield_find(mv).unwrap().tapped, "Mana Vault doesn't untap");
     let life = g.players[0].life;
     g.fire_step_triggers(crate::TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life - 1, "1 damage at upkeep while tapped");
+    assert_eq!(g.players[0].life, life, "no upkeep burn (that's the draw step)");
+    g.fire_step_triggers(crate::TurnStep::Draw);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "1 damage at the draw step while tapped");
+}
+
+/// Mana Vault's upkeep trigger pays {4} to untap when mana is up.
+#[test]
+fn mana_vault_upkeep_may_pay_four_to_untap() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let mv = g.add_card_to_battlefield(0, catalog::mana_vault());
+    g.battlefield_find_mut(mv).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(crate::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(mv).unwrap().tapped, "paid {{4}}, untapped");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the {{4}} was spent");
 }
 
 /// Chromatic Lantern grants your lands "{T}: Add one mana of any color".

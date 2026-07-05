@@ -151,7 +151,7 @@ impl Effect {
             }
         }
         match self {
-            Effect::Noop => false,
+            Effect::Noop | Effect::ChannelLifeForMana => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,

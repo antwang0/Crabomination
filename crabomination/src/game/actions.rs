@@ -168,6 +168,8 @@ pub(crate) fn flashback_additional_cost_for_name(
         // "Flashback—{1}{U}, Pay 3 life" (the {1}{U} is the printed flashback
         // mana cost on the card; the life is the additional rider).
         "Deep Analysis" => vec![A::PayLife { amount: 3 }],
+        // "Flashback—{4}{W}, Exile a card from your graveyard."
+        "Resurgent Belief" => vec![A::ExileFromGraveyard { filter: S::Any }],
         _ => vec![],
     }
 }
@@ -3826,8 +3828,46 @@ impl GameState {
                                     decision: crate::decision::Decision::ChooseTarget {
                                         source: card_id,
                                         legal,
-                                        source_name: name,
+                                        source_name: name.clone(),
                                         description: "choose a permanent to sacrifice".into(),
+                                    },
+                                    resume: crate::game::types::ResumeContext::CastAdditionalCost {
+                                        caster: p,
+                                        card_id,
+                                        target,
+                                        additional_targets,
+                                        mode,
+                                        x_value,
+                                        kicked,
+                                    },
+                                });
+                                return Ok(vec![]);
+                            }
+                        }
+                        crate::card::AdditionalCastCost::ExilePermanent { filter, count }
+                            if *count == 1 && self.pending_cast_sacrifices.is_none() =>
+                        {
+                            let legal: Vec<Target> = self
+                                .battlefield
+                                .iter()
+                                .filter(|c| {
+                                    c.controller == p
+                                        && self.evaluate_requirement_static(
+                                            filter,
+                                            &Target::Permanent(c.id),
+                                            p,
+                                            None,
+                                        )
+                                })
+                                .map(|c| Target::Permanent(c.id))
+                                .collect();
+                            if legal.len() > 1 {
+                                self.pending_decision = Some(crate::game::types::PendingDecision {
+                                    decision: crate::decision::Decision::ChooseTarget {
+                                        source: card_id,
+                                        legal,
+                                        source_name: name.clone(),
+                                        description: "choose a permanent to exile".into(),
                                     },
                                     resume: crate::game::types::ResumeContext::CastAdditionalCost {
                                         caster: p,
@@ -4695,6 +4735,22 @@ impl GameState {
             }
             // CR 119.4 — life can be paid only if the total is at least N.
             A::PayLife { amount } => self.players[p].life >= *amount as i32,
+            A::ExilePermanent { filter, count } => {
+                let matching = self.battlefield.iter().filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                }).count();
+                matching >= *count as usize
+            }
+            A::SacrificeOrPayLife { filter, life } => {
+                self.players[p].life >= *life as i32
+                    || self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && self.evaluate_requirement_static(
+                                filter, &Target::Permanent(c.id), p, None,
+                            )
+                    })
+            }
         })
     }
 
@@ -4956,6 +5012,78 @@ impl GameState {
                     let applied = self.adjust_life_applied(p, -(*amount as i32));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
+                }
+                A::ExilePermanent { filter, count } => {
+                    // Honor the caster's explicit pick(s) when present; auto-pick
+                    // the cheapest matches (tokens first, then lowest MV).
+                    let mut picked: Vec<CardId> = Vec::new();
+                    if let Some(ids) = chosen_override.take() {
+                        for id in ids {
+                            if picked.len() >= *count as usize {
+                                break;
+                            }
+                            if self.battlefield.iter().any(|c| {
+                                c.id == id
+                                    && c.controller == p
+                                    && self.evaluate_requirement_static(
+                                        filter, &Target::Permanent(c.id), p, None,
+                                    )
+                            }) {
+                                picked.push(id);
+                            }
+                        }
+                    }
+                    if picked.len() < *count as usize {
+                        let mut cands: Vec<&crate::card::CardInstance> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && !picked.contains(&c.id)
+                                    && self.evaluate_requirement_static(
+                                        filter, &Target::Permanent(c.id), p, None,
+                                    )
+                            })
+                            .collect();
+                        cands.sort_by_key(|c| (!c.is_token, c.definition.cost.cmc(), c.power()));
+                        let need = *count as usize - picked.len();
+                        picked.extend(cands.into_iter().take(need).map(|c| c.id));
+                    }
+                    for id in picked {
+                        let ctx = EffectContext::for_spell(p, None, 0, 0);
+                        self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+                    }
+                }
+                A::SacrificeOrPayLife { filter, life } => {
+                    // Sacrifice a matching token if any; else pay life when
+                    // affordable; else sacrifice the cheapest match.
+                    let has_token = self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && c.is_token
+                            && self.evaluate_requirement_static(
+                                filter, &Target::Permanent(c.id), p, None,
+                            )
+                    });
+                    if has_token || self.players[p].life < *life as i32 {
+                        let (mut ev, sp) = self.pay_additional_costs(
+                            p,
+                            &[A::SacrificePermanent { filter: filter.clone(), count: 1 }],
+                            chosen_override.take(),
+                            None,
+                        );
+                        events.append(&mut ev);
+                        if sac_power.is_none() {
+                            sac_power = sp;
+                        }
+                    } else {
+                        let applied = self.adjust_life_applied(p, -(*life as i32));
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost {
+                                player: p,
+                                amount: (-applied) as u32,
+                            });
+                        }
                     }
                 }
             }
@@ -5607,10 +5735,17 @@ impl GameState {
         if jumpstart {
             flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1, filter: None });
         }
-        if !flashback_additional.is_empty()
-            && !self.additional_costs_payable(p, &flashback_additional)
-        {
-            return Err(GameError::SelectionRequirementViolated);
+        if !flashback_additional.is_empty() {
+            // The flashback card can't fund its own riders (e.g. Resurgent
+            // Belief's gy-exile) — lift it out of the graveyard for the check.
+            let lifted = Self::take_card(&mut self.players[p].graveyard, card_id);
+            let payable = self.additional_costs_payable(p, &flashback_additional);
+            if let Some(c) = lifted {
+                self.players[p].graveyard.push(c);
+            }
+            if !payable {
+                return Err(GameError::SelectionRequirementViolated);
+            }
         }
 
         // Validate target.
@@ -5684,7 +5819,14 @@ impl GameState {
         if !flashback_additional.is_empty() {
             // Flashback sac costs (Lava Dart, Dread Return) keep the auto-pick
             // — no interactive choice is wired through the flashback path.
+            // Lift the flashback card out of the graveyard around the payment
+            // so a gy-exile rider (Resurgent Belief) can't pick the spell
+            // itself; `finalize_flashback_cast` re-locates it by id.
+            let lifted = Self::take_card(&mut self.players[p].graveyard, card_id);
             let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional, None, None);
+            if let Some(c) = lifted {
+                self.players[p].graveyard.push(c);
+            }
             cost_events.append(&mut e);
         }
         let mut events = self.finalize_flashback_cast(
@@ -7764,6 +7906,26 @@ impl GameState {
                 pool_before: pool_after_auto_tap,
             }),
             Err(e) => {
+                // Channel — convert life 1:1 into the colorless shortfall
+                // ("you may pay 1 life: add {C}", active until end of turn).
+                if self.players[payer].channel_life_for_mana {
+                    let life = self.players[payer].life.max(0) as u32;
+                    for n in 1..=life {
+                        let mut probe = self.players[payer].mana_pool.clone();
+                        probe.add_colorless(n);
+                        if probe.pay_for_spell(cost, kind).is_err() {
+                            continue;
+                        }
+                        self.pay_life_cost(payer, n);
+                        self.players[payer].mana_pool.add_colorless(n);
+                        let pool_before = self.players[payer].mana_pool.clone();
+                        let side_effects = self.players[payer]
+                            .mana_pool
+                            .pay_for_spell(cost, kind)
+                            .expect("probe covered the cost a line ago");
+                        return Ok(PaymentReceipt { auto_events, side_effects, pool_before });
+                    }
+                }
                 self.restore_payment_state(payer, snapshot);
                 Err(GameError::Mana(e))
             }

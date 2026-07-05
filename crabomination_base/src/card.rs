@@ -2447,6 +2447,22 @@ pub enum AdditionalCastCost {
     /// life". Paid immediately during casting, so any "loses life" watcher
     /// fires before the spell resolves.
     PayLife { amount: u32 },
+    /// "As an additional cost to cast this spell, exile [count] [filter]
+    /// permanent(s) you control." (Necrotic Fumes.) Auto-picker exiles the
+    /// cheapest matches (tokens first, then lowest mana value); a `wants_ui`
+    /// caster is prompted like a sacrifice pick.
+    ExilePermanent {
+        filter: SelectionRequirement,
+        #[serde(default = "one_u32")]
+        count: u32,
+    },
+    /// "As an additional cost, sacrifice a [filter] or pay N life." (Final
+    /// Payment.) Auto path: sacrifice a matching token if one exists, else
+    /// pay the life when affordable, else sacrifice the cheapest match.
+    SacrificeOrPayLife {
+        filter: SelectionRequirement,
+        life: u32,
+    },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.

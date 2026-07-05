@@ -1873,15 +1873,13 @@ pub fn stonebinders_familiar() -> CardDefinition {
 
 /// Necrotic Fumes — {1}{B}{B} Sorcery — Lesson. "As an additional cost,
 /// exile a creature you control. Exile target creature or planeswalker."
-/// (The additional cost is modeled as a sacrifice — exile-as-cost isn't a
-/// distinct primitive.)
 pub fn necrotic_fumes() -> CardDefinition {
     CardDefinition {
         name: "Necrotic Fumes",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
-        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+        additional_cast_cost: vec![AdditionalCastCost::ExilePermanent {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
