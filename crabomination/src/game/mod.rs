@@ -11757,6 +11757,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard
+            | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::ActivationCostReduction { .. }
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed

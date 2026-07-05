@@ -948,3 +948,29 @@ fn voltage_surge_unkicked_deals_two() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(victim).expect("survives").damage, 2);
 }
+
+/// Necrogen Communion grants toxic 2 and reanimates the host under your
+/// control when it dies.
+#[test]
+fn necrogen_communion_grants_toxic_and_reanimates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let aura = g.add_card_to_hand(0, catalog::necrogen_communion());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast aura");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.iter()
+        .any(|k| matches!(k, crate::card::Keyword::Toxic(2))), "host has toxic 2");
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("host returned to the battlefield");
+    assert_eq!(back.controller, 0, "under the aura controller's control");
+}

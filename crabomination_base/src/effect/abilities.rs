@@ -814,6 +814,12 @@ pub enum StaticEffect {
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).
     MayCastPermanentsFromGraveyard,
+    /// "You may cast [filter] spells from your graveyard by paying `life`
+    /// life in addition to paying their other costs. If you cast a spell this
+    /// way, it enters with a finality counter." Noctis, Prince of Lucis
+    /// (checked in `cast_spell`; the life is paid on a successful cast and
+    /// the finality counter stamped via `CardInstance.pending_etb_counters`).
+    GraveyardCastWithLifeSurcharge { filter: SelectionRequirement, life: u32 },
     /// CR 401.5: the controller plays with the top card of their library
     /// revealed (surfaced to every seat via `PlayerView.library_top`).
     TopOfLibraryRevealed,

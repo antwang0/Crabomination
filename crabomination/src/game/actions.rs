@@ -2055,6 +2055,37 @@ impl GameState {
             }
             return r;
         }
+        // Noctis — cast a covered spell from your graveyard by paying the
+        // static's life surcharge; it enters with a finality counter. Hop the
+        // card into hand for the normal cast pipeline; restore on failure.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && !self.players[p].graveyard.iter().any(|c| {
+                c.id == card_id
+                    && self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
+            })
+            && let Some(life) = self.graveyard_cast_life_surcharge(p, card_id)
+        {
+            let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
+            self.players[p].hand.push(card);
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            match &r {
+                Err(_) => {
+                    if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        card.pending_etb_counters.clear();
+                        self.players[p].send_to_graveyard(card);
+                    }
+                }
+                Ok(_) => {
+                    self.pay_life_cost(p, life);
+                    self.entered_from_graveyard_this_turn.insert(card_id);
+                }
+            }
+            return r;
+        }
         // CR 401.6 — cast off the library top when a PlayFromLibraryTop
         // static covers the card (Mystic Forge). Hop the card into hand for
         // the normal cast pipeline; restore it to the top on failure.
@@ -2118,6 +2149,27 @@ impl GameState {
                     && !self.players[p].graveyard_cast_types_this_turn.contains(t)
             })
             .cloned()
+    }
+
+    /// Noctis — when `card_id` sits in `p`'s graveyard, a
+    /// `GraveyardCastWithLifeSurcharge` permission `p` controls covers it, and
+    /// `p` can pay the life (CR 119.4), return the surcharge.
+    pub(crate) fn graveyard_cast_life_surcharge(&self, p: usize, card_id: CardId) -> Option<u32> {
+        use crate::effect::StaticEffect;
+        let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .find_map(|sa| match &sa.effect {
+                StaticEffect::GraveyardCastWithLifeSurcharge { filter, life }
+                    if self.evaluate_requirement_on_card(filter, card, p)
+                        && self.players[p].life >= *life as i32 =>
+                {
+                    Some(*life)
+                }
+                _ => None,
+            })
     }
 
     /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a

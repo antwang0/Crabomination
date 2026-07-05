@@ -5013,3 +5013,67 @@ fn chocobo_kick_unkicked_single_bite() {
     let cp = g.battlefield_find(victim).expect("wurm survives 2 damage");
     assert_eq!(cp.damage, 2, "2 marked damage");
 }
+
+/// Sin's trigger exiles a random permanent card from your graveyard and mints
+/// a tapped token copy; a lone creature card → one tapped copy.
+#[test]
+fn sin_exiles_and_copies_tapped() {
+    let mut g = two_player_game();
+    let sin = g.add_card_to_battlefield(0, catalog::sin_spiras_punishment());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let eff = catalog::sin_spiras_punishment().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(sin, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled");
+    let copy = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .expect("tapped token copy minted");
+    assert!(copy.tapped, "copy enters tapped");
+}
+
+/// Sin repeats while the exiled card is a land: two lands in the graveyard →
+/// both exiled, two tapped land token copies.
+#[test]
+fn sin_repeats_on_lands() {
+    let mut g = two_player_game();
+    let sin = g.add_card_to_battlefield(0, catalog::sin_spiras_punishment());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let eff = catalog::sin_spiras_punishment().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(sin, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.players[0].graveyard.is_empty(), "both lands exiled (repeat)");
+    let copies = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Forest" && c.tapped).count();
+    assert_eq!(copies, 2, "two tapped Forest token copies");
+}
+
+/// Noctis lets you cast an artifact from your graveyard for +3 life; it
+/// enters with a finality counter.
+#[test]
+fn noctis_casts_artifacts_from_graveyard_with_finality() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::noctis_prince_of_lucis());
+    let relic = g.add_card_to_graveyard(0, catalog::ornithopter()); // {0} artifact
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: relic, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("graveyard cast under Noctis");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(relic).expect("artifact on battlefield");
+    assert_eq!(c.counter_count(CounterType::Finality), 1, "enters with a finality counter");
+    assert_eq!(g.players[0].life, life - 3, "paid the 3-life surcharge");
+}
+
+/// Without Noctis the same graveyard cast is rejected.
+#[test]
+fn graveyard_artifact_cast_needs_noctis() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_graveyard(0, catalog::ornithopter());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: relic, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no permission → rejected");
+}

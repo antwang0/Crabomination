@@ -7963,3 +7963,58 @@ pub fn chocobo_kick() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sin, Spira's Punishment — {4}{B}{G}{U} 7/7 Leviathan Avatar with flying.
+/// Whenever Sin enters or attacks, exile a permanent card from your graveyard
+/// at random, then create a tapped token copy of it; repeat if it was a land.
+pub fn sin_spiras_punishment() -> CardDefinition {
+    let loop_effect = || Effect::ExileRandomGraveyardCopyTapped { who: PlayerRef::You };
+    CardDefinition {
+        name: "Sin, Spira's Punishment",
+        cost: cost(&[generic(4), b(), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leviathan, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(loop_effect()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: loop_effect(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Noctis, Prince of Lucis — {1}{W}{U}{B} 4/3 Human Noble with lifelink. You
+/// may cast artifact spells from your graveyard by paying 3 life in addition
+/// to their other costs; they enter with a finality counter.
+pub fn noctis_prince_of_lucis() -> CardDefinition {
+    CardDefinition {
+        name: "Noctis, Prince of Lucis",
+        cost: cost(&[generic(1), w(), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast artifact spells from your graveyard by paying 3 life in addition to paying their other costs. They enter with a finality counter.",
+            effect: StaticEffect::GraveyardCastWithLifeSurcharge {
+                filter: SelectionRequirement::Artifact,
+                life: 3,
+            },
+        }],
+        ..Default::default()
+    }
+}

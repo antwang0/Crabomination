@@ -1455,3 +1455,34 @@ pub fn furnace_punisher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Necrogen Communion — {1}{B} Aura. Enchant creature you control; it has
+/// toxic 2. When it dies, return that card to the battlefield under your
+/// control.
+pub fn necrogen_communion() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Necrogen Communion",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Toxic(2)], ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..Default::default()
+    }
+}

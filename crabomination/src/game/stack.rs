@@ -950,6 +950,13 @@ impl GameState {
                             self.grant_keyword_eot(card_id, kw);
                         }
                     }
+                    // Cast-time ETB-counter riders stamped on the instance
+                    // (Noctis's graveyard-cast finality counter).
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                        for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
+                            counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                        }
+                    }
                     // CR 122.1 — Solemnity drops enters-with-counters.
                     if self.counters_locked() { counter_specs.clear(); }
                     for (kind, value) in counter_specs {

@@ -6718,6 +6718,52 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileRandomGraveyardCopyTapped { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Bounded: each pass exiles one card, so the initial graveyard
+                // size caps the land-repeat loop.
+                for _ in 0..self.players[p].graveyard.len() {
+                    let candidates: Vec<(CardId, bool)> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.is_permanent())
+                        .map(|c| (c.id, c.definition.is_land()))
+                        .collect();
+                    if candidates.is_empty() {
+                        break;
+                    }
+                    let (pick, is_land) =
+                        candidates[(rand::random::<u64>() % candidates.len() as u64) as usize];
+                    let mut sub = ctx.clone();
+                    sub.targets = vec![Target::Permanent(pick)];
+                    self.run_effect(
+                        &Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                        &sub,
+                        events,
+                    )?;
+                    self.run_effect(
+                        &Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: crate::effect::Value::ONE,
+                            source: Selector::Target(0),
+                            extra_creature_types: vec![],
+                            extra_card_types: vec![],
+                            override_pt: None,
+                            override_colors: None,
+                            enters_tapped: true,
+                            non_legendary: false,
+                            legendary: false,
+                        },
+                        &sub,
+                        events,
+                    )?;
+                    if !is_land {
+                        break;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CreateTokenCopiesHasteSac { who, count, source } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;

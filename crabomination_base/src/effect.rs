@@ -3301,6 +3301,10 @@ pub enum Effect {
         count: Value,
         source: Selector,
     },
+    /// Sin, Spira's Punishment — exile a permanent card from `who`'s graveyard
+    /// at random, then create a tapped token that's a copy of it. If the
+    /// exiled card was a land, repeat (bounded by the graveyard size).
+    ExileRandomGraveyardCopyTapped { who: PlayerRef },
     /// CR 701.32 — Populate: `who` creates a token that's a copy of a creature
     /// token they control (their choice; AutoDecider keeps the highest-power
     /// one). No-op if they control no creature token.

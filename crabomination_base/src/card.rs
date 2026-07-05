@@ -3280,6 +3280,10 @@ pub struct CardInstance {
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
     pub bargained: bool,
+    /// One-shot cast-time rider: when this spell resolves as a permanent it
+    /// enters with these counters (Noctis's graveyard-cast finality counter).
+    /// Drained at ETB by the stack resolver; empty for ordinary casts.
+    pub pending_etb_counters: Vec<(CounterType, u32)>,
     /// CR 702.172 — Spree mode indices chosen at cast time (empty for
     /// non-Spree spells). Stamped by `GameAction::CastSpellSpree` and read at
     /// resolution by `Effect::Spree`.
@@ -3691,6 +3695,7 @@ impl CardInstance {
             squad_count: 0,
             cast_mana_spent: 0,
             bargained: false,
+            pending_etb_counters: Vec::new(),
             spree_modes: Vec::new(),
             spliced_effects: Vec::new(),
             bought_back: false,
@@ -4132,6 +4137,9 @@ struct CardInstanceWire {
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     bargained: bool,
+    /// Noctis cast-time ETB-counter rider. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pending_etb_counters: Vec<(CounterType, u32)>,
     /// CR 702.47 spliced rules text. `#[serde(default)]` for back-compat.
     #[serde(default)]
     spliced_effects: Vec<Effect>,
@@ -4374,6 +4382,7 @@ impl serde::Serialize for CardInstance {
             squad_count: self.squad_count,
             cast_mana_spent: self.cast_mana_spent,
             bargained: self.bargained,
+            pending_etb_counters: self.pending_etb_counters.clone(),
             spliced_effects: self.spliced_effects.clone(),
             encoded_on: self.encoded_on,
             cast_target_was_battlefield: self.cast_target_was_battlefield,
@@ -4469,6 +4478,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.squad_count = wire.squad_count;
         c.cast_mana_spent = wire.cast_mana_spent;
         c.bargained = wire.bargained;
+        c.pending_etb_counters = wire.pending_etb_counters.clone();
         c.spliced_effects = wire.spliced_effects.clone();
         c.encoded_on = wire.encoded_on;
         c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
