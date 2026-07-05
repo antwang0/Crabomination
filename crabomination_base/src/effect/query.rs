@@ -154,7 +154,8 @@ impl Effect {
             Effect::Noop
             | Effect::ChannelLifeForMana
             | Effect::Venture
-            | Effect::DoubleYourSourcesDamageThisTurn => false,
+            | Effect::DoubleYourSourcesDamageThisTurn
+            | Effect::ReturnSelfTransformedAttached => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,

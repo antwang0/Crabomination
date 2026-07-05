@@ -6479,3 +6479,54 @@ pub fn athreos_shroud_veiled() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB set completion ───────────────────────────────────────────────────────
+// (The five Gods live in `ths::enchantments` alongside the THS originals.)
+
+/// Bronzehide Lion — {G}{W} 3/3 Cat. {G}{W}: indestructible EOT; dies →
+/// returns as an Aura on a creature you control with the same activation.
+pub fn bronzehide_lion() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let indestructible_pump = |what: Selector| ActivatedAbility {
+        mana_cost: cost(&[g(), w()]),
+        effect: Effect::GrantKeyword {
+            what,
+            keyword: Keyword::Indestructible,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    let aura_back = CardDefinition {
+        name: "Bronzehide Lion",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        activated_abilities: vec![indestructible_pump(Selector::AttachedTo(Box::new(
+            Selector::This,
+        )))],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Bronzehide Lion",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![indestructible_pump(Selector::This)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::ReturnSelfTransformedAttached,
+        }],
+        back_face: Some(Box::new(aura_back)),
+        ..Default::default()
+    }
+}

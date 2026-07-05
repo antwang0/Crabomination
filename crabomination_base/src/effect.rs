@@ -2871,6 +2871,11 @@ pub enum Effect {
     /// from its owner's graveyard (Unstoppable Slasher — two stun counters).
     /// No-op if the source isn't in a graveyard.
     ReturnSelfTappedWithCounters { kind: crate::card::CounterType, amount: u32 },
+    /// Bronzehide Lion — "when this creature dies, return it to the
+    /// battlefield [as its `back_face` Aura] attached to a creature you
+    /// control" (auto-pick: greatest power). No-op if the source isn't in a
+    /// graveyard, has no back face, or its owner controls no creature.
+    ReturnSelfTransformedAttached,
     /// "Return the top creature card of `who`'s graveyard to the battlefield."
     /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
     /// the graveyard holds no creature card.

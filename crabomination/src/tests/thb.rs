@@ -4082,3 +4082,158 @@ fn allure_of_the_unknown_exiles_nonland_rest_to_hand() {
     // Allure left hand on cast (-1); the other five revealed cards entered hand (+5).
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 5, "the rest went to your hand");
 }
+
+// ── THB set completion: the five Gods + Bronzehide Lion ──────────────────────
+
+/// A God without enough devotion isn't a creature; hitting the threshold
+/// turns it on (Thassa: devotion to blue ≥ 5).
+#[test]
+fn thassa_creature_only_at_devotion_five() {
+    let mut g = two_player_game();
+    let thassa = g.add_card_to_battlefield(0, catalog::thassa_deep_dwelling());
+    let cp = g.computed_permanent(thassa).unwrap();
+    assert!(!cp.card_types.contains(&crate::card::CardType::Creature),
+        "devotion 1 (its own pip) — not a creature");
+    // Two more Thassas' worth of blue pips… use Master of Waves-free route:
+    // three more single-U permanents. Nadir Kraken has {1}{U}{U} (2 pips).
+    g.add_card_to_battlefield(0, catalog::nadir_kraken());
+    g.add_card_to_battlefield(0, catalog::nadir_kraken());
+    let cp = g.computed_permanent(thassa).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature),
+        "devotion 5 — creature (1 + 2 + 2 pips)");
+}
+
+/// Thassa's end-step trigger blinks another creature you control (its ETB
+/// re-fires) and her activation taps another creature.
+#[test]
+fn thassa_blinks_at_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thassa_deep_dwelling());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let blinked = g.battlefield_find(bear).expect("returned to the battlefield");
+    assert!(!blinked.tapped, "returns as a fresh untapped object");
+}
+
+/// Erebos draws for 2 life when another creature you control dies.
+#[test]
+fn erebos_pays_two_life_to_draw_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::erebos_bleak_hearted());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.battlefield_find_mut(bear).unwrap().damage = 9;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Purphoros grants other creatures haste and sneaks a red creature from
+/// hand in until the end step.
+#[test]
+fn purphoros_sneaks_a_red_creature_in() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let god = g.add_card_to_battlefield(0, catalog::purphoros_bronze_blooded());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(god).unwrap().keywords.contains(&Keyword::Haste), "not itself");
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: god, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Purphoros");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_some(), "creature snuck in");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_none(), "sacrificed at end step");
+}
+
+/// Nylea discounts creature spells and digs a creature to hand.
+#[test]
+fn nylea_discounts_and_digs() {
+    let mut g = two_player_game();
+    let god = g.add_card_to_battlefield(0, catalog::nylea_keen_eyed());
+    // Discount: Grizzly Bears {1}{G} → {G}.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted bear for a single {G}");
+    drain_stack(&mut g);
+    // Dig: creature on top goes to hand.
+    g.add_card_to_library(0, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: god, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Nylea");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "revealed creature to hand");
+}
+
+/// Klothys exiles a graveyard land for mana, or a nonland for drain.
+#[test]
+fn klothys_first_main_trigger_branches() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::klothys_god_of_destiny());
+    // Nonland in the opponent's graveyard: gain 2, burn each opponent 2.
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let (p0, p1) = (g.players[0].life, g.players[1].life);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 2, "gained 2");
+    assert_eq!(g.players[1].life, p1 - 2, "opponent burned for 2");
+    assert!(g.players[1].graveyard.is_empty(), "graveyard card exiled");
+}
+
+/// Bronzehide Lion dies and returns as an Aura on a creature you control;
+/// the Aura's activation grants the host indestructible.
+#[test]
+fn bronzehide_lion_returns_as_aura() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let lion = g.add_card_to_battlefield(0, catalog::bronzehide_lion());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(lion).unwrap().damage = 9;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let aura = g.battlefield_find(lion).expect("returned to the battlefield");
+    assert!(aura.definition.is_aura(), "returned as an Aura");
+    assert_eq!(aura.attached_to, Some(bear), "attached to your creature");
+    assert!(!aura.definition.is_creature(), "no longer a creature");
+    // The Aura's activation grants the host indestructible.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lion, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate the Aura");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+}

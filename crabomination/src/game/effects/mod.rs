@@ -12069,6 +12069,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnSelfTransformedAttached => {
+                // Bronzehide Lion: return the dead source from its owner's
+                // graveyard as its back-face Aura, attached to the owner's
+                // greatest-power creature. No creature → it stays dead.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(owner) = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src))
+                else {
+                    return Ok(());
+                };
+                let host = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == owner && c.definition.is_creature())
+                    .max_by_key(|c| c.power())
+                    .map(|c| c.id);
+                let Some(host) = host else { return Ok(()) };
+                let Some(pos) = self.players[owner].graveyard.iter().position(|c| c.id == src)
+                else {
+                    return Ok(());
+                };
+                if self.players[owner].graveyard[pos].definition.back_face.is_none() {
+                    return Ok(());
+                }
+                let mut card = self.players[owner].graveyard.remove(pos);
+                let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+                card.front_face = Some(card.definition.clone());
+                card.definition = std::sync::Arc::new(back);
+                card.transformed = true;
+                events.push(GameEvent::Transformed { card_id: src });
+                self.place_card_in_dest(
+                    card,
+                    owner,
+                    &crate::effect::ZoneDest::Battlefield {
+                        controller: PlayerRef::Seat(owner),
+                        tapped: false,
+                    },
+                    events,
+                );
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.attached_to = Some(host);
+                    events.push(GameEvent::AttachmentMoved { attachment: src, attached_to: Some(host) });
+                }
+                Ok(())
+            }
+
             Effect::CantBlockSourceThisTurn { target } => {
                 // Record (blocker, attacker=source) so the declare-blockers
                 // validator bars only this pairing (Kozilek's Pathfinder).
