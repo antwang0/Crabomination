@@ -216,7 +216,13 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
             .iter()
             .find_map(|(k, v)| matches!(k, CounterType::Loyalty).then_some(*v))
             .unwrap_or(0);
-        lines.push(format!("Loyalty: {loyalty}"));
+        match p.loyalty_uses_remaining {
+            Some(0) => lines.push(format!("Loyalty: {loyalty} (no activations left this turn)")),
+            Some(n) if n > 1 => {
+                lines.push(format!("Loyalty: {loyalty} ({n} activations this turn)"))
+            }
+            _ => lines.push(format!("Loyalty: {loyalty}")),
+        }
         // List the walker's loyalty abilities with their signed cost, so a
         // hover shows "+1: Draw a card / -X: Make a token" without opening the
         // activator UI. Variable-X abilities render their cost as "-X".

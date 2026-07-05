@@ -1027,7 +1027,17 @@ fn project_permanent(
             .iter()
             .find_map(|(b, a)| (*b == card.id).then_some(*a)),
         abilities: project_abilities(card),
-        loyalty_abilities: project_loyalty_abilities(card),
+        loyalty_abilities: project_loyalty_abilities(card, battlefield),
+        loyalty_uses_remaining: card.definition.is_planeswalker().then(|| {
+            let allowed: u8 = if card.definition.loyalty_twice_each_turn
+                || card.loyalty_twice_this_turn
+            {
+                2
+            } else {
+                1
+            };
+            allowed.saturating_sub(card.loyalty_uses_this_turn)
+        }),
         triggered_ability_labels: project_triggered_ability_labels(card),
         static_ability_labels: project_static_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
@@ -1372,9 +1382,13 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
     }
 }
 
-fn project_loyalty_abilities(card: &CardInstance) -> Vec<crate::net::LoyaltyAbilityView> {
-    card.definition
-        .loyalty_abilities
+fn project_loyalty_abilities(
+    card: &CardInstance,
+    battlefield: &[CardInstance],
+) -> Vec<crate::net::LoyaltyAbilityView> {
+    // Printed + statics-granted (Kasmina / Ichormoon) — the same list the
+    // activation path accepts, so granted indices are clickable.
+    crate::game::effective_loyalty_abilities(card, battlefield)
         .iter()
         .enumerate()
         .map(|(i, a)| crate::net::LoyaltyAbilityView {

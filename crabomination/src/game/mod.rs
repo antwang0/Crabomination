@@ -9484,38 +9484,11 @@ impl GameState {
             return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
         }
 
-        // Printed abilities, plus any granted by another friendly
-        // planeswalker's ability-sharing static (Kasmina, Enigma Sage) at
-        // indices past the printed count.
-        let mut abilities = self.battlefield[pos].definition.loyalty_abilities.clone();
-        for c in &self.battlefield {
-            if c.id != card_id
-                && c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
-                    )
-                })
-            {
-                abilities.extend(c.definition.loyalty_abilities.iter().cloned());
-            }
-        }
-        // Ichormoon Gauntlet — fixed loyalty abilities granted to every
-        // planeswalker its controller runs.
-        for c in &self.battlefield {
-            if c.controller != p {
-                continue;
-            }
-            for sa in &c.definition.static_abilities {
-                if let crate::effect::StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
-                    abilities: granted,
-                } = &sa.effect
-                {
-                    abilities.extend(granted.iter().cloned());
-                }
-            }
-        }
+        // Printed + statics-granted abilities (Kasmina's sharing static,
+        // Ichormoon Gauntlet's fixed grants) at indices past the printed
+        // count — same list the wire view surfaces.
+        let abilities =
+            effective_loyalty_abilities(&self.battlefield[pos], &self.battlefield);
         let ability = abilities
             .get(ability_index)
             .cloned()
@@ -11612,6 +11585,45 @@ fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
 }
 
 // ── Static ability conversion ─────────────────────────────────────────────────
+
+/// CR 606 — the loyalty abilities a planeswalker can actually activate:
+/// printed ones, plus those granted by friendly statics (Kasmina, Enigma
+/// Sage's sharing; Ichormoon Gauntlet's fixed "[0]: Proliferate" grants) at
+/// indices past the printed count. Shared by `activate_loyalty_ability` and
+/// the server view so networked seats see exactly what they can use.
+pub(crate) fn effective_loyalty_abilities(
+    card: &CardInstance,
+    battlefield: &[CardInstance],
+) -> Vec<crate::effect::LoyaltyAbility> {
+    let mut abilities = card.definition.loyalty_abilities.clone();
+    for c in battlefield {
+        if c.id != card.id
+            && c.controller == card.controller
+            && c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
+                )
+            })
+        {
+            abilities.extend(c.definition.loyalty_abilities.iter().cloned());
+        }
+    }
+    for c in battlefield {
+        if c.controller != card.controller {
+            continue;
+        }
+        for sa in &c.definition.static_abilities {
+            if let crate::effect::StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
+                abilities: granted,
+            } = &sa.effect
+            {
+                abilities.extend(granted.iter().cloned());
+            }
+        }
+    }
+    abilities
+}
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
 /// Takes the full `CardInstance` so Equipment/Aura abilities can use `attached_to`.

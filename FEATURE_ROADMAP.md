@@ -114,6 +114,23 @@ exercising each) was elided in a compaction pass; recover it from
   include statics-/equip-granted SpellCast triggers (Red Mage's Rapier, Black
   Mage's Rod), and unified poison scaling through
   `GameState::scaled_player_counter_count` (Winding Constrictor boosts poison).
+- **ONE-completion primitives (modern_decks — Phyrexia: All Will Be One):**
+  CR 702.150 Compleated + `{A/B/P}` PhyrexianHybrid pips; CR 602.5g
+  summoning-sick `{T}`-ability gate (activation + auto-tap) with
+  `ControllerCreatureAbilitiesAsThoughHaste` (Tyvar); CR 603.4 intervening-if
+  on combat-damage triggers; death-trigger doubling (Drivnod);
+  `EventKind::{PoisonAdded, BecameAttached}`; loyalty-ability grants
+  (`PlaneswalkersHaveLoyaltyAbilities` — Ichormoon) + shared
+  `effective_loyalty_abilities` surfaced in the wire view with
+  `loyalty_uses_remaining`; `Effect::{BecomeTreasure, AuraSwapFromHand,
+  GrantLoyaltyTwiceThisTurn, AddCounterOfPresentKind, BlockersPoisonedThisTurn,
+  PreventNextDamageByTargetMintMites, OnYourNextInstantSorceryThisTurn}`;
+  `CostReductionPerCounterOnSource`, `SetBasePtForFilter`,
+  `AddCreatureTypeToMatching`, `HasActivatedAbilitiesOfGraveyardLands`,
+  `PreventDamageToThisRedirect`, prevention shields with mite-mint riders,
+  oil-activity turn flags, target-conditional spell tax
+  (`cost_increase_if_targets`), Corrupted-gated flashback, CR 704.5z Speed
+  SBA, CR 702.65 Aura swap.
 - **LKI / equip / zone / saga primitives (modern_decks — FIN, this run):**
   CR 603.10 granted-type death LKI — `GameState::dying_snapshot` stamps a
   leaving permanent's *computed* (layer-4) creature types into the death
@@ -387,7 +404,8 @@ Each unblocks a large swath of cards.
   `GameAction::CastPrototype`: cast a colorless artifact creature for its
   smaller, colored prototype cost/size, keeping abilities/types (the BRO
   cycle: Goring Warplow, Steel Seraph, Phyrexian Fleshgorger, …).
-  **Omen** still ⏳.
+  **Omen** ✅ (`CardDefinition.omen` + `omen_casting` — the Adventure-style
+  alternate instant/sorcery half).
 - 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).

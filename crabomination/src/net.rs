@@ -1174,6 +1174,11 @@ pub struct PermanentView {
     /// Loyalty abilities (only populated for planeswalkers).
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbilityView>,
+    /// CR 606.3 — loyalty activations this planeswalker has left this turn
+    /// (accounts for Urza's / Kaito's twice-per-turn riders). `None` for
+    /// non-planeswalkers.
+    #[serde(default)]
+    pub loyalty_uses_remaining: Option<u8>,
     /// Compact one-line summary per triggered ability ("ETB: Draw a
     /// card", "Magecraft: Drain 1", "Dies: Mill 2"). Lets the client
     /// surface the printed trigger text in tooltips without round-
