@@ -6599,11 +6599,13 @@ impl GameState {
         let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
             return false;
         };
-        let computed = self.compute_battlefield();
-        let blocker_computed = computed.iter().find(|c| c.id == blocker_id);
-        let Some(blocker_cp) = blocker_computed else {
+        // Only the blocker's and each attacker's computed views are needed —
+        // avoid paying the whole-board `compute_battlefield` per candidate
+        // (this runs per blocker in `legal_blockers` / the bot's block scan).
+        let Some(blocker_cp) = self.computed_permanent(blocker_id) else {
             return false;
         };
+        let blocker_cp = &blocker_cp;
         // CR 509.1a — creature-ness from the computed view (animated lands /
         // crewed Vehicles can block).
         if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
@@ -6622,10 +6624,10 @@ impl GameState {
         }
         self.attacking.iter().any(|atk| {
             let attacker = self.battlefield.iter().find(|c| c.id == atk.attacker);
-            let atk_cp = computed.iter().find(|c| c.id == atk.attacker);
-            let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
-            let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
-            let atk_power = atk_cp.map(|c| c.power)
+            let atk_cp = self.computed_permanent(atk.attacker);
+            let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+            let atk_colors = atk_cp.as_ref().map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_power = atk_cp.as_ref().map(|c| c.power)
                 .or_else(|| attacker.map(|a| a.power()))
                 .unwrap_or(0);
             attacker.is_some()
@@ -6643,11 +6645,11 @@ impl GameState {
         let Some(attacker) = self.battlefield.iter().find(|c| c.id == attacker_id) else {
             return false;
         };
-        let computed = self.compute_battlefield();
-        let blocker_cp = computed.iter().find(|c| c.id == blocker_id);
-        let Some(blocker_cp) = blocker_cp else {
+        // Per-id computed views — see `can_block_any_attacker`.
+        let Some(blocker_cp) = self.computed_permanent(blocker_id) else {
             return false;
         };
+        let blocker_cp = &blocker_cp;
         if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
             return false;
         }
@@ -6717,10 +6719,10 @@ impl GameState {
                 return false;
             }
         }
-        let atk_cp = computed.iter().find(|c| c.id == attacker_id);
-        let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
-        let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
-        let atk_power = atk_cp.map(|c| c.power).unwrap_or_else(|| attacker.power());
+        let atk_cp = self.computed_permanent(attacker_id);
+        let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        let atk_colors = atk_cp.as_ref().map(|c| c.colors.as_slice()).unwrap_or(&[]);
+        let atk_power = atk_cp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
         // CR 701.54c (level 1+) — "Your Ring-bearer … can't be blocked by
         // creatures with greater power." Same shape as Skulk, but keyed on the
         // attacker being its controller's Ring-bearer.

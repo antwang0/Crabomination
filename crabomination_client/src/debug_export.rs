@@ -207,6 +207,8 @@ mod tests {
                 cannot_gain_life: false,
                 commander_damage_taken: vec![],
                 team: 0,
+                dungeon: None,
+                dungeons_completed: 0,
                 coven_active: false,
                 descend_count: 0,
                 descended_this_turn_count: 0,

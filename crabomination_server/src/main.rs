@@ -39,6 +39,7 @@ use crabomination::server::{
 };
 
 mod config;
+mod history;
 mod slots;
 mod stats;
 
@@ -259,6 +260,7 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
                 s.record_outcome(&outcome, bin_format, duration, true);
                 *s
             };
+            history::record(bin_format.label(), duration, &outcome);
             eprintln!(
                 "lobby match ended (format={}, duration={}, turns={}) — {}",
                 bin_format.label(),
@@ -361,6 +363,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         s.record_outcome(&outcome, format, duration, false);
         *s
     };
+    history::record(format.label(), duration, &outcome);
     eprintln!(
         "bot match ended ({}, format={}, duration={}, turns={}) — {}",
         peer,
@@ -411,6 +414,7 @@ fn run_pair_match(
         s.record_outcome(&outcome, format, duration, true);
         *s
     };
+    history::record(format.label(), duration, &outcome);
     eprintln!(
         "pair match ended ({} ↔ {}, format={}, duration={}, turns={}) — {}",
         a_peer,

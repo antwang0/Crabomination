@@ -70,6 +70,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Coven (Innistrad) — a witchy moonlit green: 3+ creatures, distinct powers.
         StatChipKind::Coven => (Color::srgba(0.14, 0.30, 0.20, 1.0), theme::TEXT_PRIMARY),
+        // Dungeon venture progress (CR 309) — a torchlit dungeon-stone umber.
+        StatChipKind::Dungeon => (Color::srgba(0.28, 0.20, 0.12, 1.0), theme::TEXT_PRIMARY),
         // Spell-cast lock (Rule of Law / Deafening Silence / Ethersworn
         // Canonist) — a stern slate so a barred extra cast reads as "stop".
         StatChipKind::SpellLock => (Color::srgba(0.30, 0.14, 0.18, 1.0), theme::TEXT_PRIMARY),
@@ -121,6 +123,7 @@ pub(super) enum StatChipKind {
     TopCard,
     Speed,
     Coven,
+    Dungeon,
     SpellLock,
     Ring,
     Crime,
@@ -702,6 +705,18 @@ pub fn update_player_stats_chips(
         // different powers, so coven-gated payoffs are online.
         if p.coven_active {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
+        }
+        // CR 309 — venture progress: current room while in a dungeon, plus the
+        // completed-dungeon tally once nonzero.
+        if let Some((_, room)) = &p.dungeon {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Dungeon, format!("🏰 {room}"));
+        } else if p.dungeons_completed > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Dungeon,
+                format!("🏰 completed ×{}", p.dungeons_completed),
+            );
         }
         // CR 603.7e — a pending "your next creature spell enters with …" rider.
         if let Some(label) =

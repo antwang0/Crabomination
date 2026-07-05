@@ -620,6 +620,11 @@ fn project_player(
         cannot_gain_life,
         commander_damage_taken,
         team,
+        dungeon: state.players[player_seat].dungeon.as_ref().and_then(|(name, room)| {
+            let def = crabomination_base::dungeons::dungeon_by_name(name)?;
+            Some((name.clone(), def.rooms.get(*room as usize)?.name.to_string()))
+        }),
+        dungeons_completed: state.players[player_seat].dungeons_completed,
         coven_active,
         descend_count: state.players[player_seat]
             .graveyard

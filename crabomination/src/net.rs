@@ -705,6 +705,14 @@ pub struct PlayerView {
     /// seat-order seating when every team reads as the same default).
     #[serde(default)]
     pub team: usize,
+    /// CR 309 — the dungeon this player is currently in, as
+    /// `(dungeon name, current room name)`. `None` between dungeons.
+    /// Surfaced so the client can show a venture chip.
+    #[serde(default)]
+    pub dungeon: Option<(String, String)>,
+    /// CR 701.49d — dungeons this player has completed this game.
+    #[serde(default)]
+    pub dungeons_completed: u32,
     /// Innistrad "Coven" — true when this player controls three or more
     /// creatures with different powers, so coven-gated abilities are online.
     /// Surfaced so UIs can show a "Coven" badge and light up coven payoffs.
