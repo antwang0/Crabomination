@@ -183,6 +183,13 @@ pub(crate) fn extra_cost_for_spell(
     if state.players[caster].first_spell_tax_charges > 0 {
         tax += 1;
     }
+    // "Costs {N} more if it targets a [filter]" (Vanish into Eternity).
+    if let Some((filter, n)) = &card.definition.cost_increase_if_targets
+        && let Some(t) = target
+        && state.evaluate_requirement_static(filter, t, caster, None)
+    {
+        tax += n;
+    }
     // "Reveal a [filter] card from your hand or pay {N}" (Silvergill Adept):
     // no matching hand card → the pay half joins the cost. Same shape for
     // "sacrifice a [filter] or pay {N}" (Bayou Groff) against the battlefield.
@@ -4988,6 +4995,9 @@ impl GameState {
         if is_instant_or_sorcery {
             self.players[p].instants_or_sorceries_cast_this_turn += 1;
         }
+        if card.definition.cost.colors().len() >= 2 {
+            self.players[p].multicolored_spells_cast_this_turn += 1;
+        }
         if !card.casting_alt_half() && card.definition.is_creature() {
             self.players[p].creatures_cast_this_turn += 1;
         }
@@ -5512,6 +5522,15 @@ impl GameState {
         let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem)
             .then(|| self.graveyard_flashback_grant(p, &card))
             .flatten();
+        // Conditional flashback (Viral Spawning's Corrupted gate).
+        if card.effective_flashback().is_some()
+            && let Some(cond) = &card.definition.flashback_condition
+        {
+            let cctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+            if !self.evaluate_predicate(cond, &cctx) {
+                return Err(GameError::SorcerySpeedOnly);
+            }
+        }
         let flashback_cost = match card.effective_flashback() {
             Some(c) => c.clone(),
             None if jumpstart => card.definition.cost.clone(),

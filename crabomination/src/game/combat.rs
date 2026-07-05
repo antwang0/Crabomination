@@ -1134,6 +1134,17 @@ impl GameState {
                 blocker: blocker_id,
                 attacker: attacker_id,
             });
+            // Noxious Assault's turn rider: each declared block poisons the
+            // blocker's controller.
+            if self.block_poison_this_turn > 0 {
+                let ctrl = self
+                    .battlefield_find(blocker_id)
+                    .map(|c| c.controller);
+                if let Some(ctrl) = ctrl {
+                    let n = self.block_poison_this_turn;
+                    self.add_poison(ctrl, n, &mut events);
+                }
+            }
         }
         for (id, d) in pt_deltas {
             if let Some(c) = self.battlefield_find_mut(id) {

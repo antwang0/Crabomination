@@ -123,6 +123,8 @@ pub enum CreatureType {
     Weird,
     // Amonkhet (Heart-Piercer Manticore).
     Manticore,
+    // ONE (Argentum Masticore).
+    Masticore,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,
     // Kaladesh Fabricate Servos).
     Thopter,
@@ -1425,6 +1427,9 @@ pub enum SelectionRequirement {
     /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at
     /// effect resolution; unresolved instances evaluate false.
     ManaValueEqualsSourceCounters(CounterType),
+    /// MV ≤ the mana value of the card discarded earlier in this resolution
+    /// (Argentum Masticore's reflexive destroy).
+    ManaValueAtMostDiscardedThisEffect,
     /// True when the card's mana value equals the most-recently-sacrificed
     /// creature's mana value plus `offset`, read from the resolution scratch
     /// (`GameState.sacrificed_mana_value`). Powers Birthing Pod's "search for a
@@ -2042,6 +2047,15 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+    /// "This spell costs {N} more to cast if it targets a [filter]" —
+    /// Vanish into Eternity. Read by `extra_cost_for_spell` off the chosen
+    /// target at cast time.
+    #[serde(default)]
+    pub cost_increase_if_targets: Option<(SelectionRequirement, u32)>,
+    /// Gate on casting via Flashback ("Corrupted — … this card has flashback"
+    /// — Viral Spawning). Checked at the graveyard-cast gate.
+    #[serde(default)]
+    pub flashback_condition: Option<crate::effect::Predicate>,
     /// CR 702.33 / 601.2b — an *optional* non-mana additional cost:
     /// "Kicker—Sacrifice an artifact or creature" (Vayne's Treachery),
     /// "Kicker—Return a land you control" (Chocobo Kick), "you may sacrifice

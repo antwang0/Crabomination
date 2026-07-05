@@ -714,6 +714,7 @@ impl GameState {
         self.sacrificed_power = None;
         self.sacrificed_toughness = None;
         self.sacrificed_mana_value = None;
+        self.last_discarded_mana_value = None;
         self.tapped_for_cost_power = None;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
@@ -780,6 +781,17 @@ impl GameState {
     /// triggers. Shared by the auto-pick path and the interactive
     /// `SacrificePending` resume so both behave identically.
     pub(crate) fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
+        // Stamp the resolution scratch so `Value::Sacrificed*` and the
+        // `ManaValue*Sacrificed*` filters read this sacrifice (Kethek's
+        // "lesser mana value" dig).
+        if let Some(stats) = self
+            .battlefield_find(id)
+            .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc()))
+        {
+            self.sacrificed_power = Some(stats.0);
+            self.sacrificed_toughness = Some(stats.1);
+            self.sacrificed_mana_value = Some(stats.2);
+        }
         let is_creature = self
             .battlefield_find(id)
             .map(|c| c.definition.is_creature())
@@ -6026,6 +6038,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BlockersPoisonedThisTurn { amount } => {
+                self.block_poison_this_turn = self.block_poison_this_turn.max(*amount);
+                Ok(())
+            }
+
             Effect::GrantLoyaltyTwiceThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
@@ -9258,7 +9275,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopPutMatchingOntoBattlefield { count, filter, then } => {
+            Effect::LookTopPutMatchingOntoBattlefield { count, filter, then, max, tapped } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let looked: Vec<crate::card::CardId> =
@@ -9266,7 +9283,7 @@ impl GameState {
                 if looked.is_empty() {
                     return Ok(());
                 }
-                let picks: Vec<crate::card::CardId> = looked
+                let mut picks: Vec<crate::card::CardId> = looked
                     .iter()
                     .copied()
                     .filter(|id| {
@@ -9277,9 +9294,12 @@ impl GameState {
                             .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p))
                     })
                     .collect();
+                if let Some(m) = max {
+                    picks.truncate(*m as usize);
+                }
                 let dest = ZoneDest::Battlefield {
                     controller: crate::effect::PlayerRef::Seat(p),
-                    tapped: false,
+                    tapped: *tapped,
                 };
                 for id in &picks {
                     self.move_card_to(*id, &dest, ctx, events);
@@ -13721,9 +13741,19 @@ impl GameState {
             ),
             PlayerRef::EachPlayerExceptControllerOf(sel) => {
                 let excl = self.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
-                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
-                        self.battlefield_find(cid).map(|c| c.controller)
-                    }
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                        .battlefield_find(cid)
+                        .map(|c| c.controller)
+                        // A spell trigger-subject still on the stack excludes
+                        // its caster (Zenith Chronicler's "each other player").
+                        .or_else(|| {
+                            self.stack.iter().find_map(|s| match s {
+                                StackItem::Spell { card, caster, .. } if card.id == cid => {
+                                    Some(*caster)
+                                }
+                                _ => None,
+                            })
+                        }),
                     EntityRef::Player(p) => Some(p),
                 });
                 self.apnap_sort(

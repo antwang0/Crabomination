@@ -620,6 +620,27 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)
                 .unwrap_or(0),
+            Value::MulticoloredSpellsCastThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].multicolored_spells_cast_this_turn as i32)
+                .unwrap_or(0),
+            Value::GreatestToxicAmongControlled(p) => {
+                let Some(p) = self.resolve_player(p, ctx) else { return 0 };
+                self.compute_battlefield()
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .map(|c| {
+                        c.keywords
+                            .iter()
+                            .map(|k| match k {
+                                crate::card::Keyword::Toxic(n) => *n as i32,
+                                _ => 0,
+                            })
+                            .sum::<i32>()
+                    })
+                    .max()
+                    .unwrap_or(0)
+            }
             Value::CreaturesDiedThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)
@@ -2208,6 +2229,9 @@ impl GameState {
             // Unresolved source-counter MV gate (concretized at resolution
             // via `resolve_source_counters`).
             R::ManaValueEqualsSourceCounters(_) => false,
+            R::ManaValueAtMostDiscardedThisEffect => {
+                card.definition.cost.cmc() <= self.last_discarded_mana_value.unwrap_or(0)
+            }
             R::ManaValueEqualsSacrificedPlus(off) => {
                 card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off
             }

@@ -562,6 +562,7 @@ impl Effect {
                 sel_has_target(what)
             }
             Effect::Proliferate => false,
+            Effect::BlockersPoisonedThisTurn { .. } => false,
             Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }

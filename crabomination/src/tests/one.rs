@@ -3308,3 +3308,293 @@ fn nahiri_zero_copies_from_graveyard() {
     assert!(g.computed_permanent(copy.id).unwrap().keywords.contains(&Keyword::Haste));
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead), "original exiled");
 }
+
+// ── ONE wave 6: Sun's Twilights + rares ──────────────────────────────────────
+
+fn cast_x(g: &mut GameState, def: crate::card::CardDefinition, x: u32, target: Option<Target>) {
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, def);
+    g.players[0].mana_pool.add_colorless(x + 6);
+    for c in [crate::mana::Color::White, crate::mana::Color::Blue, crate::mana::Color::Red,
+              crate::mana::Color::Green] {
+        g.players[0].mana_pool.add(c, 2);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target, additional_targets: vec![], mode: None, x_value: Some(x),
+    }).expect("cast X spell");
+    drain_stack(g);
+}
+
+/// White Sun's Twilight at X=5: 5 life, 5 Mites, board wiped.
+#[test]
+fn white_suns_twilight_big_x() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let life = g.players[0].life;
+    cast_x(&mut g, catalog::white_suns_twilight(), 5, None);
+    assert_eq!(g.players[0].life, life + 5);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Mite").count(), 5);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Serra Angel"), "wiped");
+}
+
+/// Blue Sun's Twilight at X=5 steals and copies.
+#[test]
+fn blue_suns_twilight_steal_and_copy() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    cast_x(&mut g, catalog::blue_suns_twilight(), 5, Some(Target::Permanent(angel)));
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 0, "stolen");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Serra Angel").count(), 2,
+        "copy minted");
+}
+
+/// Blue Sun's Twilight can't steal above X.
+#[test]
+fn blue_suns_twilight_mv_cap() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::blue_suns_twilight());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).is_err(), "MV 5 > X=2 is an illegal target");
+}
+
+/// Red Sun's Twilight at X=5 destroys and leaves hasty copies.
+#[test]
+fn red_suns_twilight_copies_then_destroys() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    cast_x(&mut g, catalog::red_suns_twilight(), 5, Some(Target::Permanent(ring)));
+    assert!(g.battlefield_find(ring).is_none(), "original destroyed");
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Sol Ring")
+        .expect("token copy left behind");
+    assert!(copy.is_token);
+}
+
+/// Green Sun's Twilight at small X digs to hand.
+#[test]
+fn green_suns_twilight_digs_to_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let hand0 = g.players[0].hand.len();
+    cast_x(&mut g, catalog::green_suns_twilight(), 2, None);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "took a creature and a land");
+}
+
+/// Kinzu exiles the dying creature for a 1/1 toxic copy.
+#[test]
+fn kinzu_exiles_for_toxic_copy() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kinzu_of_the_bleak_coven());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[0].life;
+    let ctx = crate::game::effects::EffectContext::for_ability(bears, 0, None);
+    let events = g.resolve_effect(&crate::effect::Effect::SacrificePermanent {
+        what: crate::effect::Selector::This,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bears), "exiled, not in graveyard");
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("copy minted");
+    let cp = g.computed_permanent(copy.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Toxic(1))));
+}
+
+/// Kethek sacrifices a spare creature and deploys a lesser-MV creature.
+#[test]
+fn kethek_end_step_crucible() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kethek_crucible_goliath());
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // MV 5 fodder
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 hit
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "lesser creature deployed");
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Serra Angel"), "fodder gone");
+}
+
+/// Argentum Masticore's upkeep: discard kills a lesser permanent; declining
+/// sacrifices it.
+#[test]
+fn argentum_masticore_upkeep_tax() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let core = g.add_card_to_battlefield(0, catalog::argentum_masticore());
+    g.add_card_to_hand(0, catalog::serra_angel()); // MV 5 discard
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring()); // MV 1
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none(), "MV1 ≤ MV5 discarded — destroyed");
+    assert!(g.battlefield_find(core).is_some(), "Masticore stays");
+    // Decline next upkeep → sacrifice.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(core).is_none(), "sacrificed on decline");
+}
+
+/// Vanish into Eternity costs {3} more against creatures.
+#[test]
+fn vanish_into_eternity_creature_tax() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::vanish_into_eternity());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "3 mana cannot cover the +3 creature tax");
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(ring)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("noncreature target at base cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none(), "exiled");
+}
+
+/// Viral Spawning's flashback is Corrupted-gated.
+#[test]
+fn viral_spawning_corrupted_flashback() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::viral_spawning());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: dead, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no poison → no flashback");
+    g.players[1].poison_counters = 3;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: dead, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("corrupted flashback");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Phyrexian Beast"));
+}
+
+/// Zenith Chronicler: only the first multicolored spell each turn draws.
+#[test]
+fn zenith_chronicler_first_multicolored() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zenith_chronicler());
+    g.add_card_to_library(1, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand1 = g.players[1].hand.len();
+    for i in 0..2 {
+        let spell = g.add_card_to_hand(0, catalog::kaito_dancing_shadow()); // UB multicolored
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap_or_else(|e| panic!("cast {i}: {e:?}"));
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].hand.len(), hand1 + 1, "only the first cast drew");
+}
+
+/// Noxious Assault pumps and poisons blockers for the turn.
+#[test]
+fn noxious_assault_block_poison() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::noxious_assault());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(atk).unwrap().power, 4, "+2/+2");
+    g.active_player_idx = 0;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = crate::game::types::TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)])).unwrap();
+    assert_eq!(g.players[1].poison_counters, 1, "blocking poisoned the defender");
+}
+
+/// Contagious Vorrac proliferates when the top four hold no land.
+#[test]
+fn contagious_vorrac_else_proliferates() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[1].poison_counters = 1;
+    g.move_card_to_battlefield_for_test(0, catalog::contagious_vorrac());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "no land → proliferate");
+}
+
+/// Expand the Sphere deploys up to two lands tapped and proliferates shortfall.
+#[test]
+fn expand_the_sphere_deploys_and_compensates() {
+    let mut g = two_player_game();
+    // One land in the top six → deploy 1, proliferate once.
+    g.add_card_to_library(0, catalog::forest());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[1].poison_counters = 1;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::expand_the_sphere());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let forest = g.battlefield.iter().find(|c| c.definition.name == "Forest")
+        .expect("land deployed");
+    assert!(forest.tapped, "enters tapped");
+    assert_eq!(g.players[1].poison_counters, 2, "one short → one proliferate");
+}
+
+/// Goliath Hatchery mints two Beasts; Corrupted upkeep draws by best toxic.
+#[test]
+fn goliath_hatchery_tokens_and_draw() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::goliath_hatchery());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Beast").count(), 2);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let hand0 = g.players[0].hand.len();
+    g.players[1].poison_counters = 3;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew = toxic 1 (the Beasts)");
+}

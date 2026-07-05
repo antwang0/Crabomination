@@ -6262,3 +6262,500 @@ pub fn the_eternal_wanderer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── ONE wave 6: Sun's Twilight cycle + rares ─────────────────────────────────
+
+/// White Sun's Twilight — {X}{W}{W}. Gain X life, X Mites; X≥5 board-wipes
+/// first (the printed order mints before wiping — the Mites survive either way).
+pub fn white_suns_twilight() -> CardDefinition {
+    CardDefinition {
+        name: "White Sun's Twilight",
+        cost: cost(&[crate::mana::x(), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+                then: Box::new(Effect::Destroy {
+                    what: Selector::EachPermanent(SelectionRequirement::Creature),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: mite_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Blue Sun's Twilight — {X}{U}{U}. Steal a creature with MV ≤ X; X≥5 also
+/// mints a copy of it.
+pub fn blue_suns_twilight() -> CardDefinition {
+    CardDefinition {
+        name: "Blue Sun's Twilight",
+        cost: cost(&[crate::mana::x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMostXFromCost),
+                ),
+                to: None,
+                duration: Duration::Permanent,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+                then: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::Target(0),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Red Sun's Twilight — {X}{R}{R}. Destroy up to five target artifacts (the
+/// printed cap is X); X≥5 leaves hasty copies, exiled at the next end step.
+pub fn red_suns_twilight() -> CardDefinition {
+    CardDefinition {
+        name: "Red Sun's Twilight",
+        cost: cost(&[crate::mana::x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 5,
+            filter: SelectionRequirement::Artifact,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            source: Selector::Target(0),
+                            extra_creature_types: vec![],
+                            extra_card_types: vec![],
+                            override_pt: None,
+                            override_colors: None,
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            extra_keywords: vec![Keyword::Haste],
+                        },
+                        Effect::ExileLastCreatedTokensAtNextEndStep,
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::Destroy { what: Selector::Target(0) },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Green Sun's Twilight — {X}{G}. Dig X+1 for a creature and/or land to hand;
+/// X≥5 deploys them instead.
+pub fn green_suns_twilight() -> CardDefinition {
+    let dig_filter = || SelectionRequirement::Creature.or(SelectionRequirement::Land);
+    let x_plus_one = || Value::Sum(vec![Value::XFromCost, Value::Const(1)]);
+    CardDefinition {
+        name: "Green Sun's Twilight",
+        cost: cost(&[crate::mana::x(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+            then: Box::new(Effect::LookTopPutMatchingOntoBattlefield {
+                count: x_plus_one(),
+                filter: dig_filter(),
+                then: None,
+                max: Some(2),
+                tapped: false,
+            }),
+            else_: Box::new(Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: x_plus_one(),
+                rest_to_graveyard: false,
+                pick_filter: Some(dig_filter()),
+                take: Some(Value::Const(2)),
+                to_battlefield: false,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kinzu of the Bleak Coven — {4}{B} 5/4 flying. Another nontoken creature of
+/// yours dying may be exiled for 2 life, leaving a 1/1 toxic 1 copy.
+pub fn kinzu_of_the_bleak_coven() -> CardDefinition {
+    CardDefinition {
+        name: "Kinzu of the Bleak Coven",
+        cost: cost(&[generic(4), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken,
+                }),
+            effect: Effect::MayPayLife {
+                description: "Pay 2 life to exile it for a 1/1 toxic copy?".into(),
+                amount: Value::Const(2),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: Selector::TriggerSource,
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: Some((1, 1)),
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![Keyword::Toxic(1)],
+                    },
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kethek, Crucible Goliath — {2}{B}{R} 4/4. Your end step: may sacrifice
+/// another creature to reveal-until a lesser-MV nonlegendary creature, deploy.
+pub fn kethek_crucible_goliath() -> CardDefinition {
+    CardDefinition {
+        name: "Kethek, Crucible Goliath",
+        cost: cost(&[generic(2), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a creature to dig out a lesser one?".into(),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                count: Value::ONE,
+                then: Box::new(Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasSupertype(Supertype::Legendary),
+                        )))
+                        .and(SelectionRequirement::ManaValueAtMostSacrificedPlus(0))
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::ManaValueEqualsSacrificedPlus(0),
+                        ))),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    cap: Value::LibrarySizeOf(PlayerRef::You),
+                    life_per_revealed: 0,
+                    miss_dest: crate::effect::RevealMissDest::BottomRandom,
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Argentum Masticore — {5} 5/5, first strike, protection from multicolored.
+/// Your upkeep: discard a card (destroying a lesser opposing nonland
+/// permanent) or sacrifice it.
+pub fn argentum_masticore() -> CardDefinition {
+    CardDefinition {
+        name: "Argentum Masticore",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Masticore],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::FirstStrike, Keyword::ProtectionFromMulticolored],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::MayDiscard {
+                description: "Discard a card or sacrifice Argentum Masticore?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::Reflexive {
+                    body: Box::new(Effect::Destroy {
+                        what: target_filtered(
+                            SelectionRequirement::Permanent
+                                .and(SelectionRequirement::Nonland)
+                                .and(SelectionRequirement::ControlledByOpponent)
+                                .and(SelectionRequirement::ManaValueAtMostDiscardedThisEffect),
+                        ),
+                    }),
+                }),
+                else_: Some(Box::new(Effect::SacrificeSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unctus's Retrofitter — {2}{U} 2/3, toxic 1. ETB: an artifact you control
+/// becomes a 4/4 artifact creature (approximated as a permanent animation).
+pub fn unctuss_retrofitter() -> CardDefinition {
+    CardDefinition {
+        name: "Unctus's Retrofitter",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![etb(Effect::BecomeCreature {
+            what: target_filtered(
+                SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            creature_types: vec![],
+            keywords: vec![],
+            duration: Duration::Permanent,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vanish into Eternity — {2}{W} Instant. Exile target nonland permanent;
+/// costs {3} more if it targets a creature.
+pub fn vanish_into_eternity() -> CardDefinition {
+    CardDefinition {
+        name: "Vanish into Eternity",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        cost_increase_if_targets: Some((SelectionRequirement::Creature, 3)),
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            ),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Viral Spawning — {2}{G} Sorcery. A 3/3 toxic Beast; Corrupted grants it
+/// flashback {2}{G}.
+pub fn viral_spawning() -> CardDefinition {
+    CardDefinition {
+        name: "Viral Spawning",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), g()]))],
+        flashback_condition: Some(Predicate::CorruptedActive { who: PlayerRef::You }),
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: beast_token(),
+        },
+        ..Default::default()
+    }
+}
+
+/// Zenith Chronicler — {2} 3/1. A player's first multicolored spell each turn
+/// draws each other player a card.
+pub fn zenith_chronicler() -> CardDefinition {
+    CardDefinition {
+        name: "Zenith Chronicler",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Multicolored,
+                    },
+                    Predicate::ValueEquals(
+                        Value::MulticoloredSpellsCastThisTurn(PlayerRef::ControllerOf(Box::new(
+                            Selector::TriggerSource,
+                        ))),
+                        Value::ONE,
+                    ),
+                ]),
+            ),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayerExceptControllerOf(Box::new(
+                    Selector::TriggerSource,
+                ))),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Noxious Assault — {3}{G}{G} Sorcery. Team +2/+2; blocks this turn poison
+/// the blocker's controller.
+pub fn noxious_assault() -> CardDefinition {
+    CardDefinition {
+        name: "Noxious Assault",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BlockersPoisonedThisTurn { amount: 1 },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Contagious Vorrac — {2}{G} 3/3. ETB: dig 4 for a land to hand; finding
+/// none, proliferate. (Taking a found land is assumed.)
+pub fn contagious_vorrac() -> CardDefinition {
+    let dig = |extra: Option<Effect>| {
+        let look = Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Land),
+            take: None,
+            to_battlefield: false,
+        };
+        match extra {
+            Some(e) => Effect::Seq(vec![look, e]),
+            None => look,
+        }
+    };
+    CardDefinition {
+        name: "Contagious Vorrac",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Phyrexian,
+                CreatureType::Boar,
+                CreatureType::Beast,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CountMatching {
+                    sel: Box::new(Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(4) }),
+                    filter: SelectionRequirement::Land,
+                },
+                Value::ONE,
+            ),
+            then: Box::new(dig(None)),
+            else_: Box::new(dig(Some(Effect::Proliferate))),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Expand the Sphere — {3}{G} Sorcery. Dig 6 for up to two lands onto the
+/// battlefield tapped; proliferate once per land short of two.
+pub fn expand_the_sphere() -> CardDefinition {
+    CardDefinition {
+        name: "Expand the Sphere",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Repeat {
+                count: Value::NonNeg(Box::new(Value::Diff(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::Min(
+                        Box::new(Value::Const(2)),
+                        Box::new(Value::CountMatching {
+                            sel: Box::new(Selector::TopOfLibrary {
+                                who: PlayerRef::You,
+                                count: Value::Const(6),
+                            }),
+                            filter: SelectionRequirement::Land,
+                        }),
+                    )),
+                ))),
+                body: Box::new(Effect::Proliferate),
+            },
+            Effect::LookTopPutMatchingOntoBattlefield {
+                count: Value::Const(6),
+                filter: SelectionRequirement::Land,
+                then: None,
+                max: Some(2),
+                tapped: true,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goliath Hatchery — {4}{G}{G}. ETB: two 3/3 toxic Beasts. Corrupted — your
+/// upkeep draws cards equal to your best total toxic value.
+pub fn goliath_hatchery() -> CardDefinition {
+    CardDefinition {
+        name: "Goliath Hatchery",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: beast_token(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::CorruptedActive { who: PlayerRef::You }),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::GreatestToxicAmongControlled(PlayerRef::You),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

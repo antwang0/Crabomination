@@ -8316,6 +8316,8 @@ pub fn ultima_origin_of_oblivion() -> CardDefinition {
 pub fn gilgamesh_master_at_arms() -> CardDefinition {
     let dig = || Effect::LookTopPutMatchingOntoBattlefield {
         count: Value::Const(6),
+        max: None,
+        tapped: false,
         filter: SelectionRequirement::HasCardType(CardType::Artifact)
             .and(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)),
         then: Some(Box::new(Effect::Attach {

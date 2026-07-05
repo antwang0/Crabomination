@@ -808,6 +808,12 @@ pub struct GameState {
     /// Reset between independent resolutions.
     #[serde(default)]
     pub(crate) sacrificed_mana_value: Option<u32>,
+    /// Mana value of the last card discarded during the current resolution
+    /// (Argentum Masticore's "MV ≤ the discarded card" reflexive gate).
+    pub(crate) last_discarded_mana_value: Option<u32>,
+    /// "Whenever a creature blocks this turn, its controller gets N poison
+    /// counters" (Noxious Assault). Cleared at cleanup.
+    pub(crate) block_poison_this_turn: u32,
     /// Transient: power of the creature tapped to pay a Station ability's cost
     /// (CR 702.184a). Stamped by `Effect::WithTappedPower` at resolution; read
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
@@ -1502,6 +1508,8 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
+            last_discarded_mana_value: self.last_discarded_mana_value,
+            block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             last_created_token: self.last_created_token,
@@ -1648,6 +1656,8 @@ impl GameState {
             sacrificed_power: None,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
+            last_discarded_mana_value: None,
+            block_poison_this_turn: 0,
             tapped_for_cost_power: None,
             trigger_event_amount_scratch: 0,
             last_created_token: None,
@@ -7239,6 +7249,7 @@ impl GameState {
             self.players[p].cards_discarded_this_turn.saturating_add(1);
         self.players[p].discarded_this_turn.insert(card_id);
         self.cards_discarded_this_resolution += 1;
+        self.last_discarded_mana_value = Some(card.definition.cost.cmc());
         *self
             .cards_discarded_per_player_this_resolution
             .entry(p)

@@ -563,6 +563,11 @@ pub enum Value {
     /// The player's poison counters (Vraska's −9 "counters equal to the
     /// difference" top-up).
     PoisonCountersOf(PlayerRef),
+    /// Multicolored spells the player has cast this turn (Zenith Chronicler).
+    MulticoloredSpellsCastThisTurn(PlayerRef),
+    /// The greatest total toxic value among creatures the player controls
+    /// (Goliath Hatchery's Corrupted draw; CR 702.180b sums instances).
+    GreatestToxicAmongControlled(PlayerRef),
     /// Two raised to the inner value, clamped to a sane upper bound (≤30).
     /// Used by SOS Mathemagics — "target player draws 2ˣ cards" — so the
     /// X-cost bombshell scales correctly at the small/medium values
@@ -2640,6 +2645,13 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
         then: Option<Box<Effect>>,
+        /// Cap on how many matches are deployed (Expand the Sphere's "up to
+        /// two"). None = all matching.
+        #[serde(default)]
+        max: Option<u32>,
+        /// Deployed cards enter tapped.
+        #[serde(default)]
+        tapped: bool,
     },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the
@@ -3802,6 +3814,10 @@ pub enum Effect {
     /// player's qualifying attacker; the attacker is bound as
     /// `Selector::TriggerSource`. Summon: Leviathan II/III.
     OnMatchingAttacksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
+    /// "Whenever a creature blocks this turn, its controller gets `amount`
+    /// poison counters" (Noxious Assault). Turn-scoped flag consumed at
+    /// blocker declaration.
+    BlockersPoisonedThisTurn { amount: u32 },
     /// Stagger (Lightning, Army of One) — until your next turn, if a source
     /// would deal damage to `who` or a permanent they control, it deals
     /// double that damage instead (CR 614.5-style replacement).

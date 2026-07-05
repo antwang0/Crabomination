@@ -384,6 +384,7 @@ impl GameState {
                     pl.spells_cast_this_game_turn = 0;
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
+                    pl.multicolored_spells_cast_this_turn = 0;
                     // CR 603.7e — unused "your next creature spell this turn"
                     // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();
@@ -2155,6 +2156,7 @@ impl GameState {
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();
         self.damage_cant_be_prevented_this_turn = false;
+        self.block_poison_this_turn = 0;
         // Empty mana pools (Kruphix converts to colorless instead).
         self.empty_mana_pools();
     }
