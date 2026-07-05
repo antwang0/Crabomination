@@ -391,6 +391,11 @@ pub struct Player {
     pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// CR 614 — Melira, the Living Cure's cap already replaced a poison
+    /// placement this turn; further poison this turn is dropped. Reset at
+    /// the turn boundary. Default false for snapshot back-compat.
+    #[serde(default)]
+    pub poison_capped_this_turn: bool,
     /// CR 701.54 — how many times the Ring has tempted this player (0–4; the
     /// printed abilities are "two/three/four or more", so we cap the stored
     /// value at 4). Each step up activates another of The Ring's emblem
@@ -658,6 +663,7 @@ impl Player {
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            poison_capped_this_turn: false,
             ring_temptations: 0,
             ring_bearer: None,
             speed: 0,

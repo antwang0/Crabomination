@@ -2169,11 +2169,7 @@ impl GameState {
                     return;
                 }
                 if atk.has_infect {
-                    // CR 614.16 — infect poison the player gets scales with
-                    // their own counter modifiers (Winding Constrictor).
-                    let n = self.scaled_player_counter_count(p, amount);
-                    self.players[p].poison_counters += n;
-                    events.push(GameEvent::PoisonAdded { player: p, amount: n });
+                    self.add_poison(p, amount, events);
                 } else {
                     let applied = self.adjust_life_applied(p, -(amount as i32));
                     events.push(GameEvent::DamageDealt {
@@ -2217,11 +2213,7 @@ impl GameState {
                 // player, on top of any life loss (and stacks with Infect's
                 // poison). Only when damage was actually dealt.
                 if atk.toxic > 0 && amount > 0 {
-                    // CR 614.16 — Toxic poison scales with the poisoned
-                    // player's counter modifiers (Winding Constrictor).
-                    let n = self.scaled_player_counter_count(p, atk.toxic);
-                    self.players[p].poison_counters += n;
-                    events.push(GameEvent::PoisonAdded { player: p, amount: n });
+                    self.add_poison(p, atk.toxic, events);
                 }
                 // Phase M: bump the 21-commander-damage tally when the
                 // attacker is a Commander. Both Infect and regular

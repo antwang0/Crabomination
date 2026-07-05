@@ -2622,6 +2622,51 @@ impl GameState {
         n
     }
 
+    /// Central poison-placement funnel (CR 122 / 614.16): scales `base` by
+    /// the poisoned player's counter modifiers (Winding Constrictor adder +
+    /// doublers), applies Melira's "instead you get one and no more this
+    /// turn" cap (CR 614), bumps `poison_counters`, and emits `PoisonAdded`.
+    /// Every poison site routes here — `Effect::AddPoison`,
+    /// `AddCounter(Player)`, proliferate, and infect/toxic combat damage.
+    /// Returns the number of counters actually applied.
+    pub(crate) fn add_poison(
+        &mut self,
+        seat: usize,
+        base: u32,
+        events: &mut Vec<GameEvent>,
+    ) -> u32 {
+        let mut n = self.scaled_player_counter_count(seat, base);
+        // CR 614 — Melira, the Living Cure: "If you would get one or more
+        // poison counters, instead you get one poison counter and you can't
+        // get additional poison counters this turn."
+        if n > 0 && self.player_has_static(seat, |se| {
+            matches!(se, crate::effect::StaticEffect::PoisonCappedAtOnePerTurn)
+        }) {
+            n = if self.players[seat].poison_capped_this_turn { 0 } else { 1 };
+            self.players[seat].poison_capped_this_turn = true;
+        }
+        if n == 0 {
+            return 0;
+        }
+        self.players[seat].poison_counters += n;
+        events.push(GameEvent::PoisonAdded { player: seat, amount: n });
+        n
+    }
+
+    /// Whether `seat` controls a permanent printing a static ability matching
+    /// `pred` — the shared query for player-scoped consult-at-a-funnel
+    /// statics (draw doubling, proliferate doubling, poison caps, …).
+    pub(crate) fn player_has_static(
+        &self,
+        seat: usize,
+        pred: impl Fn(&crate::effect::StaticEffect) -> bool,
+    ) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
+        })
+    }
+
     /// Number of `StaticEffect::DoublePlusOneCounters` permanents `seat`
     /// controls — each doubles a +1/+1 placement onto one of `seat`'s
     /// creatures (Branching Evolution / The Earth Crystal). Multiplicative,
@@ -4575,7 +4620,7 @@ impl GameState {
                     continue;
                 };
                 let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
-                if !requirement_mentions_modified(req) && !requirement_mentions_attacking(req) {
+                if !requirement_needs_live_resolution(req) {
                     continue;
                 }
                 let ids: Vec<CardId> = self
@@ -4619,7 +4664,7 @@ impl GameState {
                     continue;
                 };
                 let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
-                if !requirement_mentions_modified(req) && !requirement_mentions_attacking(req) {
+                if !requirement_needs_live_resolution(req) {
                     continue;
                 }
                 let ids: Vec<CardId> = self
@@ -8223,10 +8268,14 @@ impl GameState {
         // Event-keyed delayed triggers ("when [card] dies this turn, …").
         // Fire any `WhenCardDies(cid)` whose watched card appears in a
         // `CreatureDied` event in this batch, with its captured target.
+        // `PermanentDied` covers non-creature deaths (a watched artifact —
+        // Melira's return rider); a creature death lists its id twice, which
+        // is harmless since a fired watcher is removed.
         let died: Vec<CardId> = events
             .iter()
             .filter_map(|e| match e {
-                GameEvent::CreatureDied { card_id } => Some(*card_id),
+                GameEvent::CreatureDied { card_id }
+                | GameEvent::PermanentDied { card_id, .. } => Some(*card_id),
                 _ => None,
             })
             .collect();
@@ -8427,6 +8476,13 @@ impl GameState {
                 .chain(static_granted.iter().map(|t| (usize::MAX, t)))
                 .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
+                // A `FromYourGraveyard`-scoped trigger functions ONLY while
+                // its card is in a graveyard (CR 603.3d zone-scoping —
+                // Bloodghast, Voidwing Hybrid); the graveyard walk below
+                // gathers those. Skip them on the battlefield.
+                if matches!(ta.event.scope, crate::effect::EventScope::FromYourGraveyard) {
+                    continue;
+                }
                 // CR 603.3d — "triggers only once each turn": skip if it has
                 // already fired this turn or earlier in this same batch.
                 let once_key = (card.id, trig_idx);
@@ -8472,6 +8528,9 @@ impl GameState {
                         // Enrage fires once per instance of damage
                         // (CR 702.130a) — fan out across the batch.
                         | crate::effect::EventKind::DealtDamage
+                        // A Tekuthal-doubled proliferate emits two events in
+                        // one batch; payoffs fire once per proliferation.
+                        | crate::effect::EventKind::Proliferated
                 );
                 // "Only once each turn" overrides fan-out: a single batch of
                 // simultaneous events mints one trigger, not one per event.
@@ -12032,6 +12091,10 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantMakeYouSacrifice
             | StaticEffect::OpponentsCantMakeYouDiscard
             | StaticEffect::ControllerDrawsDoubled
+            // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
+            // proliferate resolver / `add_poison` funnel.
+            | StaticEffect::ProliferateTwice
+            | StaticEffect::PoisonCappedAtOnePerTurn
             | StaticEffect::RedirectDamageToSelf
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
@@ -12095,6 +12158,28 @@ fn requirement_mentions_modified(req: &SelectionRequirement) -> bool {
         R::Not(inner) => requirement_mentions_modified(inner),
         _ => false,
     }
+}
+
+fn requirement_mentions_equipped(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::IsEquipped | R::EquippedByAtLeast(_) => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_equipped(a) || requirement_mentions_equipped(b)
+        }
+        R::Not(inner) => requirement_mentions_equipped(inner),
+        _ => false,
+    }
+}
+
+/// Whether a `GrantKeyword` / `PumpPT` static's filter reads live battlefield
+/// state (combat role, modified-ness, attachment counts) and must therefore be
+/// resolved into a `Specific` id list on every layer recompute instead of
+/// routing through the state-blind `CardMatch` path.
+fn requirement_needs_live_resolution(req: &SelectionRequirement) -> bool {
+    requirement_mentions_modified(req)
+        || requirement_mentions_attacking(req)
+        || requirement_mentions_equipped(req)
 }
 
 /// Whether `req` references the live combat state (`IsAttacking`), so a

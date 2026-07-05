@@ -1900,6 +1900,8 @@ pub enum GameEventWire {
     LifeGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::ScriedOrSurveiled`.
     ScriedOrSurveiled { player: usize, surveil: bool },
+    /// Wire mirror of `GameEvent::Proliferated` (CR 701.34).
+    Proliferated { player: usize },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::CommittedCrime` (CR 700.13).
@@ -2060,6 +2062,9 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::ScriedOrSurveiled { player, surveil } => {
                 GameEventWire::ScriedOrSurveiled { player: *player, surveil: *surveil }
+            }
+            GameEvent::Proliferated { player } => {
+                GameEventWire::Proliferated { player: *player }
             }
             GameEvent::EnergyGained { player, amount } => GameEventWire::EnergyGained {
                 player: *player,
@@ -2324,6 +2329,7 @@ impl GameEventWire {
             // ScryPerformed/SurveilPerformed line already covers the log, so
             // this one renders blank (and the client skips blank rows).
             E::ScriedOrSurveiled { .. } => String::new(),
+            E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
             E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),

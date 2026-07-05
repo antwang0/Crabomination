@@ -1912,6 +1912,7 @@ pub fn make_your_mark() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 slot: 0,
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,

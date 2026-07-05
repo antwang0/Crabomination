@@ -13,6 +13,7 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
     match cost {
         WardCost::Mana(c) => c.cmc() == 0,
         WardCost::Life(n) => *n == 0,
+        WardCost::ManaAndLife(c, n) => c.cmc() == 0 && *n == 0,
         WardCost::Discard(n) => *n == 0,
         WardCost::Blight(n) => *n == 0,
         WardCost::SacrificeCreature => false,
@@ -9192,7 +9193,10 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller == p)
                 .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
-                .map(|c| c.counter_count(*kind))
+                .map(|c| match kind {
+                    Some(k) => c.counter_count(*k),
+                    None => c.counters.values().sum(),
+                })
                 .sum();
             if have < *count {
                 return Err(GameError::SelectionRequirementViolated);
@@ -9572,10 +9576,16 @@ impl GameState {
         // counters distributed across matching permanents you control. The
         // auto-picker takes them lowest-power-first (validated pre-flight).
         if let Some((kind, count, filter)) = ability.remove_counter_among_filter.clone() {
+            let total = |c: &CardInstance| -> u32 {
+                match kind {
+                    Some(k) => c.counter_count(k),
+                    None => c.counters.values().sum(),
+                }
+            };
             let mut picks: Vec<(CardId, i32)> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == p && c.counter_count(kind) > 0)
+                .filter(|c| c.controller == p && total(c) > 0)
                 .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
@@ -9584,9 +9594,25 @@ impl GameState {
             for (cid, _) in picks {
                 if left == 0 { break; }
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
-                    let take = left.min(c.counter_count(kind));
-                    c.remove_counters(kind, take);
-                    left -= take;
+                    match kind {
+                        Some(k) => {
+                            let take = left.min(c.counter_count(k));
+                            c.remove_counters(k, take);
+                            left -= take;
+                        }
+                        None => {
+                            // Any-kind drain: take from each present kind in
+                            // turn until the quota is met.
+                            let kinds: Vec<_> =
+                                c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
+                            for k in kinds {
+                                if left == 0 { break; }
+                                let take = left.min(c.counter_count(k));
+                                c.remove_counters(k, take);
+                                left -= take;
+                            }
+                        }
+                    }
                 }
             }
         }

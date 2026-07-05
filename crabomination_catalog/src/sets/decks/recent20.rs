@@ -121,9 +121,10 @@ pub fn battle_cry_goblin() -> CardDefinition {
 
 // ── Commit a crime ───────────────────────────────────────────────────────────
 
-/// Gisa, the Hellraiser — {3}{B}{B} 4/4 Legendary Human Warlock. Ward—{2}.
-/// Skeletons and Zombies you control get +1/+1 and have menace. Whenever you
-/// commit a crime, create two tapped 2/2 Zombie Rogue tokens (once each turn).
+/// Gisa, the Hellraiser — {3}{B}{B} 4/4 Legendary Human Warlock. Ward—{2},
+/// Pay 2 life. Skeletons and Zombies you control get +1/+1 and have menace.
+/// Whenever you commit a crime, create two tapped 2/2 Zombie Rogue tokens
+/// (once each turn).
 pub fn gisa_the_hellraiser() -> CardDefinition {
     let undead = || {
         Selector::EachPermanent(
@@ -143,8 +144,7 @@ pub fn gisa_the_hellraiser() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        // "Ward—{2}, Pay 2 life": the life half is approximated away.
-        keywords: vec![Keyword::Ward(WardCost::generic(2))],
+        keywords: vec![Keyword::Ward(WardCost::ManaAndLife(cost(&[generic(2)]), 2))],
         static_abilities: vec![
             StaticAbility {
                 description: "Skeletons and Zombies you control get +1/+1.",

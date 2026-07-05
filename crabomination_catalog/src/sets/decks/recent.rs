@@ -1322,6 +1322,7 @@ pub fn blessed_defiance() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 slot: 0,
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
@@ -5585,6 +5586,7 @@ pub fn felonious_rage() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 slot: 0,
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,

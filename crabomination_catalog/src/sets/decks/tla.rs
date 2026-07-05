@@ -4679,6 +4679,7 @@ pub fn fatal_fissure() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::WhenTargetDiesThisTurn {
+            filter: None,
             body: Box::new(Effect::Earthbend { n: Value::Const(4) }),
             slot: 0,
         },

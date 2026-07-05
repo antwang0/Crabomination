@@ -1476,6 +1476,11 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
+    /// CR 701.34 — a player proliferated. Fires once per proliferate
+    /// instance (so a Tekuthal-doubled proliferate fires payoffs twice);
+    /// the proliferating player is the event actor. "Whenever you
+    /// proliferate" (Scheming Aspirant, Ezuri, Voidwing Hybrid).
+    Proliferated,
     /// CR 701.54 — the Ring tempted a player (and they chose a Ring-bearer).
     /// Matched to `GameEvent::RingTempted`; the chosen bearer rides in as the
     /// trigger subject. Powers "whenever you choose a creature as your
@@ -4149,6 +4154,12 @@ pub enum Effect {
         /// Which target slot to watch (default 0 via `#[serde(default)]`).
         #[serde(default)]
         slot: usize,
+        /// Cast-time filter for the watched target when this effect is the
+        /// slot's *only* mention (Melira's "another target creature or
+        /// artifact"); `None` when a preceding effect already declared it
+        /// (Searing Blood's damage). Surfaced by the target walkers.
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
     },
 
     /// "Whenever a creature you control enters this turn, [body]." Registers

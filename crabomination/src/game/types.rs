@@ -1435,6 +1435,9 @@ pub enum GameEvent {
     /// CR 701.22/701.42 — `player` scried or surveiled (a nonzero peek).
     /// `surveil` distinguishes the two for surveil-only / scry-only payoffs.
     ScriedOrSurveiled { player: usize, surveil: bool },
+    /// CR 701.34 — `player` proliferated (once per proliferate instance;
+    /// a doubled proliferate emits two events).
+    Proliferated { player: usize },
     /// CR 700.14 — `player` paid a spell cost, bringing their running
     /// total of mana spent to cast spells this turn to `total`. "Whenever
     /// you expend N" triggers (`EventKind::Expend` + `Predicate::

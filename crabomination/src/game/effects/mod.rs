@@ -5878,11 +5878,7 @@ impl GameState {
                             self.permanents_gained_counter_this_turn.insert(cid);
                         }
                         EntityRef::Player(p) if *kind == CounterType::Poison => {
-                            // Poison on a player scales per CR 614.16 — Winding
-                            // Constrictor's +1 adder then any counter doublers.
-                            let n = self.scaled_player_counter_count(p, base);
-                            self.players[p].poison_counters += n;
-                            events.push(GameEvent::PoisonAdded { player: p, amount: n });
+                            self.add_poison(p, base, events);
                         }
                         _ => {}
                     }
@@ -6211,79 +6207,21 @@ impl GameState {
             }
 
             Effect::Proliferate => {
-                // CR 122.1 — Solemnity locks out all counter placement.
-                if self.counters_locked() { return Ok(()); }
-                // CR 701.34a — "To proliferate means to choose any number
-                // of permanents and/or players that have a counter, then
-                // give each one additional counter of each kind that
-                // permanent or player already has." The proliferating
-                // player picks which permanents and which players. The
-                // engine's auto-decider implements a strategic baseline:
-                //  - Pick each friendly permanent for every counter kind
-                //    that benefits the controller (+1/+1, Charge, Loyalty,
-                //    Page, Stun on enemy-bound permanents). Skip
-                //    MinusOneMinusOne on friendlies (would shrink them).
-                //  - Pick each enemy permanent for MinusOneMinusOne only
-                //    (would shrink them); skip +1/+1 on enemies (would
-                //    pump them).
-                //  - For poison: each opponent gets +1 poison; the
-                //    proliferating player declines their own poison
-                //    counter.
-                let proliferating = ctx.controller;
-                let updates: Vec<(CardId, Vec<CounterType>)> = self
+                // CR 701.34 / 614 — "If you would proliferate, proliferate
+                // twice instead" (Tekuthal). Each copy applies once to each
+                // resulting proliferate: n copies → 2^n proliferations.
+                let doublers = self
                     .battlefield
                     .iter()
-                    .map(|c| {
-                        let friendly = c.controller == proliferating;
-                        let kinds: Vec<CounterType> = c.counters.iter()
-                            .filter(|(_, n)| **n > 0)
-                            .filter(|(k, _)| match **k {
-                                // Bad-for-friendly: skip on your stuff,
-                                // proliferate on enemy stuff.
-                                CounterType::MinusOneMinusOne => !friendly,
-                                CounterType::Stun => !friendly,
-                                // Good-for-friendly: proliferate yours,
-                                // skip opponent's.
-                                CounterType::PlusOnePlusOne
-                                | CounterType::Loyalty
-                                | CounterType::Charge
-                                | CounterType::Page => friendly,
-                                // Other kinds: proliferate by default
-                                // (the controller can always elect to
-                                // proliferate any counter under the
-                                // printed rule).
-                                _ => true,
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(sa.effect, crate::effect::StaticEffect::ProliferateTwice)
                             })
-                            .map(|(k, _)| *k)
-                            .collect();
-                        (c.id, kinds)
                     })
-                    .filter(|(_, kinds)| !kinds.is_empty())
-                    .collect();
-                for (cid, kinds) in updates {
-                    if let Some(c) = self.battlefield_find_mut(cid) {
-                        for k in kinds {
-                            c.add_counters(k, 1);
-                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: 1 });
-                        }
-                    }
-                }
-                for i in 0..self.players.len() {
-                    if self.players[i].poison_counters > 0 && i != proliferating {
-                        self.players[i].poison_counters += 1;
-                        events.push(GameEvent::PoisonAdded { player: i, amount: 1 });
-                    }
-                }
-                // CR 701.34a — the proliferating player may also add a counter
-                // to *players* who have one. The auto-decider proliferates the
-                // controller's own beneficial resource counters (experience,
-                // energy) and declines opponents' (as with +1/+1 vs enemies).
-                if self.players[proliferating].experience > 0 {
-                    self.players[proliferating].experience += 1;
-                }
-                if self.players[proliferating].energy > 0 {
-                    self.players[proliferating].energy += 1;
-                    events.push(GameEvent::EnergyGained { player: proliferating, amount: 1 });
+                    .count() as u32;
+                for _ in 0..(1u32 << doublers.min(8)) {
+                    self.do_proliferate(ctx.controller, events);
                 }
                 Ok(())
             }
@@ -7139,6 +7077,24 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::ManaAndLife(mc, n) => {
+                        // Compound "Ward—{cost}, Pay N life" (Ovika, Gisa):
+                        // check the life half first (no rollback needed),
+                        // then attempt the mana half.
+                        let life = *n as i32;
+                        if self.effective_life(affected_controller) < life {
+                            false
+                        } else {
+                            let saved_priority = self.priority.player_with_priority;
+                            self.priority.player_with_priority = affected_controller;
+                            let ok = self.try_pay_with_auto_tap(affected_controller, mc).is_ok();
+                            self.priority.player_with_priority = saved_priority;
+                            if ok {
+                                self.pay_life_cost(affected_controller, life as u32);
+                            }
+                            ok
+                        }
+                    }
                     WardCost::Discard(n) => {
                         // Ward—Discard N cards. Payable only if the
                         // controller has ≥ N cards in hand. Auto-pay
@@ -7846,12 +7802,7 @@ impl GameState {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        // CR 122 / 614.16 — Winding Constrictor's player half
-                        // ("you get that many plus one") composed with any
-                        // counter doublers.
-                        let n = self.scaled_player_counter_count(p, base);
-                        self.players[p].poison_counters += n;
-                        events.push(GameEvent::PoisonAdded { player: p, amount: n });
+                        self.add_poison(p, base, events);
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -10584,7 +10535,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WhenTargetDiesThisTurn { body, slot } => {
+            Effect::WhenTargetDiesThisTurn { body, slot, filter: _ } => {
                 // Watch the targeted creature's death; capture its controller
                 // as the body's Target(0) so it survives the creature leaving
                 // play. No-op if there's no permanent target (the creature
@@ -13939,6 +13890,79 @@ fn requirement_mentions_other_than_source(req: &crate::card::SelectionRequiremen
 // inflate `run_effect`'s (already enormous) debug-build stack frame —
 // deep effect recursion overflows the default test stack otherwise.
 impl GameState {
+    /// One proliferate instance (CR 701.34a): "choose any number of permanents
+    /// and/or players that have a counter, then give each one additional
+    /// counter of each kind that permanent or player already has." The
+    /// engine's auto-decider implements a strategic baseline:
+    ///  - each friendly permanent proliferates every counter kind that
+    ///    benefits the controller (+1/+1, Charge, Loyalty, Page); skips
+    ///    MinusOneMinusOne / Stun on friendlies;
+    ///  - each enemy permanent proliferates only its bad-for-them kinds;
+    ///  - each opponent with poison gets +1 poison; the proliferating player
+    ///    declines their own poison and proliferates their experience/energy.
+    /// Emits `GameEvent::Proliferated` even when Solemnity locks counter
+    /// placement — proliferating still happened (CR 701.34), it just adds
+    /// nothing.
+    pub(crate) fn do_proliferate(&mut self, proliferating: usize, events: &mut Vec<GameEvent>) {
+        events.push(GameEvent::Proliferated { player: proliferating });
+        // CR 122.1 — Solemnity locks out all counter placement.
+        if self.counters_locked() {
+            return;
+        }
+        let updates: Vec<(CardId, Vec<CounterType>)> = self
+            .battlefield
+            .iter()
+            .map(|c| {
+                let friendly = c.controller == proliferating;
+                let kinds: Vec<CounterType> = c.counters.iter()
+                    .filter(|(_, n)| **n > 0)
+                    .filter(|(k, _)| match **k {
+                        // Bad-for-friendly: skip on your stuff, proliferate
+                        // on enemy stuff.
+                        CounterType::MinusOneMinusOne => !friendly,
+                        CounterType::Stun => !friendly,
+                        // Good-for-friendly: proliferate yours, skip
+                        // opponent's.
+                        CounterType::PlusOnePlusOne
+                        | CounterType::Loyalty
+                        | CounterType::Charge
+                        | CounterType::Page => friendly,
+                        // Other kinds: proliferate by default (the controller
+                        // can always elect to proliferate any counter under
+                        // the printed rule).
+                        _ => true,
+                    })
+                    .map(|(k, _)| *k)
+                    .collect();
+                (c.id, kinds)
+            })
+            .filter(|(_, kinds)| !kinds.is_empty())
+            .collect();
+        for (cid, kinds) in updates {
+            if let Some(c) = self.battlefield_find_mut(cid) {
+                for k in kinds {
+                    c.add_counters(k, 1);
+                    events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: 1 });
+                }
+            }
+        }
+        for i in 0..self.players.len() {
+            if self.players[i].poison_counters > 0 && i != proliferating {
+                self.add_poison(i, 1, events);
+            }
+        }
+        // CR 701.34a — the proliferating player may also add a counter to
+        // *players* who have one. The auto-decider proliferates the
+        // controller's own beneficial resource counters (experience, energy)
+        // and declines opponents' (as with +1/+1 vs enemies).
+        if self.players[proliferating].experience > 0 {
+            self.players[proliferating].experience += 1;
+        }
+        if self.players[proliferating].energy > 0 {
+            self.players[proliferating].energy += 1;
+            events.push(GameEvent::EnergyGained { player: proliferating, amount: 1 });
+        }
+    }
 
     #[inline(never)]
     fn resolve_exchange_control_choosing(

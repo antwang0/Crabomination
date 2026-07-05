@@ -1077,10 +1077,12 @@ fn project_permanent(
         // future field can carry the richer WardCost shape if a client
         // needs it.
         ward_cost: card.definition.keywords.iter().find_map(|kw| {
-            if let crate::card::Keyword::Ward(crate::card::WardCost::Mana(c)) = kw {
-                Some(c.cmc())
-            } else {
-                None
+            match kw {
+                crate::card::Keyword::Ward(crate::card::WardCost::Mana(c))
+                | crate::card::Keyword::Ward(crate::card::WardCost::ManaAndLife(c, _)) => {
+                    Some(c.cmc())
+                }
+                _ => None,
             }
         }).unwrap_or(0),
         mana_value: card.definition.cost.cmc(),

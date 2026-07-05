@@ -9898,6 +9898,7 @@ pub fn searing_blood() -> CardDefinition {
         // when the 2 damage kills the creature within this same resolution.
         effect: Effect::Seq(vec![
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 body: Box::new(Effect::DealDamage {
                     to: Selector::Target(0),
                     amount: Value::Const(3),
@@ -48485,6 +48486,7 @@ fn death_protection_rider(name: &'static str) -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::WhenTargetDiesThisTurn {
+            filter: None,
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::TriggerSource,
@@ -49782,6 +49784,7 @@ pub fn malakir_rebirth() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 body: Box::new(Effect::Move {
                     what: Selector::TriggerSource,
                     to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },

@@ -450,6 +450,14 @@ pub enum StaticEffect {
     /// `draw_one`; the extra draw is not itself re-doubled by the same
     /// pass (CR 614.5), though stacked doublers each apply once.
     ControllerDrawsDoubled,
+    /// CR 701.34 / 614 — "If you would proliferate, proliferate twice
+    /// instead" (Tekuthal, Inquiry Dominus). Consulted per `Effect::Proliferate`
+    /// resolution for the source's controller; n copies → 2^n proliferations.
+    ProliferateTwice,
+    /// CR 614 — Melira, the Living Cure: if the source's controller would get
+    /// one or more poison counters, they get one instead and can't get more
+    /// this turn. Consulted in the `add_poison` funnel.
+    PoisonCappedAtOnePerTurn,
     /// CR 614.9 — damage redirection: all damage that would be dealt to the
     /// source's controller or another permanent they control is dealt to the
     /// source instead (Palisade Giant). Applied once per damage event
@@ -1538,7 +1546,8 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
-    /// Optional cost: remove `u32` counters of the named kind from among
+    /// Optional cost: remove `u32` counters of the named kind (`None` = any
+    /// mix of kinds — Tekuthal's "remove three counters") from among
     /// permanents matching the filter the activator controls (CR 602.5b —
     /// "Remove N [kind] counters from among creatures you control:"). Unlike
     /// `remove_counter_cost` the counters may come from any mix of matching
@@ -1546,7 +1555,8 @@ pub struct ActivatedAbility {
     /// below the count; the auto-picker drains lowest-value permanents first.
     /// Hopeful Initiate. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
-    pub remove_counter_among_filter: Option<(crate::card::CounterType, u32, SelectionRequirement)>,
+    pub remove_counter_among_filter:
+        Option<(Option<crate::card::CounterType>, u32, SelectionRequirement)>,
     /// True if activating this ability returns the source permanent to its
     /// owner's hand as part of the cost (CR 602.5b "Return this … to its
     /// owner's hand:" cost lines). The bounce happens after tap/mana/life

@@ -4266,6 +4266,7 @@ pub fn initiate_of_blood() -> CardDefinition {
             // Register the death-watch first so it's live if the 1 damage kills.
             effect: Effect::Seq(vec![
                 Effect::WhenTargetDiesThisTurn {
+                    filter: None,
                     body: Box::new(Effect::Flip { what: Selector::This }),
                     slot: 0,
                 },

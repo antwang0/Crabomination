@@ -1871,6 +1871,7 @@ impl GameState {
         // cast on your turn reads damage dealt since this turn began.
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
+            pl.poison_capped_this_turn = false;
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();

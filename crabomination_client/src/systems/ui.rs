@@ -922,6 +922,7 @@ fn event_phrase(spec: &crabomination::card::EventSpec) -> String {
         K::DealtDamage if self_src => "Whenever this is dealt damage,".into(),
         K::CreatureOrArtifactDied => "Whenever a creature or artifact you control dies,".into(),
         K::ScriedOrSurveiled if self_src => "Whenever you scry or surveil,".into(),
+        K::Proliferated => "Whenever you proliferate,".into(),
         K::AnyCounterAdded if self_src => "Whenever a counter is put on this,".into(),
         K::StepBegins(step) => format!("At the beginning of {step:?},").to_lowercase().replacen("at", "At", 1),
         K::TurnedFaceUp => "When this is turned face up,".into(),

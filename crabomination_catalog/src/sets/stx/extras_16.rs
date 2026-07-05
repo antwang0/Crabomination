@@ -246,6 +246,7 @@ pub fn devouring_tendrils() -> CardDefinition {
             // Register the death watch before dealing damage so the kill's
             // death event is caught (mirrors Searing Blood's ordering).
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 body: Box::new(Effect::GainLife {
                     who: Selector::Player(PlayerRef::You),
                     amount: Value::Const(2),

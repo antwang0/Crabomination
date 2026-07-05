@@ -2290,6 +2290,7 @@ pub fn desperate_measures() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::WhenTargetDiesThisTurn {
+                filter: None,
                 body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
                 slot: 0,
             },

@@ -206,6 +206,9 @@ pub enum LandType {
     Cave,
     // Final Fantasy — "Land — Town" (Towns-matter: Affinity for Towns, etc.).
     Town,
+    // Phyrexia: All Will Be One — "Land — Sphere" (the enters-tapped cycle +
+    // Mirrex/Monument utility lands).
+    Sphere,
 }
 
 /// Artifact subtypes.
@@ -442,6 +445,9 @@ pub enum Zone {
 pub enum WardCost {
     Mana(crate::mana::ManaCost),
     Life(u32),
+    /// Compound "Ward—{cost}, Pay N life" (Ovika, Enigma Goliath; Gisa, the
+    /// Hellraiser). Both halves must be paid or the spell/ability is countered.
+    ManaAndLife(crate::mana::ManaCost, u32),
     Discard(u32),
     /// "Ward—Blight N." (CR 701.68 — Auntie Ool, Cursewretch.) The warding
     /// player must put N -1/-1 counters on a creature they control.

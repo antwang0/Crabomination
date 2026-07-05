@@ -887,7 +887,9 @@ impl Effect {
             // target land").
             Effect::BecomeCopyOf { source, .. }
             | Effect::BecomeCopyOfFor { source, .. } => sel_filter(source),
-            Effect::WhenTargetDiesThisTurn { .. } => Some(&SelectionRequirement::Creature),
+            Effect::WhenTargetDiesThisTurn { filter, .. } => {
+                filter.as_ref().or(Some(&SelectionRequirement::Creature))
+            }
             // Modal cards: surface the first mode's filter as the
             // representative one (UI/bot still need *some* filter to
             // narrow target candidates). Mode-specific validation lives
@@ -1620,6 +1622,10 @@ impl Effect {
                 }
                 Effect::If { then, else_, .. } => eff_find(then, slot, mode, kicked)
                     .or_else(|| eff_find(else_, slot, mode, kicked)),
+                // A death-watch that is its slot's only mention declares the
+                // filter itself (Melira's "another target creature or artifact").
+                Effect::WhenTargetDiesThisTurn { filter: Some(f), slot: s, .. }
+                    if *s as u8 == slot => Some(f),
                 Effect::ForEach { selector, body } => {
                     sel_find(selector, slot).or_else(|| eff_find(body, slot, mode, kicked))
                 }

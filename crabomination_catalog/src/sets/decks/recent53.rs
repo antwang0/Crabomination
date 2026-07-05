@@ -346,7 +346,7 @@ pub fn hopeful_initiate() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w()]),
             remove_counter_among_filter: Some((
-                CounterType::PlusOnePlusOne,
+                Some(CounterType::PlusOnePlusOne),
                 2,
                 R::Creature.and(R::ControlledByYou),
             )),
