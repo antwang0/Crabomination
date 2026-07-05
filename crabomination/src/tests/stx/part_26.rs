@@ -278,6 +278,7 @@ fn biblioplex_assistant_returns_instant_from_graveyard_to_top() {
 fn overgrown_arch_gains_life_and_learns() {
     let mut g = two_player_game();
     let arch = g.add_card_to_battlefield(0, catalog::overgrown_arch());
+    g.clear_sickness(arch);
     g.battlefield_find_mut(arch).unwrap().tapped = false;
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {

@@ -4491,6 +4491,16 @@ impl GameState {
                 if !host_matches {
                     continue;
                 }
+                if let Some(pred) = &cond.condition {
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(pred, &ctx) {
+                        continue;
+                    }
+                }
                 if cond.power != 0 || cond.toughness != 0 {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
@@ -12046,6 +12056,9 @@ fn static_effect_to_effects(
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep
+            // ControllerCreatureAbilitiesAsThoughHaste (Tyvar) — consulted at
+            // the CR 602.5g activation gate; no layer effect.
+            | StaticEffect::ControllerCreatureAbilitiesAsThoughHaste
             // UntapSelfEachUntapStep (Thousand Moons Infantry) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapSelfEachUntapStep

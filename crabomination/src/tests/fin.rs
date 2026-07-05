@@ -786,6 +786,7 @@ fn goobbue_gardener_taps_for_green() {
 fn blazing_bomb_blow_up() {
     let mut g = two_player_game();
     let bomb = g.add_card_to_battlefield(0, catalog::blazing_bomb());
+    g.clear_sickness(bomb);
     g.battlefield_find_mut(bomb).unwrap().add_counters(CounterType::PlusOnePlusOne, 1); // → 2/2
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.step = TurnStep::PreCombatMain;
@@ -4781,6 +4782,7 @@ fn summon_fenrir_chapter_three_draws_on_greatest_power() {
 fn stiltzkin_donates_and_draws() {
     let mut g = two_player_game();
     let stiltzkin = g.add_card_to_battlefield(0, catalog::stiltzkin_moogle_merchant());
+    g.clear_sickness(stiltzkin);
     let gift = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::forest());
     g.players[0].mana_pool.add_colorless(2);

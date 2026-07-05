@@ -232,6 +232,7 @@ fn dryad_greenseeker_reveals_top_land() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::forest());
     let dryad = g.add_card_to_battlefield(0, catalog::dryad_greenseeker());
+    g.clear_sickness(dryad);
     g.priority.player_with_priority = 0;
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {

@@ -29,6 +29,7 @@ fn witherbloom_studies_mills_then_returns_to_hand() {
 fn prismari_channeler_taps_for_blue_or_red() {
     let mut g = two_player_game();
     let pc = g.add_card_to_battlefield(0, catalog::prismari_channeler());
+    g.clear_sickness(pc);
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("blue tap");
     drain_stack(&mut g);
@@ -1767,6 +1768,7 @@ fn prismari_cartographer_scrys_and_draws() {
 fn quandrix_geologist_can_tap_for_g_or_u() {
     let mut g = two_player_game();
     let qg = g.add_card_to_battlefield(0, catalog::quandrix_geologist());
+    g.clear_sickness(qg);
     let pool_g_before = g.players[0].mana_pool.amount(Color::Green);
     g.perform_action(GameAction::ActivateAbility {
         card_id: qg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Tap for G");

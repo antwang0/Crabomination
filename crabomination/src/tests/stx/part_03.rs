@@ -2509,6 +2509,7 @@ fn lorehold_lightning_deals_three_to_creature() {
 fn quandrix_engineer_taps_for_green_or_blue() {
     let mut g = two_player_game();
     let qe = g.add_card_to_battlefield(0, catalog::quandrix_engineer());
+    g.clear_sickness(qe);
     // Activate green-mana ability
     g.perform_action(GameAction::ActivateAbility {
         card_id: qe, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("green tap");

@@ -34,6 +34,7 @@ fn viridian_zealot_sacs_to_destroy_artifact_or_enchantment() {
     let zealot = g.add_card_to_battlefield(0, catalog::viridian_zealot());
     let ench = g.add_card_to_battlefield(1, catalog::mark_of_asylum());
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
     activate(&mut g, zealot, 0, Some(Target::Permanent(ench)));
     assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
     assert!(g.battlefield_find(zealot).is_none(), "Zealot sacrificed itself");

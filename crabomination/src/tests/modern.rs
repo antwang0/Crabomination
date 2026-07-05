@@ -10969,6 +10969,7 @@ fn final_reward_exiles_target_creature() {
 fn holy_light_sweeps_minus_one_minus_one() {
     let mut g = two_player_game();
     let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // 1/1
+    g.clear_sickness(elf); // auto-tap may only tap a non-sick elf (CR 602.5g)
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let id = g.add_card_to_hand(0, catalog::holy_light());
     g.players[0].mana_pool.add(Color::White, 1);
@@ -13819,6 +13820,7 @@ fn rofellos_taps_for_green_per_forest() {
     g.add_card_to_battlefield(0, catalog::forest());
     g.add_card_to_battlefield(0, catalog::forest());
     let id = g.add_card_to_battlefield(0, catalog::rofellos_llanowar_emissary());
+    g.clear_sickness(id);
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.add_card_to_battlefield(0, catalog::forest());
 
@@ -26454,6 +26456,7 @@ fn llanowar_visionary_draws_and_taps_for_green() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "ETB drew a card (cast -1, draw +1)");
+    g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("mana ability");
@@ -34380,6 +34383,7 @@ fn beacon_of_destruction_burns_and_reshuffles() {
 fn noble_hierarch_taps_for_a_color() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::noble_hierarch());
+    g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
         .expect("Noble Hierarch's mana ability activates");
@@ -38996,6 +39000,7 @@ fn wildfire_wickerfolk_delirium_pumps_and_grants_trample() {
 fn kindlespark_duo_pings_and_untaps_on_noncreature_cast() {
     let mut g = two_player_game();
     let duo = g.add_card_to_battlefield(0, catalog::kindlespark_duo());
+    g.clear_sickness(duo);
     g.players[1].life = 20;
     g.perform_action(GameAction::ActivateAbility {
         card_id: duo, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
@@ -39208,6 +39213,7 @@ fn pileated_provisioner_counters_nonflyer() {
 fn three_tree_rootweaver_taps_for_any_color() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::three_tree_rootweaver());
+    g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for mana");
@@ -40880,7 +40886,8 @@ fn goblin_chirurgeon_regenerates() {
 #[test]
 fn sparksmith_pings_for_goblin_count() {
     let mut g = two_player_game();
-    let smith = g.add_card_to_battlefield(0, catalog::sparksmith()); // 1 Goblin
+    let smith = g.add_card_to_battlefield(0, catalog::sparksmith());
+    g.clear_sickness(smith); // 1 Goblin
     g.add_card_to_battlefield(0, catalog::goblin_ringleader()); // 2 Goblins total
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
     let my_life = g.players[0].life;
@@ -41108,6 +41115,7 @@ fn impact_tremors_pings_on_creature_enter() {
 fn wellwisher_gains_life_per_elf() {
     let mut g = two_player_game();
     let well = g.add_card_to_battlefield(0, catalog::wellwisher());
+    g.clear_sickness(well);
     g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.add_card_to_battlefield(1, catalog::llanowar_elves()); // counts all Elves
     let life = g.players[0].life;
@@ -41123,6 +41131,7 @@ fn wellwisher_gains_life_per_elf() {
 fn timberwatch_elf_pumps_by_elf_count() {
     let mut g = two_player_game();
     let timber = g.add_card_to_battlefield(0, catalog::timberwatch_elf());
+    g.clear_sickness(timber);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::llanowar_elves()); // 2 Elves total
     g.perform_action(GameAction::ActivateAbility {
@@ -51255,6 +51264,7 @@ fn drana_counters_attackers_on_combat_damage() {
 fn cryptbreaker_mints_and_draws() {
     let mut g = two_player_game();
     let cb = g.add_card_to_battlefield(0, catalog::cryptbreaker());
+    g.clear_sickness(cb);
     g.add_card_to_hand(0, catalog::forest()); // discard fodder
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -59557,6 +59567,7 @@ fn bristling_boar_has_solo_block_clause() {
 fn humble_naturalist_makes_restricted_mana() {
     let mut g = two_player_game();
     let hn = g.add_card_to_battlefield(0, catalog::humble_naturalist());
+    g.clear_sickness(hn);
     g.perform_action(GameAction::ActivateAbility {
         card_id: hn, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
     }).expect("tap Humble Naturalist");
@@ -59864,6 +59875,7 @@ fn kogla_fights_on_etb_and_protects() {
 fn parcelbeast_drops_top_land() {
     let mut g = two_player_game();
     let pb = g.add_card_to_battlefield(0, catalog::parcelbeast());
+    g.clear_sickness(pb);
     let land = g.add_card_to_library(0, catalog::forest()); // top of empty library
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
@@ -61795,6 +61807,7 @@ fn general_kudro_etb_exiles_graveyard() {
 fn fiend_artisan_tutors_to_battlefield() {
     let mut g = two_player_game();
     let artisan = g.add_card_to_battlefield(0, catalog::fiend_artisan());
+    g.clear_sickness(artisan);
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let elf = g.add_card_to_library(0, catalog::llanowar_elves()); // MV1
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));

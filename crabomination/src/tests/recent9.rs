@@ -205,6 +205,7 @@ fn curious_farm_animals_gains_life_on_death() {
 fn deserters_disciple_grants_unblockable() {
     let mut g = two_player_game();
     let disciple = g.add_card_to_battlefield(0, catalog::deserters_disciple());
+    g.clear_sickness(disciple);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {

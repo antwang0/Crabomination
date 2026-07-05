@@ -266,6 +266,8 @@ pub enum PlaneswalkerSubtype {
     Wrenn,
     // NEO: The Wandering Emperor.
     WanderingEmperor,
+    // ONE planeswalkers.
+    Koth, Kaya, Tyvar, Kaito,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -2508,6 +2510,11 @@ pub struct ConditionalEquipBonus {
     pub toughness: i32,
     #[serde(default)]
     pub keywords: Vec<Keyword>,
+    /// Extra game-state gate ("Corrupted — enchanted creature gets an
+    /// additional +1/+0 and has first strike" — Zealot's Conviction).
+    /// Evaluated against the bonus source's controller each layer pass.
+    #[serde(default)]
+    pub condition: Option<crate::effect::Predicate>,
 }
 
 /// CR 702.95 — the bonus each member of a Soulbond pair gains while paired.

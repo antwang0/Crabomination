@@ -2362,6 +2362,7 @@ fn quandrix_mistwarden_taps_to_scry_one() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_battlefield(0, catalog::quandrix_mistwarden());
+    g.clear_sickness(id);
     let view = g.battlefield_find(id).expect("Mistwarden on bf");
     assert_eq!(view.power(), 0);
     assert_eq!(view.toughness(), 3);

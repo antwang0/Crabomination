@@ -170,6 +170,7 @@ fn whirling_dervish_grows_on_combat_damage() {
 fn femeref_archers_shoots_attacking_flyer() {
     let mut g = two_player_game();
     let archers = g.add_card_to_battlefield(0, catalog::femeref_archers());
+    g.clear_sickness(archers);
     let flyer = g.add_card_to_battlefield(0, catalog::bird_maiden()); // 1/2 flyer
     g.clear_sickness(flyer);
     while g.step != TurnStep::DeclareAttackers {

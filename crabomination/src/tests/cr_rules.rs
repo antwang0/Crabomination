@@ -5767,6 +5767,7 @@ fn cr_613_counter_gated_creature_type_composes_with_pt() {
 fn cr_103_4_above_starting_reads_actual_starting_life() {
     let mut g = two_player_game();
     let speaker = g.add_card_to_battlefield(0, catalog::speaker_of_the_heavens());
+    g.clear_sickness(speaker);
     g.players[0].starting_life = 40;
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
@@ -6284,6 +6285,7 @@ fn cr_702_6e_equipment_grants_attack_trigger() {
 fn cr_608_2h_sacrificed_source_deals_last_known_power() {
     let mut g = two_player_game();
     let bomb = g.add_card_to_battlefield(0, catalog::blazing_bomb());
+    g.clear_sickness(bomb);
     g.battlefield_find_mut(bomb).unwrap().add_counters(CounterType::PlusOnePlusOne, 2); // 3/3
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.step = TurnStep::PreCombatMain;

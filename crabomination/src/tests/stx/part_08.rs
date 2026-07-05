@@ -1775,6 +1775,7 @@ fn strixhaven_pupil_activated_scry_and_draw() {
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::lightning_bolt());
     let id = g.add_card_to_battlefield(0, catalog::strixhaven_pupil());
+    g.clear_sickness(id);
     g.players[0].mana_pool.add_colorless(2);
     drain_stack(&mut g);
     let hand_before = g.players[0].hand.len();

@@ -51911,12 +51911,14 @@ pub fn shield_of_the_oversoul() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Indestructible],
+                    condition: None,
                 },
                 ConditionalEquipBonus {
                     host_filter: SelectionRequirement::HasColor(Color::White),
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Flying],
+                    condition: None,
                 },
             ],
             ..Default::default()
@@ -51948,12 +51950,14 @@ pub fn steel_of_the_godhead() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Lifelink],
+                    condition: None,
                 },
                 ConditionalEquipBonus {
                     host_filter: SelectionRequirement::HasColor(Color::Blue),
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Unblockable],
+                    condition: None,
                 },
             ],
             ..Default::default()

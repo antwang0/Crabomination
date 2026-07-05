@@ -7683,6 +7683,7 @@ fn moseo_veins_new_dean_infusion_no_return_without_life_gain() {
 fn page_loose_leaf_taps_for_colorless() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::page_loose_leaf());
+    g.clear_sickness(id);
     drain_stack(&mut g);
 
     let mana_before = g.players[0].mana_pool.total();

@@ -557,6 +557,9 @@ pub enum Value {
     /// "if a land entered under your control this turn" landfall riders
     /// (Groundswell, Searing Blaze). Reset on the player's untap.
     LandsPlayedThisTurn(PlayerRef),
+    /// Artifacts that entered the battlefield under the player's control this
+    /// turn (`Player.artifacts_entered_this_turn`) — Malcator's end-step gate.
+    ArtifactsEnteredThisTurn(PlayerRef),
     /// Two raised to the inner value, clamped to a sane upper bound (≤30).
     /// Used by SOS Mathemagics — "target player draws 2ˣ cards" — so the
     /// X-cost bombshell scales correctly at the small/medium values

@@ -2377,7 +2377,7 @@ impl GameState {
             .find(|c| c.id == source)
             .map(|c| c.controller);
 
-        let mut triggers: Vec<(CardId, Effect, usize)> = self
+        let mut triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
             .battlefield
             .iter()
             .find(|c| c.id == source)
@@ -2405,7 +2405,7 @@ impl GameState {
                                     | crate::effect::EventScope::AnyPlayer
                             )
                     })
-                    .map(|t| (c.id, t.effect.clone(), c.controller))
+                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
                     .collect()
             })
             .unwrap_or_default();
@@ -2433,7 +2433,7 @@ impl GameState {
                                 | crate::effect::EventScope::AnyPlayer
                         )
                     {
-                        triggers.push((trig_source, t.effect.clone(), atk_ctrl));
+                        triggers.push((trig_source, t.effect.clone(), atk_ctrl, t.event.filter.clone()));
                     }
                 }
             }
@@ -2452,7 +2452,7 @@ impl GameState {
                 }
                 for t in &bonus.triggered_abilities {
                     if t.event.kind == kind {
-                        triggers.push((source, t.effect.clone(), atk_ctrl));
+                        triggers.push((source, t.effect.clone(), atk_ctrl, t.event.filter.clone()));
                     }
                 }
             }
@@ -2475,7 +2475,7 @@ impl GameState {
                     if t.event.kind == kind
                         && matches!(t.event.scope, crate::effect::EventScope::YourControl)
                     {
-                        triggers.push((c.id, t.effect.clone(), c.controller));
+                        triggers.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
                     }
                 }
             }
@@ -2498,7 +2498,12 @@ impl GameState {
                                 crate::effect::EventScope::FromYourGraveyard
                             )
                         {
-                            triggers.push((gy_card.id, t.effect.clone(), gy_card.owner));
+                            triggers.push((
+                                gy_card.id,
+                                t.effect.clone(),
+                                gy_card.owner,
+                                t.event.filter.clone(),
+                            ));
                         }
                     }
                 }
@@ -2514,7 +2519,7 @@ impl GameState {
         {
             for enc in &self.exile {
                 if enc.encoded_on == Some(source) {
-                    triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl));
+                    triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None));
                 }
             }
             // CR 701.54c (level 4+) — "Whenever your Ring-bearer deals combat
@@ -2529,11 +2534,29 @@ impl GameState {
                         amount: crate::effect::Value::Const(3),
                     },
                     atk_ctrl,
+                    None,
                 ));
             }
         }
 
-        for (trig_source, effect, controller) in triggers {
+        for (trig_source, effect, controller, filter) in triggers {
+            // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
+            // a creature you control *with toxic* deals combat damage…" —
+            // Necrogen Rotpriest). `TriggerSource` in the filter reads the
+            // dealing creature, not the listener.
+            if let Some(pred) = &filter {
+                let mut ctx = crate::game::effects::EffectContext::for_trigger(
+                    trig_source,
+                    controller,
+                    Some(default_target.clone()),
+                    0,
+                );
+                ctx.trigger_source =
+                    Some(crate::game::effects::EntityRef::Permanent(source));
+                if !self.evaluate_predicate(pred, &ctx) {
+                    continue;
+                }
+            }
             // Most combat-damage triggers implicitly target the damaged player
             // (drain riders, "that player discards / loses life"). But some
             // target a *graveyard* card (Efreet Flamepainter, Venerable

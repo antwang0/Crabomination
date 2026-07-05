@@ -136,6 +136,7 @@ fn savage_punch_ferocious_pumps_before_fight() {
 fn circle_of_elders_only_taps_when_formidable() {
     let mut g = two_player_game();
     let circle = g.add_card_to_battlefield(0, catalog::circle_of_elders());
+    g.clear_sickness(circle);
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     let act = GameAction::ActivateAbility {

@@ -43,6 +43,7 @@ fn nullmage_shepherd_taps_four_to_destroy() {
 fn magus_of_the_wheel_refills_both_hands() {
     let mut g = two_player_game();
     let magus = g.add_card_to_battlefield(0, catalog::magus_of_the_wheel());
+    g.clear_sickness(magus);
     for p in 0..2 {
         for _ in 0..3 { g.add_card_to_hand(p, catalog::forest()); }
         for _ in 0..10 { g.add_card_to_library(p, catalog::forest()); }
@@ -106,6 +107,7 @@ fn nighthawk_scavenger_scales_off_opponent_graveyard_types() {
 fn speaker_of_the_heavens_makes_angel_only_when_high_on_life() {
     let mut g = two_player_game();
     let speaker = g.add_card_to_battlefield(0, catalog::speaker_of_the_heavens());
+    g.clear_sickness(speaker);
     // At 20 life the ability is illegal — no Angel.
     g.players[0].life = 20;
     g.priority.player_with_priority = 0;

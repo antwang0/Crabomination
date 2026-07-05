@@ -101,7 +101,7 @@ pub fn manglehorn() -> CardDefinition {
     }
 }
 
-/// Viridian Zealot — {1}{G} 2/2 Elf Warrior. {G}, {T}, Sacrifice: Destroy
+/// Viridian Zealot — {1}{G} 2/2 Elf Warrior. {1}{G}, Sacrifice: Destroy
 /// target artifact or enchantment.
 pub fn viridian_zealot() -> CardDefinition {
     CardDefinition {
@@ -115,8 +115,7 @@ pub fn viridian_zealot() -> CardDefinition {
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: cost(&[g()]),
+            mana_cost: cost(&[generic(1), g()]),
             sac_cost: true,
             effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
             ..Default::default()

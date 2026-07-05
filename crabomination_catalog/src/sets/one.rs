@@ -8,7 +8,9 @@ use crate::card::{
     SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, WardCost,
 };
-use crate::effect::shortcut::{deal, drain, draw, etb, gain_life, on_attack, on_dies, target_filtered};
+use crate::effect::shortcut::{
+    deal, drain, draw, etb, gain_life, on_attack, on_dies, target_any, target_filtered,
+};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, phyrexian, r, u, w, Color};
@@ -4762,6 +4764,987 @@ pub fn awaken_the_sleeper() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── ONE remainder wave 1: rares/uncommons on existing primitives ────────────
+
+/// A 3/3 colorless Phyrexian Golem artifact creature token (Malcator).
+fn golem_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Phyrexian Golem".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Chittering Skitterling — {2}{B} 1/4 Phyrexian Rat. Corrupted — Sacrifice an
+/// artifact or creature: Draw a card. Only if an opponent has 3+ poison, once
+/// each turn.
+pub fn chittering_skitterling() -> CardDefinition {
+    CardDefinition {
+        name: "Chittering Skitterling",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                1,
+            )),
+            once_per_turn: true,
+            condition: Some(Predicate::CorruptedActive { who: PlayerRef::You }),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Filigree Sylex — {2} Legendary Artifact. {T}: oil counter. {T}, Sac:
+/// destroy each nonland permanent with MV = oil count. {T}, remove ten oil
+/// from among your permanents, Sac: 10 damage to any target.
+pub fn the_filigree_sylex() -> CardDefinition {
+    CardDefinition {
+        name: "The Filigree Sylex",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Oil,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::DestroyEachNonlandWithManaValue {
+                    value: Value::TotalCountersOn { what: Box::new(Selector::This) },
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                remove_counter_among_filter: Some((
+                    Some(CounterType::Oil),
+                    10,
+                    SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
+                )),
+                effect: deal(10, target_any()),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tamiyo's Logbook — {2}{U} Artifact — Book. {5}{U}, {T}: Draw a card. Costs
+/// {1} less to activate per other artifact you control.
+pub fn tamiyos_logbook() -> CardDefinition {
+    CardDefinition {
+        name: "Tamiyo's Logbook",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Book],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u()]),
+            tap_cost: true,
+            cost_reduction_per: Some(
+                SelectionRequirement::Artifact
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Staff of Compleation — {3} Artifact. {T}, Pay 1/2/3/4 life: destroy your
+/// permanent / any-color mana / proliferate / draw. {5}: Untap it.
+pub fn staff_of_compleation() -> CardDefinition {
+    CardDefinition {
+        name: "Staff of Compleation",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 1,
+                effect: Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::OwnedByYou),
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 2,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 3,
+                effect: Effect::Proliferate,
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 4,
+                effect: draw(1),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Koth, Fire of Resistance — {2}{R}{R} Planeswalker — Koth, loyalty 4.
+/// +2: tutor a basic Mountain to hand. −3: damage = your Mountains to a
+/// creature. −7: emblem "Mountain enters → 4 damage to any target".
+pub fn koth_fire_of_resistance() -> CardDefinition {
+    let mountain = SelectionRequirement::HasLandType(crate::card::LandType::Mountain);
+    CardDefinition {
+        name: "Koth, Fire of Resistance",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Koth],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand.and(mountain.clone()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                        mountain.clone().and(SelectionRequirement::ControlledByYou),
+                    ))),
+                },
+                ..Default::default()
+            },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Koth, Fire of Resistance".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::EntersBattlefield,
+                            EventScope::YourControl,
+                        )
+                        .with_filter(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: mountain,
+                        }),
+                        effect: deal(4, target_any()),
+                    }],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Malcator, Purity Overseer — {1}{W}{U} 1/1. ETB: a 3/3 Golem. Your end step,
+/// if three or more artifacts entered under your control this turn: a 3/3 Golem.
+pub fn malcator_purity_overseer() -> CardDefinition {
+    let mint_golem = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: golem_token(),
+    };
+    CardDefinition {
+        name: "Malcator, Purity Overseer",
+        cost: cost(&[generic(1), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Phyrexian,
+                CreatureType::Elephant,
+                CreatureType::Wizard,
+            ],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(mint_golem()),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::ArtifactsEnteredThisTurn(PlayerRef::You),
+                    Value::Const(3),
+                )),
+                effect: mint_golem(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Geth, Thane of Contracts — {1}{B}{B} 3/4. Other creatures you control get
+/// -1/-1. {1}{B}{B}, {T}, sorcery: reanimate a creature from your graveyard.
+/// (The "exile it if it would leave" rider is a finality counter.)
+pub fn geth_thane_of_contracts() -> CardDefinition {
+    CardDefinition {
+        name: "Geth, Thane of Contracts",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get -1/-1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: -1,
+                toughness: -1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b(), b()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::Finality,
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ichorplate Golem — {3} 2/3. Your creatures entering with oil get another
+/// oil counter; your oil-countered creatures get +1/+1.
+pub fn ichorplate_golem() -> CardDefinition {
+    CardDefinition {
+        name: "Ichorplate Golem",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::WithCounter(CounterType::Oil)),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::Oil,
+                amount: Value::ONE,
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with oil counters on them get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::Oil)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Necrogen Rotpriest — {2}{B}{G} 1/5, toxic 2. Your toxic creatures' combat
+/// damage to a player adds a poison counter. {1}{B}{G}: a toxic creature you
+/// control gains deathtouch until end of turn.
+pub fn necrogen_rotpriest() -> CardDefinition {
+    CardDefinition {
+        name: "Necrogen Rotpriest",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Phyrexian,
+                CreatureType::Zombie,
+                CreatureType::Cleric,
+            ],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        keywords: vec![Keyword::Toxic(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasToxic,
+                }),
+            effect: Effect::AddPoison {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b(), g()]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasToxic),
+                ),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Indoctrination Attendant — {3}{W} 3/4, toxic 1. ETB: you may bounce another
+/// permanent you control; if you do, create a Mite.
+pub fn indoctrination_attendant() -> CardDefinition {
+    CardDefinition {
+        name: "Indoctrination Attendant",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return another permanent you control to hand for a Mite?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::ChoosePermanentForSource {
+                    filter: SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                Effect::Move {
+                    what: Selector::ChosenPermanentOfSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
+                        Selector::ChosenPermanentOfSource,
+                    ))),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: mite_token(),
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mirrex — Land — Sphere. {T}: {C}. {T}: any color if it entered this turn.
+/// {3}, {T}: create a Mite.
+pub fn mirrex() -> CardDefinition {
+    CardDefinition {
+        name: "Mirrex",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Sphere],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::EnteredThisTurn,
+                }),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: mite_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Monumental Facade — Land — Sphere, enters with two oil counters.
+/// {T}: {C}. {T}, remove an oil counter: put an oil counter on target
+/// artifact or creature you control. Sorcery only.
+pub fn the_monumental_facade() -> CardDefinition {
+    CardDefinition {
+        name: "The Monumental Facade",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Sphere],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                remove_counter_cost: Some((CounterType::Oil, 1)),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::Oil,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Seedcore — Land — Sphere. {T}: {C}. {T}: any color for Phyrexian
+/// creature spells. Corrupted — {T}: target 1/1 creature gets +2/+1 until EOT.
+pub fn the_seedcore() -> CardDefinition {
+    CardDefinition {
+        name: "The Seedcore",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Sphere],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::AnyOneColor(Value::ONE)),
+                        crate::mana::SpendRestriction::CreatureOfType(CreatureType::Phyrexian),
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(Predicate::CorruptedActive { who: PlayerRef::You }),
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::PowerAtLeast(1))
+                            .and(SelectionRequirement::PowerAtMost(1))
+                            .and(SelectionRequirement::ToughnessAtLeast(1))
+                            .and(SelectionRequirement::ToughnessAtMost(1)),
+                    ),
+                    power: Value::Const(2),
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Zealot's Conviction — {W} Aura with flash. +1/+1; Corrupted — an additional
+/// +1/+0 and first strike.
+pub fn zealots_conviction() -> CardDefinition {
+    CardDefinition {
+        name: "Zealot's Conviction",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: SelectionRequirement::Creature,
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+                condition: Some(Predicate::CorruptedActive { who: PlayerRef::You }),
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Transplant Theorist — {3}{U} 2/4. Your artifacts (including this) entering
+/// let you loot. {2}: bottom target card from your graveyard.
+pub fn transplant_theorist() -> CardDefinition {
+    CardDefinition {
+        name: "Transplant Theorist",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::MayDo {
+                description: "Draw a card, then discard a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    draw(1),
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ])),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InYourGraveyard),
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Atlas — {3} Artifact. {T}: any color. Corrupted — on becoming
+/// tapped, each poisoned-out opponent loses 1 life (exact in two-player).
+pub fn phyrexian_atlas() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Atlas",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource)
+                .with_filter(Predicate::CorruptedActive { who: PlayerRef::You }),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Slobad, Iron Goblin — {2}{R} 3/3. {T}, Sacrifice an artifact: add {R} equal
+/// to its mana value, spendable only on artifacts.
+pub fn slobad_iron_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Slobad, Iron Goblin",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Phyrexian,
+                CreatureType::Goblin,
+                CreatureType::Artificer,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Restricted(
+                    Box::new(crate::effect::ManaPayload::OfColor(
+                        Color::Red,
+                        Value::SacrificedManaValue,
+                    )),
+                    crate::mana::SpendRestriction::ArtifactOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Venerated Rotpriest — {G} 1/2, toxic 1. Whenever a creature you control
+/// becomes the target of a spell, target opponent gets a poison counter.
+pub fn venerated_rotpriest() -> CardDefinition {
+    CardDefinition {
+        name: "Venerated Rotpriest",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted),
+            effect: Effect::AddPoison {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unctus, Grand Metatect — {1}{U}{U} 2/4. Other blue creatures you control
+/// loot when tapped; other artifact creatures get +1/+1. {U/P}, sorcery:
+/// target creature you control becomes a blue artifact in addition until EOT.
+pub fn unctus_grand_metatect() -> CardDefinition {
+    CardDefinition {
+        name: "Unctus, Grand Metatect",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Vedalken],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description:
+                    "Other blue creatures you control have \"Whenever this creature becomes \
+                     tapped, draw a card, then discard a card.\"",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasColor(Color::Blue))
+                        .and(SelectionRequirement::OtherThanSource),
+                    ability: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                        effect: Effect::Seq(vec![
+                            draw(1),
+                            Effect::Discard {
+                                who: Selector::You,
+                                amount: Value::ONE,
+                                random: false,
+                            },
+                        ]),
+                    }),
+                },
+            },
+            StaticAbility {
+                description: "Other artifact creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[phyrexian(Color::Blue)]),
+            sorcery_speed: true,
+            effect: Effect::AddCardTypeIndefinitely {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                card_type: CardType::Artifact,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tyvar, Jubilant Brawler — {1}{B}{G} Planeswalker — Tyvar, loyalty 3.
+/// Your creatures' abilities activate as though they had haste. +1: untap a
+/// creature. −2: mill 3, then may reanimate a MV≤2 creature.
+pub fn tyvar_jubilant_brawler() -> CardDefinition {
+    CardDefinition {
+        name: "Tyvar, Jubilant Brawler",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Tyvar],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        static_abilities: vec![StaticAbility {
+            description:
+                "You may activate abilities of creatures you control as though those creatures \
+                 had haste.",
+            effect: StaticEffect::ControllerCreatureAbilitiesAsThoughHaste,
+        }],
+        loyalty_abilities: vec![
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Untap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    up_to: None,
+                },
+                ..Default::default()
+            },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                    Effect::MayDo {
+                        description: "Return a creature with mana value 2 or less?".into(),
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(
+                                SelectionRequirement::Creature
+                                    .and(SelectionRequirement::InYourGraveyard)
+                                    .and(SelectionRequirement::ManaValueAtMost(2)),
+                            ),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nahiri's Sacrifice — {1}{R} Sorcery. Sacrifice an artifact or creature with
+/// mana value X; deal X damage divided among any number of target creatures.
+pub fn nahiris_sacrifice() -> CardDefinition {
+    CardDefinition {
+        name: "Nahiri's Sacrifice",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::DealDamageDivided {
+            total: Value::SacrificedManaValue,
+            filter: SelectionRequirement::Creature,
+            max_targets: 5,
+        },
+        ..Default::default()
+    }
+}
+
+/// Atraxa's Skitterfang — {3} 2/2, enters with three oil counters. At combat
+/// on your turn, may remove one: a creature you control gains flying,
+/// vigilance, deathtouch, or lifelink until end of turn.
+pub fn atraxas_skitterfang() -> CardDefinition {
+    let grant = |keyword: Keyword| Effect::GrantKeyword {
+        what: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        keyword,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Atraxa's Skitterfang",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(3))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::MayDo {
+                description: "Remove an oil counter to grant a keyword?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::Oil,
+                        amount: Value::ONE,
+                    },
+                    Effect::ChooseMode(vec![
+                        grant(Keyword::Flying),
+                        grant(Keyword::Vigilance),
+                        grant(Keyword::Deathtouch),
+                        grant(Keyword::Lifelink),
+                    ]),
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Serum-Core Chimera — {2}{U}{R} 2/4 flying; noncreature casts add oil.
+/// Remove three oil, sorcery: draw, then may discard for 3 damage.
+pub fn serum_core_chimera() -> CardDefinition {
+    CardDefinition {
+        name: "Serum-Core Chimera",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Chimera],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_noncreature()),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Oil,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            remove_counter_cost: Some((CounterType::Oil, 3)),
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::MayDiscard {
+                    description: "Discard a nonland card for 3 damage?".into(),
+                    count: Value::ONE,
+                    then: Box::new(Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                        amount: Value::Const(3),
+                    }),
+                    else_: None,
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

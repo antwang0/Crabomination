@@ -38,7 +38,8 @@ fn marble_gargoyle_pumps_toughness() {
 #[test]
 fn coral_colony_mills_by_defender_count() {
     let mut g = two_player_game();
-    let colony = g.add_card_to_battlefield(0, catalog::coral_colony()); // a defender
+    let colony = g.add_card_to_battlefield(0, catalog::coral_colony());
+    g.clear_sickness(colony); // a defender
     g.add_card_to_battlefield(0, catalog::coral_colony()); // a second defender
     for _ in 0..4 { g.add_card_to_library(1, catalog::grizzly_bears()); }
     g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);

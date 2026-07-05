@@ -62,6 +62,7 @@ fn glimmerpoint_stag_blinks_a_permanent() {
 fn weathered_wayfarer_only_works_when_behind() {
     let mut g = two_player_game();
     let way = g.add_card_to_battlefield(0, catalog::weathered_wayfarer());
+    g.clear_sickness(way);
     g.add_card_to_library(0, catalog::plains());
     g.players[0].mana_pool.add(Color::White, 1);
     g.priority.player_with_priority = 0;
@@ -77,6 +78,7 @@ fn weathered_wayfarer_only_works_when_behind() {
 fn weathered_wayfarer_fetches_when_behind() {
     let mut g = two_player_game();
     let way = g.add_card_to_battlefield(0, catalog::weathered_wayfarer());
+    g.clear_sickness(way);
     for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
     let land = g.add_card_to_library(0, catalog::plains());
     g.players[0].mana_pool.add(Color::White, 1);
@@ -120,6 +122,7 @@ fn fleetfoot_dancer_has_the_three_keywords() {
 fn stormscape_apprentice_taps_a_creature() {
     let mut g = two_player_game();
     let app = g.add_card_to_battlefield(0, catalog::stormscape_apprentice());
+    g.clear_sickness(app);
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::White, 1);
     activate(&mut g, app, 0, Some(Target::Permanent(foe)));
@@ -131,6 +134,7 @@ fn stormscape_apprentice_drains_one() {
     let mut g = two_player_game();
     g.players[1].life = 20;
     let app = g.add_card_to_battlefield(0, catalog::stormscape_apprentice());
+    g.clear_sickness(app);
     g.players[0].mana_pool.add(Color::Black, 1);
     activate(&mut g, app, 1, None);
     assert_eq!(g.players[1].life, 19, "opponent loses 1 life");

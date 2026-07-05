@@ -167,6 +167,7 @@ fn bloated_contaminator_toxic_and_proliferate() {
 fn sinew_dancer_corrupted_ability_gated() {
     let mut g = two_player_game();
     let dancer = g.add_card_to_battlefield(0, catalog::sinew_dancer());
+    g.clear_sickness(dancer);
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
@@ -2648,4 +2649,472 @@ fn awaken_the_sleeper_steals_and_smashes() {
     assert_eq!(c.controller, 0, "stolen");
     assert!(!c.tapped, "untapped");
     assert!(g.battlefield_find(sword).is_none(), "equipment destroyed");
+}
+
+// ── ONE remainder wave 1 ─────────────────────────────────────────────────────
+
+/// Chittering Skitterling's sac-draw is Corrupted-gated and once per turn.
+#[test]
+fn chittering_skitterling_corrupted_sac_draw() {
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::chittering_skitterling());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
+        card_id: rat, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(act(&mut g).is_err(), "no poison → Corrupted gate rejects");
+    g.players[1].poison_counters = 3;
+    let hand0 = g.players[0].hand.len();
+    act(&mut g).expect("corrupted sac-draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew");
+    assert!(act(&mut g).is_err(), "once per turn");
+}
+
+/// The Filigree Sylex nukes MV = oil count on sacrifice (LKI-read counters).
+#[test]
+fn filigree_sylex_destroys_matching_mv() {
+    let mut g = two_player_game();
+    let sylex = g.add_card_to_battlefield(0, catalog::the_filigree_sylex());
+    g.battlefield_find_mut(sylex).unwrap().add_counters(CounterType::Oil, 2);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sylex, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac-nuke");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "MV 2 destroyed at 2 oil");
+    assert!(g.battlefield_find(angel).is_some(), "MV 5 survives");
+}
+
+/// Tamiyo's Logbook draw costs {1} less per other artifact.
+#[test]
+fn tamiyos_logbook_discounted_draw() {
+    let mut g = two_player_game();
+    let book = g.add_card_to_battlefield(0, catalog::tamiyos_logbook());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::sol_ring());
+    }
+    g.add_card_to_library(0, catalog::forest());
+    // {5}{U} − {3} = {2}{U}.
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: book, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("discounted activation");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew");
+    assert!(g.players[0].mana_pool.total() == 0, "paid exactly two generic + U");
+}
+
+/// Staff of Compleation: pay 4 life to draw; {5} untaps it.
+#[test]
+fn staff_of_compleation_life_paid_modes() {
+    let mut g = two_player_game();
+    let staff = g.add_card_to_battlefield(0, catalog::staff_of_compleation());
+    g.add_card_to_library(0, catalog::forest());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: staff, ability_index: 3, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pay 4 life: draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 4);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: staff, ability_index: 4, target: None, additional_targets: vec![], x_value: None,
+    }).expect("{5}: untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(staff).unwrap().tapped, "untapped");
+}
+
+/// Koth −3 deals damage equal to your Mountains.
+#[test]
+fn koth_minus_three_scales_with_mountains() {
+    let mut g = two_player_game();
+    let koth = g.add_card_to_battlefield(0, catalog::koth_fire_of_resistance());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: koth, ability_index: 1, target: Some(Target::Permanent(angel)), x_value: None,
+    }).expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "4 damage kills the 4/4");
+}
+
+/// Malcator mints on ETB and again at end step after 3 artifacts entered.
+#[test]
+fn malcator_end_step_golem_gate() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::malcator_purity_overseer());
+    drain_stack(&mut g);
+    let golems = |g: &GameState| g.battlefield.iter()
+        .filter(|c| c.definition.name == "Phyrexian Golem").count();
+    assert_eq!(golems(&g), 1, "ETB golem");
+    g.players[0].artifacts_entered_this_turn = 3;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(golems(&g), 2, "end-step golem after 3 artifacts");
+}
+
+/// Geth's anthem shrinks others; his reanimation stamps a finality counter.
+#[test]
+fn geth_anthem_and_reanimate() {
+    let mut g = two_player_game();
+    let geth = g.add_card_to_battlefield(0, catalog::geth_thane_of_contracts());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 1, "-1/-1 anthem");
+    assert_eq!(g.computed_permanent(geth).unwrap().power, 3, "Geth unaffected");
+    let dead = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.clear_sickness(geth);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: geth, ability_index: 0, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], x_value: None,
+    }).expect("reanimate");
+    drain_stack(&mut g);
+    let angel = g.battlefield.iter().find(|c| c.definition.name == "Serra Angel")
+        .expect("reanimated");
+    assert_eq!(angel.counter_count(CounterType::Finality), 1, "finality rider");
+}
+
+/// Ichorplate Golem bumps entering oil creatures and anthems oil carriers.
+#[test]
+fn ichorplate_golem_oil_synergy() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ichorplate_golem());
+    // Skitterfang enters with three oil counters → trigger adds a fourth.
+    let fang = g.move_card_to_battlefield_for_test(0, catalog::atraxas_skitterfang());
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentEntered { card_id: fang }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(fang).unwrap().counter_count(CounterType::Oil), 4,
+        "3 from ETB + 1 from Ichorplate");
+    let cp = g.computed_permanent(fang).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + oil anthem");
+}
+
+/// Necrogen Rotpriest adds a poison counter when a toxic creature connects.
+#[test]
+fn necrogen_rotpriest_bonus_poison() {
+    let mut g = two_player_game();
+    let priest = g.add_card_to_battlefield(0, catalog::necrogen_rotpriest());
+    g.clear_sickness(priest);
+    g.active_player_idx = 0;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: priest, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    // toxic 2 + rotpriest trigger = 3 poison.
+    assert_eq!(g.players[1].poison_counters, 3);
+}
+
+/// Indoctrination Attendant bounces your permanent for a Mite.
+#[test]
+fn indoctrination_attendant_bounce_for_mite() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.move_card_to_battlefield_for_test(0, catalog::indoctrination_attendant());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "bounced");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Phyrexian Mite"), "mite minted");
+}
+
+/// Mirrex taps for any color only on the turn it entered.
+#[test]
+fn mirrex_any_color_gate() {
+    let mut g = two_player_game();
+    let land = g.move_card_to_battlefield_for_test(0, catalog::mirrex());
+    drain_stack(&mut g);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("entered this turn → any color");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    // Next turn the gate closes.
+    let land2 = g.add_card_to_battlefield(0, catalog::mirrex());
+    g.battlefield_find_mut(land2).unwrap().entered_turn = None;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: land2, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "stale Mirrex can't tap for color");
+}
+
+/// The Monumental Facade moves its stored oil onto your artifact.
+#[test]
+fn monumental_facade_oil_transfer() {
+    let mut g = two_player_game();
+    let facade = g.move_card_to_battlefield_for_test(0, catalog::the_monumental_facade());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(facade).unwrap().counter_count(CounterType::Oil), 2);
+    let golem = g.add_card_to_battlefield(0, catalog::ichorplate_golem());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: facade, ability_index: 1, target: Some(Target::Permanent(golem)),
+        additional_targets: vec![], x_value: None,
+    }).expect("move oil");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(facade).unwrap().counter_count(CounterType::Oil), 1);
+    assert_eq!(g.battlefield_find(golem).unwrap().counter_count(CounterType::Oil), 1);
+}
+
+/// The Seedcore's Corrupted pump needs 3+ opponent poison and a 1/1 target.
+#[test]
+fn seedcore_corrupted_pump() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::the_seedcore());
+    let priest = g.add_card_to_battlefield(0, catalog::venerated_rotpriest()); // a 1/2
+    let mono = g.add_card_to_battlefield(0, catalog::memnite()); // 1/1
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState, tgt| g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: Some(Target::Permanent(tgt)),
+        additional_targets: vec![], x_value: None,
+    });
+    assert!(act(&mut g, mono).is_err(), "no poison → rejected");
+    g.players[1].poison_counters = 3;
+    assert!(act(&mut g, priest).is_err(), "1/2 isn't a legal 1/1 target");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    act(&mut g, mono).expect("corrupted pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mono).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "1/1 + 2/+1");
+}
+
+/// Zealot's Conviction gives +1/+1, upgrading to +2/+1 first strike when Corrupted.
+#[test]
+fn zealots_conviction_corrupted_rider() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::zealots_conviction());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bears);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 base");
+    assert!(!cp.keywords.contains(&Keyword::FirstStrike));
+    g.players[1].poison_counters = 3;
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "additional +1/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "corrupted first strike");
+}
+
+/// Transplant Theorist loots on artifact entries and bottoms graveyard cards.
+#[test]
+fn transplant_theorist_loot_and_bottom() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let theorist = g.move_card_to_battlefield_for_test(0, catalog::transplant_theorist());
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentEntered {
+        card_id: theorist,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 1, "looted: drew then discarded");
+    let dead = g.players[0].graveyard[0].id;
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: theorist, ability_index: 0, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], x_value: None,
+    }).expect("bottom it");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "graveyard emptied");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(dead), "on the bottom");
+}
+
+/// Phyrexian Atlas drains on tap only while Corrupted.
+#[test]
+fn phyrexian_atlas_corrupted_tap_drain() {
+    let mut g = two_player_game();
+    let atlas = g.add_card_to_battlefield(0, catalog::phyrexian_atlas());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1, "no poison → no drain");
+    g.players[1].poison_counters = 3;
+    g.battlefield_find_mut(atlas).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap again");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1, "corrupted tap drains 1");
+}
+
+/// Slobad turns an artifact into that much restricted red mana.
+#[test]
+fn slobad_sacrifices_for_scaled_mana() {
+    let mut g = two_player_game();
+    let slobad = g.add_card_to_battlefield(0, catalog::slobad_iron_goblin());
+    g.clear_sickness(slobad);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring()); // MV 1
+    let _ = ring;
+    g.add_card_to_battlefield(0, catalog::tamiyos_logbook()); // MV 3 — auto-pick lowest
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: slobad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac artifact for mana");
+    assert!(g.players[0].mana_pool.restricted_total() >= 1, "got scaled restricted red mana");
+}
+
+/// Venerated Rotpriest poisons when your creature is targeted by a spell.
+#[test]
+fn venerated_rotpriest_poison_on_target() {
+    let mut g = two_player_game();
+    let priest = g.add_card_to_battlefield(0, catalog::venerated_rotpriest());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(priest)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own priest");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 1, "opponent got a poison counter");
+}
+
+/// Unctus anthems artifact bodies and loots when your blue creature taps.
+#[test]
+fn unctus_grand_metatect_statics() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::unctus_grand_metatect());
+    let golem = g.add_card_to_battlefield(0, catalog::ichorplate_golem());
+    let cp = g.computed_permanent(golem).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "artifact creature +1/+1");
+    // A blue creature tapping loots.
+    let drake = g.add_card_to_battlefield(0, catalog::wind_drake());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    let gy0 = g.players[0].graveyard.len();
+    g.battlefield_find_mut(drake).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::PermanentTapped { card_id: drake }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0, "loot: net hand unchanged");
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 1, "discarded one");
+}
+
+/// Tyvar lets a summoning-sick creature tap-activate (CR 602.5g exemption).
+#[test]
+fn tyvar_grants_ability_haste() {
+    let mut g = two_player_game();
+    let priest = g.add_card_to_battlefield(0, catalog::necrogen_rotpriest());
+    let sylex = g.add_card_to_battlefield(0, catalog::the_filigree_sylex());
+    let _ = (priest, sylex);
+    // A sick creature with a tap ability: Sinew Dancer ({W}, {T}: tap target).
+    let dancer = g.add_card_to_battlefield(0, catalog::sinew_dancer());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
+        card_id: dancer, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], x_value: None,
+    });
+    assert!(act(&mut g).is_err(), "sick creature can't tap-activate (CR 602.5g)");
+    g.add_card_to_battlefield(0, catalog::tyvar_jubilant_brawler());
+    act(&mut g).expect("Tyvar's static exempts the gate");
+}
+
+/// Tyvar −2 mills three and can reanimate a cheap creature.
+#[test]
+fn tyvar_minus_two_reanimates() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let tyvar = g.add_card_to_battlefield(0, catalog::tyvar_jubilant_brawler());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tyvar, ability_index: 1, target: Some(Target::Permanent(dead)), x_value: None,
+    }).expect("-2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "reanimated");
+    assert!(g.players[0].library.len() < 3 || !g.players[0].graveyard.is_empty(), "milled");
+}
+
+/// Nahiri's Sacrifice divides damage equal to the sacrificed mana value.
+#[test]
+fn nahiris_sacrifice_scales_with_sacrifice() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // MV 5 fodder
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::nahiris_sacrifice());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "5 damage kills the 4/4");
+}
+
+/// Serum-Core Chimera accrues oil on noncreature casts and cashes three in.
+#[test]
+fn serum_core_chimera_oil_loop() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let chimera = g.add_card_to_battlefield(0, catalog::serum_core_chimera());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("noncreature cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(chimera).unwrap().counter_count(CounterType::Oil), 1);
+    let c = g.battlefield_find_mut(chimera).unwrap();
+    c.add_counters(CounterType::Oil, 2);
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    let victim = g.add_card_to_battlefield(1, catalog::wind_drake()); // 2/2 flyer
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chimera, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    }).expect("remove three oil");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "3 damage killed the drake");
 }

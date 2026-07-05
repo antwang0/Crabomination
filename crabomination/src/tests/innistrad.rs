@@ -1799,7 +1799,8 @@ fn catapult_fodder_transforms_and_captain_drains() {
     let mut g = two_player_game();
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
-    let fodder = g.add_card_to_battlefield(0, catalog::catapult_fodder()); // 1/5, t>p
+    let fodder = g.add_card_to_battlefield(0, catalog::catapult_fodder());
+    g.clear_sickness(fodder); // 1/5, t>p
     let effect = catalog::catapult_fodder().triggered_abilities[0].effect.clone();
     // Only one toughness>power creature (the fodder) → no transform.
     g.resolve_effect(&effect, &EffectContext::for_ability(fodder, 0, None)).unwrap();

@@ -369,6 +369,7 @@ fn gearseeker_serpent_affinity_for_artifacts() {
 fn aetherjacket_sacs_to_destroy_artifact() {
     let mut g = two_player_game();
     let jacket = g.add_card_to_battlefield(0, catalog::aetherjacket());
+    g.clear_sickness(jacket);
     let target = g.add_card_to_battlefield(1, catalog::sol_ring());
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;

@@ -1213,6 +1213,11 @@ pub enum StaticEffect {
     /// checked in `activate_ability` (sibling of
     /// `ArtifactActivatedAbilitiesLocked`).
     CreatureActivatedAbilitiesLocked,
+    /// "You may activate abilities of creatures you control as though those
+    /// creatures had haste." Exempts the controller's creatures from the
+    /// CR 602.5g summoning-sickness gate on {T}/{Q} costs (Tyvar, Jubilant
+    /// Brawler; Thousand-Year Elixir kin).
+    ControllerCreatureAbilitiesAsThoughHaste,
     /// CR 122.1 — Solemnity-style lock: "Counters can't be put on
     /// permanents or players." A global replacement read at every
     /// counter-placement site (`Effect::AddCounter`, `Effect::Proliferate`,

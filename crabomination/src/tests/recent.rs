@@ -4946,6 +4946,7 @@ fn brimstone_trebuchet_pings_and_untaps() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     let tre = g.add_card_to_battlefield(0, catalog::brimstone_trebuchet());
+    g.clear_sickness(tre);
     let opp = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: tre, ability_index: 0, target: None, additional_targets: vec![], x_value: None,

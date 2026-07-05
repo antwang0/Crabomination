@@ -4463,6 +4463,26 @@ impl GameState {
                 self.pay_additional_costs(p, &additional_costs, chosen_sacrifices, chosen_discards);
             auto_events.append(&mut cost_events);
             sac_x = power;
+            // Carry the cost-sacrifice's stats into the spell's resolution
+            // (resolve_effect resets the scratch) so `Value::Sacrificed*`
+            // reads them — Nahiri's Sacrifice's "X = its mana value".
+            let had_sac_cost = additional_costs.iter().any(|c| {
+                matches!(c, crate::card::AdditionalCastCost::SacrificePermanent { .. })
+            });
+            if let (true, Some(pw), Some(tough), Some(mv)) = (
+                had_sac_cost,
+                self.sacrificed_power,
+                self.sacrificed_toughness,
+                self.sacrificed_mana_value,
+            ) {
+                let def = std::sync::Arc::make_mut(&mut card.definition);
+                def.effect = Effect::WithSacrificedPt {
+                    power: pw,
+                    toughness: tough,
+                    mana_value: mv,
+                    body: Box::new(def.effect.clone()),
+                };
+            }
         }
         let events = auto_events;
         let final_x = x_value.unwrap_or(0).max(sac_x.unwrap_or(0));
@@ -4670,7 +4690,7 @@ impl GameState {
                     // (tokens first, then lowest mana value, then lowest power)
                     // for any remainder. The first sacrifice's power becomes
                     // the spell's X.
-                    let chosen: Vec<(CardId, u32, bool)> = {
+                    let chosen: Vec<(CardId, u32, bool, i32, u32)> = {
                         let mut picked: Vec<&crate::card::CardInstance> = Vec::new();
                         if let Some(ids) = chosen_override.take() {
                             for id in ids {
@@ -4717,12 +4737,28 @@ impl GameState {
                         picked
                             .iter()
                             .take(*count as usize)
-                            .map(|c| (c.id, c.power().max(0) as u32, c.definition.is_creature()))
+                            .map(|c| {
+                                (
+                                    c.id,
+                                    c.power().max(0) as u32,
+                                    c.definition.is_creature(),
+                                    c.toughness(),
+                                    c.definition.cost.cmc(),
+                                )
+                            })
                             .collect()
                     };
-                    for (idx, (id, power, is_creature)) in chosen.into_iter().enumerate() {
+                    for (idx, (id, power, is_creature, tough, mv)) in
+                        chosen.into_iter().enumerate()
+                    {
                         if idx == 0 {
                             sac_power = Some(power);
+                            // Stamp the resolution scratch so the spell body can
+                            // read `Value::Sacrificed{Power,Toughness,ManaValue}`
+                            // (Nahiri's Sacrifice's "X = its mana value").
+                            self.sacrificed_power = Some(power as i32);
+                            self.sacrificed_toughness = Some(tough);
+                            self.sacrificed_mana_value = Some(mv);
                         }
                         if is_creature {
                             if let Some(c) = self.dying_snapshot(id) {
@@ -8673,6 +8709,35 @@ impl GameState {
             }
         }
 
+        // CR 602.5g — a creature's ability with a {T} cost can't be activated
+        // while the creature is summoning-sick, unless it has haste or its
+        // controller has a Tyvar-style "as though they had haste" static.
+        if ability.tap_cost && !source_in_gy && !source_in_hand {
+            let sick = self.battlefield_find(card_id).is_some_and(|c| {
+                c.summoning_sick
+                    && self
+                        .computed_permanent(card_id)
+                        .is_some_and(|cp| {
+                            cp.card_types.contains(&crate::card::CardType::Creature)
+                                && !cp.keywords.contains(&Keyword::Haste)
+                        })
+            });
+            if sick {
+                let exempt = self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::ControllerCreatureAbilitiesAsThoughHaste
+                            )
+                        })
+                });
+                if !exempt {
+                    return Err(GameError::SummoningSickness(card_id));
+                }
+            }
+        }
+
         // CR 602.5c — a permanent whose *computed* keyword set carries
         // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
         // activate its non-mana abilities. Battlefield sources only.
@@ -9771,7 +9836,18 @@ impl GameState {
         let is_mana_ab = is_mana_ability(&ability.effect);
 
         if is_mana_ab {
-            let effect = ability.effect.clone();
+            // Carry a cost-sacrificed permanent's stats into the inline
+            // resolution (resolve_effect resets the scratch) — Slobad's
+            // "add {R} equal to the sacrificed artifact's mana value".
+            let effect = match cost_sac_pt {
+                Some((power, toughness)) => Effect::WithSacrificedPt {
+                    power,
+                    toughness,
+                    mana_value: cost_sac_mv,
+                    body: Box::new(ability.effect.clone()),
+                },
+                None => ability.effect.clone(),
+            };
             // CR 701.10f / 614.5 — "tap a permanent for mana" multipliers
             // (Mana Reflection ×2, Nyxbloom Ancient ×3). Stamp the transient
             // multiplier so the `AddMana` resolver scales pip output; clear

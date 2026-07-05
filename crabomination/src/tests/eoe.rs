@@ -693,6 +693,7 @@ fn illvoi_operative_second_spell_counter() {
 fn kavaron_turbodrone_pumps_and_hastes() {
     let mut g = two_player_game();
     let drone = g.add_card_to_battlefield(0, catalog::kavaron_turbodrone());
+    g.clear_sickness(drone);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
@@ -1927,6 +1928,7 @@ fn virulent_silencer_poisons_on_combat_damage() {
 fn steelswarm_operator_makes_restricted_mana() {
     let mut g = two_player_game();
     let op = g.add_card_to_battlefield(0, catalog::steelswarm_operator());
+    g.clear_sickness(op);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
