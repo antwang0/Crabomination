@@ -746,6 +746,8 @@ Each a small targeted feature; sweep batch by batch.
 - ⏳ **Set / Scryfall import pipeline** (`scripts/verify_cards.py` exists — extend).
 - ⏳ **Card art / image pipeline**.
 - ⏳ **Rules-engine conformance suite** mapped to CR sections.
+- ✅ **Operator telemetry endpoint** — `CRAB_STATUS_BIND` HTTP `/healthz` +
+  `/status` (uptime, rolling match stats, slot accounting).
 
 ---
 

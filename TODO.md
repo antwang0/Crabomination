@@ -3256,6 +3256,22 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **Deferred this run (noticed, not tackled):**
+  - **Angel's Grace** — needs `Player.cant_lose_this_turn` (+ opponents
+    can't-win) consulted at the SBA loss check / decking / lose-effects, and a
+    damage-to-1 floor in `adjust_life`.
+  - **Zabaz, the Glimmerwasp** — modular-counter +1 replacement (a
+    modular-scoped `ExtraCounterAllKinds` sibling).
+  - **Portent Tracker** — battle defense-counter manipulation targeting.
+  - **Mycosynth Lattice** — "all permanents are artifacts" fits
+    `AddCardTypeToMatching`, but the all-colorless + spend-any-color halves
+    have no primitives.
+  - **Glimpse of Tomorrow / Emperor of Bones** — shuffle-permanents-and-
+    redeploy; exiled-with + counters-added reflexive return.
+  - **Dies-redirects vs dies-triggers** — SBA callers fire `CreatureDied`
+    before `remove_from_battlefield_to_graveyard_raw` resolves a
+    Finality/`DiesToLibraryTopInstead` redirect, so dies-triggers can fire for
+    a creature that never reached a graveyard.
 - ⏳ **All Will Be One placer attribution** — `GameEvent::CounterAdded` carries
   no "who placed" seat, so the enchantment fires off counters landing on your
   permanents + poison hitting opponents (exact in two-player). Threading the
@@ -5309,17 +5325,11 @@ were stale). See git history for the per-card details.
 ## New TODO suggestions (push modern_decks)
 
 ### Client GUI follow-ups
-- **Mayhem cast affordance.** `GraveyardCardView.mayhem_cost` now surfaces a
-  castable Mayhem cost (only after the card was discarded this turn) and the bot
-  enumerates `CastMayhem`. The client GUI graveyard browser still needs a
-  right-click "Cast for Mayhem" entry wired to `GameAction::CastMayhem`
-  (mirror the flashback/disturb affordances). The GUI crate can't build in the
-  headless cloud env (wayland-sys), so this wasn't verifiable here.
-- **Disturb-into-Aura target picker.** The engine + bot now route an enchant
-  target through `GameAction::CastDisturb` for Aura back faces. The GUI graveyard
-  browser is read-only (it never built any graveyard-recast action), so a
-  right-click "Cast for Disturb" entry — and, when the back is an Aura, a
-  target-selection step — still needs wiring. Unverifiable headless (wayland).
+- ✅ **Graveyard click-to-cast** — badge-bearing tiles in the graveyard browser
+  now submit their recast on click (Flashback / Mayhem / Harmonize / Disturb /
+  Retrace / Escape via `graveyard_recast_click`; targets auto-picked, Escape
+  fodder auto-chosen). Remaining nicety: a real target-picker step for Aura
+  Disturb backs, and manual Escape-fodder selection.
 - **Surface new combat riders in tooltips.** The reminder/ability panel should
   note `Keyword::CantBeBlockedByPowerLess` (Formation Breaker) and a
   turn-scoped "can attack despite defender" badge once
@@ -5415,50 +5425,6 @@ random ETB via d3), Medomai's Prophecy (chosen-name Saga;
 for the name-gated chapter-III draw; chapter IV's look-at-each-top is
 informational and modeled as `Noop`).
 
-### Engine — Battle permanent type (CR 110.4) ⏳
-
-CR 110.4 lists six permanent types: artifact, battle, creature,
-enchantment, land, planeswalker. The engine's `CardType` enum has the
-other five but no `Battle` variant. Battles introduced in March of the
-Machine: each battle has defense counters (similar to loyalty), can be
-attacked by creatures, and "transforms" when its defense reaches 0.
-Affected cards: Mortality Spear's printed-Oracle's "destroy target
-creature, planeswalker, or battle" rider currently collapses to
-"creature/planeswalker" since no Battle exists.
-
-**Fix**: add `CardType::Battle` + a `defense_counters` field on
-`CardInstance` + an `AttackTarget::Battle(CardId)` variant. Combat
-resolution would route attacker damage to defense counters
-(similar to the planeswalker path). Engine-wide ⏳ until a card needs it.
-
-### Engine — Phasing (CR 110.5, CR 702.26) ⏳
-
-CR 110.5 lists "phased in/phased out" as a permanent status; the
-engine has tapped + face-down but no phasing flag. Phasing matters
-for Teferi-style "phase out" effects, the Fading mechanic, and the
-SBA bypass during the phased-out state.
-
-**Fix**: add a `phased_out: bool` field on `CardInstance` + a
-`Predicate::IsPhasedIn` predicate + an SBA bypass for phased-out
-permanents (they're treated as not on the battlefield for triggers,
-combat, and most checks). The phase-in turn-based action runs at
-the start of each untap step. Engine-wide ⏳ until a card needs it.
-
-### Engine — Multi-target divided damage primitive
-
-The engine collapses every "divided as you choose among any number of
-targets" rider to a single target. Affected cards: Crackle with Power,
-Magma Opus, Electrolyze, Devious Cover-Up, Vibrant Outburst, Mizzium
-Mortars (Overload alt only), Snow Day, Spell Satchel. The headline
-play pattern works at one target, but the multi-target shape is a
-recurring 🟡 in STRIXHAVEN2.md.
-
-**Fix**: extend `Selector::Target(u8)` to accept an array of targets
-with associated damage portions: `Selector::DividedTargets(Vec<(u8,
-Value)>)`. Cast-time the caster picks N targets and divides the spell's
-total damage among them; resolution loops `DealDamage(target_i,
-portion_i)`. This unlocks ~6 cube/SOS/STX 🟡s in one engine landing.
-
 ### Engine — Permanent-copy primitive (`Effect::CreateCopyToken`)
 
 Multiple SOS/STX cards print "create a token that's a copy of target
@@ -5473,7 +5439,12 @@ and mints a token whose `definition` clones the source's. The
 `modifiers` field lets cards like Applied Geometry append
 "0/0 Fractal creature in addition to its other types".
 
-### Engine — Cast-from-exile pipeline
+### Engine — Cast-from-exile pipeline (partly shipped)
+
+`ActivatedAbility.from_exile` now supports pay-cost recasts from exile
+(Squee, the Immortal), and `CastWithoutPayingImmediate { copy }` casts copies
+from exile (Capricious Hellraiser). The remaining general shape:
+
 
 SOS Improvisation Capstone, Decorum Dissertation, Echocasting
 Symposium's Paradigm rider, Practiced Scrollsmith's "may cast" rider
@@ -5514,16 +5485,6 @@ already tracked in Commander phase) — `ReplacementEffect` registry
 keyed on `ZoneChange { from: Battlefield, to: Graveyard, card_filter }`.
 Returns an `(Exile, DelayedTriggerOnExile)` 2-tuple instead of the
 default zone change.
-
-### Engine — Skip-turn primitive (CR 716)
-
-Ral Zarek -7 skips opp's next X turns. No skip-turn flag on
-`Player`. Also blocks Time Walk's "after this turn, take another"
-shape if a Twincast user wants to copy a Time Walk.
-
-**Shape**: `Player.extra_turns: u32` already exists for extra turns;
-add `Player.skipped_turns: u32` and have `pass_priority`'s
-Cleanup-to-next-turn transition decrement and skip when non-zero.
 
 ### Card — Augusta, Dean of Order — "same-power batch" gate (push modern_decks batch 14 suggested)
 
