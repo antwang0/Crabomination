@@ -367,6 +367,9 @@ mod tests_quests;
 #[path = "../tests/recent105.rs"]
 mod tests_recent105;
 #[cfg(test)]
+#[path = "../tests/recent106.rs"]
+mod tests_recent106;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -2683,6 +2686,12 @@ impl GameState {
             n = if self.players[seat].poison_capped_this_turn { 0 } else { 1 };
             self.players[seat].poison_capped_this_turn = true;
         }
+        // Melira, Sylvok Outcast — "You can't get poison counters."
+        if n > 0 && self.player_has_static(seat, |se| {
+            matches!(se, crate::effect::StaticEffect::PlayerCannotGetPoison)
+        }) {
+            n = 0;
+        }
         if n == 0 {
             return 0;
         }
@@ -2746,6 +2755,12 @@ impl GameState {
     /// of `seat`'s creatures (Vizier of Remedies; one per copy).
     pub fn minus_counter_reduction_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
+        // Melira's full lock swallows any placement.
+        if self.player_has_static(seat, |se| {
+            matches!(se, StaticEffect::NoMinusCountersOnYourCreatures)
+        }) {
+            return u32::MAX;
+        }
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
@@ -6882,6 +6897,29 @@ impl GameState {
         // and triggered abilities are unaffected (702.61b).
         if self.stack_has_split_second() && self.split_second_blocks(&action) {
             return Err(GameError::SplitSecondLock);
+        }
+        // Iona, Shield of Emeria — opponents can't cast spells of the
+        // chosen color (read off the printed cost's pips).
+        if action.is_cast() {
+            let caster = self.priority.player_with_priority;
+            let cast_colors: Vec<crate::mana::Color> = action
+                .cast_card_id()
+                .and_then(|id| self.find_card_anywhere(id))
+                .map(|c| c.definition.printed_colors())
+                .unwrap_or_default();
+            let locked = self.battlefield.iter().any(|c| {
+                !self.same_team(c.controller, caster)
+                    && c.chosen_color.is_some_and(|col| cast_colors.contains(&col))
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::OpponentsCantCastChosenColor
+                        )
+                    })
+            });
+            if locked {
+                return Err(GameError::SilencedThisTurn);
+            }
         }
         // Voice of Victory — the active player's opponents can't cast spells
         // during that player's turn.
@@ -12240,6 +12278,12 @@ fn static_effect_to_effects(
             // DiesToLibraryTopInstead (Pulmonic Sliver) — consulted in
             // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::DiesToLibraryTopInstead { .. }
+            // OpponentsCantCastChosenColor (Iona) — gated at the cast
+            // dispatch; no layer effect.
+            | StaticEffect::OpponentsCantCastChosenColor
+            // Melira's poison / -1/-1 locks — consulted at their funnels.
+            | StaticEffect::PlayerCannotGetPoison
+            | StaticEffect::NoMinusCountersOnYourCreatures
             // Search statics (Aven Mindcensor / Leonin Arbiter) — consulted
             // in `Effect::Search` via `search_top_limit_for` /
             // `pay_search_tax`; no layer effect.

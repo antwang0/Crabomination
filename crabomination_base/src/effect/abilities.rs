@@ -143,6 +143,10 @@ pub enum StaticEffect {
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.
     GrantProtectionFromChosenColor { applies_to: Selector },
+    /// "Your opponents can't cast spells of the chosen color" — reads the
+    /// source's `chosen_color` ETB stamp (Iona, Shield of Emeria). Gated at
+    /// the cast dispatch.
+    OpponentsCantCastChosenColor,
     /// "Each [creature_type] creature gets +P/+T for each *other*
     /// [creature_type] on the battlefield" (Sliver Legion). State-aware:
     /// gathered with the live battlefield count, one effect per matching
@@ -471,6 +475,13 @@ pub enum StaticEffect {
     /// one or more poison counters, they get one instead and can't get more
     /// this turn. Consulted in the `add_poison` funnel.
     PoisonCappedAtOnePerTurn,
+    /// "You can't get poison counters" (Melira, Sylvok Outcast). Consulted in
+    /// the `add_poison` funnel.
+    PlayerCannotGetPoison,
+    /// "Creatures you control can't have -1/-1 counters put on them"
+    /// (Melira, Sylvok Outcast) — the full-lock sibling of
+    /// `MinusCounterReduction`.
+    NoMinusCountersOnYourCreatures,
     /// CR 614.9 — damage redirection: all damage that would be dealt to the
     /// source's controller or another permanent they control is dealt to the
     /// source instead (Palisade Giant). Applied once per damage event
