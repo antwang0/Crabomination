@@ -2326,3 +2326,287 @@ fn feed_the_infection_corrupted_gate() {
     resolve_for(&mut g, 0, catalog::feed_the_infection().effect);
     assert_eq!(g.players[1].life, 17, "Corrupted — opponent lost 3");
 }
+
+// ── Wave 4 ───────────────────────────────────────────────────────────────────
+
+/// Rustvine Cultivator banks oil then untaps a land with it.
+#[test]
+fn rustvine_cultivator_untaps_land() {
+    let mut g = two_player_game();
+    let rv = g.add_card_to_battlefield(0, catalog::rustvine_cultivator());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    if let Some(c) = g.battlefield_find_mut(land) { c.tapped = true; }
+    if let Some(c) = g.battlefield_find_mut(rv) { c.add_counters(CounterType::Oil, 1); }
+    g.clear_sickness(rv);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rv, ability_index: 1, target: Some(Target::Permanent(land)), additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
+}
+
+/// Oil-Gorger Troll draws only when an oil-countered permanent is around.
+#[test]
+fn oil_gorger_troll_conditional_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::oil_gorger_troll());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3");
+    assert_eq!(g.players[0].hand.len(), hand0, "no oil permanent — no draw");
+    // With an oil-countered permanent out, a second Troll draws.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(bear) { c.add_counters(CounterType::Oil, 1); }
+    g.move_card_to_battlefield_for_test(0, catalog::oil_gorger_troll());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "oil permanent — draw");
+}
+
+/// Hazardous Blast pings the opposing team and locks their blocks.
+#[test]
+fn hazardous_blast_ping_and_lock() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    resolve_for(&mut g, 0, catalog::hazardous_blast().effect);
+    assert_eq!(g.computed_permanent(mine).unwrap().toughness, 2, "yours untouched");
+    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Ruthless Predation pumps then bites.
+#[test]
+fn ruthless_predation_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let rp = g.add_card_to_hand(0, catalog::ruthless_predation());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rp, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "3 power kills the 2/2");
+    assert!(g.battlefield_find(mine).is_some(), "2 damage vs 4 toughness survives");
+}
+
+/// Maze's Mantle grants hexproof only to a toxic host.
+#[test]
+fn mazes_mantle_toxic_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let toxic = g.add_card_to_battlefield(0, catalog::bilious_skulldweller());
+    let mm = g.add_card_to_hand(0, catalog::mazes_mantle());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mm, target: Some(Target::Permanent(toxic)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(toxic).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 + 2/2");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "toxic host got hexproof");
+}
+
+/// Drown in Ichor shrinks and proliferates.
+#[test]
+fn drown_in_ichor_kill_and_proliferate() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.players[1].poison_counters = 1;
+    let di = g.add_card_to_hand(0, catalog::drown_in_ichor());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: di, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "-4/-4 kills the 4/4");
+    assert_eq!(g.players[1].poison_counters, 2, "proliferated the poison");
+}
+
+/// Glistener Seer converts oil into scrys.
+#[test]
+fn glistener_seer_scry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let seer = g.move_card_to_battlefield_for_test(0, catalog::glistener_seer());
+    drain_stack(&mut g);
+    g.clear_sickness(seer);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Oil), 2);
+}
+
+/// Cinderslash Ravager discounts by oil-countered permanents and sweeps 1.
+#[test]
+fn cinderslash_ravager_discount_and_ping() {
+    let mut g = two_player_game();
+    // Two oil-countered permanents → {4}{R}{G} - {2} = 4 mana total.
+    for _ in 0..2 {
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        if let Some(c) = g.battlefield_find_mut(b) { c.add_counters(CounterType::Oil, 1); }
+    }
+    let foe = g.add_card_to_battlefield(1, catalog::bilious_skulldweller()); // 1/1
+    let cr = g.add_card_to_hand(0, catalog::cinderslash_ravager());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for {2}{R}{G} after the oil discount");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "ETB ping killed the 1/1");
+}
+
+/// Sheoldred's Edict mode 0 makes each opponent sacrifice a nontoken creature.
+#[test]
+fn sheoldreds_edict_nontoken_mode() {
+    let mut g = two_player_game();
+    let real = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let se = g.add_card_to_hand(0, catalog::sheoldreds_edict());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: se, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(real).is_none(), "opponent sacrificed the nontoken creature");
+}
+
+/// Tyvar's Stand pumps by X and shields.
+#[test]
+fn tyvars_stand_x_pump() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ts = g.add_card_to_hand(0, catalog::tyvars_stand());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ts, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: Some(3),
+    }).unwrap();
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 5, "+3/+3");
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Mite Overseer's token anthem is on only during your turn.
+#[test]
+fn mite_overseer_turn_gated_token_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mite_overseer());
+    resolve_for(&mut g, 0, crate::effect::Effect::CreateToken {
+        who: crate::effect::PlayerRef::You,
+        count: crate::effect::Value::ONE,
+        definition: crate::card::TokenDefinition {
+            name: "Soldier".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![crate::card::CardType::Creature],
+            subtypes: crate::card::Subtypes {
+                creature_types: vec![crate::card::CreatureType::Soldier],
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    });
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Soldier").unwrap().id;
+    assert_eq!(g.computed_permanent(tok).unwrap().power, 2, "your turn: +1/+0");
+    g.active_player_idx = 1;
+    assert_eq!(g.computed_permanent(tok).unwrap().power, 1, "off turn: anthem off");
+}
+
+/// Vat Emergence steals a creature card from the opponent's graveyard and
+/// proliferates.
+#[test]
+fn vat_emergence_reanimates_theirs() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[1].poison_counters = 1;
+    resolve_for(&mut g, 0, crate::effect::Effect::Seq(vec![]));
+    let ve = g.add_card_to_hand(0, catalog::vat_emergence());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ve, target: Some(Target::Permanent(dead)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let stolen = g.battlefield_find(dead).expect("reanimated");
+    assert_eq!(stolen.controller, 0, "under your control");
+    assert_eq!(g.players[1].poison_counters, 2, "proliferated");
+}
+
+/// Urabrask's Anointer's ETB damage scales with oil-countered permanents.
+#[test]
+fn urabrasks_anointer_scaled_ping() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        if let Some(c) = g.battlefield_find_mut(b) { c.add_counters(CounterType::Oil, 1); }
+    }
+    g.move_card_to_battlefield_for_test(0, catalog::urabrasks_anointer());
+    drain_stack(&mut g);
+    // Auto-target aims the ping at the opponent's face: X = 2 oil permanents.
+    assert_eq!(g.players[1].life, 18, "2 oil permanents → 2 damage");
+}
+
+/// Planar Disruption locks the enchanted permanent's abilities and combat.
+#[test]
+fn planar_disruption_locks() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pd = g.add_card_to_hand(0, catalog::planar_disruption());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pd, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert!(cp.keywords.contains(&Keyword::CantAttack));
+    assert!(cp.keywords.contains(&Keyword::CantActivateAbilities));
+}
+
+/// Porcelain Zealot pumps +2/+2 for a toxic target at combat.
+#[test]
+fn porcelain_zealot_toxic_bonus() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::porcelain_zealot());
+    let toxic = g.add_card_to_battlefield(0, catalog::bilious_skulldweller()); // 1/1 toxic
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(toxic)),
+    ]));
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(toxic).unwrap().power, 3, "1 + 2 (toxic bonus)");
+}
