@@ -5284,3 +5284,72 @@ fn ultima_blights_lands_and_doubles_colorless() {
     }).expect("tap blighted land for colorless");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "one C plus the mirrored C");
 }
+
+/// Gilgamesh's ETB digs six, deploys the Equipment, and attaches to a Samurai
+/// (himself).
+#[test]
+fn gilgamesh_digs_equipment_and_attaches() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let sword = g.add_card_to_library(0, catalog::bone_saw());
+    let gil = g.move_card_to_battlefield_for_test(0, catalog::gilgamesh_master_at_arms());
+    drain_stack(&mut g);
+    let eq = g.battlefield_find(sword).expect("Equipment deployed from the top six");
+    assert_eq!(eq.attached_to, Some(gil), "attached to the Samurai");
+}
+
+/// Random Encounter deploys milled creatures with haste and returns them to
+/// hand at the next end step.
+#[test]
+fn random_encounter_deploys_then_bounces() {
+    let mut g = two_player_game();
+    // Library of exactly four creature cards → all four milled and deployed.
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::random_encounter());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Random Encounter");
+    drain_stack(&mut g);
+    let bears: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears").map(|c| c.id).collect();
+    assert_eq!(bears.len(), 4, "all four milled creatures deployed");
+    assert!(g.computed_permanent(bears[0]).unwrap().keywords.contains(&Keyword::Haste));
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "bounced at the end step");
+    assert_eq!(g.players[0].hand.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears").count(), 4, "back in hand");
+}
+
+/// Quina rides every token mint under your control with an extra 1/1 Frog,
+/// and eats Frogs to grow.
+#[test]
+fn quina_adds_a_frog_to_token_mints() {
+    let mut g = two_player_game();
+    let quina = g.add_card_to_battlefield(0, catalog::quina_qu_gourmet());
+    // Any token creation under your control (a Treasure) adds a Frog.
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(&crate::effect::shortcut::mint_treasures(1), &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Frog").count(), 1,
+        "one Frog rider");
+    // Eat the Frog: {2}, sac a Frog → +1/+1 counter.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: quina, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("eat the Frog");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(quina).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Frog").count(), 0);
+}

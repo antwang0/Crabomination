@@ -177,6 +177,8 @@ pub enum CreatureType {
     Hero,
     // Final Fantasy Moogle tribe.
     Moogle,
+    // Final Fantasy Qu tribe (Quina).
+    Qu,
     // TLA — Ember Island Production's 2/2 Coward token.
     Coward,
     // Tarkir: Dragonstorm (Cunning Coyote).

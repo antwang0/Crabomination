@@ -5701,6 +5701,9 @@ static FIN: &[Factory] = &[
     super::fin::gogo_master_of_mimicry,
     super::fin::lightning_army_of_one,
     super::fin::ultima_origin_of_oblivion,
+    super::fin::gilgamesh_master_at_arms,
+    super::fin::random_encounter,
+    super::fin::quina_qu_gourmet,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

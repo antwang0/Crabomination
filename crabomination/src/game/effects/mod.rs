@@ -740,6 +740,37 @@ impl GameState {
         self.named_card_this_resolution = None;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
+        // Quina — a resolution that minted one or more tokens under a
+        // player's control mints one extra rider token per
+        // `TokenCreationAddsToken` static that player controls (single
+        // application per resolution, CR 614.13-flavor).
+        let minted_for: Vec<usize> = {
+            let mut v: Vec<usize> = self
+                .last_created_tokens
+                .iter()
+                .filter_map(|id| self.battlefield_find(*id).map(|c| c.controller))
+                .collect();
+            v.sort_unstable();
+            v.dedup();
+            v
+        };
+        for p in minted_for {
+            let riders: Vec<crate::card::TokenDefinition> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::TokenCreationAddsToken { definition } => {
+                        Some(definition.clone())
+                    }
+                    _ => None,
+                })
+                .collect();
+            for def in riders {
+                self.mint_token_onto_battlefield(token_to_card_definition(&def), p, false, &mut events);
+            }
+        }
         Ok(events)
     }
 
@@ -9207,6 +9238,99 @@ impl GameState {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
                     }
+                }
+                Ok(())
+            }
+
+            Effect::MillDeployCreaturesUntilEndStep { amount } => {
+                let p = ctx.controller;
+                {
+                    use rand::seq::SliceRandom;
+                    self.players[p].library.shuffle(&mut rand::rng());
+                }
+                let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
+                let mut milled = Vec::new();
+                for _ in 0..n {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    let is_creature = card.definition.is_creature();
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
+                    if is_creature {
+                        milled.push(cid);
+                    }
+                }
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(p),
+                    tapped: false,
+                };
+                for cid in milled {
+                    self.move_card_to(cid, &dest, ctx, events);
+                    if self.battlefield.iter().any(|c| c.id == cid) {
+                        self.grant_keyword_eot(cid, Keyword::Haste);
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: p,
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::Move {
+                                what: Selector::Target(0),
+                                to: ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                            },
+                            target: Some(Target::Permanent(cid)),
+                            bound_token: None,
+                            fires_once: true,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LookTopPutMatchingOntoBattlefield { count, filter, then } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let looked: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if looked.is_empty() {
+                    return Ok(());
+                }
+                let picks: Vec<crate::card::CardId> = looked
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.players[p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    })
+                    .collect();
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(p),
+                    tapped: false,
+                };
+                for id in &picks {
+                    self.move_card_to(*id, &dest, ctx, events);
+                    if self.battlefield.iter().any(|c| c.id == *id) {
+                        self.last_moved_cards.push(*id);
+                    }
+                }
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    looked.iter().copied().filter(|id| !picks.contains(id)).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.players[p].library.push(card);
+                    }
+                }
+                if !picks.is_empty()
+                    && let Some(then) = then
+                {
+                    self.run_effect(then, ctx, events)?;
                 }
                 Ok(())
             }

@@ -11828,6 +11828,9 @@ fn static_effect_to_effects(
             // `gather_continuous_effects_inner` (needs the source's named_card).
             | StaticEffect::NamedLandsNeutralized
             | StaticEffect::BlightedLandsNeutralized
+            // TokenCreationAddsToken — consulted in the resolve_effect
+            // epilogue (Quina's extra-Frog rider); not a layer effect.
+            | StaticEffect::TokenCreationAddsToken { .. }
             // GrantActivatedAbility — surfaced as a virtual activated ability
             // in `activate_ability`; not a characteristic layer effect.
             | StaticEffect::GrantActivatedAbility { .. }

@@ -2583,6 +2583,20 @@ pub enum Effect {
     /// match; the new attacker hits the same defender the triggering creature
     /// (`trigger_source`) is attacking.
     LookTopMayDeployAttacking { count: Value, filter: SelectionRequirement },
+    /// Random Encounter — shuffle your library, mill `amount`; put each
+    /// creature card milled this way onto the battlefield with haste, and
+    /// return those creatures to their owners' hands at the beginning of the
+    /// next end step.
+    MillDeployCreaturesUntilEndStep { amount: Value },
+    /// Gilgamesh — look at the top `count` cards of your library; put every
+    /// card matching `filter` onto the battlefield ("any number" resolved as
+    /// take-all); bottom the rest in a random order. When one or more entered
+    /// this way, `then` runs with the moved cards on `Selector::LastMoved`.
+    LookTopPutMatchingOntoBattlefield {
+        count: Value,
+        filter: SelectionRequirement,
+        then: Option<Box<Effect>>,
+    },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the
     /// rest on the bottom of your library in a random order." Atraxa, Grand

@@ -176,6 +176,8 @@ impl Effect {
             Effect::OnMatchingAttacksThisTurn { .. } => false,
             Effect::CopyAbility { what, .. } => sel_has_target(what),
             Effect::StaggerPlayerUntilYourNextTurn { who } => player_has_target(who),
+            Effect::LookTopPutMatchingOntoBattlefield { .. } => false,
+            Effect::MillDeployCreaturesUntilEndStep { .. } => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the
             // lowest-seat opponent, so no cast-time target is demanded.
             Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,

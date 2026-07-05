@@ -8286,3 +8286,95 @@ pub fn ultima_origin_of_oblivion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gilgamesh, Master-at-Arms — {4}{R}{R} 6/6 Human Samurai. Whenever he enters
+/// or attacks, look at the top six cards; put any number of Equipment from
+/// among them onto the battlefield, bottom the rest at random, then attach
+/// one to a Samurai you control.
+/// (Take-all Equipment; "attach one" attaches each moved Equipment.)
+pub fn gilgamesh_master_at_arms() -> CardDefinition {
+    let dig = || Effect::LookTopPutMatchingOntoBattlefield {
+        count: Value::Const(6),
+        filter: SelectionRequirement::HasCardType(CardType::Artifact)
+            .and(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+        then: Some(Box::new(Effect::Attach {
+            what: Selector::LastMoved,
+            to: Selector::GreatestPowerControlledMatching(SelectionRequirement::HasCreatureType(
+                CreatureType::Samurai,
+            )),
+        })),
+    };
+    CardDefinition {
+        name: "Gilgamesh, Master-at-Arms",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Samurai],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![
+            etb(dig()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: dig(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Random Encounter — {4}{R}{R} Sorcery. Shuffle, mill four; milled creatures
+/// hit the battlefield with haste and bounce home at the next end step.
+/// Flashback {6}{R}{R}.
+pub fn random_encounter() -> CardDefinition {
+    CardDefinition {
+        name: "Random Encounter",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), r(), r()]))],
+        effect: Effect::MillDeployCreaturesUntilEndStep { amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Quina, Qu Gourmet — {2}{G} 2/3 Qu. If one or more tokens would be created
+/// under your control, those tokens plus a 1/1 green Frog are created instead.
+/// {2}, Sacrifice a Frog: put a +1/+1 counter on Quina.
+pub fn quina_qu_gourmet() -> CardDefinition {
+    let frog = TokenDefinition {
+        name: "Frog".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Frog], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Quina, Qu Gourmet",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Qu], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "If one or more tokens would be created under your control, those tokens plus a 1/1 green Frog creature token are created instead.",
+            effect: StaticEffect::TokenCreationAddsToken { definition: frog },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Frog), 1)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

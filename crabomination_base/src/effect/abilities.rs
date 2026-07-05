@@ -1078,6 +1078,11 @@ pub enum StaticEffect {
     /// with a `GrantActivatedAbility` over `WithCounter(Blight)` lands for
     /// the "{T}: Add {C}" half.
     BlightedLandsNeutralized,
+    /// Quina, Qu Gourmet — "If one or more tokens would be created under your
+    /// control, those tokens plus a [definition] token are created instead."
+    /// Applied once per resolution that minted 1+ tokens for the controller
+    /// (CR 614.13-style single application).
+    TokenCreationAddsToken { definition: crate::card::TokenDefinition },
     /// Necrotic Ooze — "As long as this is on the battlefield, it has all
     /// activated abilities of all creature cards in all graveyards." Surfaced
     /// by `granted_abilities_for` (which walks every graveyard for creature
