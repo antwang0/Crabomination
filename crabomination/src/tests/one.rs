@@ -1210,3 +1210,59 @@ fn bladegraft_aspirant_discounts_equipment() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(sword).is_some());
 }
+
+/// Carnivorous Canopy proliferates only against small targets.
+#[test]
+fn carnivorous_canopy_proliferates_on_small() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(1, catalog::ornithopter()); // MV 0
+    let seeded = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(seeded).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::carnivorous_canopy());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(relic)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(relic).is_none(), "artifact destroyed");
+    assert_eq!(g.battlefield_find(seeded).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferated (MV 0 ≤ 3)");
+}
+
+/// Crawling Chorus leaves a Mite behind.
+#[test]
+fn crawling_chorus_leaves_a_mite() {
+    let mut g = two_player_game();
+    let chorus = g.add_card_to_battlefield(0, catalog::crawling_chorus());
+    g.battlefield_find_mut(chorus).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let mite = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Mite")
+        .expect("Mite minted");
+    assert!(mite.definition.keywords.contains(&crate::card::Keyword::CantBlock));
+}
+
+/// Distorted Curiosity costs {U} while an opponent is corrupted.
+#[test]
+fn distorted_curiosity_corrupted_discount() {
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 3;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = g.add_card_to_hand(0, catalog::distorted_curiosity());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1); // just {U}
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("corrupted discount to {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew two");
+}

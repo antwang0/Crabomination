@@ -6974,6 +6974,9 @@ static ONE: &[Factory] = &[
     super::one::atmosphere_surgeon,
     super::one::bladed_ambassador,
     super::one::black_suns_twilight,
+    super::one::carnivorous_canopy,
+    super::one::chrome_cat,
+    super::one::distorted_curiosity,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

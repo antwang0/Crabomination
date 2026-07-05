@@ -1867,3 +1867,64 @@ pub fn black_suns_twilight() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Carnivorous Canopy — {2}{G} Sorcery. Destroy target artifact, enchantment,
+/// or flying creature; proliferate if its mana value was 3 or less.
+pub fn carnivorous_canopy() -> CardDefinition {
+    let filter = || {
+        SelectionRequirement::Artifact
+            .or(SelectionRequirement::Enchantment)
+            .or(SelectionRequirement::Creature
+                .and(SelectionRequirement::HasKeyword(Keyword::Flying)))
+    };
+    CardDefinition {
+        name: "Carnivorous Canopy",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: SelectionRequirement::ManaValueAtMost(3),
+            },
+            then: Box::new(Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(filter()) },
+                Effect::Proliferate,
+            ])),
+            else_: Box::new(Effect::Destroy { what: target_filtered(filter()) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Chrome Cat — {3} 3/2 Cat artifact creature. ETB scry 1.
+pub fn chrome_cat() -> CardDefinition {
+    CardDefinition {
+        name: "Chrome Cat",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Distorted Curiosity — {2}{U} Sorcery. Corrupted — costs {2} less if an
+/// opponent has three or more poison counters. Draw two cards.
+pub fn distorted_curiosity() -> CardDefinition {
+    CardDefinition {
+        name: "Distorted Curiosity",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "Corrupted — This spell costs {2} less to cast if an opponent has three or more poison counters.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::CorruptedActive { who: PlayerRef::You },
+                amount: 2,
+            },
+        }],
+        effect: draw(2),
+        ..Default::default()
+    }
+}
