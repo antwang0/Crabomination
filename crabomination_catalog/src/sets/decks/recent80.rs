@@ -216,8 +216,8 @@ pub fn caustic_bronco() -> CardDefinition {
         keywords: vec![Keyword::Saddle(3)],
         triggered_abilities: vec![on_attack(Effect::If {
             cond: Predicate::SourceSaddled,
-            then: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::EachOpponent }),
-            else_: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::You }),
+            then: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::EachOpponent, you_gain: false }),
+            else_: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::You, you_gain: false }),
         })],
         ..Default::default()
     }

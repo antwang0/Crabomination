@@ -570,7 +570,8 @@ impl Effect {
             // Targets slot 0 (a creature) but reads it straight off ctx.
             Effect::PreventNextDamageByTargetMintMites => true,
             Effect::GainControl { what, .. }
-            | Effect::GainControlWhileSourceRemains { what } => sel_has_target(what),
+            | Effect::GainControlWhileSourceRemains { what }
+            | Effect::WeldArtifacts { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
             | Effect::Amass { who, count, .. } => {
@@ -814,7 +815,8 @@ impl Effect {
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
-            | Effect::GainControlWhileSourceRemains { what } => sel_filter(what),
+            | Effect::GainControlWhileSourceRemains { what }
+            | Effect::WeldArtifacts { what } => sel_filter(what),
             // The target may be the moved object (`what`: Kor Outfitter's
             // "target Equipment") or the host (`to`: Maul's "attach this to
             // target creature"). Prefer whichever sub-selector carries slot 0.
@@ -1802,7 +1804,8 @@ impl Effect {
                 | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
                 | Effect::GainControl { what, .. }
-                | Effect::GainControlWhileSourceRemains { what } => sel_find(what, slot),
+                | Effect::GainControlWhileSourceRemains { what }
+                | Effect::WeldArtifacts { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }

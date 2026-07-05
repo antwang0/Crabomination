@@ -6448,6 +6448,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WeldArtifacts { what } => {
+                // Goblin Welder: the target artifact's controller sacrifices
+                // it and returns an artifact card from their graveyard
+                // (auto-pick: highest MV) to the battlefield simultaneously.
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(seat) = self.battlefield_find(cid).map(|c| c.controller) else {
+                        continue;
+                    };
+                    let Some(gy_id) = self.players[seat]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.card_types.contains(&CardType::Artifact))
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id)
+                    else {
+                        continue;
+                    };
+                    self.sacrifice_one(cid, seat, events);
+                    self.move_card_to(
+                        gy_id,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(seat),
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::ExchangeControl { a, b } => {
                 // CR 701.12 — swap the controllers of the two resolved
                 // permanents simultaneously. No-op unless both still exist.
@@ -8989,10 +9021,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopToHandLoseMv { who } => {
+            Effect::RevealTopToHandLoseMv { who, you_gain } => {
                 // Top card to hand; `who` loses life equal to its MV (Sorin +1
                 // → each opponent; Caustic Bronco → each opponent when saddled,
-                // else the controller).
+                // else the controller). `you_gain` adds the controller's gain
+                // half (Twilight Prophet).
                 let p = ctx.controller;
                 if self.players[p].library.is_empty() {
                     return Ok(());
@@ -9010,6 +9043,12 @@ impl GameState {
                         let applied = self.adjust_life_applied(who, -mv);
                         if applied < 0 {
                             events.push(GameEvent::LifeLost { player: who, amount: (-applied) as u32 });
+                        }
+                    }
+                    if *you_gain {
+                        let gained = self.adjust_life_applied(p, mv);
+                        if gained > 0 {
+                            events.push(GameEvent::LifeGained { player: p, amount: gained as u32 });
                         }
                     }
                 }

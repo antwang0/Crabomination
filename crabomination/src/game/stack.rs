@@ -3123,12 +3123,25 @@ impl GameState {
             } else {
                 None
             };
+            // CR 614 — "If this permanent would be put into a graveyard, put
+            // it on top of its owner's library instead" (Pulmonic Sliver's
+            // Sliver-wide grant; the "may" is auto-taken).
+            let library_top_redirect = self.battlefield.iter().any(|src| {
+                src.definition.static_abilities.iter().any(|sa| {
+                    matches!(&sa.effect,
+                        crate::effect::StaticEffect::DiesToLibraryTopInstead { filter }
+                        if crate::game::layers::requirement_matches_card(
+                            filter, &card, src.controller))
+                })
+            });
             let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
                 || self.dies_to_exile_eot.contains(&id)
                 || card.definition.dies_to_exile
                 || valentin_redirect.is_some()
             {
                 crate::card::Zone::Exile
+            } else if library_top_redirect {
+                crate::card::Zone::Library
             } else {
                 crate::card::Zone::Graveyard
             };
@@ -3297,7 +3310,15 @@ impl GameState {
             // Top of owner's library. Replacement effects don't carry
             // a position field today; if a future replacement needs
             // bottom / shuffled, extend the type.
-            Zone::Library => self.players[owner].library.insert(0, card),
+            Zone::Library => {
+                // CR 122.2 — counters and battlefield state don't survive
+                // the zone change.
+                card.counters.clear();
+                card.keyword_counters.clear();
+                card.damage = 0;
+                card.tapped = false;
+                self.players[owner].library.insert(0, card)
+            }
             Zone::Command => self.players[owner].command.push(card),
             Zone::Battlefield | Zone::Stack => {
                 // Unsupported as a replacement redirect target — the

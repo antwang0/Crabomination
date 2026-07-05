@@ -11781,7 +11781,7 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::RevealTopToHandLoseMv { who: PlayerRef::EachOpponent },
+                effect: Effect::RevealTopToHandLoseMv { who: PlayerRef::EachOpponent, you_gain: false },
                 ..Default::default()
             },
             LoyaltyAbility {

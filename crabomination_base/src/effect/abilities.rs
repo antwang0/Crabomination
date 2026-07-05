@@ -1289,6 +1289,11 @@ pub enum StaticEffect {
         #[serde(default)]
         void_counter: bool,
     },
+    /// CR 614 — "If [a matching permanent] would be put into a graveyard,
+    /// put it on top of its owner's library instead." Consulted in
+    /// `remove_from_battlefield_to_graveyard_raw`; the printed "may" is
+    /// auto-taken. Pulmonic Sliver ("All Slivers have …").
+    DiesToLibraryTopInstead { filter: crate::card::SelectionRequirement },
     /// CR 614.5 — "If an opponent would mill one or more cards, they mill
     /// twice that many cards instead." (Bruvac the Grandiloquent.) Consulted
     /// by `GameState::mill_count_for` at every mill site.

@@ -358,6 +358,9 @@ mod tests_recent102;
 #[path = "../tests/recent103.rs"]
 mod tests_recent103;
 #[cfg(test)]
+#[path = "../tests/recent104.rs"]
+mod tests_recent104;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -12205,6 +12208,9 @@ fn static_effect_to_effects(
             // Void) — consulted at graveyard-placement time via
             // `graveyard_exiled_for`; no layer effect.
             | StaticEffect::ExileCardsBoundForGraveyard { .. }
+            // DiesToLibraryTopInstead (Pulmonic Sliver) — consulted in
+            // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
+            | StaticEffect::DiesToLibraryTopInstead { .. }
             // Search statics (Aven Mindcensor / Leonin Arbiter) — consulted
             // in `Effect::Search` via `search_top_limit_for` /
             // `pay_search_tax`; no layer effect.

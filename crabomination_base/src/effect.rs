@@ -2607,8 +2607,13 @@ pub enum Effect {
     /// "Reveal the top card of your library and put it into your hand. `who`
     /// loses life equal to its mana value." Sorin, Grim Nemesis +1 (`who:
     /// EachOpponent`); Caustic Bronco's saddled/unsaddled attack (each opponent
-    /// / you).
-    RevealTopToHandLoseMv { who: PlayerRef },
+    /// / you). With `you_gain`, the controller also gains that much life
+    /// (Twilight Prophet's city's-blessing drain).
+    RevealTopToHandLoseMv {
+        who: PlayerRef,
+        #[serde(default)]
+        you_gain: bool,
+    },
     /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of target
     /// opponent's library, exile one face down (auto-pick: highest MV) with
     /// a while-exiled cast permission for you, and bottom the rest randomly.
@@ -3256,6 +3261,10 @@ pub enum Effect {
     /// Gain control of the resolved permanents for as long as the effect's
     /// source remains on the battlefield (Sower of Temptation).
     GainControlWhileSourceRemains { what: Selector },
+    /// Goblin Welder: target artifact's controller simultaneously sacrifices
+    /// it and returns an artifact card from their graveyard to the
+    /// battlefield. The graveyard half is auto-picked (highest mana value).
+    WeldArtifacts { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
     /// Register a `DelayedKind::NextEndStep` exile for every token minted
