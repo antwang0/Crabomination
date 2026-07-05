@@ -12354,6 +12354,66 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AuraSwapFromHand => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let Some(host) = self.battlefield_find(source).and_then(|c| c.attached_to)
+                else {
+                    return Ok(());
+                };
+                let p = ctx.controller;
+                let mut cands: Vec<(CardId, u32, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| {
+                        c.definition
+                            .subtypes
+                            .enchantment_subtypes
+                            .contains(&crate::card::EnchantmentSubtype::Aura)
+                    })
+                    .map(|c| (c.id, c.definition.cost.cmc(), c.definition.name.to_string()))
+                    .collect();
+                if cands.is_empty() {
+                    return Ok(());
+                }
+                cands.sort_by_key(|(_, mv, _)| std::cmp::Reverse(*mv));
+                let pick = if self.players[p].wants_ui || cands.len() > 1 {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Exchange with which Aura?".into(),
+                        candidates: cands.iter().map(|(id, _, n)| (*id, n.clone())).collect(),
+                        min: 1,
+                        max: 1,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(ids) => ids.first().copied(),
+                        _ => None,
+                    }
+                    .unwrap_or(cands[0].0)
+                } else {
+                    cands[0].0
+                };
+                // Source Aura → owner's hand; picked Aura → battlefield on
+                // the same host.
+                self.move_card_to(source, &ZoneDest::Hand(crate::effect::PlayerRef::You), ctx, events);
+                let mut sub = ctx.clone();
+                sub.targets = vec![Target::Permanent(pick)];
+                self.move_card_to(
+                    pick,
+                    &ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(p),
+                        tapped: false,
+                    },
+                    ctx,
+                    events,
+                );
+                if let Some(c) = self.battlefield_find_mut(pick) {
+                    c.attached_to = Some(host);
+                    events.push(GameEvent::AuraAttached { aura: pick, attached_to: host });
+                }
+                Ok(())
+            }
+
             Effect::PreventNextDamageByTargetMintMites => {
                 // Auto-fallback: the controller's biggest creature.
                 let tgt = match ctx.targets.first() {

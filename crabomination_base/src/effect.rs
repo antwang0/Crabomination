@@ -3147,6 +3147,11 @@ pub enum Effect {
     /// only once" — Kaito, Dancing Shadow's combat-damage rider. Sets the
     /// resolved planeswalkers' `loyalty_twice_this_turn` (cleared at cleanup).
     GrantLoyaltyTwiceThisTurn { what: Selector },
+    /// CR 702.65 — Aura swap: "Exchange this Aura with an Aura card in your
+    /// hand." The source Aura returns to hand and the chosen hand Aura enters
+    /// attached to the same permanent (Arcanum Wings). Auto-picks the
+    /// highest-MV hand Aura; a `wants_ui` controller gets a ChooseCards pick.
+    AuraSwapFromHand,
     /// Ria Ivor — "the next time target creature would deal combat damage to
     /// one or more players this combat, prevent that damage; create that many
     /// 1/1 Phyrexian Mite tokens" (shield keyed on the creature as source).

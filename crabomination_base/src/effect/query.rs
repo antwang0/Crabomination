@@ -564,6 +564,7 @@ impl Effect {
             | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
             Effect::Proliferate => false,
             Effect::BlockersPoisonedThisTurn { .. } => false,
+            Effect::AuraSwapFromHand => false,
             // Targets slot 0 (a creature) but reads it straight off ctx.
             Effect::PreventNextDamageByTargetMintMites => true,
             Effect::GainControl { what, .. }

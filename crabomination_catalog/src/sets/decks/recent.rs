@@ -12162,3 +12162,34 @@ pub fn felidar_savior() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Aura swap (CR 702.65) ────────────────────────────────────────────────────
+
+/// Arcanum Wings — {1}{U} Aura. Enchanted creature has flying. Aura swap
+/// {2}{U} ({2}{U}: Exchange this Aura with an Aura card in your hand.)
+pub fn arcanum_wings() -> CardDefinition {
+    CardDefinition {
+        name: "Arcanum Wings",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            sorcery_speed: true,
+            effect: Effect::AuraSwapFromHand,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

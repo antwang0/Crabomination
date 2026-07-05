@@ -6685,3 +6685,41 @@ fn cr_702_180c_toxic_gives_poison_equal_to_value() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].poison_counters, 4, "toxic 4 → four poison counters (CR 702.180c)");
 }
+
+/// CR 704.5z — controlling a "Start your engines!" permanent with no speed
+/// sets speed 1 via state-based action (covers non-cast arrivals).
+#[test]
+fn cr_704_5z_engines_seed_speed_sba() {
+    let mut g = two_player_game();
+    let mut racer = catalog::grizzly_bears();
+    racer.keywords.push(crate::card::Keyword::StartYourEngines);
+    g.add_card_to_battlefield(0, racer);
+    assert_eq!(g.players[0].speed, 0, "SBA hasn't run yet");
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].speed, 1, "704.5z seeded speed 1");
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].speed, 1, "idempotent");
+}
+
+/// CR 702.65 — Aura swap exchanges the Aura with one in hand, keeping the host.
+#[test]
+fn cr_702_65_aura_swap_exchanges_with_hand() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wings = g.add_card_to_battlefield(0, catalog::arcanum_wings());
+    g.battlefield_find_mut(wings).unwrap().attached_to = Some(bears);
+    let other = g.add_card_to_hand(0, catalog::zealots_conviction());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wings, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("aura swap");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wings), "Wings back in hand");
+    let conviction = g.battlefield_find(other).expect("hand Aura deployed");
+    assert_eq!(conviction.attached_to, Some(bears), "attached to the same host");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "Conviction's +1/+1 applies");
+}

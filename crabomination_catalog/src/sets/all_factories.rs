@@ -3519,6 +3519,7 @@ static DECKS: &[Factory] = &[
     super::decks::fervent_champion,
     super::decks::porcelain_legionnaire,
     super::decks::short_sword,
+    super::decks::arcanum_wings,
     super::decks::axebane_beast,
     super::decks::yavimaya_sapherd,
     super::decks::faerie_guidemother,

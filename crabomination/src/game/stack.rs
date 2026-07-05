@@ -2898,6 +2898,22 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
+        // CR 704.5z — a player who controls a "Start your engines!" permanent
+        // and has no speed gets speed 1. (The self-ETB path also seeds it;
+        // this SBA covers blink/control-change/token-copy arrivals.)
+        for seat in 0..self.players.len() {
+            if self.players[seat].speed == 0
+                && self.battlefield.iter().any(|c| {
+                    c.controller == seat
+                        && c.definition
+                            .keywords
+                            .contains(&crate::card::Keyword::StartYourEngines)
+                })
+            {
+                self.players[seat].speed = 1;
+            }
+        }
+
         // CR 704.5n — "If an Equipment or Fortification is attached to an
         // illegal permanent or to a player, it becomes unattached from
         // that permanent or player. It remains on the battlefield."
