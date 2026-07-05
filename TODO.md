@@ -3208,7 +3208,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   immunity ✅ — `StaticEffect::PreventNoncombatDamageToYourCreatures` (Mark of
   Asylum; noncombat-only because combat damage to creatures is marked off the
   shared funnel).
-- 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Extra **combat-phase** insertion ✅ (CR 505.1b — `AdditionalCombatPhase` at End of Combat + `AdditionalCombatPhaseAfterMain` post-main re-entry, Relentless Assault). Phasing-in of extra non-combat steps still ⏳.
+- 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Extra **combat-phase** insertion ✅ (CR 505.1b — `AdditionalCombatPhase` at End of Combat + `AdditionalCombatPhaseAfterMain` post-main re-entry, Relentless Assault). Extra **upkeep steps** ✅ (CR 500.9 — `Effect::AdditionalUpkeepStep` + `Predicate::IsFirstUpkeepThisTurn`; Paradox Haze, `cr_500_9_*`). Remaining ⏳: extra draw/main steps (no card yet needs them).
 - ✅ **CR 702.113 — Awaken** — rides `AlternativeCost { target_filter, effect_override }`: awaken cast adds the counters + a permanent-duration `BecomeCreature` on the targeted land (Part the Waterveil).
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail. `LandType::Cave`
   added (CR 305.6 land subtypes), unblocking the LCI Cave lands + Caves-matter
@@ -3228,7 +3228,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   graveyard — Voidwing Hybrid); "proliferate twice instead" ✅
   (`StaticEffect::ProliferateTwice`, 2^n for n Tekuthals). Remaining:
   per-player UI choice of which permanents/players to proliferate.
-- 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked`. The foretell / plot / adventure-creature exile-cast paths now gate on it too (`cast_foretold`/`cast_plotted`/`cast_adventure_creature`; test `drannith_magistrate_blocks_foretold_cast`). Remaining ⏳: suspend's eventual cast.
+- 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked`. The foretell / plot / adventure-creature exile-cast paths now gate on it too (`cast_foretold`/`cast_plotted`/`cast_adventure_creature`; test `drannith_magistrate_blocks_foretold_cast`). Suspend's eventual cast gates on the same lock ✅ (`cast_card_for_free` → `cast_from_zone_blocked`; test `cr_702_62e_suspend_final_cast_blocked_by_drannith`).
 - ✅ **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
   (702.29e) ✅ via `Keyword::Landcycling(cost, LandType)` and the general
   `Keyword::Typecycling(cost, filter)` ("Basic landcycling" — Ash Barrens),

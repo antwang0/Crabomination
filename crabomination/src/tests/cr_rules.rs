@@ -6723,3 +6723,58 @@ fn cr_702_65_aura_swap_exchanges_with_hand() {
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "Conviction's +1/+1 applies");
 }
+
+// ── CR 500.9 — additional upkeep steps ───────────────────────────────────────
+
+/// Paradox Haze banks an additional upkeep step at the first upkeep of your
+/// turn; the extra upkeep begins (and doesn't loop a third time).
+#[test]
+fn cr_500_9_paradox_haze_grants_second_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::paradox_haze());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.upkeep_steps_this_turn = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.additional_upkeep_steps, 1, "haze banked an extra upkeep");
+    // Pass until the banked step loops back into a second Upkeep.
+    while g.upkeep_steps_this_turn == 1 && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.upkeep_steps_this_turn, 2, "second upkeep step");
+    assert_eq!(g.step, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.additional_upkeep_steps, 0, "the extra upkeep doesn't re-trigger the haze");
+    // And the turn proceeds to Draw afterwards.
+    while g.step == TurnStep::Upkeep && !g.is_game_over() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.step, TurnStep::Draw, "no third upkeep");
+}
+
+// ── CR 702.62e — suspend's eventual cast respects cast-zone locks ────────────
+
+/// Drannith Magistrate ("opponents can't cast from anywhere but their hands")
+/// blocks the suspended card's free cast when the last time counter comes off;
+/// it stays exiled (CR 702.62e).
+#[test]
+fn cr_702_62e_suspend_final_cast_blocked_by_drannith() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::durkwood_baloth()); // Suspend 5—{G}
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    g.add_card_to_battlefield(1, catalog::drannith_magistrate());
+    g.exile.iter_mut().find(|c| c.id == id).unwrap().counters
+        .insert(CounterType::Time, 1);
+    g.active_player_idx = 0;
+    let evs = g.process_suspend();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let card = g.exile.iter().find(|c| c.id == id).expect("stays exiled while locked");
+    assert_eq!(card.counter_count(CounterType::Time), 0, "counters still ticked away");
+    assert!(g.battlefield_find(id).is_none(), "never entered the battlefield");
+}

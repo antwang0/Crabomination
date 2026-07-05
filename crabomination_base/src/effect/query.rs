@@ -695,7 +695,8 @@ impl Effect {
             }
             Effect::AdditionalCombatPhase { count }
             | Effect::AdditionalCombatPhaseAfterMain { count }
-            | Effect::AdditionalEndStep { count } => value_has_target(count),
+            | Effect::AdditionalEndStep { count }
+            | Effect::AdditionalUpkeepStep { count } => value_has_target(count),
             // Registers a delayed trigger; its body targets at fire time, not cast.
             Effect::AtEachCombatThisTurn { .. } => false,
             Effect::UnlockRoomDoor { what } => sel_has_target(what),

@@ -1091,6 +1091,10 @@ pub enum Predicate {
     /// end step — i.e. no extra end step has begun yet. Gates "if it's the
     /// first end step of the turn, …" riders (Y'shtola Rhul).
     IsFirstEndStepThisTurn,
+    /// True while the current turn is in its first upkeep step — gates
+    /// Paradox Haze's "first upkeep step of your turn" trigger so the extra
+    /// upkeep it grants doesn't loop.
+    IsFirstUpkeepThisTurn,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by
@@ -4551,6 +4555,10 @@ pub enum Effect {
     /// `count` extra end steps; when the active player leaves the End step with
     /// one banked, the turn loops back to another End step (Y'shtola Rhul).
     AdditionalEndStep { count: Value },
+    /// CR 500.9 — "you get an additional upkeep step after this one." Banks
+    /// `count` extra upkeep steps; when the active player leaves the Upkeep
+    /// with one banked, the turn loops back to another Upkeep (Paradox Haze).
+    AdditionalUpkeepStep { count: Value },
     /// "At the beginning of each combat this turn, [body]." Registers a
     /// turn-scoped `DelayedKind::EachCombatThisTurn` delayed trigger that
     /// runs `body` at the start of every Begin-Combat step for the rest of

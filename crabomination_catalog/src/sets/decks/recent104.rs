@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, StaticEffect};
-use crate::mana::{b, cost, g, generic, r, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Pulmonic Sliver — {3}{W}{W} 3/3 Sliver. All Sliver creatures have flying.
 /// All Slivers may go to their owner's library top instead of the graveyard.
@@ -101,6 +101,26 @@ pub fn goblin_welder() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Artifact),
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Paradox Haze — {2}{U} Enchantment. At the first upkeep of your turn you
+/// get an additional upkeep step (CR 500.9; enchant-player is modeled as a
+/// controller-scoped enchantment).
+pub fn paradox_haze() -> CardDefinition {
+    CardDefinition {
+        name: "Paradox Haze",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::IsFirstUpkeepThisTurn),
+            effect: Effect::AdditionalUpkeepStep { count: Value::ONE },
         }],
         ..Default::default()
     }

@@ -1183,6 +1183,18 @@ pub struct GameState {
     /// first end step" riders don't loop on the extra step they grant.
     #[serde(default)]
     pub(crate) end_steps_this_turn: u32,
+    /// CR 500.9 — additional upkeep steps banked by
+    /// `Effect::AdditionalUpkeepStep`. When the active player leaves the
+    /// Upkeep step with this set, the turn loops back to another Upkeep
+    /// (decrementing) instead of advancing to Draw (Paradox Haze). Reset at
+    /// cleanup.
+    #[serde(default)]
+    pub(crate) additional_upkeep_steps: u32,
+    /// How many Upkeep steps have begun this turn. Read by
+    /// `Predicate::IsFirstUpkeepThisTurn` so Paradox Haze's "first upkeep
+    /// step of your turn" gate doesn't loop on the extra step it grants.
+    #[serde(default)]
+    pub(crate) upkeep_steps_this_turn: u32,
     /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
     /// directions for the rest of the turn (Maze of Ith: "prevent all combat
     /// damage that would be dealt to and dealt by that creature"). The combat
@@ -1571,6 +1583,8 @@ impl Clone for GameState {
             combat_phases_this_turn: self.combat_phases_this_turn,
             additional_end_steps: self.additional_end_steps,
             end_steps_this_turn: self.end_steps_this_turn,
+            additional_upkeep_steps: self.additional_upkeep_steps,
+            upkeep_steps_this_turn: self.upkeep_steps_this_turn,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
@@ -1719,6 +1733,8 @@ impl GameState {
             combat_phases_this_turn: 0,
             additional_end_steps: 0,
             end_steps_this_turn: 0,
+            additional_upkeep_steps: 0,
+            upkeep_steps_this_turn: 0,
             combat_damage_prevented_creatures: Vec::new(),
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),

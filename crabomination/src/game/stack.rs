@@ -209,6 +209,14 @@ impl GameState {
             next = TurnStep::End;
         }
 
+        // CR 500.9 — additional upkeep step. When the active player leaves
+        // the Upkeep with one banked, loop back to another Upkeep instead of
+        // advancing to Draw (Paradox Haze).
+        if self.step == TurnStep::Upkeep && self.additional_upkeep_steps > 0 {
+            self.additional_upkeep_steps -= 1;
+            next = TurnStep::Upkeep;
+        }
+
         // CR 511.2 — "Effects that last 'until end of combat' expire at the
         // end of the combat phase." Sweep `UntilEndOfCombat` continuous
         // effects whenever we leave EndCombat — including into an additional
@@ -293,6 +301,7 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::Upkeep => {
+                self.upkeep_steps_this_turn = self.upkeep_steps_this_turn.saturating_add(1);
                 // CR 702.32 / 702.62 — Fading / Vanishing tick down as a
                 // turn-based action at upkeep, before step triggers.
                 let mut fv = self.process_fading_vanishing();
@@ -2117,6 +2126,8 @@ impl GameState {
         self.combat_phases_this_turn = 0;
         self.additional_end_steps = 0;
         self.end_steps_this_turn = 0;
+        self.additional_upkeep_steps = 0;
+        self.upkeep_steps_this_turn = 0;
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;

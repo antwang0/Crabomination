@@ -3606,6 +3606,7 @@ static DECKS: &[Factory] = &[
     super::decks::pulmonic_sliver,
     super::decks::twilight_prophet,
     super::decks::goblin_welder,
+    super::decks::paradox_haze,
     super::decks::gilt_leaf_archdruid,
     super::decks::earthbending_lesson,
     super::decks::dai_li_indoctrination,
