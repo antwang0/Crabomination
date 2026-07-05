@@ -1169,6 +1169,7 @@ mod tests {
             static_ability_labels: vec![],
             abilities: vec![],
             loyalty_abilities: vec![],
+            loyalty_uses_remaining: None,
             has_stun_counters: false,
             has_finality_counters: false,
             dies_to_exile: false,

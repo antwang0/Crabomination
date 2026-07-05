@@ -3239,6 +3239,21 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **All Will Be One placer attribution** — `GameEvent::CounterAdded` carries
+  no "who placed" seat, so the enchantment fires off counters landing on your
+  permanents + poison hitting opponents (exact in two-player). Threading the
+  placing controller through the counter funnel would make it exact in
+  multiplayer and unlock "whenever an opponent puts a counter…" designs.
+- ⏳ **Rhuk's dies-half** — "equipped creature … attacks or dies"; the dies
+  half needs the victim's attachment list snapshotted before the equipment
+  unattaches (LKI for attachments).
+- ⏳ **CastWithoutPayingImmediate copy-mode** — Capricious Hellraiser should
+  cast a *copy* (original stays exiled); a `copy: bool` rider on the effect
+  would also serve future "copy it and you may cast the copy" cards.
+- ⏳ **Random graveyard exile selector** — `Selector::Take` is deterministic
+  (top of the vec); a `TakeRandom` sibling would make Hellraiser and
+  Sin-style random exiles faithful.
+
 - ⏳ **recent34–38 follow-ups / deferred cards (this run):**
   - Quest cycle remainder: **Quest for Pure Flame** (needs a turn-scoped
     "double all damage from your sources" replacement — no primitive yet),

@@ -644,15 +644,7 @@ pub fn shrapnel_slinger() -> CardDefinition {
 /// A 1/1 colorless Phyrexian Mite artifact creature token with toxic 1 that
 /// can't block (Skrelv's Hive, Crawling Chorus).
 fn mite_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Phyrexian Mite".into(),
-        power: 1,
-        toughness: 1,
-        card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian, CreatureType::Mite], ..Default::default() },
-        keywords: vec![Keyword::Toxic(1), Keyword::CantBlock],
-        ..Default::default()
-    }
+    crabomination_base::tokens::phyrexian_mite_token()
 }
 
 /// Tyrranax Rex — {4}{G}{G}{G} Creature — Phyrexian Dinosaur 8/8. Can't be
