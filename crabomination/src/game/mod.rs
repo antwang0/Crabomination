@@ -4336,6 +4336,51 @@ impl GameState {
                     }
                     all_effects.push(e);
                 }
+                // Live-conditional team anthems (`PumpTeamIf`) don't fold
+                // through `static_ability_to_effects` — evaluate the gate
+                // against the emblem's owner here (Ellywick's −7 emblem).
+                for sa in &synth.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpTeamIf {
+                        condition,
+                        applies_to,
+                        power,
+                        toughness,
+                        keywords,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx =
+                        crate::game::effects::EffectContext::for_ability(sid, seat, None);
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    let Some(affected) = selector_to_affected(applies_to, &synth) else {
+                        continue;
+                    };
+                    if *power != 0 || *toughness != 0 {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: synth.object_timestamp(),
+                            source: sid,
+                            affected: affected.clone(),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::Indefinite,
+                            modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        });
+                    }
+                    for kw in keywords {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: synth.object_timestamp(),
+                            source: sid,
+                            affected: affected.clone(),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::Indefinite,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
             }
         }
         // CR 702.6 — Equipment attachment statics. Each Equipment with a

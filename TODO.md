@@ -68,6 +68,19 @@ Remaining known approximations (each noted on its factory doc):
   Encroaching Mycosynth's off-battlefield halves, Green Sun's Twilight's
   one-per-type pick.
 
+## Discovered follow-ups — AFR venture batch (`decks::afr`)
+
+- Rooms resolve inline (no stack round-trip); Tomb's two pay-or-lose rooms are
+  flat life loss; Mad Wizard's Lair free-cast collapsed to the draws.
+- Ellywick −2 drops the "if it's legendary, gain 3 life" rider; her emblem
+  approximates "+2/+2 per differently named dungeon" as a flat +2/+2 while ≥1
+  completed. Emblem `PumpTeamIf` statics now evaluate live (new in this run).
+- Skipped (need primitives): Find the Path (aura granting the host land a mana
+  ability), Thieves' Tools (host-power-gated unblockable — `ConditionalEquipBonus`
+  covers it; just not implemented), Midnight Pathlighter (once-per-batch
+  "one or more creatures deal combat damage" venture), Hama Pashar (room
+  abilities trigger an additional time).
+
 ## Environment note
 
 The `crabomination_client` (Bevy GUI) needs system libs the base image lacks.
