@@ -465,19 +465,21 @@ pub fn swan_song() -> CardDefinition {
     }
 }
 
-/// Drown in Ichor — {1}{B} Sorcery. Drown in Ichor deals 3 damage to target
-/// creature. Surveil 1.
+/// Drown in Ichor — {1}{B} Sorcery. Target creature gets -4/-4 until end of
+/// turn. Proliferate.
 pub fn drown_in_ichor() -> CardDefinition {
     CardDefinition {
         name: "Drown in Ichor",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(3),
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-4),
+                toughness: Value::Const(-4),
+                duration: crate::effect::Duration::EndOfTurn,
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Proliferate,
         ]),
         ..Default::default()
     }

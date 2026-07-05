@@ -26,6 +26,19 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- ✅ **`FromYourGraveyard`-scoped triggers fired from the battlefield too.**
+  The battlefield gather didn't exclude the scope, so a Bloodghast-class
+  trigger could fire while its card was in play (Voidwing Hybrid would have
+  bounced itself). Fixed: the battlefield walk skips `FromYourGraveyard`;
+  only the graveyard walk gathers them.
+- ✅ **Poison placement now has one funnel.** `GameState::add_poison` routes
+  AddPoison / AddCounter(Player) / proliferate / infect / toxic combat, with
+  CR 614.16 scaling and Melira's `PoisonCappedAtOnePerTurn` cap applied in one
+  place (proliferate poison previously skipped Constrictor scaling).
+- ✅ **Equipped-state anthem filters live-resolve.** `GrantKeyword`/`PumpPT`
+  statics over `IsEquipped`/`EquippedByAtLeast` join the `IsModified`/
+  `IsAttacking` per-recompute `Specific` path (`requirement_needs_live_
+  resolution`) instead of being silently dropped (Hexgold Hoverwings, Kemba).
 - ✅ **Self-ETB trigger `EventSpec.filter` was dropped.** The inline
   spell-resolution path (`stack.rs`) collected `SelfSource` `EntersBattlefield`
   triggers by kind+scope only, discarding `event.filter`, so filtered self-ETB
@@ -38,16 +51,30 @@ factory doc comment:
 
 ## Discovered follow-ups — Phyrexia: All Will Be One (`sets::one`)
 
-Primitives shipped this run: `Keyword::HexproofExceptColors`,
-`SelectionRequirement::HasToxic` (+ `CardInstance::has_toxic`),
-`DynamicPt::BasePlusCountersOnSelf`. Cards still blocked on one primitive each:
-
-All four previously-blocked ONE cards ship: Necrogen Communion (the
-Minion's-Return `EnchantedBySource` reanimate), Furnace Punisher
-(`SelectorCountAtLeast` over the upkeep player's basics), Voltage Surge
-(`kicker_action_cost` optional sacrifice, CR 702.33f), and a faithful Anoint
-with Affliction (`SelectionRequirement::ControllerCorrupted`). Enumerate
-remaining set gaps with `python3 scripts/set_gaps.py one`.
+~135 ONE cards ship (`tests/one.rs` at 143 green). Primitives shipped across
+the runs: `Keyword::HexproofExceptColors`, `SelectionRequirement::HasToxic`,
+`DynamicPt::BasePlusCountersOnSelf` (now with per-axis `per_p`/`per_t`
+scaling), `EventKind::Proliferated`, `StaticEffect::ProliferateTwice`,
+`StaticEffect::PoisonCappedAtOnePerTurn`, `WardCost::ManaAndLife`,
+`Effect::SacrificeLastCreatedTokensAtNextEndStep`, `LandType::Sphere`,
+cumulative Toxic/Poisonous layer stacking (CR 702.180b). Enumerate remaining
+gaps with `python3 scripts/set_gaps.py one` (~65, mostly rares/mythics):
+- **Compleated planeswalkers** (Jace/Vraska/Lukka/Nahiri/Nissa) — need the
+  702.150 Compleated cast mode (pay {C/P} with life → fewer loyalty).
+- **Trigger-doubling Praetors** (Elesh Norn, Drivnod) — ETB/death trigger
+  count replacement (Elesh Norn also needs opponent-trigger suppression).
+- **All Will Be One / Ichormoon Gauntlet / Venser** — counter-placement
+  triggers with amounts, planeswalker granted loyalty abilities, named-token
+  uniqueness checks.
+- **Mercurial Spelldancer** (delayed copy-next-I/S rider), **Kinzu** (dies →
+  pay-2-life exile + 1/1 toxic copy), **Kethek** (end-step sac → reveal-until
+  lesser-MV deploy), **Blue/Red/Green/White Sun's Twilight** (X-gated riders),
+  **Zenith Chronicler** (per-player first-multicolored-spell tracking),
+  **Noxious Assault** (a whenever-a-creature-blocks-this-turn delayed
+  trigger), **Viral Spawning** (Corrupted-conditional flashback),
+  **Vanish into Eternity** (conditional self cost *increase*),
+  **Mindsplice Apparatus** (per-counter-on-source I/S cost reduction),
+  **Goliath Hatchery** (draw = chosen creature's total toxic value).
 
 ## Environment note
 
@@ -2927,7 +2954,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.115 — Ingest
 - ✅ CR 701.x — Process
 - ✅ CR 208.2 / 613.7b — Set base P/T
-- ✅ CR 702.21 — Ward (discard / life / `WardCost::LifeSourcePower` = source's power — Phyrexian Fleshgorger; `cr_702_21_*`)
+- ✅ CR 702.21 — Ward (discard / life / compound `WardCost::ManaAndLife` — Ovika, Gisa / `WardCost::LifeSourcePower` = source's power — Phyrexian Fleshgorger; `cr_702_21_*`)
 - ✅ CR 702.160 — Prototype (`CardDefinition.prototype` + `GameAction::CastPrototype`; the BRO cycle; `cr_702_160_*`)
 - ✅ CR 702.125 — Undaunted: `StaticEffect::SelfCostReducedPerOpponent` folded into `cost_reduction_for_spell` (generic-only, {1} per opponent). Sublime Exhalation, Curtains' Call, Coastal Breach (`decks::recent12`). Tests in `tests/recent12.rs`.
 - ✅ CR 702.163 — For Mirrodin! (living-weapon-shaped ETB: mint a 2/2 red Rebel + self-attach — Barbed Batterfist, Goldwarden's Helm; `cr_702_163_*`)
@@ -3175,9 +3202,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — permanents' counters + player poison ✅;
-  player experience/energy now proliferate for the controller
-  (`cr_701_34_proliferate_adds_experience_counter`). Remaining: per-player UI
-  choice of which permanents/players to proliferate. See git for detail.
+  player experience/energy ✅; "whenever you proliferate" triggers ✅
+  (`EventKind::Proliferated`, fires once per instance, incl. from the
+  graveyard — Voidwing Hybrid); "proliferate twice instead" ✅
+  (`StaticEffect::ProliferateTwice`, 2^n for n Tekuthals). Remaining:
+  per-player UI choice of which permanents/players to proliferate.
 - 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked`. The foretell / plot / adventure-creature exile-cast paths now gate on it too (`cast_foretold`/`cast_plotted`/`cast_adventure_creature`; test `drannith_magistrate_blocks_foretold_cast`). Remaining ⏳: suspend's eventual cast.
 - ✅ **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
   (702.29e) ✅ via `Keyword::Landcycling(cost, LandType)` and the general

@@ -316,9 +316,9 @@ fn charforger_etb_token_and_death_growth() {
     }).expect("bolt fodder");
     drain_stack(&mut g);
     assert_eq!(
-        g.battlefield_find(charforger).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        g.battlefield_find(charforger).unwrap().counter_count(CounterType::Oil),
         1,
-        "grew when another creature you control died",
+        "oiled up when another creature you control died",
     );
 }
 

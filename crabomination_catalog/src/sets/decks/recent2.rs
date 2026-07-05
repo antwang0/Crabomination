@@ -487,8 +487,8 @@ pub fn valgavoths_faithful() -> CardDefinition {
 }
 
 /// Charforger — {1}{B}{R} 2/3 Phyrexian Beast. ETB create a 1/1 red Phyrexian
-/// Goblin. Whenever another creature you control dies, put a +1/+1 counter on
-/// it. (The "or artifact" half of the death watch is dropped.)
+/// Goblin. Another creature or artifact you control dying adds an oil counter;
+/// remove three oil counters: create another Goblin.
 pub fn charforger() -> CardDefinition {
     let goblin = TokenDefinition {
         name: "Phyrexian Goblin".into(),
@@ -513,16 +513,25 @@ pub fn charforger() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![
-            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: goblin }),
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: goblin.clone(),
+            }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                event: EventSpec::new(EventKind::CreatureOrArtifactDied, EventScope::AnotherOfYours),
                 effect: Effect::AddCounter {
                     what: Selector::This,
-                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    kind: crate::card::CounterType::Oil,
                     amount: Value::Const(1),
                 },
             },
         ],
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            remove_counter_cost: Some((crate::card::CounterType::Oil, 3)),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: goblin },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

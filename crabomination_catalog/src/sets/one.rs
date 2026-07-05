@@ -4313,22 +4313,6 @@ pub fn dune_mover() -> CardDefinition {
 
 // ── Wave 4: commons/uncommons + modal spells ─────────────────────────────────
 
-/// Pestilent Syphoner — {1}{B} 1/1 flying, toxic 1.
-pub fn pestilent_syphoner() -> CardDefinition {
-    CardDefinition {
-        name: "Pestilent Syphoner",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying, Keyword::Toxic(1)],
-        ..Default::default()
-    }
-}
 
 /// Rustvine Cultivator — {G} 1/2. {T}: add an oil counter; {T}, remove an
 /// oil: untap target land.
@@ -4412,27 +4396,6 @@ pub fn molten_rebuke() -> CardDefinition {
     }
 }
 
-/// Hazardous Blast — {3}{R} Sorcery. 1 damage to each opposing creature;
-/// they can't block this turn.
-pub fn hazardous_blast() -> CardDefinition {
-    let opp_creatures = || Selector::EachPermanent(
-        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-    );
-    CardDefinition {
-        name: "Hazardous Blast",
-        cost: cost(&[generic(3), r()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            deal(1, opp_creatures()),
-            Effect::GrantKeyword {
-                what: opp_creatures(),
-                keyword: Keyword::CantBlock,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
-        ..Default::default()
-    }
-}
 
 /// Tamiyo's Immobilizer — {3}{U}. Enters with four oil; {T}, remove an oil:
 /// tap target artifact or creature.
@@ -4456,34 +4419,6 @@ pub fn tamiyos_immobilizer() -> CardDefinition {
     }
 }
 
-/// Aspirant's Ascent — {U} Instant. Target creature gets +1/+3 and gains
-/// flying and toxic 1 until end of turn.
-pub fn aspirants_ascent() -> CardDefinition {
-    CardDefinition {
-        name: "Aspirant's Ascent",
-        cost: cost(&[u()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::ONE,
-                toughness: Value::Const(3),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Flying,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Toxic(1),
-                duration: Duration::EndOfTurn,
-            },
-        ]),
-        ..Default::default()
-    }
-}
 
 /// Ruthless Predation — {1}{G} Sorcery. Your creature gets +1/+2, then
 /// fights a creature you don't control.
@@ -4548,25 +4483,6 @@ pub fn mazes_mantle() -> CardDefinition {
     }
 }
 
-/// Drown in Ichor — {1}{B} Sorcery. Target creature gets -4/-4 until end of
-/// turn. Proliferate.
-pub fn drown_in_ichor() -> CardDefinition {
-    CardDefinition {
-        name: "Drown in Ichor",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-4),
-                toughness: Value::Const(-4),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Proliferate,
-        ]),
-        ..Default::default()
-    }
-}
 
 /// Porcelain Zealot — {3}{W} 2/3. At combat on your turn: your creature gets
 /// +1/+1 — +2/+2 instead if it has toxic.
@@ -4607,28 +4523,6 @@ pub fn porcelain_zealot() -> CardDefinition {
     }
 }
 
-/// Glistener Seer — {U} 0/3. Enters with three oil; {T}, remove an oil: scry 1.
-pub fn glistener_seer() -> CardDefinition {
-    CardDefinition {
-        name: "Glistener Seer",
-        cost: cost(&[u()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Advisor],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 3,
-        enters_with_counters: Some((CounterType::Oil, Value::Const(3))),
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            remove_counter_cost: Some((CounterType::Oil, 1)),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
 
 /// Cinderslash Ravager — {4}{R}{G} 5/5 vigilance; costs {1} less per
 /// oil-countered permanent you control; ETB: 1 damage to each opposing creature.
@@ -4662,57 +4556,7 @@ pub fn cinderslash_ravager() -> CardDefinition {
     }
 }
 
-/// Sheoldred's Edict — {1}{B} Instant. Choose one — each opponent sacrifices
-/// a nontoken creature / a creature token / a planeswalker.
-pub fn sheoldreds_edict() -> CardDefinition {
-    let sac = |filter: SelectionRequirement| Effect::Sacrifice {
-        who: Selector::Player(PlayerRef::EachOpponent),
-        count: Value::ONE,
-        filter,
-    };
-    CardDefinition {
-        name: "Sheoldred's Edict",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            sac(SelectionRequirement::Creature.and(SelectionRequirement::NotToken)),
-            sac(SelectionRequirement::Creature.and(SelectionRequirement::IsToken)),
-            sac(SelectionRequirement::Planeswalker),
-        ]),
-        ..Default::default()
-    }
-}
 
-/// Tyvar's Stand — {X}{G} Instant. Your creature gets +X/+X and gains
-/// hexproof and indestructible until end of turn.
-pub fn tyvars_stand() -> CardDefinition {
-    CardDefinition {
-        name: "Tyvar's Stand",
-        cost: cost(&[crate::mana::x(), g()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::XFromCost,
-                toughness: Value::XFromCost,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Hexproof,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
-        ..Default::default()
-    }
-}
 
 /// Charge of the Mites — {2}{W} Instant. Choose one — damage equal to your
 /// creature count to a creature or planeswalker; or two Mites.
@@ -4770,25 +4614,6 @@ pub fn mite_overseer() -> CardDefinition {
     }
 }
 
-/// Vat Emergence — {4}{B} Sorcery. Reanimate a creature card from any
-/// graveyard under your control. Proliferate.
-pub fn vat_emergence() -> CardDefinition {
-    CardDefinition {
-        name: "Vat Emergence",
-        cost: cost(&[generic(4), b()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
-            Effect::Proliferate,
-        ]),
-        ..Default::default()
-    }
-}
 
 /// Veil of Assimilation — {1}{W}. This or another artifact entering: target
 /// creature you control gets +1/+1 and gains vigilance until end of turn.

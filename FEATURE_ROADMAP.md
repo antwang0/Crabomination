@@ -167,6 +167,23 @@ exercising each) was elided in a compaction pass; recover it from
   on itself — Evolving Adaptive). Oil-count payoffs reuse `Value::CountOf` over
   `SelectionRequirement::WithCounter` (Kuldotha Cackler). 21 ONE cards in
   `sets::one`; tests in `tests/one.rs`.
+- **Proliferate / poison / ward primitives (modern_decks — ONE, this run):**
+  `EventKind::Proliferated` ("whenever you proliferate", once per instance,
+  fires from graveyard scopes too — Scheming Aspirant, Ezuri, Voidwing Hybrid);
+  `StaticEffect::ProliferateTwice` (CR 614 replacement — Tekuthal);
+  `StaticEffect::PoisonCappedAtOnePerTurn` at a new `add_poison` funnel
+  unifying every poison site with CR 614.16 scaling (Melira);
+  `WardCost::ManaAndLife` (compound "Ward—{3}, Pay 3 life" — Ovika, Gisa);
+  any-kind `remove_counter_among_filter` costs (Tekuthal); cumulative
+  Toxic/Poisonous keyword stacking at layer 6 (CR 702.180b — Plague Nurse);
+  per-axis `BasePlusCountersOnSelf` scaling (Exuberant Fuseling's +1/+0 per
+  oil); `Effect::SacrificeLastCreatedTokensAtNextEndStep` (Urabrask's Forge);
+  `WhenTargetDiesThisTurn` watches `PermanentDied` + carries a declared target
+  filter (Melira's artifact watch); `FromYourGraveyard` triggers no longer
+  fire from the battlefield; equipped-state anthem filters (`IsEquipped`/
+  `EquippedByAtLeast`) live-resolve per recompute (Hexgold Hoverwings, Kemba);
+  `LandType::Sphere`. Server lobby-phase chat; client lobby chat panel +
+  Corrupted HUD chip. ~135 ONE cards in `sets::one` (143 tests).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
@@ -624,12 +641,12 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Lobby / matchmaking** — LAN lobby browser (create/join/spectate, host bot
   add/remove). Remaining ⏳: join-by-code over internet, quick-match.
 - ✅ **Reconnect / resume** — resume tokens + backoff retry + full snapshot
-  restore. Remaining ⏳: surface a "reconnecting (N/10)…" banner.
+  restore + a "reconnecting (N/10)…" client banner.
 - ✅ **Spectator mode** (read-only `ClientView` stream).
 - ✅ **Player identity** — editable display name reaches every seat + log lines,
   persisted across launches.
-- 🟡 **Chat** — free in-match chat ships (`T`). Remaining ⏳: emotes, mute,
-  lobby-phase chat.
+- 🟡 **Chat** — free in-match chat ships (`T`), and lobby-phase chat relays
+  to lobby members (same `T` input + a lobby panel). Remaining ⏳: emotes, mute.
 - 🟡 **Timers** — per-action rope ships server-side + client countdown banner.
   Remaining: per-game chess clock.
 - ⏳ **Friends / invites / ratings / leaderboards**.
