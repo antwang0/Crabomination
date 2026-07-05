@@ -8632,6 +8632,11 @@ impl GameState {
                             subject,
                             event_amount: self.event_amount_for(ev),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
+                            triggered_by_death: matches!(
+                                ev,
+                                GameEvent::CreatureDied { .. }
+                                    | GameEvent::CreatureSacrificed { .. }
+                            ),
                         });
                         if ta.event.once_per_turn && trig_idx < n_printed {
                             once_fired_this_batch.insert(once_key);
@@ -8685,6 +8690,7 @@ impl GameState {
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                             event_amount: self.event_amount_for(ev),
                             triggered_by_etb: false,
+                            triggered_by_death: false,
                         });
                     }
                 }
@@ -8741,6 +8747,11 @@ impl GameState {
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_for(ev),
                                 triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
+                            triggered_by_death: matches!(
+                                ev,
+                                GameEvent::CreatureDied { .. }
+                                    | GameEvent::CreatureSacrificed { .. }
+                            ),
                             });
                             break;
                         }
@@ -8776,6 +8787,7 @@ impl GameState {
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_for(ev),
                                 triggered_by_etb: false,
+                            triggered_by_death: false,
                             });
                         }
                     }
@@ -8855,6 +8867,7 @@ impl GameState {
                             subject: None,
                             event_amount: 0,
                             triggered_by_etb: false,
+                            triggered_by_death: false,
                         });
                     }
                 }
@@ -8895,6 +8908,7 @@ impl GameState {
                                 subject: None,
                                 event_amount: 0,
                                 triggered_by_etb: false,
+                            triggered_by_death: false,
                             });
                         }
                     }
@@ -8916,6 +8930,7 @@ impl GameState {
                                 subject: None,
                                 event_amount: 0,
                                 triggered_by_etb: false,
+                            triggered_by_death: false,
                             });
                         }
                     }
@@ -8972,6 +8987,7 @@ impl GameState {
                 subject,
                 event_amount,
                 triggered_by_etb,
+                triggered_by_death,
             } = candidate;
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
@@ -9038,7 +9054,27 @@ impl GameState {
             } else {
                 // Katara, the Fearless: a non-ETB Ally trigger fires an
                 // additional time per Katara the controller controls.
-                let fires = 1 + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
+                // Drivnod, Carnage Dominus: a death-caused trigger of a
+                // permanent its controller controls fires an additional time
+                // per Drivnod.
+                let death_extra = if triggered_by_death {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == controller)
+                        .flat_map(|c| &c.definition.static_abilities)
+                        .filter(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::DoubleControllerDeathTriggers
+                            )
+                        })
+                        .count()
+                } else {
+                    0
+                };
+                let fires = 1
+                    + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                    + death_extra;
                 for _ in 0..fires {
                     queue.push(PendingTriggerPush {
                         source,
@@ -9463,6 +9499,21 @@ impl GameState {
                 })
             {
                 abilities.extend(c.definition.loyalty_abilities.iter().cloned());
+            }
+        }
+        // Ichormoon Gauntlet — fixed loyalty abilities granted to every
+        // planeswalker its controller runs.
+        for c in &self.battlefield {
+            if c.controller != p {
+                continue;
+            }
+            for sa in &c.definition.static_abilities {
+                if let crate::effect::StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
+                    abilities: granted,
+                } = &sa.effect
+                {
+                    abilities.extend(granted.iter().cloned());
+                }
             }
         }
         let ability = abilities
@@ -11739,6 +11790,34 @@ fn static_effect_to_effects(
                 duration: EffectDuration::WhileSourceOnBattlefield,
                 modification: Modification::RemoveAllAbilities,
             }],
+            StaticEffect::SetBasePtForFilter { applies_to, power, toughness } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(*power, *toughness),
+                    }],
+                    None => vec![],
+                }
+            }
+            StaticEffect::AddCreatureTypeToMatching { applies_to, creature_type } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddCreatureType(*creature_type),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::AddCardTypeToMatching { applies_to, card_type } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {
@@ -11854,6 +11933,7 @@ fn static_effect_to_effects(
             // `ally_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerAllyTriggers
             | StaticEffect::DoubleControllerTriggersOfType { .. }
+            | StaticEffect::DoubleControllerDeathTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).
@@ -11861,6 +11941,7 @@ fn static_effect_to_effects(
             // OtherPlaneswalkersHaveSourceLoyaltyAbilities — read at loyalty
             // activation time in `activate_loyalty_ability`; no layer effect.
             | StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
+            | StaticEffect::PlaneswalkersHaveLoyaltyAbilities { .. }
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.
             | StaticEffect::PlayFromLibraryTop { .. }
@@ -11931,6 +12012,9 @@ fn static_effect_to_effects(
             | StaticEffect::GrantActivatedAbility { .. }
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
+            | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
+            | StaticEffect::CostReductionPerCounterOnSource { .. }
+            | StaticEffect::PreventDamageToThisRedirect
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard

@@ -54,6 +54,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
+        (EventKind::PoisonAdded, GameEvent::PoisonAdded { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
@@ -90,6 +91,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
         (EventKind::AuraAttached, GameEvent::AuraAttached { .. }) => true,
+        (
+            EventKind::BecameAttached,
+            GameEvent::AttachmentMoved { attached_to: Some(_), .. },
+        ) => true,
         (EventKind::DayNightChanged, GameEvent::DayNightChanged { was_transition, .. }) => {
             *was_transition
         }
@@ -210,6 +215,12 @@ pub(crate) fn event_matches_spec(
             // "Whenever this creature becomes tapped" (Vampire Envoy).
             event,
             GameEvent::PermanentTapped { card_id } if *card_id == source.id
+        ) || matches!(
+            // "Whenever this Equipment becomes attached" (Blade of Shared
+            // Souls). Source must equal the moved attachment.
+            event,
+            GameEvent::AttachmentMoved { attachment, attached_to: Some(_) }
+                if *attachment == source.id
         ) || matches!(
             // CR 702.26 — "When this phases in." Source must equal the
             // phasing-in permanent.
@@ -529,7 +540,8 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::CommittedCrime { player }
-        | GameEvent::ColorlessManaAdded { player, .. } => Some(EntityRef::Player(*player)),
+        | GameEvent::ColorlessManaAdded { player, .. }
+        | GameEvent::PoisonAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // Bind `Selector::TriggerSource` to the permanent that received the
@@ -558,6 +570,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Bind TriggerSource to the host the Aura attached to (the "creature
         // you control" in Siona's payoff).
         GameEvent::AuraAttached { attached_to, .. } => Some(EntityRef::Permanent(*attached_to)),
+        // BecameAttached binds the host, so "that creature" reads it.
+        GameEvent::AttachmentMoved { attached_to: Some(host), .. } => {
+            Some(EntityRef::Permanent(*host))
+        }
         _ => None,
     }
 }
@@ -640,6 +656,9 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // The Aura's controller is the actor — "an Aura YOU control became
         // attached" gates on the Aura's controller (Siona).
         GameEvent::AuraAttached { aura, .. } => Some(*aura),
+        // The moved attachment is the actor — "this Equipment becomes
+        // attached" is a SelfSource trigger on the Equipment.
+        GameEvent::AttachmentMoved { attachment, .. } => Some(*attachment),
         _ => None,
     }
 }

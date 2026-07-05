@@ -49,32 +49,24 @@ factory doc comment:
   cast-property intervening-ifs still read true. (Attack/etc. SelfSource triggers
   already went through the general dispatch, which evaluated filters.)
 
-## Discovered follow-ups — Phyrexia: All Will Be One (`sets::one`)
+## Phyrexia: All Will Be One (`sets::one`) — COMPLETE
 
-~135 ONE cards ship (`tests/one.rs` at 143 green). Primitives shipped across
-the runs: `Keyword::HexproofExceptColors`, `SelectionRequirement::HasToxic`,
-`DynamicPt::BasePlusCountersOnSelf` (now with per-axis `per_p`/`per_t`
-scaling), `EventKind::Proliferated`, `StaticEffect::ProliferateTwice`,
-`StaticEffect::PoisonCappedAtOnePerTurn`, `WardCost::ManaAndLife`,
-`Effect::SacrificeLastCreatedTokensAtNextEndStep`, `LandType::Sphere`,
-cumulative Toxic/Poisonous layer stacking (CR 702.180b). Enumerate remaining
-gaps with `python3 scripts/set_gaps.py one` (~65, mostly rares/mythics):
-- **Compleated planeswalkers** (Jace/Vraska/Lukka/Nahiri/Nissa) — need the
-  702.150 Compleated cast mode (pay {C/P} with life → fewer loyalty).
-- **Trigger-doubling Praetors** (Elesh Norn, Drivnod) — ETB/death trigger
-  count replacement (Elesh Norn also needs opponent-trigger suppression).
-- **All Will Be One / Ichormoon Gauntlet / Venser** — counter-placement
-  triggers with amounts, planeswalker granted loyalty abilities, named-token
-  uniqueness checks.
-- **Mercurial Spelldancer** (delayed copy-next-I/S rider), **Kinzu** (dies →
-  pay-2-life exile + 1/1 toxic copy), **Kethek** (end-step sac → reveal-until
-  lesser-MV deploy), **Blue/Red/Green/White Sun's Twilight** (X-gated riders),
-  **Zenith Chronicler** (per-player first-multicolored-spell tracking),
-  **Noxious Assault** (a whenever-a-creature-blocks-this-turn delayed
-  trigger), **Viral Spawning** (Corrupted-conditional flashback),
-  **Vanish into Eternity** (conditional self cost *increase*),
-  **Mindsplice Apparatus** (per-counter-on-source I/S cost reduction),
-  **Goliath Hatchery** (draw = chosen creature's total toxic value).
+Every single-faced ONE card is implemented (`python3 scripts/set_gaps.py one`
+reports 0 missing); tests in `crabomination/src/tests/one.rs`. Primitives
+shipped across the runs: CR 702.150 Compleated (+ `{A/B/P}` PhyrexianHybrid
+pips), CR 602.5g summoning-sickness activation gate, death-trigger doubling
+(Drivnod), `EventKind::{PoisonAdded, BecameAttached}`, oil-activity turn
+flags, per-counter cost reduction, prevention-with-mite-mint shields,
+graveyard-lands ability borrowing, `Effect::BecomeTreasure`, loyalty-ability
+grants (Ichormoon), and the CR 603.4 combat-damage intervening-if fix.
+Remaining known approximations (each noted on its factory doc):
+- Capricious Hellraiser exiles the top three graveyard cards (not random) and
+  free-casts the original, not a copy.
+- Rhuk's dies-half, Ria Ivor's target choice (auto-picks your biggest
+  creature), Phyrexian Atlas multiplayer scoping, Nahiri 0's loyalty MV cap,
+  Kaito's per-dealer (unbatched) bounce, Monument's name-count filter,
+  Encroaching Mycosynth's off-battlefield halves, Green Sun's Twilight's
+  one-per-type pick.
 
 ## Environment note
 

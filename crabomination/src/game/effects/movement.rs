@@ -137,6 +137,38 @@ impl GameState {
             }
             return 0;
         }
+        // Phyrexian Vindicator — "If damage would be dealt to this creature,
+        // prevent that damage. When damage is prevented this way, this
+        // creature deals that much damage to any other target" (auto-picked).
+        if let EntityRef::Permanent(cid) = ent
+            && amount > 0
+            && self.battlefield_find(cid).is_some_and(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventDamageToThisRedirect
+                    )
+                })
+            })
+        {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: None,
+                to_card: Some(cid),
+            });
+            let controller = self.battlefield_find(cid).map(|c| c.controller).unwrap_or(0);
+            let redirect = crate::effect::Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: crate::effect::Value::Const(amount as i32),
+            };
+            let target = self.auto_target_for_effect_avoiding(&redirect, controller, Some(cid));
+            self.stack.push(
+                crate::game::types::TriggerPush::new(cid, controller, redirect)
+                    .target(target)
+                    .build(),
+            );
+            return 0;
+        }
         if self.prevention_shields.is_empty() {
             return amount;
         }
@@ -156,6 +188,8 @@ impl GameState {
         let mut reflect_ctrl: Option<usize> = None;
         // One-event (Circle of Protection) shields spent in this event.
         let mut spent_one_event: Vec<usize> = Vec::new();
+        // Ria Ivor — (seat, prevented) mite mints owed after the loop.
+        let mut mite_mints: Vec<(usize, u32)> = Vec::new();
         for (i, shield) in self
             .prevention_shields
             .iter_mut()
@@ -181,6 +215,9 @@ impl GameState {
             if shield.one_event && soak > 0 {
                 spent_one_event.push(i);
             }
+            if soak > 0 && let Some(seat) = shield.mint_mites_for {
+                mite_mints.push((seat, soak));
+            }
             prevented += soak;
             if shield.gain_life {
                 life_gain += soak;
@@ -204,6 +241,15 @@ impl GameState {
             let applied = self.adjust_life_applied(p, life_gain as i32);
             if applied > 0 {
                 events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+            }
+        }
+        // Ria Ivor — one Phyrexian Mite per point of damage the shield ate.
+        for (seat, n) in mite_mints {
+            for _ in 0..n {
+                let def = crabomination_base::tokens::token_to_card_definition(
+                    &crabomination_base::tokens::phyrexian_mite_token(),
+                );
+                self.mint_token_onto_battlefield(def, seat, false, events);
             }
         }
         // Deflecting Palm's "deals that much damage to that source's

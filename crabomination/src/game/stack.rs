@@ -385,6 +385,7 @@ impl GameState {
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.multicolored_spells_cast_this_turn = 0;
+                    pl.oil_activity_this_turn = false;
                     // CR 603.7e — unused "your next creature spell this turn"
                     // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();
@@ -2136,6 +2137,7 @@ impl GameState {
                 crate::game::types::DelayedKind::WhenCardDies(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                    | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
                     | crate::game::types::DelayedKind::EachCombatThisTurn
                     | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
             )
@@ -3070,6 +3072,11 @@ impl GameState {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
+            // Churning Reservoir: an oil-countered permanent bound for a
+            // graveyard flips its controller's oil-activity flag.
+            if card.counter_count(crate::card::CounterType::Oil) > 0 {
+                self.players[card.controller].oil_activity_this_turn = true;
+            }
             // CR 122.1h — Finality counters redirect Battlefield →
             // Graveyard to Battlefield → Exile. Wilt in the Heat's "if
             // that creature would die this turn, exile it instead" rides
@@ -3453,13 +3460,32 @@ impl GameState {
             out.push(GameEvent::CardPutIntoGraveyard { player: owner, card_id: id, is_land });
         }
         for (source, effect, controller) in leave_triggers {
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
-            self.stack.push(
-                TriggerPush::new(source, controller, effect)
-                    .target(auto_target)
-                    .build(),
-            );
+            // Drivnod, Carnage Dominus — a creature dying causes this trigger,
+            // so it fires an additional time per Drivnod its controller runs.
+            let fires = 1 + if dying_creature_controller.is_some() {
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == controller)
+                    .flat_map(|c| &c.definition.static_abilities)
+                    .filter(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::DoubleControllerDeathTriggers
+                        )
+                    })
+                    .count()
+            } else {
+                0
+            };
+            for _ in 0..fires {
+                let auto_target =
+                    self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+                self.stack.push(
+                    TriggerPush::new(source, controller, effect.clone())
+                        .target(auto_target)
+                        .build(),
+                );
+            }
         }
         // CR 702.79 / 702.92 — Persist / Undying apply on *any* death, not
         // just lethal-damage SBA. The destroy / sacrifice funnels route

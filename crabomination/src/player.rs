@@ -196,6 +196,11 @@ pub struct Player {
     /// Chronicler's "first multicolored spell each turn"). Reset at cleanup.
     #[serde(default)]
     pub multicolored_spells_cast_this_turn: u32,
+    /// Churning Reservoir's gate: an oil counter left one of this player's
+    /// permanents this turn, or an oil-countered permanent of theirs hit a
+    /// graveyard. Reset at cleanup.
+    #[serde(default)]
+    pub oil_activity_this_turn: bool,
     /// Number of times an "Nth time this turn" landfall ability this player
     /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
     /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
@@ -627,6 +632,7 @@ impl Player {
             creatures_entered_last_turn: Vec::new(),
             artifacts_entered_this_turn: 0,
             multicolored_spells_cast_this_turn: 0,
+            oil_activity_this_turn: false,
             escalating_resolutions_this_turn: 0,
             pending_creature_etb_counters: Vec::new(),
             pending_creature_etb_keywords: Vec::new(),

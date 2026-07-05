@@ -1142,6 +1142,9 @@ pub enum Predicate {
     /// opponent of `who` has three or more poison counters. Gates Corrupted
     /// triggers / "as long as" statics.
     CorruptedActive { who: PlayerRef },
+    /// Churning Reservoir — an oil counter was removed from `who`'s permanent
+    /// this turn, or an oil-countered permanent of theirs hit a graveyard.
+    OilActivityThisTurn { who: PlayerRef },
     /// `who` controls a creature whose power is greater than or equal to every
     /// creature's power on the battlefield — i.e. controls the creature with
     /// the greatest power, or one tied for it (Summon: Fenrir III "Ecliptic
@@ -1492,6 +1495,10 @@ pub enum EventKind {
     /// the proliferating player is the event actor. "Whenever you
     /// proliferate" (Scheming Aspirant, Ezuri, Voidwing Hybrid).
     Proliferated,
+    /// A player got one or more poison counters (`GameEvent::PoisonAdded`) —
+    /// the player half of All Will Be One's "counters on a permanent or
+    /// player". Event amount = counters added.
+    PoisonAdded,
     /// CR 701.54 — the Ring tempted a player (and they chose a Ring-bearer).
     /// Matched to `GameEvent::RingTempted`; the chosen bearer rides in as the
     /// trigger subject. Powers "whenever you choose a creature as your
@@ -1610,6 +1617,9 @@ pub enum EventKind {
     /// control). The attached-to permanent is the event subject. Matched to
     /// `GameEvent::AuraAttached`. Siona, Captain of the Pyleas.
     AuraAttached,
+    /// This Equipment became attached to a permanent (Blade of Shared Souls;
+    /// fires off `GameEvent::AttachmentMoved` with a live host).
+    BecameAttached,
     /// CR 712 — a permanent transformed. Fires once per transformed permanent;
     /// the transforming permanent is the event subject (`EventScope::SelfSource`
     /// for "when this transforms"). Matched to `GameEvent::Transformed`.
@@ -3137,6 +3147,14 @@ pub enum Effect {
     /// only once" — Kaito, Dancing Shadow's combat-damage rider. Sets the
     /// resolved planeswalkers' `loyalty_twice_this_turn` (cleared at cleanup).
     GrantLoyaltyTwiceThisTurn { what: Selector },
+    /// Ria Ivor — "the next time target creature would deal combat damage to
+    /// one or more players this combat, prevent that damage; create that many
+    /// 1/1 Phyrexian Mite tokens" (shield keyed on the creature as source).
+    PreventNextDamageByTargetMintMites,
+    /// Ichormoon Gauntlet — "choose a counter on target permanent; put an
+    /// additional counter of that kind on it." Auto-picks +1/+1 when present,
+    /// else the most numerous kind.
+    AddCounterOfPresentKind { what: Selector },
     /// Vraska, Betrayal's Sting's −2 — "[what] becomes a Treasure artifact
     /// with '{T}, Sacrifice: add one mana of any color' and loses all other
     /// card types and abilities" (layer 4 type swap + layer 6 ability wipe +
@@ -4220,6 +4238,11 @@ pub enum Effect {
     /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.
     /// Codie, Vociferous Codex.
     OnYourNextSpellCastThisTurn {
+        body: Box<Effect>,
+    },
+    /// One-shot "when you next cast an instant or sorcery spell this turn,
+    /// [body]" — other casts leave it armed (Mercurial Spelldancer's copy).
+    OnYourNextInstantSorceryThisTurn {
         body: Box<Effect>,
     },
     /// "When you cast a spell with the chosen name for the first time this

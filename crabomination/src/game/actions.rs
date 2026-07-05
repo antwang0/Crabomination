@@ -334,6 +334,12 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 {
                     reduction += state.players[caster].experience;
                 }
+                StaticEffect::CostReductionPerCounterOnSource { filter, kind }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += src.counter_count(*kind);
+                }
                 StaticEffect::CostReductionBySourcePower { filter }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -7264,11 +7270,22 @@ impl GameState {
         // CR 603.7e — one-shot "when you cast your next spell this turn"
         // delayed triggers (Codie). Fire each matching watcher once, with
         // the cast spell bound as the trigger source, and consume it.
+        let cast_is_is = self.find_card_anywhere(cast_card).is_some_and(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                || c.definition.card_types.contains(&crate::card::CardType::Sorcery)
+        });
         let (next_cast, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
             .into_iter()
             .partition(|dt| {
                 dt.controller == controller
-                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellCastThisTurn)
+                    && (matches!(
+                        dt.kind,
+                        crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                    ) || (cast_is_is
+                        && matches!(
+                            dt.kind,
+                            crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
+                        )))
             });
         self.delayed_triggers = rest;
         // Expose the cast spell's mana value so bodies can gate on it
@@ -8293,6 +8310,27 @@ impl GameState {
             for pl in &self.players {
                 for card in &pl.graveyard {
                     if !card.definition.is_creature() {
+                        continue;
+                    }
+                    for ab in &card.definition.activated_abilities {
+                        if ab.from_graveyard || ab.exile_self_cost {
+                            continue;
+                        }
+                        out.push(ab.clone());
+                    }
+                }
+            }
+        }
+        // Mirran Safehouse — every battlefield-usable activated ability of
+        // every land card in every graveyard.
+        if self.battlefield_find(card_id).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfGraveyardLands)
+            })
+        }) {
+            for pl in &self.players {
+                for card in &pl.graveyard {
+                    if !card.definition.is_land() {
                         continue;
                     }
                     for ab in &card.definition.activated_abilities {
@@ -9671,7 +9709,11 @@ impl GameState {
         if let Some((kind, count)) = ability.remove_counter_cost
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
+            let ctrl = c.controller;
             c.remove_counters(kind, count);
+            if kind == crate::card::CounterType::Oil {
+                self.players[ctrl].oil_activity_this_turn = true;
+            }
         }
 
         // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`

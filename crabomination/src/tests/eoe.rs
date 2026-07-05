@@ -805,6 +805,7 @@ fn frenzied_baloth_combat_damage_unpreventable() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     g.prevention_shields.push(PreventionShield {
+        mint_mites_for: None,
         target: PreventionTarget::Player(1),
         remaining: None,
         gain_life: false,

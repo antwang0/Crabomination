@@ -3598,3 +3598,347 @@ fn goliath_hatchery_tokens_and_draw() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew = toxic 1 (the Beasts)");
 }
+
+// ── ONE wave 7: mythics + oil engines ────────────────────────────────────────
+
+/// All Will Be One pings for counters you place and poison you inflict.
+#[test]
+fn all_will_be_one_counter_pings() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::all_will_be_one());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let life1 = g.players[1].life;
+    let ctx = crate::game::effects::EffectContext::for_ability(bears, 0, None);
+    let events = g.resolve_effect(&crate::effect::Effect::AddCounter {
+        what: crate::effect::Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: crate::effect::Value::Const(4),
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(victim).is_none() || g.players[1].life == life1 - 4,
+        "4 counters pinged an opposing target for 4"
+    );
+}
+
+/// Drivnod doubles your death triggers.
+#[test]
+fn drivnod_doubles_death_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drivnod_carnage_dominus());
+    // Injector Crocodile: dies → incubate 3.
+    let croc = g.add_card_to_battlefield(0, catalog::injector_crocodile());
+    let ctx = crate::game::effects::EffectContext::for_ability(croc, 0, None);
+    let events = g.resolve_effect(&crate::effect::Effect::SacrificePermanent {
+        what: crate::effect::Selector::This,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let incubators = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
+    assert_eq!(incubators, 2, "death trigger fired twice");
+}
+
+/// Ichormoon Gauntlet grants planeswalkers [0]: Proliferate.
+#[test]
+fn ichormoon_gauntlet_grants_loyalty_zero() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ichormoon_gauntlet());
+    let koth = g.add_card_to_battlefield(0, catalog::koth_fire_of_resistance());
+    g.players[1].poison_counters = 1;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Koth prints 3 abilities; index 3 = the granted [0]: Proliferate.
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: koth, ability_index: 3, target: None, x_value: None,
+    }).expect("granted [0]");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 2, "proliferated");
+}
+
+/// Mindsplice Apparatus discounts instants per oil counter.
+#[test]
+fn mindsplice_apparatus_scaling_discount() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::mindsplice_apparatus());
+    g.battlefield_find_mut(app).unwrap().add_counters(CounterType::Oil, 2);
+    // Serum Visions? use Lightning Bolt: {R} — no generic to shave. Use
+    // Nahiri's Sacrifice {1}{R}: 2 oil shaves the {1}.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    let target = g.add_card_to_battlefield(1, catalog::wind_drake());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::nahiris_sacrifice());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1); // exactly {R}
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted to {R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "resolved");
+}
+
+/// Mercurial Spelldancer's saboteur rider copies your next instant.
+#[test]
+fn mercurial_spelldancer_copies_next_spell() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dancer = g.add_card_to_battlefield(0, catalog::mercurial_spelldancer());
+    g.battlefield_find_mut(dancer).unwrap().add_counters(CounterType::Oil, 2);
+    g.clear_sickness(dancer);
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dancer, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dancer).unwrap().counter_count(CounterType::Oil), 0,
+        "two oil cashed in");
+    let life1 = g.players[1].life;
+    g.step = crate::game::types::TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 6, "bolt + copy = 6");
+}
+
+/// Churning Reservoir's Goblin mint needs oil activity this turn.
+#[test]
+fn churning_reservoir_oil_gate() {
+    let mut g = two_player_game();
+    let res = g.add_card_to_battlefield(0, catalog::churning_reservoir());
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
+        card_id: res, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(act(&mut g).is_err(), "no oil activity yet");
+    // Remove an oil counter from a permanent you control.
+    let fang = g.add_card_to_battlefield(0, catalog::atraxas_skitterfang());
+    g.battlefield_find_mut(fang).unwrap().add_counters(CounterType::Oil, 1);
+    let ctx = crate::game::effects::EffectContext::for_ability(fang, 0, None);
+    g.resolve_effect(&crate::effect::Effect::RemoveCounter {
+        what: crate::effect::Selector::This, kind: CounterType::Oil,
+        amount: crate::effect::Value::ONE,
+    }, &ctx).unwrap();
+    act(&mut g).expect("oil was removed this turn");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Phyrexian Goblin"));
+}
+
+/// Phyrexian Vindicator deflects damage to another target.
+#[test]
+fn phyrexian_vindicator_deflects() {
+    let mut g = two_player_game();
+    let vind = g.add_card_to_battlefield(0, catalog::phyrexian_vindicator());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(vind)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the Vindicator");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(vind).unwrap().damage, 0, "damage prevented");
+    assert_eq!(g.players[1].life, life1 - 3, "3 deflected at the opponent");
+}
+
+/// Graaz turns your other creatures into 5/3 Juggernauts.
+#[test]
+fn graaz_makes_five_three_juggernauts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::graaz_unstoppable_juggernaut());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3));
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Juggernaut));
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Bear), "in addition");
+    assert!(cp.keywords.contains(&crate::card::Keyword::MustAttack), "must attack");
+}
+
+/// Encroaching Mycosynth turns your nonland permanents into artifacts.
+#[test]
+fn encroaching_mycosynth_artifacts_everything() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::encroaching_mycosynth());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bears).unwrap().card_types.contains(&CardType::Artifact));
+    assert!(!g.computed_permanent(land).unwrap().card_types.contains(&CardType::Artifact));
+    assert!(!g.computed_permanent(theirs).unwrap().card_types.contains(&CardType::Artifact));
+}
+
+/// Venser mints The Hollow Sentinel on your first proliferate.
+#[test]
+fn venser_mints_hollow_sentinel() {
+    let mut g = two_player_game();
+    let venser = g.add_card_to_battlefield(0, catalog::venser_corpse_puppet());
+    g.players[1].poison_counters = 1;
+    let ctx = crate::game::effects::EffectContext::for_ability(venser, 0, None);
+    let events = g.resolve_effect(&crate::effect::Effect::Proliferate, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "The Hollow Sentinel"));
+}
+
+/// The Mycosynth Gardens becomes a copy of your Sol Ring.
+#[test]
+fn mycosynth_gardens_copies_artifact() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::the_mycosynth_gardens());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring()); // MV 1
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: Some(Target::Permanent(ring)),
+        additional_targets: vec![], x_value: Some(1),
+    }).expect("become a copy");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert!(cp.card_types.contains(&CardType::Artifact), "now a Sol Ring copy");
+}
+
+/// Mirran Safehouse taps like the lands in the graveyards.
+#[test]
+fn mirran_safehouse_borrows_land_abilities() {
+    let mut g = two_player_game();
+    let house = g.add_card_to_battlefield(0, catalog::mirran_safehouse());
+    g.add_card_to_graveyard(1, catalog::mountain());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: house, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap like a Mountain");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 1);
+}
+
+/// Monument to Perfection animates only at nine land names.
+#[test]
+fn monument_to_perfection_transformation() {
+    let mut g = two_player_game();
+    let mon = g.add_card_to_battlefield(0, catalog::monument_to_perfection());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
+        card_id: mon, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(act(&mut g).is_err(), "too few land names");
+    for f in [catalog::plains, catalog::island, catalog::swamp, catalog::mountain,
+              catalog::forest, catalog::mirrex, catalog::the_seedcore,
+              catalog::the_monumental_facade, catalog::the_mycosynth_gardens] {
+        g.add_card_to_battlefield(0, f());
+    }
+    act(&mut g).expect("nine names");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mon).unwrap();
+    assert_eq!((cp.power, cp.toughness), (9, 9));
+    assert!(cp.keywords.contains(&crate::card::Keyword::Indestructible));
+}
+
+// ── ONE wave 8: the set closes out ───────────────────────────────────────────
+
+/// Capricious Hellraiser is {3} cheaper at nine cards and free-casts an
+/// exiled noncreature spell.
+#[test]
+fn capricious_hellraiser_ritual() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    for _ in 0..8 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let life1 = g.players[1].life;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hell = g.add_card_to_hand(0, catalog::capricious_hellraiser());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 3); // {3} shaved off
+    g.perform_action(GameAction::CastSpell {
+        card_id: hell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted to {R}{R}{R}");
+    drain_stack(&mut g);
+    // Three graveyard cards were exiled; if the Bolt was among them it was
+    // free-cast at an opposing target.
+    assert_eq!(g.players[0].graveyard.len(), 6, "three cards exiled");
+    assert_eq!(g.players[1].life, life1 - 3, "free Bolt resolved");
+}
+
+/// Blade of Shared Souls lets its bearer copy another creature you control.
+#[test]
+fn blade_of_shared_souls_copies() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::blade_of_shared_souls());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![angel]),
+    ]));
+    g.perform_action(GameAction::Equip { equipment: blade, target: bears }).expect("equip");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!(cp.power, 4, "the bear became a Serra Angel copy");
+}
+
+/// Rhuk steals the Equipment off another attacking equipped creature.
+#[test]
+fn rhuk_nabs_equipment() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let rhuk = g.add_card_to_battlefield(0, catalog::rhuk_hexgold_nabber());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let sword = g.add_card_to_battlefield(0, catalog::short_sword());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bears);
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bears, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(rhuk), "sword moved to Rhuk");
+}
+
+/// Ria Ivor converts the chosen creature's prevented combat damage to Mites.
+#[test]
+fn ria_ivor_mints_mites() {
+    let mut g = two_player_game();
+    let ria = g.add_card_to_battlefield(0, catalog::ria_ivor_bane_of_bladehold());
+    g.clear_sickness(ria);
+    g.active_player_idx = 0;
+    // Auto-pick chooses the biggest creature — Ria herself.
+    g.fire_step_triggers(crate::game::types::TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let life1 = g.players[1].life;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ria, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1, "combat damage prevented");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Mite").count(), 3,
+        "three Mites for three prevented damage");
+}

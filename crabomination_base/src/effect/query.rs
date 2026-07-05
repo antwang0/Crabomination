@@ -309,6 +309,7 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
             Effect::FactOrFiction { .. } => false,
@@ -558,11 +559,13 @@ impl Effect {
             }
             Effect::RemoveAllCounters { what } => sel_has_target(what),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
-            Effect::GrantLoyaltyTwiceThisTurn { what } | Effect::BecomeTreasure { what } => {
-                sel_has_target(what)
-            }
+            Effect::GrantLoyaltyTwiceThisTurn { what }
+            | Effect::BecomeTreasure { what }
+            | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
             Effect::Proliferate => false,
             Effect::BlockersPoisonedThisTurn { .. } => false,
+            // Targets slot 0 (a creature) but reads it straight off ctx.
+            Effect::PreventNextDamageByTargetMintMites => true,
             Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
@@ -826,6 +829,7 @@ impl Effect {
             | Effect::SetLoyalty { what, .. }
             | Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::BecomeTreasure { what }
+            | Effect::AddCounterOfPresentKind { what }
             | Effect::AddKeywordCounter { what, .. }
             | Effect::RemoveKeywordCounter { what, .. }
             | Effect::AddRandomMissingCounter { what, .. } => sel_filter(what),
@@ -924,6 +928,7 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.primary_target_filter(),
@@ -1851,6 +1856,7 @@ impl Effect {
                 | Effect::SetLoyalty { what, .. }
                 | Effect::GrantLoyaltyTwiceThisTurn { what }
                 | Effect::BecomeTreasure { what }
+                | Effect::AddCounterOfPresentKind { what }
                 | Effect::BecomeChosenColor { what, .. }
                 | Effect::BecomeColor { what, .. }
                 | Effect::BecomeCreatureType { what, .. }
@@ -1892,6 +1898,7 @@ impl Effect {
                 Effect::WithSacrificedPt { body, .. }
                 | Effect::WithTappedPower { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
+                | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PayEnergy { then, .. } => eff_find(then, slot, mode, kicked),

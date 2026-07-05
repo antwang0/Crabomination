@@ -691,6 +691,9 @@ pub enum DelayedKind {
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
     YourNextSpellCastThisTurn,
+    /// "When you next cast an instant or sorcery spell this turn, copy that
+    /// spell" (Mercurial Spelldancer). Non-matching casts leave it armed.
+    YourNextInstantSorceryCastThisTurn,
     /// "When you cast a spell with the chosen name for the first time this
     /// turn, …" (CR 603.7e, name-gated). Fires once on the controller's next
     /// cast whose name matches the source's `named_card`; non-matching casts
@@ -811,6 +814,10 @@ pub(crate) struct TriggerCandidate {
     /// Proctor's CR 614 tax only applies to ETB-triggered abilities — this
     /// flag is read at push-time to gate the tax.
     pub triggered_by_etb: bool,
+    /// True if the originating event was a creature dying — Drivnod's
+    /// "a creature dying causes … triggers an additional time" doubler.
+    #[serde(default)]
+    pub triggered_by_death: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1386,6 +1393,10 @@ pub struct PreventionShield {
     /// by damage time (a resolving spell).
     #[serde(default)]
     pub source_controller: Option<usize>,
+    /// Ria Ivor — the seat that mints one Phyrexian Mite per point of damage
+    /// this shield prevents.
+    #[serde(default)]
+    pub mint_mites_for: Option<usize>,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither

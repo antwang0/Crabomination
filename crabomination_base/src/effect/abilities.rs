@@ -195,6 +195,19 @@ pub enum StaticEffect {
     /// "[permanents] are [card type] in addition to their other types" — a
     /// layer-4 additive `AddCardType` over everything `applies_to` resolves to
     /// (Toph, the First Metalbender: "nontoken artifacts you control are lands").
+    /// Graaz — "Other creatures you control have base power and toughness
+    /// 5/3" (layer 7b over a CardMatch filter).
+    SetBasePtForFilter {
+        applies_to: Selector,
+        power: i32,
+        toughness: i32,
+    },
+    /// Graaz — "… and are Juggernauts in addition to their other creature
+    /// types" (layer 4 additive creature type over a CardMatch filter).
+    AddCreatureTypeToMatching {
+        applies_to: Selector,
+        creature_type: crate::card::CreatureType,
+    },
     AddCardTypeToMatching {
         applies_to: Selector,
         card_type: crate::card::CardType,
@@ -703,6 +716,11 @@ pub enum StaticEffect {
     /// the doubler never doubles its own triggers (Harmonic Prodigy's
     /// "Shaman or *another* Wizard" — the source Wizard is itself, so its
     /// own prowess isn't doubled by the Wizard clause).
+    /// Drivnod, Carnage Dominus — "If a creature dying causes a triggered
+    /// ability of a permanent you control to trigger, that ability triggers
+    /// an additional time." Read at trigger dispatch off the
+    /// `triggered_by_death` candidate flag.
+    DoubleControllerDeathTriggers,
     DoubleControllerTriggersOfType {
         types: Vec<crate::card::CreatureType>,
         #[serde(default)]
@@ -724,6 +742,10 @@ pub enum StaticEffect {
     /// which appends the source's loyalty abilities (indices ≥ printed
     /// count) to every other friendly planeswalker.
     OtherPlaneswalkersHaveSourceLoyaltyAbilities,
+    /// Ichormoon Gauntlet — "Planeswalkers you control have '[0]: Proliferate'
+    /// and '[−12]: Take an extra turn after this one.'" Appended past the
+    /// printed abilities at loyalty-activation time.
+    PlaneswalkersHaveLoyaltyAbilities { abilities: Vec<LoyaltyAbility> },
     /// CR 401.6-adjacent: the controller may play/cast cards matching
     /// `filter` from the top of their library (Courser of Kruphix /
     /// Oracle of Mul Daya lands, Mystic Forge artifact+colorless spells).
@@ -1208,6 +1230,21 @@ pub enum StaticEffect {
     /// counters from it." Polukranos, Unchained. Consulted at both damage
     /// funnels for the source permanent itself.
     PreventDamageByRemovingCounters { kind: crate::card::CounterType },
+    /// Mindsplice Apparatus — "[filter] spells you cast cost {1} less to
+    /// cast for each [kind] counter on this artifact."
+    CostReductionPerCounterOnSource {
+        filter: SelectionRequirement,
+        kind: crate::card::CounterType,
+    },
+    /// Mirran Safehouse — "has all activated abilities of all land cards in
+    /// all graveyards." Sibling of
+    /// `HasActivatedAbilitiesOfGraveyardCreatures`.
+    HasActivatedAbilitiesOfGraveyardLands,
+    /// Phyrexian Vindicator — "If damage would be dealt to this creature,
+    /// prevent it. When damage is prevented this way, this creature deals
+    /// that much damage to any other target" (auto-picked, preferring an
+    /// opposing creature, then the opponent).
+    PreventDamageToThisRedirect,
     /// Cursed Totem / Damping Matrix — "Activated abilities of creatures
     /// can't be activated unless they're mana abilities." Global lock
     /// checked in `activate_ability` (sibling of
@@ -1613,7 +1650,7 @@ pub struct ActivatedAbility {
     pub waterbend: bool,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LoyaltyAbility {
     pub loyalty_cost: i32,
     pub effect: Effect,

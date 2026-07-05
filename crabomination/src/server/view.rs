@@ -2045,6 +2045,7 @@ mod tests {
         let mut state = two_player_game();
         let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
         state.prevention_shields.push(PreventionShield {
+            mint_mites_for: None,
             target: PreventionTarget::Player(0),
             remaining: None,
             gain_life: false,
@@ -2054,6 +2055,7 @@ mod tests {
             source_controller: None,
         });
         state.prevention_shields.push(PreventionShield {
+            mint_mites_for: None,
             target: PreventionTarget::Permanent(bear),
             remaining: Some(2),
             gain_life: false,

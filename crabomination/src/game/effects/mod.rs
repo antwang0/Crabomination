@@ -5969,8 +5969,12 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid) {
+                            let ctrl = c.controller;
                             let removed = c.remove_counters(*kind, n);
                             if removed > 0 {
+                                if *kind == CounterType::Oil {
+                                    self.players[ctrl].oil_activity_this_turn = true;
+                                }
                                 events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: *kind, count: removed });
                             }
                         }
@@ -10688,6 +10692,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnYourNextInstantSorceryThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::FactOrFiction { count } => {
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
@@ -11839,6 +11857,7 @@ impl GameState {
                         _ => None,
                     }));
                 self.prevention_shields.push(crate::game::types::PreventionShield {
+                    mint_mites_for: None,
                     target: crate::game::types::PreventionTarget::Player(ctx.controller),
                     remaining: None,
                     gain_life: false,
@@ -11917,6 +11936,7 @@ impl GameState {
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
+                            mint_mites_for: None,
                             target: s,
                             remaining: Some(n),
                             gain_life: false,
@@ -11937,6 +11957,7 @@ impl GameState {
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
+                            mint_mites_for: None,
                             target: s,
                             remaining: Some(n),
                             gain_life: true,
@@ -11954,6 +11975,7 @@ impl GameState {
                 // CR 615 — a fog scoped to one player/permanent.
                 for s in self.prevention_targets(target, ctx) {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
+                        mint_mites_for: None,
                         target: s,
                         remaining: None,
                         gain_life: false,
@@ -12328,6 +12350,62 @@ impl GameState {
                         duration: EffectDuration::Indefinite,
                         modification: Modification::AddCardType(card_type.clone()),
                     });
+                }
+                Ok(())
+            }
+
+            Effect::PreventNextDamageByTargetMintMites => {
+                // Auto-fallback: the controller's biggest creature.
+                let tgt = match ctx.targets.first() {
+                    Some(&Target::Permanent(t)) => Some(t),
+                    _ => self
+                        .resolve_selector(&Selector::GreatestPowerYouControl, ctx)
+                        .into_iter()
+                        .find_map(|e| e.as_permanent_id()),
+                };
+                let Some(tgt) = tgt else { return Ok(()) };
+                for seat in 0..self.players.len() {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: crate::game::types::PreventionTarget::Player(seat),
+                        remaining: None,
+                        gain_life: false,
+                        source: Some(tgt),
+                        one_event: true,
+                        reflect: false,
+                        source_controller: None,
+                        mint_mites_for: Some(ctx.controller),
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::AddCounterOfPresentKind { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let pick = self.battlefield_find(cid).and_then(|c| {
+                        if c.counter_count(CounterType::PlusOnePlusOne) > 0 {
+                            Some(CounterType::PlusOnePlusOne)
+                        } else {
+                            c.counters
+                                .iter()
+                                .filter(|(_, n)| **n > 0)
+                                .max_by_key(|(_, n)| **n)
+                                .map(|(k, _)| *k)
+                        }
+                    });
+                    if let Some(kind) = pick {
+                        let mut sub = ctx.clone();
+                        sub.targets = vec![Target::Permanent(cid)];
+                        self.run_effect(
+                            &Effect::AddCounter {
+                                what: Selector::Target(0),
+                                kind,
+                                amount: crate::effect::Value::ONE,
+                            },
+                            &sub,
+                            events,
+                        )?;
+                    }
                 }
                 Ok(())
             }

@@ -72,6 +72,23 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
 /// artifact with "{2}: Transform this token." Back: a 0/0 colorless Phyrexian
 /// artifact creature ("Phyrexian Token"). `incubate N` mints this with N +1/+1
 /// counters, so transforming yields an N/N.
+/// A 1/1 colorless Phyrexian Mite artifact creature token with toxic 1 that
+/// can't block (ONE — Mirrex, Ria Ivor, White Sun's Twilight).
+pub fn phyrexian_mite_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Phyrexian Mite".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Mite],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Toxic(1), Keyword::CantBlock],
+        ..Default::default()
+    }
+}
+
 pub fn incubator_token() -> TokenDefinition {
     let back = TokenDefinition {
         name: "Phyrexian Token".into(),

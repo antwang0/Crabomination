@@ -6759,3 +6759,728 @@ pub fn goliath_hatchery() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── ONE wave 7: mythics + the oil engines ────────────────────────────────────
+
+/// All Will Be One — {3}{R}{R}. Counters you place (on your permanents, or
+/// poison on opponents) ping an opposing target for that much.
+pub fn all_will_be_one() -> CardDefinition {
+    let ping = || Effect::DealDamage {
+        to: target_filtered(
+            SelectionRequirement::OpponentPlayer
+                .or(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent))
+                .or(SelectionRequirement::Planeswalker
+                    .and(SelectionRequirement::ControlledByOpponent)),
+        ),
+        amount: Value::TriggerEventAmount,
+    };
+    CardDefinition {
+        name: "All Will Be One",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YourControl),
+                effect: ping(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PoisonAdded, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::OpponentPlayer,
+                    },
+                ),
+                effect: ping(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Drivnod, Carnage Dominus — {3}{B}{B} 8/3. Death triggers of your permanents
+/// fire twice. {B/P}{B/P}, exile three creature cards from your graveyard:
+/// indestructible counter.
+pub fn drivnod_carnage_dominus() -> CardDefinition {
+    CardDefinition {
+        name: "Drivnod, Carnage Dominus",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description:
+                "If a creature dying causes a triggered ability of a permanent you control to \
+                 trigger, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerDeathTriggers,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[phyrexian(Color::Black), phyrexian(Color::Black)]),
+            exile_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                3,
+            )),
+            effect: Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ichormoon Gauntlet — {2}{U}. Your planeswalkers gain "[0]: Proliferate" and
+/// "[−12]: extra turn"; your noncreature casts add a counter of a kind already
+/// on target permanent.
+pub fn ichormoon_gauntlet() -> CardDefinition {
+    CardDefinition {
+        name: "Ichormoon Gauntlet",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description:
+                "Planeswalkers you control have \"[0]: Proliferate\" and \"[−12]: Take an extra \
+                 turn after this one.\"",
+            effect: StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
+                abilities: vec![
+                    crate::effect::LoyaltyAbility {
+                        loyalty_cost: 0,
+                        effect: Effect::Proliferate,
+                        ..Default::default()
+                    },
+                    crate::effect::LoyaltyAbility {
+                        loyalty_cost: -12,
+                        effect: Effect::TakeExtraTurn {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                        },
+                        ..Default::default()
+                    },
+                ],
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_noncreature()),
+            effect: Effect::AddCounterOfPresentKind {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::WithAnyCounter),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mindsplice Apparatus — {3}{U}, flash. Upkeep oil; instants/sorceries cost
+/// {1} less per oil counter on it.
+pub fn mindsplice_apparatus() -> CardDefinition {
+    CardDefinition {
+        name: "Mindsplice Apparatus",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Oil,
+                amount: Value::ONE,
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description:
+                "Instant and sorcery spells you cast cost {1} less to cast for each oil counter \
+                 on this artifact.",
+            effect: StaticEffect::CostReductionPerCounterOnSource {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                kind: CounterType::Oil,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mercurial Spelldancer — {1}{U} 2/1, unblockable; noncreature casts add oil.
+/// Combat damage may cash two oil for a copy of your next instant or sorcery.
+pub fn mercurial_spelldancer() -> CardDefinition {
+    CardDefinition {
+        name: "Mercurial Spelldancer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Unblockable],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(crate::effect::shortcut::cast_is_noncreature()),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Oil,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Oil,
+                        },
+                        Value::Const(2),
+                    ),
+                    then: Box::new(Effect::MayDo {
+                        description: "Remove two oil counters to copy your next spell?".into(),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::RemoveCounter {
+                                what: Selector::This,
+                                kind: CounterType::Oil,
+                                amount: Value::Const(2),
+                            },
+                            Effect::OnYourNextInstantSorceryThisTurn {
+                                body: Box::new(Effect::CopySpellMayChooseTargets {
+                                    what: Selector::TriggerSource,
+                                    count: Value::ONE,
+                                }),
+                            },
+                        ])),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Churning Reservoir — {R}. Upkeep: oil another of your artifacts/creatures.
+/// {2}, {T}: a 1/1 Goblin, only after oil activity this turn.
+pub fn churning_reservoir() -> CardDefinition {
+    CardDefinition {
+        name: "Churning Reservoir",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::NotToken)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::Oil,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            condition: Some(Predicate::OilActivityThisTurn { who: PlayerRef::You }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Phyrexian Goblin".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Vindicator — {W}{W}{W}{W} 5/5 flying. Damage aimed at it is
+/// prevented and thrown at another target.
+pub fn phyrexian_vindicator() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Vindicator",
+        cost: cost(&[w(), w(), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description:
+                "If damage would be dealt to this creature, prevent that damage and have it \
+                 deal that much damage to any other target.",
+            effect: StaticEffect::PreventDamageToThisRedirect,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Graaz, Unstoppable Juggernaut — {8} 7/5. Your Juggernauts must attack and
+/// can't be blocked by Walls; your other creatures are 5/3 Juggernauts too.
+pub fn graaz_unstoppable_juggernaut() -> CardDefinition {
+    let your_juggernauts = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Juggernaut)
+                .and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    let your_other_creatures = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )
+    };
+    CardDefinition {
+        name: "Graaz, Unstoppable Juggernaut",
+        cost: cost(&[generic(8)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Juggernaut],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 5,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Juggernauts you control attack each combat if able.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: your_juggernauts(),
+                    keyword: Keyword::MustAttack,
+                },
+            },
+            StaticAbility {
+                description: "Juggernauts you control can't be blocked by Walls.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: your_juggernauts(),
+                    keyword: Keyword::CantBeBlockedBy(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Wall),
+                    )),
+                },
+            },
+            StaticAbility {
+                description: "Other creatures you control have base power and toughness 5/3.",
+                effect: StaticEffect::SetBasePtForFilter {
+                    applies_to: your_other_creatures(),
+                    power: 5,
+                    toughness: 3,
+                },
+            },
+            StaticAbility {
+                description:
+                    "Other creatures you control are Juggernauts in addition to their other \
+                     creature types.",
+                effect: StaticEffect::AddCreatureTypeToMatching {
+                    applies_to: your_other_creatures(),
+                    creature_type: CreatureType::Juggernaut,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Encroaching Mycosynth — {3}{U}. Your nonland permanents are artifacts in
+/// addition to their other types. (The spell/off-battlefield halves are
+/// dropped.)
+pub fn encroaching_mycosynth() -> CardDefinition {
+    CardDefinition {
+        name: "Encroaching Mycosynth",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description:
+                "Nonland permanents you control are artifacts in addition to their other types.",
+            effect: StaticEffect::AddCardTypeToMatching {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                card_type: CardType::Artifact,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Venser, Corpse Puppet — {U}{B} 1/3, lifelink, toxic 1. Proliferating mints
+/// The Hollow Sentinel (if missing) or grants an artifact creature evasion.
+pub fn venser_corpse_puppet() -> CardDefinition {
+    CardDefinition {
+        name: "Venser, Corpse Puppet",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Phyrexian,
+                CreatureType::Zombie,
+                CreatureType::Wizard,
+            ],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink, Keyword::Toxic(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Proliferated, EventScope::YourControl),
+            effect: Effect::ChooseMode(vec![
+                Effect::If {
+                    cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                        Selector::EachPermanent(
+                            SelectionRequirement::HasName("The Hollow Sentinel".into())
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                    ))),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: TokenDefinition {
+                            name: "The Hollow Sentinel".into(),
+                            power: 3,
+                            toughness: 3,
+                            card_types: vec![CardType::Artifact, CardType::Creature],
+                            supertypes: vec![Supertype::Legendary],
+                            subtypes: Subtypes {
+                                creature_types: vec![
+                                    CreatureType::Phyrexian,
+                                    CreatureType::Golem,
+                                ],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: target_filtered(
+                            SelectionRequirement::Artifact
+                                .and(SelectionRequirement::Creature)
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Mycosynth Gardens — Land — Sphere. {T}: {C}. {1}, {T}: any color.
+/// {X}, {T}: becomes a copy of a nontoken artifact you control with MV X.
+pub fn the_mycosynth_gardens() -> CardDefinition {
+    CardDefinition {
+        name: "The Mycosynth Gardens",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Sphere],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[crate::mana::x()]),
+                tap_cost: true,
+                effect: Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::NotToken)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::ManaValueExactlyXFromCost),
+                    ),
+                    duration: Duration::Permanent,
+                    non_legendary: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mirran Safehouse — {3}. Has all activated abilities of all land cards in
+/// all graveyards.
+pub fn mirran_safehouse() -> CardDefinition {
+    CardDefinition {
+        name: "Mirran Safehouse",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description:
+                "Mirran Safehouse has all activated abilities of all land cards in all \
+                 graveyards.",
+            effect: StaticEffect::HasActivatedAbilitiesOfGraveyardLands,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Monument to Perfection — {2}. {3}, {T}: tutor a basic, Sphere, or Locus to
+/// hand. {3}: becomes an indestructible 9/9 toxic 9 Construct at nine
+/// differently named lands (approximated: any nine land names).
+pub fn monument_to_perfection() -> CardDefinition {
+    CardDefinition {
+        name: "Monument to Perfection",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand
+                        .or(SelectionRequirement::HasLandType(crate::card::LandType::Sphere))
+                        .or(SelectionRequirement::HasLandType(crate::card::LandType::Locus)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::DifferentlyNamedLandsControlled,
+                    Value::Const(9),
+                )),
+                effect: Effect::Seq(vec![
+                    Effect::LoseAllAbilities { what: Selector::This, duration: Duration::Permanent },
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(9),
+                        toughness: Value::Const(9),
+                        creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+                        keywords: vec![Keyword::Indestructible, Keyword::Toxic(9)],
+                        duration: Duration::Permanent,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── ONE wave 8: the last four ────────────────────────────────────────────────
+
+/// Capricious Hellraiser — {3}{R}{R}{R} 4/4 flying; {3} cheaper at nine cards
+/// in graveyard. ETB: exile three graveyard cards and free-cast a noncreature
+/// nonland one of them. (Random pick and the copy-not-original are elided.)
+pub fn capricious_hellraiser() -> CardDefinition {
+    CardDefinition {
+        name: "Capricious Hellraiser",
+        cost: cost(&[generic(3), r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {3} less to cast if you have nine or more cards in \
+                          your graveyard.",
+            effect: StaticEffect::SelfCostReducedIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(9),
+                ),
+                amount: 3,
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::Take {
+                    inner: Box::new(Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                        filter: SelectionRequirement::Any,
+                    }),
+                    count: Box::new(Value::Const(3)),
+                },
+                to: ZoneDest::Exile,
+            },
+            Effect::CastWithoutPayingImmediate {
+                what: Selector::ExiledThisResolution {
+                    filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+                },
+                source_zone: crate::card::Zone::Exile,
+                exile_after: true,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Blade of Shared Souls — {2}{U} For Mirrodin! Whenever it becomes attached
+/// to a creature, that creature may become a copy of another creature you
+/// control (kept while it stays on the battlefield).
+pub fn blade_of_shared_souls() -> CardDefinition {
+    CardDefinition {
+        name: "Blade of Shared Souls",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Rebel".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Red],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Rebel],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameAttached, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Have the equipped creature copy another creature you control?"
+                        .into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::ChoosePermanentForSource {
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        },
+                        Effect::BecomeCopyOfFor {
+                            what: Selector::TriggerSource,
+                            source: Selector::ChosenPermanentOfSource,
+                            duration: Duration::Permanent,
+                            non_legendary: false,
+                        },
+                    ])),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rhuk, Hexgold Nabber — {2}{R} 2/2, trample, haste. When another equipped
+/// creature of yours attacks, you may move all its Equipment to Rhuk. (The
+/// printed dies-half is elided.)
+pub fn rhuk_hexgold_nabber() -> CardDefinition {
+    CardDefinition {
+        name: "Rhuk, Hexgold Nabber",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rebel],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::IsEquipped,
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Attach that creature's Equipment to Rhuk?".into(),
+                body: Box::new(Effect::Attach {
+                    what: Selector::AttachedToMe(Box::new(Selector::TriggerSource)),
+                    to: Selector::This,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ria Ivor, Bane of Bladehold — {2}{W}{B} 3/4, battle cry. At combat on your
+/// turn: the next combat damage target creature would deal to a player is
+/// prevented, minting that many Mites.
+pub fn ria_ivor_bane_of_bladehold() -> CardDefinition {
+    CardDefinition {
+        name: "Ria Ivor, Bane of Bladehold",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            crate::effect::shortcut::battle_cry(1),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::PreventNextDamageByTargetMintMites,
+            },
+        ],
+        ..Default::default()
+    }
+}

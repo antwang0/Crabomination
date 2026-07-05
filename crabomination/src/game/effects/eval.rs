@@ -1429,6 +1429,9 @@ impl GameState {
                     .collect();
                 powers.len() >= 3
             }
+            Predicate::OilActivityThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].oil_activity_this_turn),
             Predicate::CorruptedActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.players.iter().enumerate().any(|(i, pl)| {
