@@ -3823,9 +3823,12 @@ impl GameState {
             waterbend = Some(amt);
         }
         // CR 702.32 — opt-in Kicker. Only stamp `kicked` if the card
-        // actually has a kicker cost; the cost itself is folded into the
-        // spell's mana cost below.
-        let kicked = kicked && card.definition.has_kicker().is_some();
+        // actually has a kicker cost (mana or action); a mana kicker is
+        // folded into the spell's mana cost below, an action kicker joins
+        // the additional-cast-cost payment.
+        let kicked = kicked
+            && (card.definition.has_kicker().is_some()
+                || card.definition.kicker_action_cost.is_some());
         card.kicked = kicked;
         // CR 702.27 — opt-in Buyback; folded into the cost below and read
         // at resolution to return the spell to hand instead of the gy.
@@ -4191,7 +4194,12 @@ impl GameState {
         // this spell, sacrifice / discard …"). Validate payability up front
         // so an unpayable spell reverts to hand before any mana is spent;
         // the costs themselves are paid after the mana cost succeeds.
-        let additional_costs = card.definition.additional_cast_cost.clone();
+        let mut additional_costs = card.definition.additional_cast_cost.clone();
+        // CR 702.32b — a paid action kicker ("Kicker—Sacrifice an artifact")
+        // is an additional cost of the kicked cast.
+        if kicked && let Some(kc) = &card.definition.kicker_action_cost {
+            additional_costs.push(kc.clone());
+        }
         if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);

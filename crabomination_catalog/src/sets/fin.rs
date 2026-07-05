@@ -7899,3 +7899,67 @@ pub fn vincents_limit_break() -> CardDefinition {
     }
 }
 
+
+/// Vayne's Treachery — {1}{B} Instant. Kicker—Sacrifice an artifact or
+/// creature. Target creature gets -2/-2 until end of turn; -6/-6 if kicked.
+pub fn vaynes_treachery() -> CardDefinition {
+    CardDefinition {
+        name: "Vayne's Treachery",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }),
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(-6),
+                toughness: Value::Const(-6),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Chocobo Kick — {1}{G} Sorcery. Kicker—Return a land you control to its
+/// owner's hand. Target creature you control deals damage equal to its power
+/// (twice its power if kicked) to target creature an opponent controls.
+pub fn chocobo_kick() -> CardDefinition {
+    let bite = |mult: i32| Effect::DealDamage {
+        to: Selector::TargetFiltered {
+            slot: 1,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+        },
+        amount: Value::Times(
+            Box::new(Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            }))),
+            Box::new(Value::Const(mult)),
+        ),
+    };
+    CardDefinition {
+        name: "Chocobo Kick",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::ReturnToHand {
+            filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }),
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(bite(2)),
+            else_: Box::new(bite(1)),
+        },
+        ..Default::default()
+    }
+}

@@ -863,3 +863,88 @@ fn sawblade_scamp_oil_then_ping() {
     assert_eq!(g.players[1].life, life - 1, "dealt 1 to the opponent");
     assert_eq!(g.battlefield.iter().find(|c| c.id == scamp).unwrap().counter_count(CounterType::Oil), 0, "spent the oil");
 }
+
+/// Furnace Punisher pings the upkeep player for 2 unless they control two or
+/// more basic lands.
+#[test]
+fn furnace_punisher_punishes_nonbasic_manabases() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::furnace_punisher());
+    // Opponent has one basic — gets hit on their upkeep.
+    g.add_card_to_battlefield(1, catalog::swamp());
+    let life = g.players[1].life;
+    let eff = catalog::furnace_punisher().triggered_abilities[0].effect.clone();
+    let src = g.battlefield.iter().find(|c| c.definition.name == "Furnace Punisher").unwrap().id;
+    let ctx = crate::game::effects::EffectContext::for_trigger(src, 0, None, 0);
+    g.active_player_idx = 1;
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life - 2, "one basic → 2 damage");
+    // Second basic shields them.
+    g.add_card_to_battlefield(1, catalog::swamp());
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life - 2, "two basics → no damage");
+}
+
+/// Anoint with Affliction exiles only MV≤3 creatures normally, but any
+/// creature once its controller is corrupted (3+ poison).
+#[test]
+fn anoint_with_affliction_corrupted_widens_target() {
+    let mut g = two_player_game();
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let big = g.add_card_to_battlefield(1, catalog::craw_wurm()); // MV 6
+    let spell = g.add_card_to_hand(0, catalog::anoint_with_affliction());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "MV 6 target rejected while not corrupted");
+    g.players[1].poison_counters = 3;
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("corrupted → any creature");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == big), "wurm exiled");
+}
+
+/// Voltage Surge: 2 damage plain; sacrificing an artifact via the optional
+/// additional cost (kicker plumbing) deals 4 instead.
+#[test]
+fn voltage_surge_kicked_deals_four() {
+    let mut g = two_player_game();
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::voltage_surge());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with additional cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "artifact sacrificed at cast");
+    assert!(g.battlefield_find(victim).is_none(), "4 damage kills the 6/4");
+}
+
+/// Voltage Surge without the sacrifice deals 2.
+#[test]
+fn voltage_surge_unkicked_deals_two() {
+    let mut g = two_player_game();
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let spell = g.add_card_to_hand(0, catalog::voltage_surge());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("plain cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).expect("survives").damage, 2);
+}

@@ -1668,6 +1668,15 @@ impl GameState {
                 };
                 self.players[owner].cards_drawn_this_turn >= *n
             }
+            R::ControllerCorrupted => {
+                let owner = match target {
+                    Target::Permanent(cid) => {
+                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                    }
+                    Target::Player(p) => *p,
+                };
+                self.players[owner].poison_counters >= 3
+            }
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Look on the battlefield first; fall through to graveyards,
@@ -2094,6 +2103,7 @@ impl GameState {
             R::ControllerDrewAtLeastThisTurn(n) => {
                 self.players[controller].cards_drawn_this_turn >= *n
             }
+            R::ControllerCorrupted => self.players[card.controller].poison_counters >= 3,
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
             R::Noncreature => !card.definition.is_creature(),

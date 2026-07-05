@@ -4927,3 +4927,89 @@ fn eden_mills_then_sacrifices_to_return_permanent() {
     assert!(g.battlefield_find(eden).is_none(), "Eden sacrificed");
     assert!(g.players[0].hand.iter().any(|c| c.id == target), "grizzly returned to hand");
 }
+
+/// Vayne's Treachery unkicked gives -2/-2; kicked (sacrificing an artifact as
+/// the kicker cost) gives -6/-6.
+#[test]
+fn vaynes_treachery_kicked_sacrifices_and_deepens() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::vaynes_treachery());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "kicker cost sacrificed the artifact");
+    assert!(g.battlefield_find(victim).is_none(), "6/4 - 6/-6 → 0/-2 dies");
+}
+
+/// Vayne's Treachery unkicked: no sacrifice, only -2/-2.
+#[test]
+fn vaynes_treachery_unkicked_is_minus_two() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::vaynes_treachery());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast unkicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_some(), "no kicker cost paid");
+    let cp = g.computed_permanent(victim).expect("wurm survives");
+    assert_eq!((cp.power, cp.toughness), (4, 2), "6/4 - 2/-2");
+}
+
+/// Chocobo Kick kicked returns a land as the cost and doubles the bite.
+#[test]
+fn chocobo_kick_kicked_doubles_the_bite() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let biter = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::chocobo_kick());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: spell, target: Some(Target::Permanent(biter)),
+        additional_targets: vec![Target::Permanent(victim)], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land bounced as the kicker cost");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "land in hand");
+    assert!(g.battlefield_find(victim).is_none(), "4 damage killed the 6/4");
+}
+
+/// Chocobo Kick unkicked: single-power bite, land stays.
+#[test]
+fn chocobo_kick_unkicked_single_bite() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let biter = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::chocobo_kick());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(biter)),
+        additional_targets: vec![Target::Permanent(victim)], mode: None, x_value: None,
+    }).expect("cast unkicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "land untouched");
+    let cp = g.battlefield_find(victim).expect("wurm survives 2 damage");
+    assert_eq!(cp.damage, 2, "2 marked damage");
+}

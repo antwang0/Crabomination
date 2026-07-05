@@ -1422,3 +1422,36 @@ pub fn sawblade_scamp() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Furnace Punisher — {2}{R} Creature — Phyrexian Warrior 3/3 with menace. At
+/// the beginning of each player's upkeep, deals 2 damage to that player unless
+/// they control two or more basic lands.
+pub fn furnace_punisher() -> CardDefinition {
+    CardDefinition {
+        name: "Furnace Punisher",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::ControlledBy {
+                        who: PlayerRef::ActivePlayer,
+                        filter: SelectionRequirement::IsBasicLand,
+                    },
+                    n: Value::Const(2),
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(deal(2, Selector::Player(PlayerRef::ActivePlayer))),
+            },
+        }],
+        ..Default::default()
+    }
+}

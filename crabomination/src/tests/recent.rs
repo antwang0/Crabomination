@@ -3752,14 +3752,14 @@ fn voltage_surge_base_and_boosted() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(v).map(|c| c.damage), Some(2), "2 damage, no sac");
 
-    // Boosted: accept the sacrifice → 4 damage kills the 4/4.
+    // Boosted: pay the optional additional cost (kicked cast) → 4 damage
+    // kills the 4/4.
     let mut g = two_player_game();
     let v = g.add_card_to_battlefield(1, catalog::serra_angel());
     g.add_card_to_battlefield(0, catalog::ornithopter()); // an artifact to sac
     let vs = g.add_card_to_hand(0, catalog::voltage_surge());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellKicked {
         card_id: vs,
         target: Some(Target::Permanent(v)),
         additional_targets: vec![],

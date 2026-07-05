@@ -5691,6 +5691,8 @@ static FIN: &[Factory] = &[
     super::fin::summon_fenrir,
     super::fin::stiltzkin_moogle_merchant,
     super::fin::vincents_limit_break,
+    super::fin::vaynes_treachery,
+    super::fin::chocobo_kick,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
@@ -6939,6 +6941,7 @@ static ONE: &[Factory] = &[
     super::one::kill_zone_acrobat,
     super::one::blightbelly_rat,
     super::one::sawblade_scamp,
+    super::one::furnace_punisher,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

@@ -5333,17 +5333,18 @@ pub fn ruby_daring_tracker() -> CardDefinition {
 
 
 /// Anoint with Affliction — {1}{B} Instant. Exile target creature with mana
-/// value 3 or less. (The Corrupted "any creature if its controller has 3+
-/// poison" rider is dropped; the base mode caps the target at MV 3.)
+/// value 3 or less. Corrupted — exile any creature instead if its controller
+/// has three or more poison counters.
 pub fn anoint_with_affliction() -> CardDefinition {
     CardDefinition {
         name: "Anoint with Affliction",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
-            ),
+            what: target_filtered(SelectionRequirement::Creature.and(
+                SelectionRequirement::ManaValueAtMost(3)
+                    .or(SelectionRequirement::ControllerCorrupted),
+            )),
         },
         ..Default::default()
     }
@@ -9021,38 +9022,32 @@ pub fn withering_torment() -> CardDefinition {
     }
 }
 
-/// Voltage Surge — {R} Instant. You may sacrifice an artifact as an additional
-/// cost; deals 2 damage to target creature or planeswalker, or 4 if you did.
-/// (The additional cost is taken at resolution — a `MayDo` sacrifice.)
+/// Voltage Surge — {R} Instant. As an additional cost, you may sacrifice an
+/// artifact. Deals 2 damage to target creature or planeswalker, or 4 if the
+/// additional cost was paid.
 pub fn voltage_surge() -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {
         name: "Voltage Surge",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::MayDo {
-                description: "Sacrifice an artifact for extra damage".into(),
-                body: Box::new(Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Artifact,
-                }),
-            },
-            Effect::If {
-                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
-                then: Box::new(Effect::DealDamage {
-                    to: Selector::Target(0),
-                    amount: Value::Const(4),
-                }),
-                else_: Box::new(Effect::DealDamage {
-                    to: target_filtered(
-                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                    ),
-                    amount: Value::Const(2),
-                }),
-            },
-        ]),
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact,
+            count: 1,
+        }),
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            }),
+        },
         ..Default::default()
     }
 }

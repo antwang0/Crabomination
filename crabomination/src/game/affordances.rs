@@ -373,7 +373,9 @@ impl GameState {
         let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
-            .filter(|c| c.definition.has_kicker().is_some())
+            .filter(|c| {
+                c.definition.has_kicker().is_some() || c.definition.kicker_action_cost.is_some()
+            })
             .map(|c| {
                 let needs_target = c.definition.effect.requires_target();
                 (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))

@@ -1485,6 +1485,11 @@ pub enum SelectionRequirement {
     /// long as there are eight or more permanent cards in your graveyard"
     /// (Watertight Gondola), and as a generic gate for Descend payoffs.
     ControllerDescend(u32),
+    /// CR 702.166 Corrupted, as a *target* filter — true when the candidate
+    /// permanent's controller has three or more poison counters. Widens
+    /// Anoint with Affliction's exile to any creature whose controller is
+    /// corrupted.
+    ControllerCorrupted,
     /// True when the candidate shares its name with a card in its controller's
     /// graveyard ("a spell that has the same name as a card in your graveyard"
     /// — Pyromancer Ascension). The candidate itself (typically a spell on the
@@ -2015,6 +2020,14 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+    /// CR 702.33 / 601.2b — an *optional* non-mana additional cost:
+    /// "Kicker—Sacrifice an artifact or creature" (Vayne's Treachery),
+    /// "Kicker—Return a land you control" (Chocobo Kick), "you may sacrifice
+    /// an artifact" (Voltage Surge). Opting in via `GameAction::CastSpellKicked`
+    /// pays this cost through the additional-cast-cost machinery and stamps
+    /// the cast `kicked`, which `Predicate::SpellWasKicked` reads.
+    #[serde(default)]
+    pub kicker_action_cost: Option<AdditionalCastCost>,
     /// CR 702.103 — Bestow alternative cost. When `Some(cost)`, the card may
     /// be cast as an Aura spell targeting a creature for this cost (via
     /// `GameAction::CastBestow`); it enters attached, grants its
