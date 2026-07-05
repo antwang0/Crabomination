@@ -1486,3 +1486,384 @@ pub fn necrogen_communion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Adaptive Sporesinger — {2}{G} 2/2 Phyrexian Druid with vigilance. ETB
+/// choose one: target creature +2/+2 and vigilance EOT, or proliferate.
+pub fn adaptive_sporesinger() -> CardDefinition {
+    CardDefinition {
+        name: "Adaptive Sporesinger",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            Effect::Proliferate,
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Annihilating Glare — {B} Sorcery. As an additional cost, pay {4} or
+/// sacrifice an artifact or creature. Destroy target creature or planeswalker.
+pub fn annihilating_glare() -> CardDefinition {
+    CardDefinition {
+        name: "Annihilating Glare",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            pay: 4,
+        }],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Axiom Engraver — {1}{R} 1/3 Phyrexian Wizard, enters with two oil counters.
+/// {T}, remove an oil counter, discard a card: draw a card.
+pub fn axiom_engraver() -> CardDefinition {
+    CardDefinition {
+        name: "Axiom Engraver",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bladegraft Aspirant — {2}{R} 2/3 Phyrexian Warrior with menace. Equipment
+/// spells cost {1} less; equip abilities cost {1} less (the printed
+/// "targeting this creature" scope widened to all your equips).
+pub fn bladegraft_aspirant() -> CardDefinition {
+    CardDefinition {
+        name: "Bladegraft Aspirant",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Equipment spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Equip abilities you activate cost {1} less to activate.",
+                effect: StaticEffect::EquipCostReduction { amount: 1 },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Blazing Crescendo — {1}{R} Instant. Target creature +3/+1 EOT; impulse the
+/// top card until the end of your next turn.
+pub fn blazing_crescendo() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Blazing Crescendo",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Against All Odds — {3}{W} Sorcery. Choose one or both: flicker target
+/// artifact/creature you control; reanimate an artifact/creature card MV≤3.
+pub fn against_all_odds() -> CardDefinition {
+    CardDefinition {
+        name: "Against All Odds",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::Seq(vec![
+                    Effect::Exile {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: SelectionRequirement::Artifact
+                                .or(SelectionRequirement::Creature)
+                                .and(SelectionRequirement::ControlledByYou),
+                        },
+                    },
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOfMoved,
+                            tapped: false,
+                        },
+                    },
+                ]),
+                // Per-mode targets each occupy slot 0 inside their mode; the
+                // outer cast supplies them positionally in pick order.
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::InYourGraveyard)
+                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Annex Sentry — {2}{W} 1/4 Phyrexian Cleric artifact creature, toxic 1. ETB
+/// exile target opposing artifact/creature MV≤3 until this leaves.
+pub fn annex_sentry() -> CardDefinition {
+    CardDefinition {
+        name: "Annex Sentry",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Toxic(1)],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Armored Scrapgorger — {1}{G} 0/3 Phyrexian Beast; +3/+0 with 3+ oil.
+/// {T}: any color. Becomes tapped → exile a graveyard card, add an oil.
+pub fn armored_scrapgorger() -> CardDefinition {
+    CardDefinition {
+        name: "Armored Scrapgorger",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +3/+0 as long as it has three or more oil counters on it.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+                    Value::Const(3),
+                ),
+                power: 3,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::InGraveyard),
+                    to: ZoneDest::Exile,
+                },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ambulatory Edifice — {2}{B} 3/2 Phyrexian Construct. ETB you may pay 2
+/// life; when you do, target creature gets -1/-1 until end of turn.
+pub fn ambulatory_edifice() -> CardDefinition {
+    CardDefinition {
+        name: "Ambulatory Edifice",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayPayLife {
+            description: "Pay 2 life for -1/-1?".into(),
+            amount: Value::Const(2),
+            body: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                }),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Atmosphere Surgeon — {1}{U} 2/1 Phyrexian Wizard. Noncreature cast → oil
+/// counter. Remove an oil: target creature gains flying EOT (sorcery only).
+pub fn atmosphere_surgeon() -> CardDefinition {
+    CardDefinition {
+        name: "Atmosphere Surgeon",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            sorcery_speed: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bladed Ambassador — {1}{W} 3/1 Phyrexian Soldier, enters with an oil
+/// counter. {1}, remove an oil counter: indestructible until end of turn.
+pub fn bladed_ambassador() -> CardDefinition {
+    CardDefinition {
+        name: "Bladed Ambassador",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::Oil, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Black Sun's Twilight — {X}{B} Instant. Up to one target creature -X/-X EOT;
+/// if X ≥ 5, reanimate a creature card MV≤X tapped.
+pub fn black_suns_twilight() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Black Sun's Twilight",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+                toughness: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(5)),
+                then: Box::new(Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::EachMatching {
+                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                            filter: SelectionRequirement::Creature,
+                        }),
+                        count: Box::new(Value::ONE),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

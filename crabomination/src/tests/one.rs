@@ -974,3 +974,243 @@ fn necrogen_communion_grants_toxic_and_reanimates() {
     let back = g.battlefield_find(bear).expect("host returned to the battlefield");
     assert_eq!(back.controller, 0, "under the aura controller's control");
 }
+
+/// Annihilating Glare's SacrificeOrPay cost: with an artifact it sacrifices;
+/// the spell destroys the target.
+#[test]
+fn annihilating_glare_sacrifices_and_destroys() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::annihilating_glare());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "artifact paid the cost");
+    assert!(g.battlefield_find(victim).is_none(), "angel destroyed");
+}
+
+/// Axiom Engraver enters with two oil and loots through them.
+#[test]
+fn axiom_engraver_loots_on_oil() {
+    let mut g = two_player_game();
+    let ax = g.move_card_to_battlefield_for_test(0, catalog::axiom_engraver());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ax).unwrap().counter_count(CounterType::Oil), 2);
+    g.clear_sickness(ax);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_hand(0, catalog::island()); // discard fodder
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ax, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("loot");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "discard 1 + draw 1");
+    assert_eq!(g.battlefield_find(ax).unwrap().counter_count(CounterType::Oil), 1);
+}
+
+/// Blazing Crescendo pumps and impulses with a next-turn window.
+#[test]
+fn blazing_crescendo_pumps_and_impulses() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let top = g.add_card_to_library(0, catalog::forest());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::blazing_crescendo());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "2+3");
+    let ex = g.exile.iter().find(|c| c.id == top).expect("impulsed");
+    assert!(matches!(ex.may_play_until.as_ref().unwrap().duration,
+        crate::card::MayPlayDuration::EndOfControllersNextTurn));
+}
+
+/// Annex Sentry jails a small opposing creature until it leaves.
+#[test]
+fn annex_sentry_jails_until_it_leaves() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let sentry = g.add_card_to_hand(0, catalog::annex_sentry());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sentry, target: Some(Target::Permanent(small)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast sentry");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == small), "bear jailed");
+    g.battlefield_find_mut(sentry).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_some(), "bear returns when the jailer dies");
+}
+
+/// Armored Scrapgorger grows with oil and eats graveyards when tapped.
+#[test]
+fn armored_scrapgorger_eats_graveyards() {
+    let mut g = two_player_game();
+    let gorger = g.add_card_to_battlefield(0, catalog::armored_scrapgorger());
+    let snack = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.clear_sickness(gorger);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gorger, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == snack), "graveyard card eaten");
+    let c = g.battlefield_find(gorger).unwrap();
+    assert_eq!(c.counter_count(CounterType::Oil), 1);
+    // 0/3 base; with three oils it's a 3/3.
+    g.battlefield_find_mut(gorger).unwrap().add_counters(CounterType::Oil, 2);
+    assert_eq!(g.computed_permanent(gorger).unwrap().power, 3, "+3/+0 at 3 oil");
+}
+
+/// Ambulatory Edifice: paying 2 life shrinks a target.
+#[test]
+fn ambulatory_edifice_pays_life_to_shrink() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.move_card_to_battlefield_for_test(0, catalog::ambulatory_edifice());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 1, "-1/-1");
+}
+
+/// Bladed Ambassador spends its oil for indestructibility.
+#[test]
+fn bladed_ambassador_goes_indestructible() {
+    let mut g = two_player_game();
+    let amb = g.move_card_to_battlefield_for_test(0, catalog::bladed_ambassador());
+    drain_stack(&mut g);
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: amb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(amb).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert_eq!(g.battlefield_find(amb).unwrap().counter_count(CounterType::Oil), 0);
+}
+
+/// Black Sun's Twilight at X=5 shrinks the target and reanimates.
+#[test]
+fn black_suns_twilight_big_x_reanimates() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::black_suns_twilight());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: Some(5),
+    }).expect("cast X=5");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "4/4 - 5/-5 dies");
+    let back = g.battlefield_find(dead).expect("reanimated");
+    assert!(back.tapped, "enters tapped");
+}
+
+/// Atmosphere Surgeon banks oil off noncreature spells and spends it for
+/// flying.
+#[test]
+fn atmosphere_surgeon_banks_and_spends_oil() {
+    let mut g = two_player_game();
+    let surgeon = g.add_card_to_battlefield(0, catalog::atmosphere_surgeon());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(surgeon).unwrap().counter_count(CounterType::Oil), 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: surgeon, ability_index: 0, target: Some(Target::Permanent(surgeon)),
+        additional_targets: vec![], x_value: None,
+    }).expect("spend oil");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(surgeon).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Adaptive Sporesinger mode 2 proliferates.
+#[test]
+fn adaptive_sporesinger_proliferates() {
+    let mut g = two_player_game();
+    let seeded = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(seeded).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let singer = g.add_card_to_battlefield(0, catalog::adaptive_sporesinger());
+    // Resolve the ETB choose-one directly on its proliferate mode.
+    let modes = match &catalog::adaptive_sporesinger().triggered_abilities[0].effect {
+        crate::effect::Effect::ChooseMode(m) => m.clone(),
+        _ => unreachable!(),
+    };
+    let ctx = crate::game::effects::EffectContext::for_trigger(singer, 0, None, 0);
+    g.resolve_effect(&modes[1], &ctx).unwrap();
+    assert_eq!(g.battlefield_find(seeded).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferated");
+}
+
+/// Against All Odds mode 2 reanimates a small artifact/creature.
+#[test]
+fn against_all_odds_reanimates_small() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let mine = g.add_card_to_battlefield(0, catalog::ornithopter()); // flicker target
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::against_all_odds());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let _ = ScriptedDecider::new([DecisionAnswer::Bool(true)]); // default picks = both modes
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(dead)], mode: None, x_value: None,
+    }).expect("cast both modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "reanimated");
+    assert!(g.battlefield_find(mine).is_some(), "flickered back");
+}
+
+/// Bladegraft Aspirant discounts Equipment spells.
+#[test]
+fn bladegraft_aspirant_discounts_equipment() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bladegraft_aspirant());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let saw = g.add_card_to_hand(0, catalog::bone_saw()); // {1}? — actually {0}; use short_sword {1}
+    let _ = saw;
+    let sword = g.add_card_to_hand(0, catalog::short_sword()); // {1} → free
+    g.perform_action(GameAction::CastSpell {
+        card_id: sword, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted to {0}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sword).is_some());
+}

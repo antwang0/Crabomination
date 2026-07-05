@@ -6962,6 +6962,18 @@ static ONE: &[Factory] = &[
     super::one::sawblade_scamp,
     super::one::furnace_punisher,
     super::one::necrogen_communion,
+    super::one::adaptive_sporesinger,
+    super::one::annihilating_glare,
+    super::one::axiom_engraver,
+    super::one::bladegraft_aspirant,
+    super::one::blazing_crescendo,
+    super::one::against_all_odds,
+    super::one::annex_sentry,
+    super::one::armored_scrapgorger,
+    super::one::ambulatory_edifice,
+    super::one::atmosphere_surgeon,
+    super::one::bladed_ambassador,
+    super::one::black_suns_twilight,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,
