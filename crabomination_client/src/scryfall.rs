@@ -179,7 +179,16 @@ pub struct ImagePrefetch {
 pub fn reload_completed_images(
     prefetch: bevy::prelude::Res<ImagePrefetch>,
     asset_server: bevy::prelude::Res<bevy::asset::AssetServer>,
+    mut drained_after_finish: bevy::prelude::Local<bool>,
 ) {
+    // Stop taking the mutex every frame forever once the prefetch thread is
+    // done: after `finished` is observed, do one final drain and go inert.
+    if *drained_after_finish {
+        return;
+    }
+    if prefetch.finished.load(std::sync::atomic::Ordering::Relaxed) {
+        *drained_after_finish = true;
+    }
     let Ok(mut completed) = prefetch.completed.lock() else { return };
     for path in completed.drain(..) {
         asset_server.reload(path);

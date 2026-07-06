@@ -1112,6 +1112,12 @@ pub fn update_turn_text(
     mut q: Query<&mut Text, With<TurnInfoText>>,
 ) {
     let Ok(mut t) = q.single_mut() else { return };
+    // Writing Text unconditionally would dirty it (re-shape/re-layout)
+    // every frame; the inputs only change with the view. `is_added` covers
+    // the HUD entity spawning after the last view change.
+    if !view.is_changed() && !t.is_added() {
+        return;
+    }
     let Some(cv) = &view.0 else { return };
     // The dedicated centered Game Over modal owns the end-game UI; the
     // corner HUD just holds a placeholder so it isn't visually empty.
@@ -2112,29 +2118,6 @@ pub fn sync_game_visuals(
     // real player — they have no hand or library of their own. Resolve the
     // viewer's hand/library through these panic-safe accessors so the board
     // still renders for spectators (empty viewer hand, zero-height deck).
-    let empty_hand: Vec<crabomination::net::HandCardView> = Vec::new();
-    let viewer_hand = cv.players.get(viewer).map(|p| &p.hand).unwrap_or(&empty_hand);
-    // Client-side hand sort (config `gameplay.sort_hand`): lands first,
-    // then by mana value, then name — Arena-style layout regardless of
-    // draw order. Hidden cards keep server order at the end. Purely a
-    // display ordering; every interaction below keys off card ids.
-    let sorted_hand: Vec<crabomination::net::HandCardView>;
-    let viewer_hand: &Vec<crabomination::net::HandCardView> = if inflight.gameplay.sort_hand {
-        let mut h = viewer_hand.clone();
-        h.sort_by_key(|c| match c {
-            crabomination::net::HandCardView::Known(k) => (
-                if k.card_types.contains(&crabomination::card::CardType::Land) { 0 } else { 1 },
-                k.cost.cmc(),
-                k.name.clone(),
-            ),
-            crabomination::net::HandCardView::Hidden { .. } => (2, 0, String::new()),
-        });
-        sorted_hand = h;
-        &sorted_hand
-    } else {
-        viewer_hand
-    };
-    let viewer_lib_size = cv.players.get(viewer).map(|p| p.library.size).unwrap_or(0);
     let gy_sizes: Vec<usize> = cv.players.iter().map(|p| p.graveyard.len()).collect();
     let gy_size = |owner: usize| gy_sizes.get(owner).copied().unwrap_or(0);
     let deck_size = |owner: usize| {
@@ -2238,6 +2221,33 @@ pub fn sync_game_visuals(
         return;
     }
     let Some(card_assets) = card_assets else { return };
+
+    // Everything below (the hand sort in particular, which clones a String
+    // per card) runs only on a view change or animation completion — keep it
+    // after the early-out above.
+    let empty_hand: Vec<crabomination::net::HandCardView> = Vec::new();
+    let viewer_hand = cv.players.get(viewer).map(|p| &p.hand).unwrap_or(&empty_hand);
+    // Client-side hand sort (config `gameplay.sort_hand`): lands first,
+    // then by mana value, then name — Arena-style layout regardless of
+    // draw order. Hidden cards keep server order at the end. Purely a
+    // display ordering; every interaction below keys off card ids.
+    let sorted_hand: Vec<crabomination::net::HandCardView>;
+    let viewer_hand: &Vec<crabomination::net::HandCardView> = if inflight.gameplay.sort_hand {
+        let mut h = viewer_hand.clone();
+        h.sort_by_key(|c| match c {
+            crabomination::net::HandCardView::Known(k) => (
+                if k.card_types.contains(&crabomination::card::CardType::Land) { 0 } else { 1 },
+                k.cost.cmc(),
+                k.name.clone(),
+            ),
+            crabomination::net::HandCardView::Hidden { .. } => (2, 0, String::new()),
+        });
+        sorted_hand = h;
+        &sorted_hand
+    } else {
+        viewer_hand
+    };
+    let viewer_lib_size = cv.players.get(viewer).map(|p| p.library.size).unwrap_or(0);
 
     // Snapshot of every opponent hand visual entity (entity, owner, slot, pos,
     // rot, is_animating). We feed a per-owner hand pool so an opponent

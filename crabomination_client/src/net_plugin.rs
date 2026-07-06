@@ -289,6 +289,12 @@ pub fn poll_net(
             }
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
+                // The drainers only run in Lobby/InGame; don't let the inbox
+                // grow unbounded in states where neither is active.
+                if chat.0.len() > 200 {
+                    let excess = chat.0.len() - 200;
+                    chat.0.drain(..excess);
+                }
             }
             ServerMsg::ActionError(e) => {
                 // `ManualTapRequired`: the player has a choice of which mana

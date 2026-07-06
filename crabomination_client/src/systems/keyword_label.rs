@@ -243,6 +243,7 @@ pub fn sync_keyword_labels(
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut labels: Query<(Entity, &KeywordLabel, &mut Node, &mut Text)>,
+    mut desired_cache: Local<HashMap<CardId, String>>,
 ) {
     // No view (between matches): clear every strip and bail.
     let Some(cv) = &view.0 else {
@@ -261,18 +262,24 @@ pub fn sync_keyword_labels(
         card_top.insert(gid.0, gtf.transform_point(top_center_local));
     }
 
-    // Desired strips: creatures with at least one displayable keyword and a
-    // live battlefield entity to anchor against.
-    let mut desired: HashMap<CardId, String> = HashMap::new();
-    for p in &cv.battlefield {
-        if !p.is_creature() || !card_top.contains_key(&p.id) {
-            continue;
-        }
-        let strip = keyword_strip(&p.keywords);
-        if !strip.is_empty() {
-            desired.insert(p.id, strip);
+    // Desired strips: creatures with at least one displayable keyword.
+    // Rebuilt only on view change (keyword_strip allocates a String per
+    // creature); anchoring/positioning below still tracks every frame, and
+    // ids without a live entity yet are handled at use time (hidden or
+    // parked offscreen until the anchor exists).
+    if view.is_changed() {
+        desired_cache.clear();
+        for p in &cv.battlefield {
+            if !p.is_creature() {
+                continue;
+            }
+            let strip = keyword_strip(&p.keywords);
+            if !strip.is_empty() {
+                desired_cache.insert(p.id, strip);
+            }
         }
     }
+    let desired = &*desired_cache;
 
     // Project a card-top world point to a viewport pixel, centring a strip of
     // `chars` glyphs over the card and lifting it above the top edge.
@@ -309,18 +316,18 @@ pub fn sync_keyword_labels(
     }
 
     // Spawn strips for newly-keyworded creatures.
-    for (id, strip) in desired {
-        if seen.contains(&id) {
+    for (id, strip) in desired.iter() {
+        if seen.contains(id) {
             continue;
         }
         let (left, top) = card_top
-            .get(&id)
+            .get(id)
             .copied()
             .and_then(|world| anchor(world, strip.chars().count()))
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
-            KeywordLabel(id),
-            Text::new(strip),
+            KeywordLabel(*id),
+            Text::new(strip.clone()),
             ui_fonts.tf(12.0),
             TextColor(Color::srgb(0.96, 0.94, 0.80)),
             BackgroundColor(Color::srgba(0.05, 0.05, 0.08, 0.62)),

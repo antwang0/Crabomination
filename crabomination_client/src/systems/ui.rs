@@ -141,6 +141,9 @@ pub fn update_castable_highlights(
     // border would otherwise linger on the battlefield/graveyard. Strip the
     // highlight from anything that left the hand still wearing it.
     left_hand: Query<(Entity, &CastableHighlight), Without<HandCard>>,
+    // Hand entities spawn via deferred commands, landing a frame after the
+    // view change that caused them — they must still get their border.
+    added_hand: Query<(), Added<HandCard>>,
 ) {
     let Some(assets) = highlight_assets else { return };
 
@@ -148,6 +151,14 @@ pub fn update_castable_highlights(
         commands.entity(h.back).despawn();
         commands.entity(h.front).despawn();
         commands.entity(entity).remove::<CastableHighlight>();
+    }
+
+    // The castable sets only change with the view or the targeting mode;
+    // skip rebuilding the two HashSets (~20 chained iterators) otherwise.
+    // The `left_hand` cleanup above stays unguarded: HandCard removal is a
+    // deferred command that can land a frame after the view change.
+    if !view.is_changed() && !targeting.is_changed() && added_hand.is_empty() {
+        return;
     }
 
     // `hard` = castable for the normal cost (green). `alt` = playable only

@@ -181,9 +181,18 @@ pub fn sync_counter_coins(
     assets: Option<Res<CounterCoinAssets>>,
     bf_cards: Query<(Entity, &GameCardId), With<BattlefieldCard>>,
     existing: Query<(Entity, &ChildOf, &CounterCoin)>,
+    // Battlefield entities spawn via deferred commands, a frame after the
+    // view change that caused them — their coins must still appear.
+    added_bf: Query<(), Added<BattlefieldCard>>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Some(assets) = assets else { return };
+    // Coins are children of the card entity (positions ride the parent), so
+    // reconciliation only needs to run when the counter data or the set of
+    // battlefield entities can have changed — not every frame.
+    if !view.is_changed() && added_bf.is_empty() {
+        return;
+    }
 
     // Build CardId → battlefield-entity lookup.
     let mut card_entity: HashMap<CardId, Entity> = HashMap::new();
@@ -434,6 +443,7 @@ pub fn sync_counter_labels(
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     mut labels: Query<(Entity, &CounterLabel, &mut Node, &mut Text, &mut TextColor)>,
+    mut desired_cache: Local<HashMap<(CardId, CounterType), (u32, usize, bool)>>,
 ) {
     let Some(cv) = &view.0 else {
         for (e, _, _, _, _) in &mut labels {
@@ -453,23 +463,25 @@ pub fn sync_counter_labels(
     // desired (card, kind) → (count, row, impending). Row orders multiple
     // counter types vertically in the same order as their coin columns
     // (`sort_key`); `impending` flips the Time label into a countdown badge.
-    let mut desired: HashMap<(CardId, CounterType), (u32, usize, bool)> = HashMap::new();
-    for p in &cv.battlefield {
-        if !card_anchor.contains_key(&p.id) {
-            continue;
-        }
-        let impending = p.impending_counters.unwrap_or(0) > 0;
-        let mut kinds: Vec<(CounterType, u32)> = p
-            .counters
-            .iter()
-            .filter(|(_, n)| *n > 0)
-            .map(|(k, n)| (*k, *n))
-            .collect();
-        kinds.sort_by_key(|(k, _)| sort_key(*k));
-        for (row, (k, n)) in kinds.into_iter().enumerate() {
-            desired.insert((p.id, k), (n, row, impending));
+    // Rebuilt only on view change; positions still track every frame, and
+    // ids without a live entity yet are hidden at use time.
+    if view.is_changed() {
+        desired_cache.clear();
+        for p in &cv.battlefield {
+            let impending = p.impending_counters.unwrap_or(0) > 0;
+            let mut kinds: Vec<(CounterType, u32)> = p
+                .counters
+                .iter()
+                .filter(|(_, n)| *n > 0)
+                .map(|(k, n)| (*k, *n))
+                .collect();
+            kinds.sort_by_key(|(k, _)| sort_key(*k));
+            for (row, (k, n)) in kinds.into_iter().enumerate() {
+                desired_cache.insert((p.id, k), (n, row, impending));
+            }
         }
     }
+    let desired = &*desired_cache;
 
     // Update existing labels; despawn any no longer present.
     let mut seen: HashSet<(CardId, CounterType)> = HashSet::new();
@@ -486,8 +498,16 @@ pub fn sync_counter_labels(
                 } else {
                     node.display = Display::None;
                 }
-                *text = Text::new(counter_label_text(label.kind, count, impending));
-                *color = TextColor(counter_label_color(label.kind));
+                // Only dirty Text/TextColor on an actual change — an
+                // unconditional write forces text re-shaping every frame.
+                let new_text = counter_label_text(label.kind, count, impending);
+                if text.0 != new_text {
+                    *text = Text::new(new_text);
+                }
+                let new_color = counter_label_color(label.kind);
+                if color.0 != new_color {
+                    *color = TextColor(new_color);
+                }
             }
             None => {
                 commands.entity(e).despawn();
@@ -496,7 +516,7 @@ pub fn sync_counter_labels(
     }
 
     // Spawn labels for newly-present (card, kind) pairs.
-    for ((id, kind), (count, row, impending)) in desired {
+    for (&(id, kind), &(count, row, impending)) in desired.iter() {
         if seen.contains(&(id, kind)) {
             continue;
         }
