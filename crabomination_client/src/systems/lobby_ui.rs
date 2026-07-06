@@ -150,7 +150,7 @@ pub fn connect_to_lobby_server(world: &mut World) {
 }
 
 fn connect(addr: &str) -> std::io::Result<(NetOutbox, NetInbox, NetConnection)> {
-    let stream = std::net::TcpStream::connect(addr)?;
+    let stream = crate::net_plugin::connect_with_timeout(addr)?;
     // Keep a clone so "Back" can shut the socket promptly (otherwise the
     // server only notices via keepalive).
     let conn_handle = stream.try_clone().ok();

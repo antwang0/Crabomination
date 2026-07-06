@@ -121,7 +121,9 @@ impl NetInbox {
     /// disconnected (the reader thread exited because the socket closed). The
     /// flag drives mid-match reconnection.
     pub fn drain(&self) -> (Vec<ServerMsg>, bool) {
-        let rx = self.0.lock().unwrap();
+        // A reader-thread panic while holding the lock must not take the
+        // whole app down on the next frame — recover the poisoned guard.
+        let rx = self.0.lock().unwrap_or_else(|p| p.into_inner());
         let mut msgs = Vec::new();
         let disconnected = loop {
             match rx.try_recv() {
@@ -447,12 +449,30 @@ pub fn maybe_reconnect(world: &mut World) {
     }
 }
 
+/// `TcpStream::connect` with a bounded timeout per resolved address. The
+/// plain connect runs on the main thread here and in the lobby browser; a
+/// dead or unroutable server would otherwise freeze rendering for the OS
+/// connect timeout (tens of seconds on some stacks).
+pub(crate) fn connect_with_timeout(addr: &str) -> std::io::Result<TcpStream> {
+    use std::net::ToSocketAddrs;
+    let mut last_err = None;
+    for sa in addr.to_socket_addrs()? {
+        match TcpStream::connect_timeout(&sa, Duration::from_secs(3)) {
+            Ok(s) => return Ok(s),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "no addresses resolved")
+    }))
+}
+
 /// Open a fresh connection and immediately send `Resume { token }`.
 fn reconnect_with_token(
     addr: &str,
     token: &str,
 ) -> std::io::Result<(NetOutbox, NetInbox, NetConnection)> {
-    let stream = TcpStream::connect(addr)?;
+    let stream = connect_with_timeout(addr)?;
     let conn_handle = stream.try_clone().ok();
     let ClientChannel { tx, rx } = tcp_client(stream)?;
     let _ = tx.send(ClientMsg::Resume { token: token.to_string() });

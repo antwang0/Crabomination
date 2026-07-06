@@ -2881,7 +2881,9 @@ pub fn handle_mode_pick_buttons(
         }
         let idx = btn.0;
         let needs_target = pending.modes.get(idx).map(|(_, n)| *n).unwrap_or(false);
-        let card_id = pending.card_id.unwrap();
+        // A mode-pick decision without a card id shouldn't happen, but a
+        // malformed/mismatched server decision must not panic the client.
+        let Some(card_id) = pending.card_id else { continue };
         if needs_target {
             targeting.active = true;
             targeting.pending_card_id = Some(card_id);

@@ -166,7 +166,7 @@ pub struct ShowVerifiedCards(pub bool);
 static CATALOG_CACHE: Mutex<Option<Vec<CatalogEntry>>> = Mutex::new(None);
 
 pub fn catalog() -> Vec<CatalogEntry> {
-    let mut guard = CATALOG_CACHE.lock().expect("audit catalog mutex");
+    let mut guard = CATALOG_CACHE.lock().unwrap_or_else(|p| p.into_inner());
     if guard.is_none() {
         // Build a (factory_ptr → set-of-pools) map so a card that
         // appears in multiple pools (cube + demo, say) keeps all of

@@ -202,7 +202,14 @@ pub fn ensure_card_images_with_progress(
 ) {
     use std::sync::atomic::Ordering;
     let cards_dir = assets_dir.join("cards");
-    fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
+    // This runs on a detached thread: a panic here would silently kill the
+    // prefetch and leave the menu progress bar incomplete forever. Treat an
+    // unwritable assets dir as "prefetch disabled" instead.
+    if let Err(e) = fs::create_dir_all(&cards_dir) {
+        eprintln!("card prefetch disabled: cannot create {}: {e}", cards_dir.display());
+        progress.finished.store(true, std::sync::atomic::Ordering::Relaxed);
+        return;
+    }
 
     // Negative cache: card names Scryfall has already told us it can't serve
     // (404 / 422). Loaded from `cards/.unavailable.txt` so a doomed card
@@ -249,14 +256,21 @@ pub fn ensure_card_images_with_progress(
 
         println!("Downloading card image: {}...", spec.label());
         match download_card_image(spec) {
-            Ok(bytes) => {
-                fs::write(&path, &bytes).expect("failed to write card image");
-                println!("  Saved to {}", path.display());
-                downloaded += 1;
-                if let Ok(mut completed) = progress.completed.lock() {
-                    completed.push(format!("cards/{}", spec.filename()));
+            Ok(bytes) => match fs::write(&path, &bytes) {
+                Ok(()) => {
+                    println!("  Saved to {}", path.display());
+                    downloaded += 1;
+                    if let Ok(mut completed) = progress.completed.lock() {
+                        completed.push(format!("cards/{}", spec.filename()));
+                    }
                 }
-            }
+                // Full disk, permissions, invalid filename — log and keep
+                // going; the placeholder reader covers the missing art.
+                Err(e) => {
+                    eprintln!("  failed to write {}: {e}", path.display());
+                    unavailable += 1;
+                }
+            },
             // Definitively no art on Scryfall (404 or 422). Negative-cache it
             // so future launches skip it; the runtime `CardPlaceholderReader`
             // serves a name placeholder for the missing path. Suppressed from
@@ -469,7 +483,13 @@ pub fn card_back_face_filename(name: &str) -> String {
 }
 
 fn sanitize_name(name: &str) -> String {
-    name.to_lowercase().replace([' ', '/', '\\'], "_")
+    // Beyond path separators, strip every Windows-invalid filename character
+    // (Circle of Protection: Red, Henzie "Toolbox" Torre, Who/What/When/...)
+    // — an invalid name makes fs::write fail on Windows. All replaced chars
+    // become '_', which `card_name_from_asset_path` already treats as a word
+    // separator, so the lossy reverse mapping stays consistent.
+    name.to_lowercase()
+        .replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
 }
 
 /// Asset path relative to the assets/ root, for use with Bevy's AssetServer.
@@ -647,8 +667,10 @@ fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
                     )));
                 }
                 attempt += 1;
-                // 0.5s, 1s, 2s — gives Scryfall's limiter time to refill.
-                let wait = Duration::from_millis(5000u64 << (attempt - 1));
+                // 0.5s, 1s, 2s, ... capped at 32s — gives Scryfall's limiter
+                // time to refill without stalling the prefetch thread for
+                // minutes on one card.
+                let wait = Duration::from_millis(500u64 << (attempt - 1).min(6));
                 eprintln!(
                     "  HTTP {code} (rate limited); retry {attempt}/{MAX_RATE_LIMIT_RETRIES} after {}ms",
                     wait.as_millis()

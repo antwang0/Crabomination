@@ -2319,8 +2319,12 @@ pub fn sync_game_visuals(
         .map(|seat| (seat, bf_row_counts(&cv.battlefield, seat).1))
         .collect();
     let creature_count = |seat: usize| creatures_by_owner.get(&seat).copied().unwrap_or(0);
+    // Server data drives the owner seat here — fall back to an empty set
+    // rather than panicking on a seat outside 0..n_seats.
+    static EMPTY_BF_IDS: std::sync::LazyLock<HashSet<CardId>> =
+        std::sync::LazyLock::new(HashSet::new);
     let bf_ids_for = |seat: usize| -> &HashSet<CardId> {
-        bf_ids_by_owner.get(&seat).expect("seat in bf_ids map")
+        bf_ids_by_owner.get(&seat).unwrap_or(&EMPTY_BF_IDS)
     };
     let hand_total = hand_ids.len();
     let all_bf_ids: HashSet<CardId> = cv.battlefield.iter().map(|c| c.id).collect();
