@@ -103,7 +103,7 @@ pub fn write_frame<T: Serialize>(stream: &mut TcpStream, value: &T) -> io::Resul
 /// Outbound-message policy for the coalescing writer outbox. Lets the
 /// generic [`Outbox`] treat server→client `View`s specially (only the latest
 /// snapshot matters) without the queue knowing the concrete message type.
-trait Outboxable {
+pub(super) trait Outboxable {
     /// True if `self`, arriving immediately behind an already-queued `prev`
     /// of the same kind, may *replace* it — i.e. `prev` is now stale and
     /// need never reach the wire. Used to collapse a run of consecutive
@@ -156,7 +156,7 @@ impl Outboxable for ClientMsg {
 /// even while a write is stuck; the outbox itself caps memory by collapsing
 /// consecutive `View`s and shedding the oldest streaming message once over
 /// [`MAX_PENDING_OUT`].
-struct Outbox<T> {
+pub(super) struct Outbox<T> {
     inner: Mutex<OutboxInner<T>>,
     cv: Condvar,
 }
@@ -169,7 +169,7 @@ struct OutboxInner<T> {
 }
 
 impl<T: Outboxable> Outbox<T> {
-    fn new() -> Arc<Self> {
+    pub(super) fn new() -> Arc<Self> {
         Arc::new(Self {
             inner: Mutex::new(OutboxInner {
                 queue: VecDeque::new(),
@@ -183,7 +183,7 @@ impl<T: Outboxable> Outbox<T> {
     /// queued message, then shedding the oldest sheddable message while over
     /// the cap. Returns `false` if the consumer has closed the outbox (the
     /// writer thread exited), signalling the producer to stop.
-    fn push(&self, msg: T) -> bool {
+    pub(super) fn push(&self, msg: T) -> bool {
         let mut g = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         if g.closed {
             return false;
@@ -211,7 +211,7 @@ impl<T: Outboxable> Outbox<T> {
 
     /// Block until a message is available, returning `None` once the outbox
     /// is closed *and* drained.
-    fn pop(&self) -> Option<T> {
+    pub(super) fn pop(&self) -> Option<T> {
         let mut g = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         loop {
             if let Some(m) = g.queue.pop_front() {
@@ -224,7 +224,23 @@ impl<T: Outboxable> Outbox<T> {
         }
     }
 
-    fn close(&self) {
+    /// Non-blocking `pop`: `Some(msg)` if one is queued, `None` otherwise
+    /// (whether empty or closed). Used by the WebSocket transport, whose
+    /// single socket thread multiplexes reads and writes and must never
+    /// park on the outbox.
+    pub(super) fn try_pop(&self) -> Option<T> {
+        let mut g = self.inner.lock().unwrap_or_else(|p| p.into_inner());
+        g.queue.pop_front()
+    }
+
+    /// True once `close()` was called and the queue is fully drained — the
+    /// WebSocket thread's signal to wind down.
+    pub(super) fn is_finished(&self) -> bool {
+        let g = self.inner.lock().unwrap_or_else(|p| p.into_inner());
+        g.closed && g.queue.is_empty()
+    }
+
+    pub(super) fn close(&self) {
         let mut g = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         g.closed = true;
         self.cv.notify_all();

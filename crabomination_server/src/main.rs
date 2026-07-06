@@ -35,7 +35,7 @@ use std::time::{Duration, Instant};
 
 use crabomination::net::LobbyFormat;
 use crabomination::server::{
-    run_match, serve_lobbies, tcp_seat, ConnId, MatchOutcome, RandomBot, SeatOccupant,
+    run_match, serve_lobbies, tcp_seat, ws_seat, ConnId, MatchOutcome, RandomBot, SeatOccupant,
 };
 
 mod config;
@@ -98,7 +98,27 @@ fn main() {
     );
 
     if lobby_mode {
-        run_lobby_server(&listener, &slots);
+        // WebSocket listener for browser clients. `CRAB_WS_BIND` picks the
+        // address (default port 7778 on the same interface); "0"/"off"
+        // disables it. Bind failure is non-fatal — native TCP still works.
+        let ws_bind = env::var("CRAB_WS_BIND").unwrap_or_else(|_| "0.0.0.0:7778".to_string());
+        let ws_listener = match ws_bind.as_str() {
+            "0" | "off" | "" => None,
+            addr => match TcpListener::bind(addr) {
+                Ok(l) => {
+                    eprintln!("websocket listener on {addr} (browser clients)");
+                    Some(l)
+                }
+                Err(e) => {
+                    eprintln!(
+                        "warning: failed to bind websocket listener {addr}: {e} \
+                         (browser clients unavailable; set CRAB_WS_BIND to change or 'off' to silence)"
+                    );
+                    None
+                }
+            },
+        };
+        run_lobby_server(&listener, ws_listener, &slots);
     } else if bot_mode {
         loop {
             let (stream, peer) = match accept_with_backoff(&listener) {
@@ -247,7 +267,11 @@ fn accept_with_deadline(
 /// [`serve_lobbies`] driver, which runs the browse/create/join protocol and
 /// starts a match when a lobby fills. The slot guard rides along with the
 /// connection, so the connection cap stays held for the lobby + match.
-fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
+fn run_lobby_server(
+    listener: &TcpListener,
+    ws_listener: Option<TcpListener>,
+    slots: &SlotManager,
+) -> ! {
     let (conn_tx, conn_rx) = mpsc::channel::<(ConnId, _, SlotGuard)>();
     // Fold each lobby-started match into the rolling stats + log a summary,
     // so lobby mode (the default) is as observable as the legacy pair mode.
@@ -274,40 +298,91 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
         });
     thread::spawn(move || serve_lobbies(conn_rx, on_match_end));
 
-    let mut next_id: u64 = 0;
+    // Connection ids are shared across both transports so the lobby manager
+    // never sees a collision.
+    let next_id = Arc::new(std::sync::atomic::AtomicU64::new(0));
+
+    // WebSocket accept loop (browser clients) on its own thread; both
+    // transports feed the same lobby channel and slot manager, so browser
+    // and native clients share lobbies and connection caps.
+    if let Some(wsl) = ws_listener {
+        let conn_tx = conn_tx.clone();
+        let slots = slots.clone();
+        let next_id = Arc::clone(&next_id);
+        thread::spawn(move || loop {
+            let (stream, peer) = match accept_with_backoff(&wsl) {
+                Some(p) => p,
+                None => continue,
+            };
+            if !admit_lobby_conn(stream, peer, &slots, &conn_tx, &next_id, Transport::Ws) {
+                eprintln!("lobby driver exited; stopping ws accept loop");
+                return;
+            }
+        });
+    }
+
     loop {
         let (stream, peer) = match accept_with_backoff(listener) {
             Some(p) => p,
             None => continue,
         };
-        let guard = match slots.try_acquire(peer.ip()) {
-            Ok(g) => g,
-            Err(reason) => {
-                let s = slots.snapshot();
-                eprintln!(
-                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/peak {pmax}/IP)",
-                    s.current, s.peak, s.refused_global, s.refused_per_ip,
-                    rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
-                );
-                let _ = stream.shutdown(std::net::Shutdown::Both);
-                continue;
-            }
-        };
-        let seat = match tcp_seat(stream) {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("tcp_seat failed for {peer}: {e}");
-                continue; // dropping `guard` frees the slot
-            }
-        };
-        let id = ConnId(next_id);
-        next_id += 1;
-        eprintln!("client {peer} → lobby (conn {})", id.0);
-        if conn_tx.send((id, seat, guard)).is_err() {
+        if !admit_lobby_conn(stream, peer, slots, &conn_tx, &next_id, Transport::Tcp) {
             eprintln!("lobby driver exited; stopping accept loop");
             std::process::exit(1);
         }
     }
+}
+
+#[derive(Clone, Copy)]
+enum Transport {
+    Tcp,
+    Ws,
+}
+
+/// Admit one accepted connection to the lobby: acquire a slot, wrap the
+/// stream into a `SeatChannel` via the transport's handshake, and hand it to
+/// the lobby driver. Returns `false` only if the lobby driver has exited
+/// (the caller's accept loop should stop); refusals and handshake failures
+/// return `true` and just drop the connection.
+fn admit_lobby_conn(
+    stream: TcpStream,
+    peer: std::net::SocketAddr,
+    slots: &SlotManager,
+    conn_tx: &mpsc::Sender<(ConnId, crabomination::server::SeatChannel, SlotGuard)>,
+    next_id: &std::sync::atomic::AtomicU64,
+    transport: Transport,
+) -> bool {
+    let label = match transport {
+        Transport::Tcp => "tcp",
+        Transport::Ws => "ws",
+    };
+    let guard = match slots.try_acquire(peer.ip()) {
+        Ok(g) => g,
+        Err(reason) => {
+            let s = slots.snapshot();
+            eprintln!(
+                "refusing {peer} ({label}): {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/peak {pmax}/IP)",
+                s.current, s.peak, s.refused_global, s.refused_per_ip,
+                rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
+            );
+            let _ = stream.shutdown(std::net::Shutdown::Both);
+            return true;
+        }
+    };
+    let seat = match transport {
+        Transport::Tcp => tcp_seat(stream),
+        Transport::Ws => ws_seat(stream),
+    };
+    let seat = match seat {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("{label}_seat failed for {peer}: {e}");
+            return true; // dropping `guard` frees the slot
+        }
+    };
+    let id = ConnId(next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+    eprintln!("client {peer} ({label}) → lobby (conn {})", id.0);
+    conn_tx.send((id, seat, guard)).is_ok()
 }
 
 /// Run a match body, catching any panic so a single buggy game logs with

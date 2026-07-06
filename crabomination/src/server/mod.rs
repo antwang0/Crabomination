@@ -70,10 +70,12 @@ pub mod bot;
 pub mod lobby;
 pub mod tcp;
 pub mod view;
+pub mod ws;
 
 pub use bot::{Bot, RandomBot};
 pub use lobby::{serve_lobbies, ConnId, LobbyManager};
 pub use tcp::{tcp_client, tcp_seat};
+pub use ws::ws_seat;
 pub use view::{project, project_spectator};
 
 /// A safety limit on how many actions a bot (or chain of bots) can take

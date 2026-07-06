@@ -1042,6 +1042,17 @@ pub struct GameState {
     /// top of the cast. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_spend_float: Option<bool>,
+    /// SOS Prepare — copies materialized by `cast_prepare_spell` whose cast
+    /// hasn't finished yet, as `(copy_id, source_creature_id)`. Registered
+    /// before the copy enters the cast pipeline and settled by
+    /// `settle_prepare_copy_cast` once the copy reaches the stack (flag it
+    /// `is_token`, unprepare the creature) or the cast fails
+    /// (unmaterialize the copy). Unlike its transient `pending_cast_*`
+    /// siblings this must survive a snapshot: a mid-cast suspension
+    /// (float-spend confirm, additional-cost pick) parks the copy in the
+    /// caster's hand across a client round-trip.
+    #[serde(default)]
+    pub(crate) pending_prepare_copies: Vec<(CardId, CardId)>,
     /// Transient: the library card a `wants_ui` cycler picked for a
     /// landcycling / typecycling fetch (CR 702.29e). Set by the
     /// `ActionSearchPick` resume just before it replays the Landcycle
@@ -1579,6 +1590,7 @@ impl Clone for GameState {
             pending_cast_discards: self.pending_cast_discards.clone(),
             pending_spree_modes: self.pending_spree_modes.clone(),
             pending_cast_spend_float: self.pending_cast_spend_float,
+            pending_prepare_copies: self.pending_prepare_copies.clone(),
             pending_landcycle_pick: self.pending_landcycle_pick,
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
