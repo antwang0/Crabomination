@@ -126,11 +126,10 @@ fn becomes_prepared() -> Effect {
 /// Prepare spell: instant — exile target creature; its controller gains
 /// life equal to that creature's power.
 ///
-/// Approximation: the printed Swords to Plowshares lifegain rider keys
-/// off the *target's controller*. The engine has no opponent-directed
-/// `GainLife { who: PlayerRef::ControllerOf(Selector) }` shape, so we
-/// approximate as the target's *owner* gaining life. The exile half is
-/// faithful.
+/// The printed Swords to Plowshares lifegain rider is faithful: the
+/// target's *controller* gains life equal to its power, wired via
+/// `GainLife { who: PlayerRef::ControllerOf(Target(0)) }`. The exile
+/// half is faithful too.
 pub fn emeritus_of_truce() -> CardDefinition {
     use super::creatures::inkling_token;
     let spell = spell_back(
@@ -457,7 +456,9 @@ pub fn cheerful_osteomancer() -> CardDefinition {
         cost(&[b()]),
         CardType::Sorcery,
         Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+            ),
             to: ZoneDest::Hand(PlayerRef::You),
         },
     );
@@ -642,7 +643,7 @@ pub fn emeritus_of_abundance() -> CardDefinition {
         cost(&[generic(1), g()]),
         CardType::Sorcery,
         Effect::Move {
-            what: target_filtered(SelectionRequirement::Any),
+            what: target_filtered(SelectionRequirement::InYourGraveyard),
             to: ZoneDest::Hand(PlayerRef::You),
         },
     );
@@ -1483,7 +1484,8 @@ pub fn grave_researcher() -> CardDefinition {
             Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::InYourGraveyard),
                 },
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

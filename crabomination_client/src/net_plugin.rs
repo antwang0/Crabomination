@@ -15,16 +15,22 @@
 //! | [`OurSeat`] | Which seat index this client controls |
 //! | [`LatestServerEvents`] | Events from the most recent server action batch |
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::net::TcpStream;
 use std::sync::{Mutex, mpsc};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
+/// `std::time::Instant` panics on wasm32-unknown-unknown; Bevy's platform
+/// shim is identical on native and browser-safe on wasm.
+use bevy::platform::time::Instant;
 
 use bevy::prelude::*;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crabomination::server::{tcp_client, ClientChannel};
 use crabomination::{
     game::GameAction,
     net::{ClientMsg, ClientView, DebugAction, GameEventWire, ServerMsg},
-    server::{tcp_client, ClientChannel},
 };
 
 /// Send game actions to the match server. Also remembers the most
@@ -176,7 +182,7 @@ pub struct ResumeInfo {
     pub lost: bool,
     /// Consecutive failed reconnect attempts; reset once messages flow again.
     pub attempts: u32,
-    pub last_attempt: Option<std::time::Instant>,
+    pub last_attempt: Option<Instant>,
 }
 
 /// Events produced by the most recent server action, cleared each frame before
@@ -195,7 +201,13 @@ pub struct MatchEnded(pub Option<Option<usize>>);
 /// in-process matches (vs-bot, host, spectate), where dropping
 /// [`NetOutbox`] already tears the channel down.
 #[derive(Resource, Default)]
-pub struct NetConnection(pub Option<std::net::TcpStream>);
+pub struct NetConnection(
+    #[cfg(not(target_arch = "wasm32"))] pub Option<std::net::TcpStream>,
+    // wasm: the socket handle lives in the NonSend `ws_client::WsSocket`
+    // resource instead (web_sys::WebSocket is !Send); this stays a unit
+    // placeholder so shared code can keep passing NetConnection around.
+    #[cfg(target_arch = "wasm32")] pub Option<()>,
+);
 
 /// Registers network resources and the polling + startup systems.
 pub struct SinglePlayerPlugin;
@@ -213,6 +225,13 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<RopeClock>()
             .init_resource::<ChatInbox>()
             .add_systems(PreUpdate, poll_net)
+            // Reconnect runs only when a reconnectable match's link has dropped.
+            .add_systems(Update, maybe_reconnect.run_if(|r: Res<ResumeInfo>| r.lost));
+        // Browser transport: flush outbound ClientMsgs into the WebSocket
+        // before poll_net drains the inbound side each tick.
+        #[cfg(target_arch = "wasm32")]
+        app.add_systems(PreUpdate, crate::ws_client::pump_ws.before(poll_net));
+        app
             .add_systems(
                 Update,
                 (
@@ -222,9 +241,7 @@ impl Plugin for SinglePlayerPlugin {
                     update_reconnect_banner,
                     update_rope_banner,
                 ),
-            )
-            // Reconnect runs only when a reconnectable match's link has dropped.
-            .add_systems(Update, maybe_reconnect.run_if(|r: Res<ResumeInfo>| r.lost));
+            );
         // Network installation happens via `crate::menu::start_net_session_from_menu`
         // on entry to `AppState::InGame` — see `main.rs` wiring.
     }
@@ -378,8 +395,17 @@ pub fn teardown_net_session(
     mut lobby: ResMut<LobbyState>,
     mut resume: ResMut<ResumeInfo>,
 ) {
+    #[cfg(not(target_arch = "wasm32"))]
     if let Some(stream) = conn.0.take() {
         let _ = stream.shutdown(std::net::Shutdown::Both);
+    }
+    // wasm: dropping the NonSend WsSocket closes the browser socket.
+    #[cfg(target_arch = "wasm32")]
+    {
+        conn.0.take();
+        commands.queue(|world: &mut World| {
+            world.remove_non_send::<crate::ws_client::WsSocket>();
+        });
     }
     commands.remove_resource::<NetOutbox>();
     commands.remove_resource::<NetInbox>();
@@ -441,6 +467,7 @@ pub fn maybe_reconnect(world: &mut World) {
         r.lost = false;
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     match reconnect_with_token(&addr, &token) {
         Ok((outbox, inbox, conn)) => {
             world.insert_resource(outbox);
@@ -453,12 +480,31 @@ pub fn maybe_reconnect(world: &mut World) {
             world.resource_mut::<ResumeInfo>().lost = true;
         }
     }
+    #[cfg(target_arch = "wasm32")]
+    match crate::ws_client::ws_connect(&addr) {
+        Ok((outbox, inbox, sock)) => {
+            // Resume is queued in the outbox mpsc and flushed by `pump_ws`
+            // once the socket opens; a failed connect surfaces as a
+            // disconnect on a later frame and retries via the same path.
+            outbox.submit_msg(ClientMsg::Resume { token });
+            world.insert_resource(outbox);
+            world.insert_resource(inbox);
+            world.insert_resource(NetConnection::default());
+            world.insert_non_send(sock);
+        }
+        Err(e) => {
+            eprintln!("reconnect: connect failed: {e}");
+            world.resource_mut::<ResumeInfo>().lost = true;
+        }
+    }
 }
 
 /// `TcpStream::connect` with a bounded timeout per resolved address. The
+/// (native-only; the wasm build connects via `ws_client`.)
 /// plain connect runs on the main thread here and in the lobby browser; a
 /// dead or unroutable server would otherwise freeze rendering for the OS
 /// connect timeout (tens of seconds on some stacks).
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn connect_with_timeout(addr: &str) -> std::io::Result<TcpStream> {
     use std::net::ToSocketAddrs;
     let mut last_err = None;
@@ -474,6 +520,7 @@ pub(crate) fn connect_with_timeout(addr: &str) -> std::io::Result<TcpStream> {
 }
 
 /// Open a fresh connection and immediately send `Resume { token }`.
+#[cfg(not(target_arch = "wasm32"))]
 fn reconnect_with_token(
     addr: &str,
     token: &str,

@@ -373,7 +373,7 @@ pub fn foolish_fate() -> CardDefinition {
                     at_least: Value::Const(1),
                 },
                 then: Box::new(Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::Const(3),
                 }),
                 else_: Box::new(Effect::Noop),
@@ -402,7 +402,7 @@ pub fn dissection_practice() -> CardDefinition {
         effect: Effect::Seq(vec![
             // Slot 0: target opponent loses 1, you gain 1.
             Effect::LoseLife {
-                who: target_filtered(SelectionRequirement::Player),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(1),
             },
             Effect::GainLife {
@@ -513,15 +513,11 @@ pub fn impractical_joke() -> CardDefinition {
 /// card from your graveyard. If you do, Heated Argument also deals 2
 /// damage to that creature's controller."
 ///
-/// Approximation: the optional "may exile a card from your graveyard /
-/// if you do, deal 2" rider is collapsed to **always deal 2 to the
-/// target's controller** — auto-decider would always choose to exile
-/// (the bonus 2 damage is a free upside over a graveyard card), and
-/// the engine has no `Move`-with-count primitive to exile *exactly
-/// one* card from a zone (a `CardsInZone`-driven `Move` would empty
-/// the entire graveyard). Net play: a 5-mana 6-to-creature + 2-to-face
-/// plus an implicit "your graveyard isn't really used" fudge — within
-/// the printed power band.
+/// The optional rider is wired faithfully: an `Effect::MayDo` gates a
+/// `Move` of exactly one graveyard card to exile (via
+/// `Selector::take(CardsInZone, 1)`) followed by 2 damage to the
+/// target creature's controller. Declining the may skips both the
+/// exile and the bonus damage.
 pub fn heated_argument() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -635,7 +631,7 @@ pub fn glorious_decay() -> CardDefinition {
             // Mode 2: exile target card from a graveyard, draw a card.
             Effect::Seq(vec![
                 Effect::Move {
-                    what: target_filtered(SelectionRequirement::Any),
+                    what: target_filtered(SelectionRequirement::InGraveyard),
                     to: ZoneDest::Exile,
                 },
                 Effect::Draw {
@@ -771,10 +767,10 @@ pub fn proctors_gaze() -> CardDefinition {
 /// • You gain 5 life.
 /// • Destroy target nonland permanent with mana value 2 or less.
 ///
-/// The "you may" gating on mode 0 is dropped — picking the mode commits
-/// you to the sacrifice (engine has no in-mode optionality primitive).
-/// AutoDecider falls through to mode 1 (gain 5) when no permanent is
-/// sacrificable, so the card never bricks.
+/// The "you may" gating on mode 0 is honored via `Effect::MayDo` —
+/// picking the mode still lets the controller decline the sacrifice
+/// (and forgo the draw). AutoDecider falls through to mode 1 (gain 5)
+/// when no permanent is sacrificable, so the card never bricks.
 pub fn witherbloom_charm() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
@@ -858,7 +854,8 @@ pub fn lorehold_charm() -> CardDefinition {
                 what: target_filtered(
                     (SelectionRequirement::HasCardType(CardType::Artifact)
                         .or(SelectionRequirement::Creature))
-                    .and(SelectionRequirement::ManaValueAtMost(2)),
+                    .and(SelectionRequirement::ManaValueAtMost(2))
+                    .and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
@@ -1355,9 +1352,9 @@ pub fn suspend_aggression() -> CardDefinition {
 /// (mandatory) + slots 1 + 2 (optional). The pump lands on each filled
 /// slot; the unfilled slots resolve to no-op via `TargetFiltered`.
 /// AutoDecider fills slot 0 only; scripted tests can wire up to three.
-/// The transient die-to-draw rider is still omitted (engine has no
-/// per-creature "grant triggered ability for a duration" primitive —
-/// tracked in TODO.md).
+/// The transient die-to-draw rider is wired via
+/// `Effect::GrantTriggeredAbility` — each pumped target gains a
+/// CreatureDied/SelfSource draw-a-card trigger until end of turn.
 pub fn rabid_attack() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     // Push (modern_decks, batch 85): "When this creature dies, draw a

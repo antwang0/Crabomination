@@ -7,11 +7,9 @@ edition = "2024"
 bevy = { version = "0.19.0" }
 bevy_mesh = "0.19.0"
 rand = "0.10.1"
-ureq = "3.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 toml = "1.1.2"
-dirs = "6"
 crabomination = { path = "../crabomination" }
 # Generating the white name-placeholder PNGs for cards with no Scryfall art
 # (see scryfall::ensure_card_images). All three are already in the tree via
@@ -19,6 +17,22 @@ crabomination = { path = "../crabomination" }
 image = "0.25.10"
 imageproc = "0.27"
 ab_glyph = "0.2.32"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Blocking HTTP (card prefetch) and OS config-dir discovery are native-only;
+# the browser build loads card art over HTTP via the AssetServer and stores
+# config in localStorage.
+ureq = "3.3"
+dirs = "6"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "WebSocket", "BinaryType", "MessageEvent", "CloseEvent", "ErrorEvent",
+    "Window", "Storage", "Location",
+] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
 # Bevy's dynamic-linking dev accelerator — OPT-IN ONLY.

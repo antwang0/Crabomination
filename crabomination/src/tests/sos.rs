@@ -8718,6 +8718,106 @@ fn cheerful_osteomancer_prepare_spell_returns_creature_from_graveyard() {
         "Bear should be back in hand");
 }
 
+// A prepare-spell cast that suspends mid-way (CR 601.2g float-spend
+// confirmation) must not unprepare the creature early, and the resumed
+// cast — which replays as a plain `CastSpell` of the copy — must still
+// get the token flag + unprepare bookkeeping.
+#[test]
+fn prepare_spell_survives_float_spend_suspension() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Regrowth ({1}{G}) off a prepared Emeritus of Abundance.
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_abundance());
+    // Off-colour float the generic pip could consume, plus untapped
+    // Forests that could pay instead — the CR 601.2g confirmation must
+    // ask before auto-spending the float.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let hand_size = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: Some(Target::Permanent(bear_in_gy)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast suspends for the float-spend confirmation");
+    let pd = g.pending_decision.as_ref().expect("a float-spend confirmation is pending");
+    assert!(matches!(pd.decision, crate::decision::Decision::OptionalTrigger { .. }));
+    // Suspended — the creature must still be prepared and nothing on the stack.
+    assert!(g.stack.is_empty(), "copy is parked in hand during the suspension");
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::Prepared), 1,
+        "creature stays prepared until the copy actually hits the stack");
+
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)))
+        .expect("confirm spending the float");
+    // The copy is now a real cast: creature unprepared, copy flagged token.
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::Prepared), 0,
+        "casting the copy unprepares the creature");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear_in_gy),
+        "Regrowth resolved — Bear back in hand");
+    // The resolved copy ceases to exist: not in hand, not in the graveyard.
+    assert_eq!(g.players[0].hand.len(), hand_size + 1,
+        "only the Bear was added to hand — the copy is gone");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Regrowth"),
+        "the copy never reaches the graveyard");
+    assert!(g.pending_prepare_copies.is_empty(), "registration settled");
+}
+
+// CR 707.10a — a countered prepare copy ceases to exist without ever
+// transiting the graveyard (no CardPutIntoGraveyard / descend bookkeeping).
+#[test]
+fn countered_prepare_copy_never_touches_the_graveyard() {
+    let mut g = two_player_game();
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::cheerful_osteomancer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: Some(Target::Permanent(bear_in_gy)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Raise Dead castable for {B}");
+    let copy_id = match g.stack.last().expect("copy on the stack") {
+        StackItem::Spell { card, .. } => card.id,
+        _ => panic!("top of stack should be the prepare copy"),
+    };
+    let gy_count_before = g.players[0].cards_to_graveyard_this_turn;
+
+    // Hand priority to the opponent so they can respond with the counter.
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(copy_id)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell castable for {U}{U}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear_in_gy),
+        "Bear stays in the graveyard (Raise Dead was countered)");
+    assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Raise Dead"),
+        "the countered copy ceases to exist — it never enters the graveyard");
+    assert_eq!(g.players[0].cards_to_graveyard_this_turn, gy_count_before,
+        "no graveyard bookkeeping fires for the countered copy");
+    assert!(!g.players[0].descended_this_turn,
+        "a countered copy does not count as descending");
+}
+
 // Emeritus of Woe // Demonic Tutor — search library for any card to hand.
 #[test]
 fn emeritus_of_woe_prepare_spell_searches_library() {

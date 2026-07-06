@@ -14,6 +14,7 @@
 //! A simple keyboard-driven text input lets the user edit the join address
 //! and the host port; clicks on the field activate it.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 
@@ -24,9 +25,11 @@ use crabomination::cube::build_cube_state;
 use crabomination::sos_mode::build_sos_state;
 use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
+#[cfg(not(target_arch = "wasm32"))]
+use crabomination::server::{run_match, tcp_seat};
 use crabomination::server::{
-    ClientChannel, RandomBot, SeatOccupant, run_match, run_match_full, seat_pair,
-    tcp_seat, SnapshotSink, SnapshotSinkState,
+    ClientChannel, RandomBot, SeatOccupant, run_match_full, seat_pair,
+    SnapshotSink, SnapshotSinkState,
 };
 
 use crate::net_plugin::{NetInbox, NetOutbox};
@@ -114,6 +117,7 @@ pub struct CliBootHint(pub Option<std::path::PathBuf>);
 pub struct CliBootFormat(pub Option<MatchFormat>);
 
 #[derive(Clone, Debug)]
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))] // HostLan{port} unused in browser
 pub enum NetMode {
     /// In-process server, RandomBot opponent.
     LocalBot,
@@ -1077,6 +1081,7 @@ pub fn start_net_session_from_menu(world: &mut World) {
                 spawn_inprocess_bot(world, format);
             }
         },
+        #[cfg(not(target_arch = "wasm32"))]
         NetMode::HostLan { port } => match spawn_host_lan(world, port, format) {
             Ok(()) => eprintln!(
                 "net: hosting {fmt:?} on 0.0.0.0:{port} — waiting for opponent",
@@ -1087,6 +1092,12 @@ pub fn start_net_session_from_menu(world: &mut World) {
                 spawn_inprocess_bot(world, format);
             }
         },
+        // Browsers can't listen for TCP connections; the button is native-only
+        // but the enum variant still exists, so route it somewhere sane.
+        #[cfg(target_arch = "wasm32")]
+        NetMode::HostLan { .. } => {
+            eprintln!("net: hosting isn't available in the browser build");
+        }
     }
 }
 
@@ -1225,6 +1236,7 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
     world.insert_resource(LatestSnapshot(sink));
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io::Result<()> {
     let bind = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&bind)?;

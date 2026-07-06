@@ -7129,7 +7129,7 @@ impl GameState {
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
                     if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
-                        self.route_to_graveyard(*card, events);
+                        self.countered_spell_off_stack(*card, events);
                     }
                 }
                 Ok(())
@@ -7154,7 +7154,7 @@ impl GameState {
                 }
                 if let Some((pos, underpaid)) = hit {
                     if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
-                        self.route_to_graveyard(*card, events);
+                        self.countered_spell_off_stack(*card, events);
                     }
                     if underpaid {
                         let draw = Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(1) };
@@ -7300,7 +7300,10 @@ impl GameState {
                 if !paid
                     && let StackItem::Spell { card, .. } = self.stack.remove(pos)
                 {
-                    if *exile {
+                    if card.is_token {
+                        // CR 707.10a — a countered copy ceases to exist; it
+                        // is never exiled or put into a graveyard.
+                    } else if *exile {
                         self.exile.push(*card);
                     } else {
                         self.route_to_graveyard(*card, events);
@@ -7519,7 +7522,7 @@ impl GameState {
                     if is_spell
                         && let StackItem::Spell { card, .. } = removed
                     {
-                        self.route_to_graveyard(*card, events);
+                        self.countered_spell_off_stack(*card, events);
                     }
                     // Trigger items just drop off — nothing else to clean up.
                 }

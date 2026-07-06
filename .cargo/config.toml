@@ -21,3 +21,9 @@ dev = "run -p crabomination_client --features dynamic_linking"
 # test harness runs each test on a spawned thread, which honors
 # RUST_MIN_STACK. Release builds use far smaller frames.
 RUST_MIN_STACK = "33554432"
+
+# getrandom (rand's entropy source) requires opting into the JS backend on
+# wasm32-unknown-unknown; the crates enable its "wasm_js" feature and this
+# flag selects it. See https://docs.rs/getrandom/#webassembly-support.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", 'getrandom_backend="wasm_js"']

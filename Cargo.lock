@@ -2335,6 +2335,7 @@ dependencies = [
  "crabomination_base",
  "crabomination_catalog",
  "ctor",
+ "getrandom 0.4.2",
  "rand 0.10.2",
  "serde",
  "serde_json",
@@ -2367,13 +2368,17 @@ dependencies = [
  "bevy_mesh",
  "crabomination",
  "dirs",
+ "getrandom 0.4.2",
  "image",
  "imageproc",
+ "js-sys",
  "rand 0.10.2",
  "serde",
  "serde_json",
  "toml",
  "ureq",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

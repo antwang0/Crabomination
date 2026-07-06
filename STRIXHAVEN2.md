@@ -27,7 +27,7 @@ share Kasmina's loyalty abilities" static
 "No partials remain" is true only in the narrow tracker sense (no card is marked
 🟡/⏳ in the status tables). In practice:
 
-- **~195 cards ship with documented approximations** (≈66 SOS, ≈129 STX —
+- **~190 cards ship with documented approximations** (≈59 SOS, ≈129 STX —
   grep the catalogs for `Approximation` / `omitted` / `dropped`). Most capture
   the headline play pattern. Possibility Storm (cast-trigger exile-and-dig via
   `Effect::PossibilityStorm`) and Hindering Light (target-restricted counter)

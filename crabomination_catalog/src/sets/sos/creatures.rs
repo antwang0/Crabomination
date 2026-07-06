@@ -1116,8 +1116,9 @@ pub fn zealous_lorecaster() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    (SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)))
+                    .and(SelectionRequirement::InYourGraveyard),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -1415,7 +1416,7 @@ pub fn startled_relic_sloth() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::InGraveyard),
                 to: ZoneDest::Exile,
             },
         }],
@@ -1862,8 +1863,9 @@ pub fn fractal_tender() -> CardDefinition {
             // Push (modern_decks, batch 82): "At the beginning of each
             // end step, if you put a counter on this creature this turn,
             // create a 0/0 G/U Fractal token and put three +1/+1
-            // counters on it." Wired as a StepBegins(End)/ActivePlayer
-            // trigger gated on the new
+            // counters on it." Wired as a StepBegins(End)/AnyPlayer
+            // trigger (fires at each end step, matching the printed
+            // "each end step") gated on the new
             // `Predicate::SourceGainedCounterThisTurn`. The trigger
             // body mints a Fractal via the shared `fractal_token()` and
             // piles 3 +1/+1 counters via `Selector::LastCreatedToken`.
@@ -1961,8 +1963,9 @@ pub fn hungry_graffalon() -> CardDefinition {
 ///
 /// Increment wired via `shortcut::increment_self_plus_one()`. The
 /// secondary "whenever one or more +1/+1 counters are put on this
-/// creature, …" rider (oracle previously truncated) stays omitted
-/// pending re-fetch.
+/// creature, you may draw a card" rider is wired via
+/// `EventKind::CounterAdded(PlusOnePlusOne)` + SelfSource, with the
+/// draw wrapped in `Effect::MayDo` to honor the printed optionality.
 pub fn pensive_professor() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::increment_self_plus_one;
@@ -2008,9 +2011,10 @@ pub fn pensive_professor() -> CardDefinition {
 /// onto another target creature."
 ///
 /// Increment wired via `shortcut::increment_self_plus_one()`. The
-/// pay-X-to-move-counters combat trigger stays omitted (no X-cost
-/// optional trigger primitive yet — same engine gap as Berta's
-/// activation's X resolution).
+/// pay-X-to-move-counters combat trigger is wired with X collapsed to
+/// 1: a BeginCombat/ActivePlayer trigger wraps `MayPay {1}` around
+/// moving one +1/+1 counter to another target creature (no X-cost
+/// optional trigger primitive yet, so one counter per combat).
 pub fn tester_of_the_tangential() -> CardDefinition {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::shortcut::{increment_self_plus_one, target_filtered};
@@ -2784,7 +2788,9 @@ pub fn sundering_archaic() -> CardDefinition {
             tap_cost: false,
             mana_cost: ManaCost::new(vec![generic(2)]),
             effect: Effect::Move {
-                what: crate::effect::shortcut::target_filtered(SelectionRequirement::Any),
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::InGraveyard,
+                ),
                 to: ZoneDest::Library {
                     who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     pos: LibraryPosition::Bottom,
@@ -3812,20 +3818,16 @@ pub fn mage_tower_referee() -> CardDefinition {
 /// if one or more cards were put into exile this turn, put a +1/+1
 /// counter on Ennis."
 ///
-/// Both abilities partially wired:
+/// Both abilities wired:
 /// - ETB flicker: exiles a target creature (auto-picker prefers a
 ///   friendly utility creature with a useful ETB) and schedules a
 ///   delayed return at next end step. Uses the same
 ///   `Exile + DelayUntil(NextEndStep, Move(Target → Battlefield(OwnerOf)))`
 ///   pattern as Restoration Angel-style flickers.
-/// - End-step counter: gated on "any card was exiled this turn". The
-///   engine doesn't yet track per-turn exile count as a `Value`, so we
-///   approximate this by using `CardsLeftGraveyardThisTurnAtLeast` as a
-///   proxy (most sources of "card put into exile" pass through gy first
-///   in our engine — flicker exiles, exile-from-gy effects, etc.). The
-///   approximation under-counts pure hand-exile and bounce-to-exile
-///   effects but covers the common case (Ennis's own ETB exile triggers
-///   the predicate via the gy-leave fired by the delayed return).
+/// - End-step counter: gated on the exact-printed
+///   `Predicate::CardsExiledThisTurnAtLeast` (backed by
+///   `Player.cards_exiled_this_turn`), so exile-from-hand and
+///   exile-from-library events count too — no graveyard-leave proxy.
 pub fn ennis_debate_moderator() -> CardDefinition {
     use crate::card::{CounterType, Predicate, Supertype};
     use crate::effect::{DelayedTriggerKind, ZoneDest};
@@ -3970,7 +3972,9 @@ pub fn forum_necroscribe() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Ward(crate::card::WardCost::Discard(1))],
         triggered_abilities: vec![repartee(Effect::Move {
-            what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
+            what: crate::effect::shortcut::target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+            ),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,
@@ -4246,10 +4250,11 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 ///
 /// Body wired (1/1 Turtle Wizard at {G} — Increment-grown shell).
 /// Increment now uses `shortcut::increment_self_plus_one()`. The
-/// death-with-counters → Fractal-with-counters trigger is still
-/// omitted (engine has no `Selector::Self.counters_at_death` snapshot
-/// — we'd need a counter-transfer-on-death primitive, tracked
-/// separately).
+/// death-with-counters → Fractal-with-counters trigger is wired: a
+/// CreatureDied/SelfSource trigger gated on
+/// `Value::CountersOn(This) >= 1` mints a Fractal token and copies the
+/// counter count onto it (counters persist on the CardInstance across
+/// the bf → gy zone change, so the read is accurate at resolve time).
 pub fn ambitious_augmenter() -> CardDefinition {
     use crate::card::CounterType;
     use crate::catalog::sets::sos::sorceries::fractal_token;
@@ -4387,7 +4392,7 @@ pub fn rubble_rouser() -> CardDefinition {
 /// Professor Dellian Fel — {2}{B}{G} Legendary Planeswalker — Dellian [5].
 ///
 /// "+2: You gain 3 life. / 0: You draw a card and lose 1 life. / -3:
-/// Destroy target creature. / -7: You get an emblem with 'Whenever you
+/// Destroy target creature. / -6: You get an emblem with 'Whenever you
 /// gain life, target opponent loses that much life.'"
 ///
 /// All four abilities wired: `+2 gain 3`, `0 draw 1 / lose 1`, `-3
@@ -4522,7 +4527,8 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
                 effect: Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                            .and(SelectionRequirement::ManaValueAtMost(3))
+                            .and(SelectionRequirement::InYourGraveyard),
                     ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
@@ -4560,8 +4566,8 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
 ///
 /// Body wired with the printed 0/3 Frog Wizard stats; the ETB Surveil 2
 /// is wired faithfully via `Effect::Surveil`. The Increment rider is
-/// omitted (no per-cast mana-spent introspection — same gap as
-/// Pensive Professor / Hungry Graffalon / Tester of the Tangential).
+/// wired via the shared `shortcut::increment_self_plus_one()` (same
+/// shape as Pensive Professor / Tester of the Tangential).
 pub fn textbook_tabulator() -> CardDefinition {
     use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::u;

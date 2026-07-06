@@ -26,10 +26,17 @@
 //! cards (no Scryfall printing) are listed in [`FICTIONAL_CARDS`] and
 //! skipped silently.
 
+// On wasm the whole prefetch half is compiled out (no ureq/threads/fs);
+// the types it shares with the native path would otherwise warn as dead.
+#![cfg_attr(target_arch = "wasm32", allow(dead_code))]
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::fmt::Write;
 use std::fs;
 use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
 use std::thread;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
 use std::sync::Arc;
@@ -136,6 +143,7 @@ const UNAVAILABLE_MANIFEST: &str = ".unavailable.txt";
 
 /// Load the negative-cache manifest into a set of filenames. Missing /
 /// unreadable file → empty set (every card gets re-checked).
+#[cfg(not(target_arch = "wasm32"))]
 fn load_unavailable(cards_dir: &Path) -> std::collections::HashSet<String> {
     fs::read_to_string(cards_dir.join(UNAVAILABLE_MANIFEST))
         .map(|s| {
@@ -150,6 +158,7 @@ fn load_unavailable(cards_dir: &Path) -> std::collections::HashSet<String> {
 
 /// Append `filename` to the negative-cache manifest. Best-effort: a write
 /// failure just means the card is re-checked next launch.
+#[cfg(not(target_arch = "wasm32"))]
 fn mark_unavailable(cards_dir: &Path, filename: &str) {
     use std::io::Write;
     if let Ok(mut f) = fs::OpenOptions::new()
@@ -197,6 +206,7 @@ pub fn reload_completed_images(
 
 /// Blocking variant without progress reporting (tests).
 #[cfg_attr(not(test), allow(dead_code))]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     ensure_card_images_with_progress(specs, assets_dir, &ImagePrefetch::default());
 }
@@ -204,6 +214,7 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
 /// `ensure_card_images` with live progress reporting — run on a background
 /// thread so launch never blocks on the network (the placeholder reader
 /// serves name placeholders until the real art lands and is reloaded).
+#[cfg(not(target_arch = "wasm32"))]
 pub fn ensure_card_images_with_progress(
     specs: &[CardImage],
     assets_dir: &Path,
@@ -520,6 +531,7 @@ pub fn card_back_face_asset_path(name: &str) -> String {
 /// `(bNNN)` suffix is deliberately left alone, since those cards aren't on
 /// Scryfall and stripping could make one accidentally resolve to a real
 /// card's art.
+#[cfg(not(target_arch = "wasm32"))]
 fn scryfall_lookup_name(name: &str) -> &str {
     const FORMAT_SUFFIXES: &[&str] = &[
         " (Modern)",
@@ -539,6 +551,7 @@ fn scryfall_lookup_name(name: &str) -> &str {
     name
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
     match spec {
         CardImage::Token { name } => download_token_image(name),
@@ -572,6 +585,7 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
 ///
 /// Scryfall returns the token regardless of which set it came from,
 /// so `unique=art` is plenty -- we don't care about printing variants.
+#[cfg(not(target_arch = "wasm32"))]
 fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
     let search_url = format!(
         "https://api.scryfall.com/cards/search?unique=art&q=is%3Atoken+t%3A{}",
@@ -621,6 +635,7 @@ impl std::fmt::Display for LookupError {
 
 impl std::error::Error for LookupError {}
 
+#[cfg(not(target_arch = "wasm32"))]
 fn try_lookup(
     matcher: &'static str,
     lookup_name: &str,
@@ -652,6 +667,7 @@ const MAX_RATE_LIMIT_RETRIES: u32 = 8;
 /// `NotFound` so the caller can fall back to a fuzzy lookup; other errors are
 /// terminal. Without the retry a single 429 used to fail every remaining card
 /// in the batch — Scryfall rate-limits the *whole* run once it trips.
+#[cfg(not(target_arch = "wasm32"))]
 fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
     let mut attempt = 0u32;
     loop {
@@ -698,6 +714,7 @@ fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
 
 /// Percent-encode a card name for use in a Scryfall URL query parameter.
 /// Spaces become `+`; all non-ASCII and reserved ASCII characters are encoded.
+#[cfg(not(target_arch = "wasm32"))]
 fn urlenccode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for byte in s.bytes() {

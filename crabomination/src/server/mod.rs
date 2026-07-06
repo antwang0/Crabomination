@@ -68,13 +68,17 @@ pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
 pub mod bot;
 pub mod lobby;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod tcp;
 pub mod view;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ws;
 
 pub use bot::{Bot, RandomBot};
 pub use lobby::{serve_lobbies, ConnId, LobbyManager};
+#[cfg(not(target_arch = "wasm32"))]
 pub use tcp::{tcp_client, tcp_seat};
+#[cfg(not(target_arch = "wasm32"))]
 pub use ws::ws_seat;
 pub use view::{project, project_spectator};
 

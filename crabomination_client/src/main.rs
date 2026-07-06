@@ -17,13 +17,17 @@ mod audit;
 mod card;
 mod config;
 mod debug_export;
+#[cfg(not(target_arch = "wasm32"))]
 mod embedded_assets;
 mod game;
 mod menu;
 mod net_plugin;
 mod render_quality;
 mod scryfall;
+mod storage;
 mod synthesized_cards;
+#[cfg(target_arch = "wasm32")]
+mod ws_client;
 mod systems;
 mod theme;
 
@@ -197,21 +201,37 @@ fn main() {
     // Resolve once: a relative `asset_dir` is anchored to a fixed location
     // (crate source dir in debug, exe dir in release) so the prefetch cache
     // and Bevy's asset root agree regardless of the working directory.
-    let asset_dir = cfg.paths.resolved_asset_dir();
+    // (Browser: asset paths are URLs fetched relative to the page, so the
+    // native filesystem anchoring doesn't apply — serve from "assets".)
+    let asset_dir = if cfg!(target_arch = "wasm32") {
+        std::path::PathBuf::from("assets")
+    } else {
+        cfg.paths.resolved_asset_dir()
+    };
     // A custom/fresh asset dir starts empty — materialize the embedded
     // core assets (font, cardback, table model) before anything reads them.
+    #[cfg(not(target_arch = "wasm32"))]
     embedded_assets::materialize_core_assets(&asset_dir);
     // Card-art prefetch runs on a background thread — launch never blocks
     // on the network. Missing images render as name placeholders (see
     // `CardPlaceholderReader`) and hot-swap to real art as downloads land
     // (`reload_completed_images`); the menu shows live progress.
     let image_prefetch = scryfall::ImagePrefetch::default();
+    #[cfg(not(target_arch = "wasm32"))]
     {
         let progress = image_prefetch.clone();
         let dir = asset_dir.clone();
         std::thread::spawn(move || {
             scryfall::ensure_card_images_with_progress(&specs, &dir, &progress);
         });
+    }
+    // Browser: no prefetch — card art loads over HTTP through the asset
+    // server (the browser cache is the disk cache). Mark the progress latch
+    // done so the menu doesn't show a stuck download bar.
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = &specs;
+        image_prefetch.finished.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     let gfx = cfg.graphics;

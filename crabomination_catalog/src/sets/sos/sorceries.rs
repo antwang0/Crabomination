@@ -676,10 +676,10 @@ pub fn borrowed_knowledge() -> CardDefinition {
 /// Pursue the Past — {R}{W} Sorcery.
 /// "You gain 2 life. You may discard a card. If you do, draw two cards."
 ///
-/// Approximation: the "may discard" optionality is dropped — picking
-/// this card commits to the discard-then-draw-2 (engine has no in-effect
-/// optionality primitive yet). The auto-decider has the controller pick
-/// the lowest-priority card for discard. The Flashback {2}{R}{W} clause
+/// The "may discard" optionality is honored via `Effect::MayDo` — the
+/// controller can decline the discard (and the draw-2 with it). When
+/// accepted, the auto-decider has the controller pick the
+/// lowest-priority card for discard. The Flashback {2}{R}{W} clause
 /// is wired via `Keyword::Flashback` so the body replays from the
 /// graveyard.
 pub fn pursue_the_past() -> CardDefinition {
@@ -791,7 +791,9 @@ pub fn moment_of_reckoning() -> CardDefinition {
             // Mode 1: return target nonland permanent card from your
             // graveyard to the battlefield.
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Nonland),
+                what: target_filtered(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -1373,9 +1375,8 @@ pub fn withering_curse() -> CardDefinition {
 ///
 /// The +2/+2 pump and Menace grant land on every creature controlled at
 /// resolution. The "whenever this creature attacks → gain 1 life" rider
-/// is omitted (the engine has no temporary-trigger-grant primitive for
-/// pump spells; granting an attack-trigger needs installing a transient
-/// trigger per-creature). Tracked in TODO.md.
+/// is wired via `Effect::GrantTriggeredAbility` — each creature gets an
+/// Attacks/SelfSource gain-1-life trigger until end of turn.
 pub fn root_manipulation() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::mana::g;
@@ -1779,7 +1780,9 @@ pub fn restoration_seminar() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Nonland),
+                what: target_filtered(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -2166,7 +2169,7 @@ pub fn archaics_agony() -> CardDefinition {
     }
 }
 
-/// Improvisation Capstone — {3}{R}{R} Lorehold Sorcery.
+/// Improvisation Capstone — {5}{R}{R} Lorehold Sorcery.
 /// "Exile cards from the top of your library until you exile cards with
 /// total mana value 4 or greater. You may cast any number of spells from
 /// among them without paying their mana costs. / Paradigm (Then exile
@@ -2176,8 +2179,8 @@ pub fn archaics_agony() -> CardDefinition {
 ///
 /// Push (modern_decks): full body now wired via the new cast-from-exile
 /// pipeline + Paradigm primitives. Both clauses ship:
-/// 1. **Exile + may-cast**: approximated as "exile top 4 cards"
-///    (the printed lower bound — 4 1-mana cards add to MV 4). For each
+/// 1. **Exile + may-cast**: exiles from the top until total MV ≥ 4
+///    (`TopOfLibraryUntilMvAtLeast`). For each
 ///    non-land card exiled, the controller is asked
 ///    "cast without paying?" via
 ///    `Effect::CastWithoutPayingImmediate(LastMoved, Exile)`. AutoDecider
@@ -2238,8 +2241,11 @@ pub fn improvisation_capstone() -> CardDefinition {
     }
 }
 
-/// Applied Geometry — {2}{G}{U}, Sorcery. Create a 0/0 green and blue
-/// Fractal creature token. Put six +1/+1 counters on it.
+/// Applied Geometry — {2}{G}{U}, Sorcery. "Create a token that's a copy
+/// of target permanent you control, except it's a 0/0 Fractal creature
+/// in addition to its other types. Put six +1/+1 counters on it."
+/// Wired via `Effect::CreateTokenCopyOf` plus six +1/+1 counters on
+/// the new token.
 pub fn applied_geometry() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::{g, u};

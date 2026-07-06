@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +9,7 @@ use serde::{Deserialize, Serialize};
 /// - Windows:  %APPDATA%\crabomination\config.toml
 /// - Linux:    ~/.config/crabomination/config.toml
 /// - macOS:    ~/Library/Application Support/crabomination/config.toml
+#[cfg(not(target_arch = "wasm32"))]
 pub fn config_path() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -15,7 +17,28 @@ pub fn config_path() -> PathBuf {
         .join("config.toml")
 }
 
+/// Browser build: the whole TOML document lives under one localStorage key
+/// (see `storage`); same format as the native file so a config is
+/// copy-pasteable between the two.
+#[cfg(target_arch = "wasm32")]
+const CONFIG_STORAGE_KEY: &str = "config.toml";
+
+/// Load config from localStorage, falling back to defaults. Unlike native
+/// (which panics on a corrupt file the user hand-edited), a corrupt stored
+/// value is discarded — there's no editor in the browser to fix it with.
+#[cfg(target_arch = "wasm32")]
+pub fn load() -> Config {
+    match crate::storage::load(CONFIG_STORAGE_KEY) {
+        Some(text) => toml::from_str(&text).unwrap_or_else(|e| {
+            eprintln!("config: stored config invalid ({e}); using defaults");
+            Config::default()
+        }),
+        None => Config::default(),
+    }
+}
+
 /// Load config from the default location, writing defaults if the file is absent.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn load() -> Config {
     let path = config_path();
     if path.exists() {
@@ -53,6 +76,21 @@ pub struct ConfigStore(pub Config);
 
 /// Rewrite the config file with `config`. Failures are logged, never
 /// fatal — losing a settings write shouldn't crash a running game.
+#[cfg(target_arch = "wasm32")]
+pub fn save(config: &Config) {
+    match toml::to_string_pretty(config) {
+        Ok(text) => {
+            if !crate::storage::save(CONFIG_STORAGE_KEY, &text) {
+                eprintln!("config: localStorage write failed");
+            }
+        }
+        Err(e) => eprintln!("config: serialize failed: {e}"),
+    }
+}
+
+/// Rewrite the config file with `config`. Failures are logged, never
+/// fatal — losing a settings write shouldn't crash a running game.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn save(config: &Config) {
     let path = config_path();
     if let Some(parent) = path.parent() {
@@ -112,18 +150,7 @@ impl Default for GameplayConfig {
 pub fn update(f: impl FnOnce(&mut Config)) {
     let mut cfg = load();
     f(&mut cfg);
-    let path = config_path();
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    match toml::to_string_pretty(&cfg) {
-        Ok(text) => {
-            if let Err(e) = fs::write(&path, &text) {
-                eprintln!("Could not persist config to {}: {e}", path.display());
-            }
-        }
-        Err(e) => eprintln!("Config serialization failed: {e}"),
-    }
+    save(&cfg);
 }
 
 

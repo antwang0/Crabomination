@@ -2013,20 +2013,46 @@ impl GameState {
         let copy_id = self.next_id();
         let copy = crate::card::CardInstance::new(copy_id, prep_def, p);
         self.players[p].hand.push(copy);
+        // Register the copy before entering the cast pipeline — the cast may
+        // suspend mid-way (float-spend confirm, additional-cost pick) and
+        // resume via a plain `CastSpell` replay, so the bookkeeping (token
+        // flag + unprepare) is settled by `settle_prepare_copy_cast` wherever
+        // the cast actually completes, not here.
+        self.pending_prepare_copies.push((copy_id, creature_id));
         let result = self.cast_spell(copy_id, target, additional_targets, mode, x_value);
-        match result {
-            Ok(mut events) => {
-                // CR 707.10a — the cast copy ceases to exist off the stack.
-                // Flagged only now that it sits on the stack; an in-hand
-                // token would be swept by the token SBA.
-                for item in self.stack.iter_mut().rev() {
-                    if let StackItem::Spell { card, .. } = item
-                        && card.id == copy_id
-                    {
-                        card.is_token = true;
-                        break;
-                    }
-                }
+        self.settle_prepare_after_cast(copy_id, result)
+    }
+
+    /// SOS Prepare — settle the bookkeeping for a prepare-spell copy after a
+    /// cast attempt (direct or a mid-cast-suspension resume replay). No-op
+    /// unless `copy_id` is registered in `pending_prepare_copies`.
+    ///
+    /// - Copy on the stack → flag it `is_token` (CR 707.10a — it ceases to
+    ///   exist off the stack; flagged only now because an in-hand token
+    ///   would be swept by the token SBA), unprepare the source creature,
+    ///   drop the registration.
+    /// - Cast suspended again (`Ok` with a fresh `pending_decision`, copy
+    ///   parked back in hand) → keep the registration for the next resume.
+    /// - Cast failed (or the copy vanished) → unmaterialize the copy.
+    pub(crate) fn settle_prepare_after_cast(
+        &mut self,
+        copy_id: CardId,
+        result: Result<Vec<GameEvent>, GameError>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::CounterType;
+        let Some(idx) = self.pending_prepare_copies.iter().position(|(c, _)| *c == copy_id)
+        else {
+            return result;
+        };
+        if result.is_ok() {
+            let on_stack = self.stack.iter_mut().rev().find_map(|item| match item {
+                StackItem::Spell { card, .. } if card.id == copy_id => Some(card),
+                _ => None,
+            });
+            if let Some(card) = on_stack {
+                card.is_token = true;
+                let (_, creature_id) = self.pending_prepare_copies.remove(idx);
+                let mut events = result.unwrap_or_default();
                 // Casting the copy unprepares the creature.
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == creature_id)
                     && c.remove_counters(CounterType::Prepared, 1) > 0
@@ -2037,15 +2063,21 @@ impl GameState {
                         count: 1,
                     });
                 }
-                Ok(events)
+                return Ok(events);
             }
-            Err(e) => {
-                // The rejected cast pushed the copy back into the hand —
-                // unmaterialize it.
-                self.players[p].hand.retain(|c| c.id != copy_id);
-                Err(e)
+            if self.pending_decision.is_some() {
+                // Mid-cast suspension — the copy is parked in the caster's
+                // hand awaiting the answer; settle again on the resume.
+                return result;
             }
         }
+        // The cast failed (rejected casts push the copy back into the hand)
+        // — unmaterialize it.
+        self.pending_prepare_copies.remove(idx);
+        for player in &mut self.players {
+            player.hand.retain(|c| c.id != copy_id);
+        }
+        result
     }
 
     pub(crate) fn cast_spell(

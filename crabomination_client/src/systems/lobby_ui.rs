@@ -7,11 +7,13 @@
 //! we hand off to `AppState::InGame` — the connection is already live, so the
 //! in-game setup is a no-op (see `menu::start_net_session_from_menu`).
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
 use bevy::prelude::*;
 
 use crabomination::net::ClientMsg;
+#[cfg(not(target_arch = "wasm32"))]
 use crabomination::server::{tcp_client, ClientChannel};
 
 use crate::menu::{AppState, MatchFormat, PendingLobbyServer};
@@ -126,7 +128,7 @@ pub fn connect_to_lobby_server(world: &mut World) {
         return;
     };
 
-    match connect(&req.addr) {
+    match connect(world, &req.addr) {
         Ok((outbox, inbox, conn)) => {
             outbox.submit_msg(ClientMsg::JoinMatch { name: req.name.clone() });
             outbox.submit_msg(ClientMsg::ListLobbies);
@@ -149,13 +151,32 @@ pub fn connect_to_lobby_server(world: &mut World) {
     }
 }
 
-fn connect(addr: &str) -> std::io::Result<(NetOutbox, NetInbox, NetConnection)> {
+#[cfg(not(target_arch = "wasm32"))]
+fn connect(
+    _world: &mut World,
+    addr: &str,
+) -> std::io::Result<(NetOutbox, NetInbox, NetConnection)> {
     let stream = crate::net_plugin::connect_with_timeout(addr)?;
     // Keep a clone so "Back" can shut the socket promptly (otherwise the
     // server only notices via keepalive).
     let conn_handle = stream.try_clone().ok();
     let ClientChannel { tx, rx } = tcp_client(stream)?;
     Ok((NetOutbox::new(tx), NetInbox(Mutex::new(rx)), NetConnection(conn_handle)))
+}
+
+/// Browser connect: WebSocket instead of TCP. The socket handle goes into
+/// the NonSend `WsSocket` resource (pumped by `ws_client::pump_ws`);
+/// outbound messages queue in the mpsc until the socket opens, so the
+/// greeting sent by the caller is safe to submit immediately.
+#[cfg(target_arch = "wasm32")]
+fn connect(
+    world: &mut World,
+    addr: &str,
+) -> std::io::Result<(NetOutbox, NetInbox, NetConnection)> {
+    let (outbox, inbox, sock) = crate::ws_client::ws_connect(addr)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    world.insert_non_send(sock);
+    Ok((outbox, inbox, NetConnection::default()))
 }
 
 // ── UI spawn / despawn ─────────────────────────────────────────────────────────
@@ -667,8 +688,17 @@ fn handle_lobby_buttons(
     if back_q.iter().any(|i| *i == Interaction::Pressed) {
         // Disconnect and return to the menu. (Going to InGame instead keeps the
         // session; this is the only path that tears it down from the lobby.)
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(stream) = conn.0.take() {
             let _ = stream.shutdown(std::net::Shutdown::Both);
+        }
+        // wasm: dropping the NonSend WsSocket closes the browser socket.
+        #[cfg(target_arch = "wasm32")]
+        {
+            conn.0.take();
+            commands.queue(|world: &mut World| {
+                world.remove_non_send::<crate::ws_client::WsSocket>();
+            });
         }
         commands.remove_resource::<NetOutbox>();
         commands.remove_resource::<NetInbox>();

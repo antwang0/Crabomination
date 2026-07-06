@@ -1742,6 +1742,7 @@ impl GameState {
             pending_cast_discards: None,
             pending_spree_modes: None,
             pending_cast_spend_float: None,
+            pending_prepare_copies: Vec::new(),
             pending_landcycle_pick: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
@@ -3886,6 +3887,22 @@ impl GameState {
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         events.push(crate::game::GameEvent::CardLeftGraveyard { player: p, card_id });
+    }
+
+    /// A spell removed from the stack by a counter / ward effect goes to
+    /// its owner's graveyard — unless it's a copy (`is_token`), which
+    /// simply ceases to exist (CR 707.10a): it never transits the
+    /// graveyard, so no `CardPutIntoGraveyard` / descend bookkeeping may
+    /// fire for it.
+    pub(crate) fn countered_spell_off_stack(
+        &mut self,
+        card: crate::card::CardInstance,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        if card.is_token {
+            return;
+        }
+        self.route_to_graveyard(card, events);
     }
 
     /// Place `card` into its owner's graveyard, or exile it instead when a
@@ -10062,11 +10079,14 @@ impl GameState {
                 // the cast reads the right actor. Any cost failure (e.g.
                 // mana shortfall) surfaces as a normal cast error. A kicked
                 // suspend replays kicked (CR 702.33).
-                return if kicked {
+                let result = if kicked {
                     self.cast_spell_kicked(card_id, target, additional_targets, mode, x_value)
                 } else {
                     self.cast_spell(card_id, target, additional_targets, mode, x_value)
                 };
+                // A prepare-spell copy that suspended here still needs its
+                // token-flag/unprepare bookkeeping (no-op otherwise).
+                return self.settle_prepare_after_cast(card_id, result);
             }
             ResumeContext::ActionFloatConfirm { actor, action } => {
                 // CR 601.2g — the payer chose whether to spend floating mana.
@@ -10077,7 +10097,15 @@ impl GameState {
                 };
                 let _ = actor;
                 self.pending_cast_spend_float = Some(spend);
-                return self.perform_action(*action);
+                // A prepare-spell copy replays as a plain `CastSpell` here —
+                // settle its token-flag/unprepare bookkeeping afterwards
+                // (no-op for anything that isn't a registered prepare copy).
+                let cast_card = action.cast_card_id();
+                let result = self.perform_action(*action);
+                return match cast_card {
+                    Some(id) => self.settle_prepare_after_cast(id, result),
+                    None => result,
+                };
             }
             ResumeContext::ActionSearchPick { actor, action } => {
                 // CR 702.29e — the cycler picked which card to fetch. Stash

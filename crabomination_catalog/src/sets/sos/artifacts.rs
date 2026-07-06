@@ -27,10 +27,10 @@ use crate::mana::g;
 ///   gates on "another creature you control dies" (excludes the Cauldron
 ///   itself, an artifact). The body is a `Drain` from `EachOpponent` to
 ///   `You`.
-/// - Activated reanimation: `tap_cost`, `sac_cost` (engine sacrifices a
-///   creature on the controller's behalf via `AutoDecider`), `sorcery_speed`,
-///   plus a {1}{B}{G} mana cost. The body picks a creature card from the
-///   controller's graveyard and moves it to the battlefield.
+/// - Activated reanimation: `tap_cost`, `sac_other_filter` (sacrifice a
+///   creature — not the Cauldron itself, which `sac_cost` would sacrifice),
+///   `sorcery_speed`, plus a {1}{B}{G} mana cost. The body picks a creature
+///   card from a graveyard and moves it to the battlefield.
 pub fn cauldron_of_essence() -> CardDefinition {
     CardDefinition {
         name: "Cauldron of Essence",
@@ -42,7 +42,9 @@ pub fn cauldron_of_essence() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -50,12 +52,13 @@ pub fn cauldron_of_essence() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: true,
-            sac_cost: true,
+            sac_cost: false,
             condition: None,
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],

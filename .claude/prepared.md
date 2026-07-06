@@ -37,14 +37,19 @@ preparation cards also prepare themselves via printed triggers/activations.
 `GameAction::CastPrepareSpell { creature_id, .. }` →
 `GameState::cast_prepare_spell` (`game/actions.rs`):
 
-- Legal only while `creature_id` is on the battlefield, controlled by the actor
-  (a stolen creature brings its spell along), and carries a Prepared counter;
-  else `GameError::NotPrepared`.
+- Legal only while `creature_id` is on the battlefield (else
+  `GameError::CardNotOnBattlefield`), controlled by the actor (a stolen
+  creature brings its spell along), and carries a Prepared counter; else
+  `GameError::NotPrepared`.
 - A fresh `CardInstance` of the spell is routed through the caster's hand into
   the normal `cast_spell` pipeline — payment, timing, targeting, and cast
-  triggers all apply. On success the stack item is flagged `is_token`
-  (CR 707.10a — the copy never reaches a graveyard) and the Prepared counter is
-  removed.
+  triggers all apply. The copy is registered in
+  `GameState.pending_prepare_copies`, and `settle_prepare_after_cast` flags
+  the stack item `is_token` (CR 707.10a — the copy never reaches a graveyard)
+  and removes the Prepared counter **only once the copy is actually on the
+  stack** — a mid-cast suspension (float-spend confirm, additional-cost pick)
+  parks the copy in hand, keeps the creature prepared, and settles on the
+  resume; a failed cast unmaterializes the copy.
 - Approximation: the engine doesn't keep a persistent copy in exile while
   prepared, so "cast from exile" zone-watch triggers don't see it; the copy
   materializes at cast time.
