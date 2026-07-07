@@ -56,3 +56,4 @@ scratch_*
 
 # Scratch gap-analysis dumps from scripts/fin_gaps.py.
 scripts/.fin_*.json
+web/dist/

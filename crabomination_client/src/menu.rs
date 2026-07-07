@@ -474,41 +474,49 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     });
                 });
 
+                // Everything driven by an in-process match thread (vs Bot,
+                // Draft, Spectate, Audit) or the local filesystem (debug
+                // state) is native-only: wasm has no threads to run the
+                // match on, so the browser build is online (lobby) play.
+                let native = cfg!(not(target_arch = "wasm32"));
+
                 // Play vs Bot
-                button(p, &tf, "Play vs Bot", BUTTON_PRIMARY_BG, PlayBotButton);
+                if native {
+                    button(p, &tf, "Play vs Bot", BUTTON_PRIMARY_BG, PlayBotButton);
 
-                // Draft — opens the 8-seat booster draft for the
-                // selected format (Cube or SoS). Modern / Commander
-                // fall back to the Cube pool.
-                button(p, &tf, "Draft (Cube / SoS)", BUTTON_INFO_BG, DraftButton);
+                    // Draft — opens the 8-seat booster draft for the
+                    // selected format (Cube or SoS). Modern / Commander
+                    // fall back to the Cube pool.
+                    button(p, &tf, "Draft (Cube / SoS)", BUTTON_INFO_BG, DraftButton);
 
-                // Spectate Bot vs Bot
-                button(
-                    p,
-                    &tf,
-                    "Spectate Bot vs Bot",
-                    BUTTON_ACCENT_BG,
-                    SpectateBotsButton,
-                );
+                    // Spectate Bot vs Bot
+                    button(
+                        p,
+                        &tf,
+                        "Spectate Bot vs Bot",
+                        BUTTON_ACCENT_BG,
+                        SpectateBotsButton,
+                    );
 
-                // Load Debug State (most recent file in <repo>/debug/)
-                button(
-                    p,
-                    &tf,
-                    "Load Latest Debug State",
-                    BUTTON_DANGER_BG,
-                    LoadDebugStateButton,
-                );
+                    // Load Debug State (most recent file in <repo>/debug/)
+                    button(
+                        p,
+                        &tf,
+                        "Load Latest Debug State",
+                        BUTTON_DANGER_BG,
+                        LoadDebugStateButton,
+                    );
 
-                // Audit Cards — opens the card picker for verifying
-                // individual card implementations one-by-one.
-                button(
-                    p,
-                    &tf,
-                    "Audit Cards",
-                    BUTTON_ACCENT_BG,
-                    AuditCardsButton,
-                );
+                    // Audit Cards — opens the card picker for verifying
+                    // individual card implementations one-by-one.
+                    button(
+                        p,
+                        &tf,
+                        "Audit Cards",
+                        BUTTON_ACCENT_BG,
+                        AuditCardsButton,
+                    );
+                }
 
                 // Settings — window mode / resolution, quality, gameplay.
                 button(
@@ -522,7 +530,8 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 // Import a decklist (Arena / MTGO text format) and play
                 // it against the bot. The field holds a file path; status
                 // feedback (unknown cards, size problems) renders below.
-                p.spawn(Node {
+                // (Native-only: file path + in-process match.)
+                if native { p.spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Stretch,
                     row_gap: Val::Px(6.0),
@@ -532,7 +541,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 .with_children(|imp| {
                     button(imp, &tf, "Play Deck vs Bot", BUTTON_PRIMARY_BG, ImportDeckButton);
                     field(imp, &tf, "Deck file:", FocusedField::DeckPath);
-                });
+                }); }
 
                 // Display name (shown to other players in lobbies).
                 p.spawn(Node {
@@ -546,8 +555,8 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     field(name, &tf, "Name:", FocusedField::PlayerName);
                 });
 
-                // Host LAN
-                p.spawn(Node {
+                // Host LAN (native-only: browsers can't listen on TCP).
+                if native { p.spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Stretch,
                     row_gap: Val::Px(6.0),
@@ -562,7 +571,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         "Port:",
                         FocusedField::HostPort,
                     );
-                });
+                }); }
 
                 // Join LAN
                 p.spawn(Node {

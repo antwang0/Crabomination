@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Crabomination</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0b0b10;
+        }
+        /* Bevy creates its own canvas and appends it to <body>; make it
+           fill the viewport. */
+        canvas {
+            display: block;
+            width: 100vw !important;
+            height: 100vh !important;
+            outline: none;
+        }
+        #loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cfc9b8;
+            font: 16px system-ui, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading Crabomination… (first load downloads the game, ~30&nbsp;MB)</div>
+    <script type="module">
+        import init from "./crabomination_client.js";
+        init().catch((e) => {
+            // Bevy's wasm entry point "throws" a control-flow exception to
+            // hand the main loop to the browser — not an error.
+            if (!e.message?.includes("Using exceptions for control flow")) {
+                document.getElementById("loading").textContent =
+                    "Failed to start: " + e;
+                throw e;
+            }
+        }).finally(() => {
+            document.getElementById("loading")?.remove();
+        });
+    </script>
+</body>
+</html>
