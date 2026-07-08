@@ -225,3 +225,29 @@ fn breathless_knight_gy_watch() {
         "graveyard arrival: +1/+1"
     );
 }
+
+/// Altar of the Goyf pumps a lone attacker by the graveyard type count and
+/// gives Lhurgoyfs trample.
+#[test]
+fn altar_of_the_goyf() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::altar_of_the_goyf());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // creature
+    g.add_card_to_graveyard(1, catalog::island()); // land
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: atk,
+        target: crate::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack alone");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(atk).unwrap();
+    assert_eq!(cp.power, 4, "2 types across graveyards → +2/+2");
+    // A Lhurgoyf gets trample from the altar's lord static.
+    let goyf = g.add_card_to_battlefield(0, catalog::lhurgoyf());
+    assert!(g.computed_permanent(goyf).unwrap().keywords.contains(&Keyword::Trample));
+}

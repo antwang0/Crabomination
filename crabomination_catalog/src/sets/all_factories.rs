@@ -999,6 +999,7 @@ static DECKS: &[Factory] = &[
     super::decks::deepwood_denizen,
     super::decks::mount_velus_manticore,
     super::decks::breathless_knight,
+    super::decks::altar_of_the_goyf,
     super::decks::ponder,
     super::decks::index,
     super::decks::spire_owl,

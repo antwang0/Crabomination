@@ -216,3 +216,39 @@ pub fn breathless_knight() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Altar of the Goyf — {5} Kindred Artifact — Lhurgoyf. A creature attacking
+/// alone gets +X/+X, X = card types in all graveyards; your Lhurgoyfs have
+/// trample.
+pub fn altar_of_the_goyf() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Altar of the Goyf",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Kindred, CardType::Artifact],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lhurgoyf], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::AttackingAlone),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::CardTypesInAllGraveyards,
+                toughness: Value::CardTypesInAllGraveyards,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Lhurgoyf creatures you control have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Lhurgoyf))
+                        .and(R::ControlledByYou),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}
