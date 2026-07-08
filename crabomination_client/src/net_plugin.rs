@@ -223,6 +223,7 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<LobbyState>()
             .init_resource::<ResumeInfo>()
             .init_resource::<RopeClock>()
+            .init_resource::<ChessClock>()
             .init_resource::<ChatInbox>()
             .add_systems(PreUpdate, poll_net)
             // Reconnect runs only when a reconnectable match's link has dropped.
@@ -240,6 +241,7 @@ impl Plugin for SinglePlayerPlugin {
                     update_spectator_banner,
                     update_reconnect_banner,
                     update_rope_banner,
+                    update_chess_clock_chip,
                 ),
             );
         // Network installation happens via `crate::menu::start_net_session_from_menu`
@@ -261,6 +263,7 @@ pub fn poll_net(
     mut lobby: ResMut<LobbyState>,
     mut resume: ResMut<ResumeInfo>,
     mut rope: ResMut<RopeClock>,
+    mut chess: ResMut<ChessClock>,
     mut chat: ResMut<ChatInbox>,
     time: Res<Time>,
 ) {
@@ -303,6 +306,11 @@ pub fn poll_net(
             // countdown (rendered by `update_rope_banner`).
             ServerMsg::Rope { seconds } => {
                 rope.deadline = Some(time.elapsed_secs_f64() + seconds as f64);
+            }
+            // Our seat went on the per-game chess clock with this much match
+            // time left — arm the persistent countdown chip.
+            ServerMsg::Clock { seconds } => {
+                chess.deadline = Some(time.elapsed_secs_f64() + seconds as f64);
             }
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
@@ -946,6 +954,101 @@ fn update_rope_banner(
                 if text.0 != label {
                     text.0 = label.clone();
                 }
+            }
+        }
+        (None, Some(e)) => {
+            commands.entity(e).despawn();
+        }
+        _ => {}
+    }
+}
+
+/// Local mirror of the per-game chess clock (`ServerMsg::Clock`): the
+/// absolute `Time::elapsed_secs_f64` instant our remaining match budget
+/// runs out. Re-armed each time our seat goes on the clock; the chip only
+/// renders while the view says we're the seat expected to act.
+#[derive(Resource, Default)]
+pub struct ChessClock {
+    pub deadline: Option<f64>,
+}
+
+/// Marker for the chess-clock chip.
+#[derive(Component)]
+struct ChessClockChip;
+
+/// Marker for the chip's text node (updated in place each tick).
+#[derive(Component)]
+struct ChessClockChipText;
+
+/// Persistent match-clock chip: shows "♟ m:ss" while our seat is on the
+/// per-game chess clock, switching to the danger palette under 30s. The
+/// deadline is only meaningful while we hold priority — the server re-arms
+/// it whenever we go back on the clock — so the chip hides otherwise.
+fn update_chess_clock_chip(
+    mut commands: Commands,
+    chess: Res<ChessClock>,
+    view: Res<CurrentView>,
+    time: Res<Time>,
+    fonts: Option<Res<crate::theme::UiFonts>>,
+    existing: Query<Entity, With<ChessClockChip>>,
+    mut text_q: Query<(&mut Text, &mut TextColor), With<ChessClockChipText>>,
+) {
+    let now = time.elapsed_secs_f64();
+    let our_turn = view
+        .0
+        .as_ref()
+        .is_some_and(|v| v.priority == v.your_seat || v.pending_decision.is_some());
+    let remaining = chess
+        .deadline
+        .filter(|_| our_turn)
+        .map(|d| (d - now).max(0.0));
+    let label = remaining.map(|rem| {
+        let secs = rem.ceil() as u64;
+        format!("♟ {}:{:02}", secs / 60, secs % 60)
+    });
+    let low = remaining.is_some_and(|rem| rem <= 30.0);
+    match (label, existing.iter().next()) {
+        (Some(label), None) => {
+            let Some(fonts) = fonts else { return };
+            commands
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(52.0),
+                        right: Val::Px(12.0),
+                        ..default()
+                    },
+                    ChessClockChip,
+                    crate::systems::game_ui::InGameRoot,
+                    Pickable::IGNORE,
+                    GlobalZIndex(45),
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(label),
+                        ChessClockChipText,
+                        fonts.tf(15.0),
+                        TextColor(crate::theme::TEXT_PRIMARY),
+                        BackgroundColor(crate::theme::HUD_BG),
+                        Node {
+                            padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                            ..default()
+                        },
+                        Pickable::IGNORE,
+                    ));
+                });
+        }
+        (Some(label), Some(_)) => {
+            for (mut text, mut color) in &mut text_q {
+                if text.0 != label {
+                    text.0 = label.clone();
+                }
+                color.0 = if low {
+                    crate::theme::ACCENT_ORANGE
+                } else {
+                    crate::theme::TEXT_PRIMARY
+                };
             }
         }
         (None, Some(e)) => {

@@ -137,6 +137,34 @@ fn parse_action_timeout(raw: Option<&str>) -> Option<Duration> {
     }
 }
 
+/// Optional per-game chess clock: when `CRAB_CHESS_CLOCK_SECS` is set (> 0),
+/// each human seat gets that much total thinking time for the whole match.
+/// The clock runs only while the seat is the expected actor; a flag fall
+/// concedes the seat (CR 104.3a). Unset / 0 → disabled. Bots are exempt.
+fn chess_clock_from_env() -> Option<Duration> {
+    parse_chess_clock(std::env::var("CRAB_CHESS_CLOCK_SECS").ok().as_deref())
+}
+
+/// Pure parser for `CRAB_CHESS_CLOCK_SECS` (whitespace-trimmed). Same
+/// contract as [`parse_action_timeout`]: `None`/empty/`0` → disabled, and a
+/// non-numeric value warns loudly rather than failing silently.
+fn parse_chess_clock(raw: Option<&str>) -> Option<Duration> {
+    match raw.map(str::trim) {
+        None | Some("") => None,
+        Some(s) => match s.parse::<u64>() {
+            Ok(0) => None,
+            Ok(secs) => Some(Duration::from_secs(secs)),
+            Err(_) => {
+                eprintln!(
+                    "warning: CRAB_CHESS_CLOCK_SECS={s:?} not a non-negative integer — \
+                     chess clock disabled",
+                );
+                None
+            }
+        },
+    }
+}
+
 /// Messages the match actor multiplexes onto its single inbound channel.
 /// Seat forwarders, the spectator drain, and (for reconnectable matches) the
 /// reattach drain all feed this enum so the actor can `recv` one stream.
@@ -403,6 +431,7 @@ pub fn run_match_reconnectable(
         None,
         RECONNECT_GRACE,
         action_timeout_from_env(),
+        chess_clock_from_env(),
     )
 }
 
@@ -429,6 +458,7 @@ pub fn run_match_reconnectable_spectatable(
         spectate_rx,
         RECONNECT_GRACE,
         action_timeout_from_env(),
+        chess_clock_from_env(),
     )
 }
 
@@ -445,6 +475,7 @@ fn run_match_inner(
     spectate_rx: Option<mpsc::Receiver<SeatChannel>>,
     reconnect_grace: Duration,
     action_timeout: Option<Duration>,
+    chess_clock: Option<Duration>,
 ) -> MatchOutcome {
     let n = occupants.len();
     assert_eq!(n, state.players.len(), "occupant count must match player count");
@@ -576,6 +607,11 @@ fn run_match_inner(
     // Rope: which human seat we're currently waiting on, and since when.
     // Reset whenever the expected actor changes or any action is accepted.
     let mut rope: Option<(usize, Instant)> = None;
+    // Chess clock: per-human-seat match-wide time budget (None = exempt /
+    // disabled) and the seat currently on the clock with its slice start.
+    let mut clock_left: Vec<Option<Duration>> =
+        (0..n).map(|i| chess_clock.filter(|_| bots[i].is_none())).collect();
+    let mut clock_since: Option<(usize, Instant)> = None;
 
     loop {
         if drive_bots(
@@ -622,6 +658,43 @@ fn run_match_inner(
                 Err(mpsc::RecvTimeoutError::Disconnected) => return capture_outcome(&state),
             }
         } else {
+            // Chess clock: bill the elapsed slice to the seat that was on
+            // the clock, concede on a flag fall, then aim the clock at the
+            // current expected actor (telling a newly-clocked seat its
+            // remaining time so the client can render a countdown).
+            if chess_clock.is_some() {
+                let now = Instant::now();
+                let prev = clock_since.map(|(s, _)| s);
+                if let Some((seat, since)) = clock_since.take()
+                    && let Some(left) = clock_left[seat].as_mut()
+                {
+                    *left = left.saturating_sub(now - since);
+                    if left.is_zero() {
+                        report_error(seat, "chess clock expired — you concede", &seat_tx);
+                        let events = state.concede(seat);
+                        let wire: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+                        broadcast_update(&state, &wire, &seat_tx, &spectator_tx);
+                        if state.is_game_over() {
+                            broadcast_match_over(&state, &seat_tx, &spectator_tx);
+                            return capture_outcome(&state);
+                        }
+                        continue;
+                    }
+                }
+                let actor = expected_actor(&state, &GameAction::PassPriority);
+                if actor < n && clock_left[actor].is_some() {
+                    clock_since = Some((actor, now));
+                    if prev != Some(actor)
+                        && let Some(tx) = seat_tx.get(actor).and_then(|s| s.as_ref())
+                    {
+                        let _ = tx.send(ServerMsg::Clock {
+                            seconds: clock_left[actor].unwrap_or_default().as_secs() as u32,
+                        });
+                    }
+                }
+            }
+            let clock_deadline: Option<Instant> =
+                clock_since.and_then(|(seat, since)| clock_left[seat].map(|left| since + left));
             // Optional rope: bound the wait when a human seat must act.
             let rope_deadline = action_timeout.and_then(|t| {
                 let actor = expected_actor(&state, &GameAction::PassPriority);
@@ -641,9 +714,24 @@ fn run_match_inner(
                 }
             });
             match rope_deadline {
-                None => match merged_rx.recv() {
-                    Ok(msg) => Some(msg),
-                    Err(_) => return capture_outcome(&state),
+                None => match clock_deadline {
+                    // A running chess clock bounds the wait even without a
+                    // rope; on expiry the loop re-enters and the billing
+                    // above concedes the flagged seat.
+                    Some(d) => {
+                        let wait = d.saturating_duration_since(Instant::now());
+                        match merged_rx.recv_timeout(wait) {
+                            Ok(msg) => Some(msg),
+                            Err(mpsc::RecvTimeoutError::Timeout) => None,
+                            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                                return capture_outcome(&state)
+                            }
+                        }
+                    }
+                    None => match merged_rx.recv() {
+                        Ok(msg) => Some(msg),
+                        Err(_) => return capture_outcome(&state),
+                    },
                 },
                 Some((actor, deadline)) => {
                     let now = Instant::now();
@@ -677,7 +765,9 @@ fn run_match_inner(
                         }
                         continue;
                     }
-                    match merged_rx.recv_timeout(deadline - now) {
+                    // The chess clock may flag before the rope does.
+                    let wait_until = clock_deadline.map_or(deadline, |c| c.min(deadline));
+                    match merged_rx.recv_timeout(wait_until.saturating_duration_since(now)) {
                         Ok(msg) => Some(msg),
                         Err(mpsc::RecvTimeoutError::Timeout) => None, // loop re-checks
                         Err(mpsc::RecvTimeoutError::Disconnected) => {
@@ -1671,6 +1761,7 @@ mod tests {
                 // window only matters at teardown (keeps the test fast).
                 Duration::from_millis(200),
                 None,
+                None,
             )
         });
 
@@ -1731,6 +1822,7 @@ mod tests {
                 None,
                 Duration::from_millis(200),
                 None,
+                None,
             );
             let _ = done_tx.send(());
             outcome
@@ -1767,6 +1859,7 @@ mod tests {
                 Some(reattach_rx),
                 None,
                 Duration::from_millis(400),
+                None,
                 None,
             );
             let _ = done_tx.send(());
@@ -1961,6 +2054,7 @@ mod tests {
                 Some(reattach_rx),
                 Some(spectate_rx),
                 Duration::from_millis(200),
+                None,
                 None,
             );
             let _ = done_tx.send(());
@@ -2277,6 +2371,64 @@ mod tests {
         let _ = handle.join();
     }
     #[test]
+    fn parse_chess_clock_handles_edge_cases() {
+        assert_eq!(parse_chess_clock(None), None, "unset → disabled");
+        assert_eq!(parse_chess_clock(Some("0")), None, "0 → disabled");
+        assert_eq!(parse_chess_clock(Some(" 300 ")), Some(Duration::from_secs(300)));
+        assert_eq!(parse_chess_clock(Some("5m")), None, "garbage → disabled");
+    }
+
+    /// With a chess clock set, a stalled human seat's flag falls and the
+    /// server concedes for it, ending the 1v1 match.
+    #[test]
+    fn chess_clock_flag_fall_concedes_stalled_seat() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                None,
+                None,
+                RECONNECT_GRACE,
+                None,
+                Some(Duration::from_millis(50)),
+            )
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+        // Neither client acts; whoever is on the clock flags. In 1v1 the
+        // other seat wins and the match ends.
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let mut over = false;
+        let mut clock_notices = 0u32;
+        'outer: while Instant::now() < deadline {
+            for ch in [&c0, &c1] {
+                while let Ok(msg) = ch.rx.try_recv() {
+                    match msg {
+                        ServerMsg::Clock { .. } => clock_notices += 1,
+                        ServerMsg::MatchOver { .. } => {
+                            over = true;
+                            break 'outer;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(over, "flag fall never ended the match");
+        assert!(clock_notices > 0, "no seat was told it was on the clock");
+        drop(c0);
+        drop(c1);
+        let outcome = handle.join().unwrap();
+        assert!(outcome.winner.is_some(), "the non-flagged seat won");
+    }
+
+    #[test]
     fn parse_action_timeout_handles_edge_cases() {
         assert_eq!(parse_action_timeout(None), None, "unset → disabled");
         assert_eq!(parse_action_timeout(Some("")), None, "empty → disabled");
@@ -2305,6 +2457,7 @@ mod tests {
                 None,
                 RECONNECT_GRACE,
                 Some(Duration::from_millis(30)),
+                None,
             )
         });
         drain_initial(&c0);
