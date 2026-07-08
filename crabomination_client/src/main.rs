@@ -752,6 +752,7 @@ fn main() {
                 .run_if(in_state(AppState::InGame)),
         )
         .init_resource::<systems::game_over::AutoRematchState>()
+        .init_resource::<systems::match_stats::MatchStats>()
         .init_resource::<systems::game_over::ActiveMatchKind>()
         // Defensive: the game-over systems read this as a required resource
         // every InGame frame. `start_net_session_from_menu` (re)sets it, but
@@ -762,6 +763,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                systems::match_stats::track_match_stats,
                 systems::game_over::sync_game_over_modal,
                 systems::game_over::handle_auto_rematch_focus,
                 systems::game_over::handle_auto_rematch_keys,

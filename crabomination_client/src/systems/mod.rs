@@ -8,6 +8,7 @@ pub mod decision_ui;
 pub mod draft;
 pub mod export_prompt;
 pub mod game_over;
+pub mod match_stats;
 pub mod game_ui;
 pub mod gizmos;
 pub mod impact;

@@ -88,6 +88,7 @@ pub fn sync_game_over_modal(
     existing: Query<Entity, With<GameOverModalRoot>>,
     auto: Res<AutoRematchState>,
     kind: Res<ActiveMatchKind>,
+    stats: Res<crate::systems::match_stats::MatchStats>,
     mut commands: Commands,
 ) {
     let game_over = view.0.as_ref().and_then(|cv| cv.game_over);
@@ -206,6 +207,20 @@ pub fn sync_game_over_modal(
                     tf(14.0),
                     TextColor(theme::TEXT_BODY),
                 ));
+                // Match stats block: turn count + one line per seat.
+                p.spawn((
+                    Text::new(format!("Turn {}", stats.turns.max(1))),
+                    tf(13.0),
+                    TextColor(theme::TEXT_MUTED),
+                ));
+                for pl in &cv.players {
+                    let label = if pl.seat == cv.your_seat { "You" } else { pl.name.as_str() };
+                    p.spawn((
+                        Text::new(stats.seat_line(pl.seat, label)),
+                        tf(13.0),
+                        TextColor(theme::TEXT_MUTED),
+                    ));
+                }
 
                 // Action buttons row: Rematch + New Game.
                 p.spawn(Node {

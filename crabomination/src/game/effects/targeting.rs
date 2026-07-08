@@ -85,6 +85,24 @@ impl GameState {
             self.evaluate_requirement_static(req, t, controller, avoid_source)
                 && self.check_target_legality(t, controller).is_ok()
         };
+        // CR 702.21 — a hostile permanent with a non-trivial Ward gets the
+        // targeting spell/ability countered unless the actor pays, and the
+        // engine pays wards from a (typically empty) floating pool. Prefer
+        // un-warded candidates; warded ones stay as a fallback so effects
+        // never fizzle outright.
+        let hostile_ward = |cid: CardId| -> bool {
+            use crate::card::Keyword;
+            let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { return false };
+            if c.controller == controller {
+                return false;
+            }
+            self.computed_permanent(cid)
+                .map(|cp| cp.keywords)
+                .unwrap_or_else(|| c.definition.keywords.clone())
+                .iter()
+                .any(|k| matches!(k, Keyword::Ward(w)
+                    if !crate::game::actions::ward_cost_is_trivial(w)))
+        };
 
         if accepts_player {
             let player_primary = Target::Player(primary_player);
@@ -194,18 +212,24 @@ impl GameState {
         if prefer_friendly && !primary_candidates.is_empty() {
             // Sort by descending power so the strongest creature wins.
             primary_candidates.sort_by_key(|c| std::cmp::Reverse(c.1));
+        } else {
+            // Hostile pick: un-warded candidates first (stable within groups).
+            primary_candidates.sort_by_key(|c| hostile_ward(c.0));
         }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
         }
-        if let Some(t) = self
-            .battlefield
-            .iter()
-            .filter(|c| !is_avoided(c.id))
-            .map(|c| Target::Permanent(c.id))
-            .find(|t| is_legal(t))
-        {
-            return Some(t);
+        for pass_warded in [false, true] {
+            if let Some(t) = self
+                .battlefield
+                .iter()
+                .filter(|c| !is_avoided(c.id))
+                .filter(|c| pass_warded || !hostile_ward(c.id))
+                .map(|c| Target::Permanent(c.id))
+                .find(|t| is_legal(t))
+            {
+                return Some(t);
+            }
         }
         // Source-fallback: only the avoided source is a legal candidate.
         // Pick it as a last resort so the trigger doesn't fizzle entirely.

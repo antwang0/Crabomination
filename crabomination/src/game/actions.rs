@@ -8,7 +8,7 @@ use crate::mana::{Color as ManaColor, ManaSymbol};
 /// visible difference from no Ward at all — so we skip the stack-churn
 /// of pushing the trigger. `SacrificeCreature` is never trivial since
 /// the controller might have no creatures to sacrifice.
-fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
+pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
     use crate::card::WardCost;
     match cost {
         WardCost::Mana(c) => c.cmc() == 0,

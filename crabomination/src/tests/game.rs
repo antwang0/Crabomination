@@ -4511,6 +4511,25 @@ fn auto_target_prefers_opponent_permanent_for_hostile_effect() {
         "Doom Blade should auto-target the opp's bear, not the bot's own");
 }
 
+/// CR 702.21 — hostile auto-targeting prefers an un-warded candidate over a
+/// warded one (the ward would counter the spell), falling back to the warded
+/// permanent only when nothing else is legal.
+#[test]
+fn auto_target_deprioritizes_warded_permanents() {
+    let mut g = two_player_game();
+    let warded = g.add_card_to_battlefield(1, catalog::patchwork_automaton()); // ward {2}
+    let plain = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let doom = catalog::doom_blade();
+    let target = g.auto_target_for_effect(&doom.effect, 0).expect("target");
+    assert_eq!(target, crate::game::Target::Permanent(plain), "prefers the un-warded bear");
+    // Warded-only board: still picked rather than fizzling.
+    let mut g = two_player_game();
+    let warded2 = g.add_card_to_battlefield(1, catalog::patchwork_automaton());
+    let _ = warded;
+    let target = g.auto_target_for_effect(&doom.effect, 0).expect("fallback target");
+    assert_eq!(target, crate::game::Target::Permanent(warded2), "warded fallback still legal");
+}
+
 /// Mirror of the hostile-effect auto-target test: friendly buffs should
 /// pick the *caster's* permanent, not the opponent's. Without this, the
 /// random bot would happily pump the opp's bear with Vines of Vastwood.
