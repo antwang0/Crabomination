@@ -382,6 +382,9 @@ mod tests_recent109;
 #[path = "../tests/mh2b.rs"]
 mod tests_mh2b;
 #[cfg(test)]
+#[path = "../tests/mh2c.rs"]
+mod tests_mh2c;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
