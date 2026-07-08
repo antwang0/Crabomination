@@ -1152,9 +1152,7 @@ impl GameState {
         let mut kept = Vec::new();
         for tc in std::mem::take(&mut self.temporary_control) {
             if tc.source == Some(id) {
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card) {
-                    c.controller = tc.original_controller;
-                }
+                self.change_control(tc.card, tc.original_controller);
             } else {
                 kept.push(tc);
             }

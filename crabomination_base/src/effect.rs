@@ -2384,6 +2384,11 @@ pub enum Effect {
     /// Archway Commons' "When this land enters, sacrifice it unless you
     /// pay {1}."
     PayManaOrElse { mana_cost: crate::mana::ManaCost, otherwise: Box<Effect> },
+    /// CR 702.29 — the resolution half of an echo trigger for a `wants_ui`
+    /// controller: "sacrifice this unless you pay its echo cost". `None` =
+    /// Echo—Discard a card. Prompted via the seat-routed yes/no ask; a paid
+    /// mana echo auto-taps lands like the synchronous `process_echo` path.
+    EchoPayOrSacrifice { mana_cost: Option<crate::mana::ManaCost> },
     /// CR 107.16 — exile the top card of the controller's library, then they
     /// may pay `energy` {E}; if they do, they may cast that card without
     /// paying its mana cost (the spell stays exiled if not cast). Amped

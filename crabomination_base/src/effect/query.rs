@@ -770,6 +770,7 @@ impl Effect {
             Effect::SacrificePermanent { what } => sel_has_target(what),
             Effect::ExileLastCreatedTokensAtNextEndStep
             | Effect::SacrificeLastCreatedTokensAtNextEndStep => false,
+            Effect::EchoPayOrSacrifice { .. } => false,
         }
     }
 

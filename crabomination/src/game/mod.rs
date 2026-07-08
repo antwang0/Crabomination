@@ -3217,7 +3217,9 @@ impl GameState {
     /// control since their last upkeep) is sacrificed unless its echo cost
     /// is paid: mana echoes auto-pay from the pool when affordable
     /// (matching `process_cumulative_upkeep`), `EchoDiscard` discards a
-    /// card picked by the controller's decider.
+    /// card picked by the controller's decider. A `wants_ui` controller
+    /// instead gets a real echo trigger on the stack whose resolution asks
+    /// pay-or-sacrifice (`Effect::EchoPayOrSacrifice`).
     pub(crate) fn process_echo(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::Keyword;
         let active = self.active_player_idx;
@@ -3235,6 +3237,21 @@ impl GameState {
             })
             .collect();
         for (id, cost) in affected {
+            if self.players.get(active).is_some_and(|p| p.wants_ui) {
+                self.push_pending_trigger(
+                    PendingTriggerPush {
+                        source: id,
+                        controller: active,
+                        effect: Effect::EchoPayOrSacrifice { mana_cost: cost },
+                        subject: None,
+                        event_amount: 0,
+                        mode: None,
+                        intervening_if: None,
+                    },
+                    None,
+                );
+                continue;
+            }
             let paid = match &cost {
                 // Auto-tap lands like a real payment — at upkeep the pool is
                 // empty, so pool-only payment would always sacrifice.
@@ -6691,9 +6708,7 @@ impl GameState {
                 continue; // card left play — nothing to revert
             }
             if which.contains(&tc.duration) {
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card) {
-                    c.controller = tc.original_controller;
-                }
+                self.change_control(tc.card, tc.original_controller);
             } else {
                 kept.push(tc);
             }
@@ -11868,6 +11883,22 @@ impl GameState {
 
     pub(crate) fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
         self.battlefield.iter_mut().find(|c| c.id == id)
+    }
+
+    /// Single funnel for on-battlefield control changes (steals, exchanges,
+    /// duration reverts). Applies CR 302.6 summoning sickness and re-arms echo
+    /// (CR 702.29b — echo is owed again once it "came under your control").
+    /// Returns the previous controller when control actually changed.
+    pub(crate) fn change_control(&mut self, id: CardId, new_ctrl: usize) -> Option<usize> {
+        let c = self.battlefield_find_mut(id)?;
+        if c.controller == new_ctrl {
+            return None;
+        }
+        let prev = c.controller;
+        c.controller = new_ctrl;
+        c.summoning_sick = true;
+        c.echo_paid = false;
+        Some(prev)
     }
 
     /// Atomically scan-and-remove a card from a zone by id. Prefer this over

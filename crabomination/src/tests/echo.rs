@@ -137,6 +137,71 @@ fn cr_310_7_portent_tracker_battle_defense() {
     );
 }
 
+/// CR 702.29b — a stolen echo permanent owes echo to its new controller,
+/// even if the previous controller already paid.
+#[test]
+fn cr_702_29b_stolen_echo_owed_by_new_controller() {
+    use crate::effect::{Duration, Effect, Selector};
+    let mut g = two_player_game();
+    let riders = g.add_card_to_battlefield(0, catalog::avalanche_riders());
+    g.battlefield_find_mut(riders).unwrap().echo_paid = true;
+    let ctx = crate::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(riders)), 0, 0);
+    g.resolve_effect(
+        &Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent },
+        &ctx,
+    )
+    .unwrap();
+    assert!(!g.battlefield_find(riders).unwrap().echo_paid, "control change re-arms echo");
+    // New controller's upkeep with no mana: sacrificed.
+    g.active_player_idx = 1;
+    let events = g.process_echo();
+    g.dispatch_triggers_for_events(&events);
+    assert!(g.battlefield_find(riders).is_none(), "new controller owed echo");
+}
+
+/// A `wants_ui` controller gets an echo pay prompt; yes auto-taps and keeps.
+#[test]
+fn echo_wants_ui_prompt_pay_keeps_permanent() {
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let riders = g.add_card_to_battlefield(0, catalog::avalanche_riders());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    g.active_player_idx = 0;
+    let events = g.process_echo();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("echo prompt suspends");
+    assert!(matches!(pd.decision, Decision::OptionalTrigger { .. }));
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(riders).unwrap().echo_paid, "paid via prompt");
+    let tapped = g.battlefield.iter().filter(|c| c.definition.is_land() && c.tapped).count();
+    assert_eq!(tapped, 4, "echo payment auto-tapped");
+}
+
+/// A `wants_ui` controller declining the echo prompt sacrifices.
+#[test]
+fn echo_wants_ui_prompt_decline_sacrifices() {
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let riders = g.add_card_to_battlefield(0, catalog::avalanche_riders());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    g.active_player_idx = 0;
+    let events = g.process_echo();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_some(), "echo prompt suspends");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false))).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(riders).is_none(), "declined echo → sacrificed");
+}
+
 /// Treetop Village animates into a 3/3 trampling Ape.
 #[test]
 fn treetop_village_animates() {

@@ -3237,6 +3237,59 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EchoPayOrSacrifice { mana_cost } => {
+                // CR 702.29 — interactive echo resolution (wants_ui seats;
+                // the synchronous path lives in `process_echo`). Sacrifice
+                // unless the controller answers yes AND the payment lands.
+                let p = ctx.controller;
+                let Some(id) = ctx.source else { return Ok(()) };
+                if self.battlefield_find(id).is_none() {
+                    return Ok(()); // left play — nothing owed
+                }
+                let name = self
+                    .battlefield_find(id)
+                    .map(|c| c.definition.name.clone())
+                    .unwrap_or_default();
+                let label = match mana_cost {
+                    Some(mc) => format!("Pay echo {} for {name}? (sacrifice it otherwise)", mc.summary()),
+                    None => format!("Discard a card for {name}'s echo? (sacrifice it otherwise)"),
+                };
+                let mut cursor = 0usize;
+                let Some(pay) = self.ask_seat_bool(&mut cursor, p, label, id, effect) else {
+                    return Ok(()); // suspended for the seat's answer
+                };
+                self.clear_answer_log();
+                let paid = pay
+                    && match mana_cost {
+                        Some(mc) => match self.try_pay_with_auto_tap(p, mc) {
+                            Ok(receipt) => {
+                                events.extend(receipt.auto_events);
+                                true
+                            }
+                            Err(_) => false,
+                        },
+                        None => {
+                            let pick = self.players[p]
+                                .hand
+                                .iter()
+                                .min_by_key(|c| c.definition.cost.cmc())
+                                .map(|c| c.id);
+                            match pick {
+                                Some(cid) => self.discard_card(p, cid, events),
+                                None => false,
+                            }
+                        }
+                    };
+                if paid {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.echo_paid = true;
+                    }
+                } else {
+                    self.sacrifice_one(id, p, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileTopMayPayEnergyToCast { energy } => {
                 use crate::card::Zone;
                 use crate::decision::{Decision, DecisionAnswer};
@@ -7128,17 +7181,7 @@ impl GameState {
                 };
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let prev = match self.battlefield_find_mut(cid) {
-                        Some(c) if c.controller != new_ctrl => {
-                            let prev = c.controller;
-                            c.controller = new_ctrl;
-                            // CR 302.6 — it hasn't been under the new
-                            // controller's control since their turn began.
-                            c.summoning_sick = true;
-                            prev
-                        }
-                        _ => continue,
-                    };
+                    let Some(prev) = self.change_control(cid, new_ctrl) else { continue };
                     // For non-permanent steals, remember the pre-steal
                     // controller so control reverts when the duration ends
                     // (CR 800.4). Keep the earliest entry if the permanent is
@@ -7164,12 +7207,7 @@ impl GameState {
                 let new_ctrl = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    if let Some(c) = self.battlefield_find_mut(cid)
-                        && c.controller != new_ctrl
-                    {
-                        let prev = c.controller;
-                        c.controller = new_ctrl;
-                        c.summoning_sick = true;
+                    if let Some(prev) = self.change_control(cid, new_ctrl) {
                         if !self.temporary_control.iter().any(|t| t.card == cid) {
                             self.temporary_control.push(crate::game::TempControl {
                                 card: cid,
@@ -7233,16 +7271,8 @@ impl GameState {
                     if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
                         && ctrl_a != ctrl_b
                     {
-                        // CR 302.6 — both sides pick up summoning sickness
-                        // under their new controller.
-                        if let Some(c) = self.battlefield_find_mut(ca) {
-                            c.controller = ctrl_b;
-                            c.summoning_sick = true;
-                        }
-                        if let Some(c) = self.battlefield_find_mut(cb) {
-                            c.controller = ctrl_a;
-                            c.summoning_sick = true;
-                        }
+                        self.change_control(ca, ctrl_b);
+                        self.change_control(cb, ctrl_a);
                     }
                 }
                 Ok(())
@@ -15362,14 +15392,8 @@ impl GameState {
                 if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
                     && ctrl_a != ctrl_b
                 {
-                    if let Some(c) = self.battlefield_find_mut(chosen) {
-                        c.controller = ctrl_b;
-                        c.summoning_sick = true;
-                    }
-                    if let Some(c) = self.battlefield_find_mut(target) {
-                        c.controller = ctrl_a;
-                        c.summoning_sick = true;
-                    }
+                    self.change_control(chosen, ctrl_b);
+                    self.change_control(target, ctrl_a);
                 }
                 Ok(())
             }

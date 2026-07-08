@@ -2313,10 +2313,14 @@ impl GameState {
     /// destroyed or sacrificed.
     pub(crate) fn objects_leave_with_player(&mut self, p: usize) {
         self.battlefield.retain(|c| c.owner != p);
-        for c in &mut self.battlefield {
-            if c.controller == p {
-                c.controller = c.owner; // control-changing effects end
-            }
+        let reverts: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p)
+            .map(|c| (c.id, c.owner))
+            .collect();
+        for (id, owner) in reverts {
+            self.change_control(id, owner); // control-changing effects end
         }
         self.exile.retain(|c| c.owner != p);
         self.players[p].hand.clear();
