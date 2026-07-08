@@ -768,6 +768,8 @@ pub(crate) fn requirement_matches_card(
         R::Noncreature => !def.card_types.contains(&CardType::Creature),
         R::IsBasicLand => def.is_land() && def.supertypes.contains(&Supertype::Basic),
         R::IsNonbasicLand => def.is_land() && !def.supertypes.contains(&Supertype::Basic),
+        R::ProducesColorless => def.produces_colorless(),
+        R::IsSnow => def.is_snow(),
         R::IsToken => card.is_token,
         R::NotToken => !card.is_token,
         R::Tapped => card.tapped,

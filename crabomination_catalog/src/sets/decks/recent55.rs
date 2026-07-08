@@ -110,6 +110,8 @@ pub fn ingenious_smith() -> CardDefinition {
                 pick_filter: Some(R::Artifact),
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)

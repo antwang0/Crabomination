@@ -304,6 +304,15 @@ impl Effect {
             Effect::FlipCoinsUntilLoseOrStop { tiers } => {
                 tiers.iter().any(|(_, e)| e.requires_target())
             }
+            Effect::FlipCoinsChooseCount { per_win, per_loss, all_won, .. } => {
+                per_win.requires_target()
+                    || per_loss.requires_target()
+                    || all_won.requires_target()
+            }
+            Effect::MoveCounters { from, to, amount, .. } => {
+                sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
+            }
+            Effect::FreeSpellsFromHandThisTurn => false,
             Effect::RollDie { count, results, .. } => {
                 value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
             }
@@ -504,7 +513,9 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
-            | Effect::PhaseOut { what }
+            | Effect::PhaseOut { what, .. }
+            | Effect::GrantSuspend { what, .. }
+            | Effect::ModularCounters { what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::RemoveFromCombat { what }
@@ -839,7 +850,9 @@ impl Effect {
             Effect::Attach { what, to } => sel_filter(what).or_else(|| sel_filter(to)),
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
-            Effect::PhaseOut { what }
+            Effect::PhaseOut { what, .. }
+            | Effect::GrantSuspend { what, .. }
+            | Effect::ModularCounters { what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::Untap { what, .. } => {
@@ -1470,7 +1483,9 @@ impl Effect {
             Effect::CastWithoutPayingImmediate { .. } => false,
             // "Tap all lands target player controls" takes a player
             // (Mistbind Clique); the plain selector forms don't.
-            Effect::PhaseOut { what }
+            Effect::PhaseOut { what, .. }
+            | Effect::GrantSuspend { what, .. }
+            | Effect::ModularCounters { what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::Untap { what, .. } => {
@@ -1827,7 +1842,9 @@ impl Effect {
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
-                Effect::PhaseOut { what }
+                Effect::PhaseOut { what, .. }
+                | Effect::GrantSuspend { what, .. }
+                | Effect::ModularCounters { what }
                 | Effect::Tap { what }
                 | Effect::TapAndUntapLock { what }
                 | Effect::Untap { what, .. } => {

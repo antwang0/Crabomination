@@ -1217,6 +1217,14 @@ pub enum PendingEffectState {
         /// Picks stay on top of the library (Sage of Days).
         #[serde(default)]
         keep_on_top: bool,
+        /// "If you put a [filter] card into your hand this way, gain N life"
+        /// (Chrome Courier).
+        #[serde(default)]
+        gain_life_if_pick: Option<(crate::card::SelectionRequirement, u32)>,
+        /// Gain life equal to the greatest power among creature cards milled
+        /// by the rest-to-graveyard sweep (Discerning Taste).
+        #[serde(default)]
+        gain_life_greatest_power_rest: bool,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the

@@ -250,6 +250,8 @@ pub fn marchesa_dealer_of_death() -> CardDefinition {
                     pick_filter: None,
                     take: Some(Value::Const(1)),
                     to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 }),
                 else_: None,
             },

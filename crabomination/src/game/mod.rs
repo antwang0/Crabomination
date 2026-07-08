@@ -394,6 +394,9 @@ mod tests_mh2e;
 #[path = "../tests/mh2f.rs"]
 mod tests_mh2f;
 #[cfg(test)]
+#[path = "../tests/mh2g.rs"]
+mod tests_mh2g;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -3184,6 +3187,69 @@ impl GameState {
         for id in suspended {
             events.append(&mut self.remove_suspend_time_counter(id));
         }
+        // CR 702.62e — cards that *gained* suspend (the card "Suspend")
+        // tick on the same schedule even without the printed keyword.
+        let granted: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| {
+                c.owner == active && c.granted_suspend && c.counter_count(CounterType::Time) > 0
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in granted {
+            events.append(&mut self.remove_suspend_time_counter(id));
+        }
+        events
+    }
+
+    /// CR 702.29 — Echo. At the beginning of the controller's upkeep, each
+    /// permanent they control with an unpaid echo (it came under their
+    /// control since their last upkeep) is sacrificed unless its echo cost
+    /// is paid: mana echoes auto-pay from the pool when affordable
+    /// (matching `process_cumulative_upkeep`), `EchoDiscard` discards a
+    /// card picked by the controller's decider.
+    pub(crate) fn process_echo(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::Keyword;
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        let affected: Vec<(CardId, Option<crate::mana::ManaCost>)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == active && !c.echo_paid)
+            .filter_map(|c| {
+                c.definition.keywords.iter().find_map(|k| match k {
+                    Keyword::Echo(cost) => Some((c.id, Some(cost.clone()))),
+                    Keyword::EchoDiscard => Some((c.id, None)),
+                    _ => None,
+                })
+            })
+            .collect();
+        for (id, cost) in affected {
+            let paid = match &cost {
+                Some(mc) => self.players[active].mana_pool.pay(mc).is_ok(),
+                None => {
+                    // Echo—Discard a card: auto-discard the lowest-MV hand
+                    // card if the hand isn't empty.
+                    let pick = self.players[active]
+                        .hand
+                        .iter()
+                        .min_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    match pick {
+                        Some(cid) => self.discard_card(active, cid, &mut events),
+                        None => false,
+                    }
+                }
+            };
+            if paid {
+                if let Some(c) = self.battlefield_find_mut(id) {
+                    c.echo_paid = true;
+                }
+            } else {
+                self.sacrifice_one(id, active, &mut events);
+            }
+        }
         events
     }
 
@@ -5646,6 +5712,7 @@ impl GameState {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::AnthemForFilter {
                     filter, power, toughness, keywords, opponents, only_your_turn,
+                    scale_by_counters_on_self,
                 } = &sa.effect
                 else {
                     continue;
@@ -5655,6 +5722,12 @@ impl GameState {
                 if *only_your_turn && self.active_player_idx != card.controller {
                     continue;
                 }
+                // Chitterspitter — "+P/+T for each [kind] counter on this".
+                let scale = match scale_by_counters_on_self {
+                    Some(kind) => card.counter_count(*kind) as i32,
+                    None => 1,
+                };
+                let (power, toughness) = (&(power * scale), &(toughness * scale));
                 let seats: Vec<usize> = if *opponents {
                     self.opponents_of(card.controller)
                 } else {
@@ -6499,12 +6572,21 @@ impl GameState {
             .battlefield_find(source)
             .map(|c| c.definition.cost.cmc())
             .unwrap_or(0);
+        let src_card_types = self
+            .computed_permanent(source)
+            .map(|c| c.card_types)
+            .unwrap_or_else(|| {
+                self.battlefield_find(source)
+                    .map(|c| c.definition.card_types.clone())
+                    .unwrap_or_default()
+            });
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src_colors.contains(color),
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
+            Keyword::ProtectionFromCardType(t) => src_card_types.contains(t),
             Keyword::ProtectionFromEverything => true,
             _ => false,
         })
@@ -9888,6 +9970,19 @@ impl GameState {
             0
         };
         let loyalty_change = if ability.x_cost { -(x as i32) } else { ability.loyalty_cost };
+        // Carth the Lion — "loyalty abilities you activate cost an
+        // additional [+1]": the cost shifts by +N (a −2 pays as −1).
+        let loyalty_change = loyalty_change
+            + self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::LoyaltyAbilitiesCostExtra(n) => Some(n),
+                    _ => None,
+                })
+                .sum::<i32>();
         let new_loyalty = current_loyalty + loyalty_change;
         if new_loyalty < 0 {
             return Err(GameError::NotEnoughLoyalty(card_id));
@@ -10611,7 +10706,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -10653,6 +10748,21 @@ impl GameState {
                     }
                 }
                 let mut events = vec![];
+                // Chrome Courier — check the picks against the rider filter
+                // while they're still library objects.
+                let pick_rider_life: Option<u32> = gain_life_if_pick.as_ref().and_then(|(f, n)| {
+                    picks
+                        .iter()
+                        .any(|id| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &crate::game::types::Target::Permanent(*id),
+                                player,
+                                None,
+                            )
+                        })
+                        .then_some(*n)
+                });
                 // Sage of Days: the pick stays on top of the library (it isn't
                 // removed here), and the milling loop below clears the rest, so
                 // the kept card rises to the top.
@@ -10684,17 +10794,34 @@ impl GameState {
                 // Move the rest of the revealed set to the bottom of the
                 // library (or graveyard). They're still at the top of the
                 // library after the picks were removed.
+                let mut greatest_milled_power: Option<i32> = None;
                 for rid in &revealed {
                     if picks.contains(rid) {
                         continue;
                     }
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *rid) {
                         if rest_to_graveyard {
+                            // Discerning Taste — track the greatest power
+                            // among milled creature cards.
+                            if gain_life_greatest_power_rest && card.definition.is_creature() {
+                                greatest_milled_power =
+                                    Some(greatest_milled_power.unwrap_or(0).max(card.definition.power));
+                            }
                             // CR 614.6 — honor graveyard-hate redirects.
                             self.route_to_graveyard(card, &mut events);
                         } else {
                             self.players[player].library.push(card);
                         }
+                    }
+                }
+                let rider_gain = pick_rider_life.map(|n| n as i32).unwrap_or(0)
+                    + greatest_milled_power.unwrap_or(0).max(0);
+                if rider_gain > 0 {
+                    let applied = self.adjust_life_applied(player, rider_gain);
+                    if applied > 0 {
+                        events.push(GameEvent::LifeGained { player, amount: applied as u32 });
+                    } else if applied < 0 {
+                        events.push(GameEvent::LifeLost { player, amount: (-applied) as u32 });
                     }
                 }
                 Ok(events)
@@ -12672,7 +12799,37 @@ fn static_effect_to_effects(
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
             | StaticEffect::OpponentsCantCastFromAnywhereButHand
             // Lier — read by the flashback-cast path / graveyard view.
-            | StaticEffect::GraveyardInstantsSorceriesHaveFlashback => vec![],
+            | StaticEffect::GraveyardInstantsSorceriesHaveFlashback
+            // Carth the Lion — read where loyalty activation costs apply.
+            | StaticEffect::LoyaltyAbilitiesCostExtra(_)
+            // Zabaz — read where the modular death trigger moves counters.
+            | StaticEffect::ModularBonusCounters(_) => vec![],
+
+            // Serra's Emissary — the creature half is a layer-6 keyword grant
+            // keyed to the ETB-chosen card type; the player half is read at
+            // the targeting/damage gates.
+            StaticEffect::YouAndCreaturesProtectionFromChosenCardType => {
+                match &card.chosen_card_type {
+                    Some(t) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::CardMatch {
+                            source_controller: card.controller,
+                            requirement: Box::new(SelectionRequirement::And(
+                                Box::new(SelectionRequirement::Creature),
+                                Box::new(SelectionRequirement::ControlledByYou),
+                            )),
+                        },
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(
+                            crate::card::Keyword::ProtectionFromCardType(t.clone()),
+                        ),
+                    }],
+                    None => vec![],
+                }
+            }
         }
     }
 }
@@ -13059,6 +13216,13 @@ pub(crate) fn can_block_attacker_computed(
         // creature that is two or more colors.
         if matches!(kw, Keyword::ProtectionFromMulticolored)
             && blocker_computed.colors.len() >= 2
+        {
+            return false;
+        }
+        // CR 702.16j — protection from a card type: can't be blocked by a
+        // creature of that type (matters for artifact/enchantment creatures).
+        if let Keyword::ProtectionFromCardType(t) = kw
+            && blocker_computed.card_types.contains(t)
         {
             return false;
         }

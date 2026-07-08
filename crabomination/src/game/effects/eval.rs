@@ -1909,6 +1909,8 @@ impl GameState {
                     R::Warped => card.warped,
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
+                    R::ProducesColorless => card.definition.produces_colorless(),
+                    R::IsSnow => card.definition.is_snow(),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsUnblocked => {
                         self.attacking.iter().any(|a| a.attacker == card.id)
@@ -2249,6 +2251,8 @@ impl GameState {
             }
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
+            R::ProducesColorless => card.definition.produces_colorless(),
+            R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             R::ManaValueAtMostYourCount(inner) => {
                 let n = self

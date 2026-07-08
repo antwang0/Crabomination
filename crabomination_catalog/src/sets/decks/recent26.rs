@@ -261,6 +261,8 @@ pub fn beastrider_vanguard() -> CardDefinition {
                 pick_filter: Some(crate::card::SelectionRequirement::Permanent),
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             ..Default::default()
         }],

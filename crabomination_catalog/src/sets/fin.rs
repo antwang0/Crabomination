@@ -2456,6 +2456,8 @@ pub fn commune_with_beavers() -> CardDefinition {
             ),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -2730,6 +2732,7 @@ pub fn yuna_hope_of_spira() -> CardDefinition {
                     keywords: vec![Keyword::Trample, Keyword::Lifelink, ward2()],
                     opponents: false,
                     only_your_turn: true,
+                    scale_by_counters_on_self: None,
                 },
             },
         ],
@@ -3855,6 +3858,8 @@ pub fn resentful_revelation() -> CardDefinition {
             pick_filter: None,
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -4840,6 +4845,7 @@ pub fn balthier_and_fran() -> CardDefinition {
                 keywords: vec![Keyword::Vigilance, Keyword::Reach],
                 opponents: false,
                 only_your_turn: false,
+                scale_by_counters_on_self: None,
             },
         }],
         ..Default::default()
@@ -5488,6 +5494,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                 keywords: vec![Keyword::Menace, Keyword::Lifelink, Keyword::Haste],
                 opponents: false,
                 only_your_turn: false,
+                scale_by_counters_on_self: None,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -8499,6 +8506,7 @@ pub fn firion_wild_rose_warrior() -> CardDefinition {
                 keywords: vec![Keyword::Haste],
                 opponents: false,
                 only_your_turn: false,
+                scale_by_counters_on_self: None,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

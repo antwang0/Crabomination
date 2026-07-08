@@ -209,6 +209,8 @@ pub fn loot_exuberant_explorer() -> CardDefinition {
                 pick_filter: Some(R::Creature.and(R::ManaValueAtMostYourCount(Box::new(R::Land)))),
                 take: None,
                 to_battlefield: true,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             ..Default::default()
         }],
@@ -636,6 +638,8 @@ pub fn trail_of_crumbs() -> CardDefinition {
                         pick_filter: Some(R::PermanentCard),
                         take: None,
                         to_battlefield: false,
+                        gain_life_if_pick: None,
+                        gain_life_greatest_power_rest: false,
                     }),
                     else_: None,
                 },

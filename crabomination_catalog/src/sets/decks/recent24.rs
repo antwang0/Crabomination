@@ -1493,6 +1493,8 @@ pub fn commune_with_evil() -> CardDefinition {
                 pick_filter: None,
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             gain_life(3),
         ]),

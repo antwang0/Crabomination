@@ -1358,6 +1358,8 @@ pub fn master_piandao() -> CardDefinition {
             ),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -1793,6 +1795,8 @@ pub fn seismic_sense() -> CardDefinition {
             ),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -2679,6 +2683,8 @@ pub fn guru_pathik() -> CardDefinition {
             ),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -4206,6 +4212,8 @@ pub fn accumulate_wisdom() -> CardDefinition {
         pick_filter: None,
         take: Some(take),
         to_battlefield: false,
+        gain_life_if_pick: None,
+        gain_life_greatest_power_rest: false,
     };
     CardDefinition {
         name: "Accumulate Wisdom",

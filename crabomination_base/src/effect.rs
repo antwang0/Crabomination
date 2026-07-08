@@ -2629,6 +2629,15 @@ pub enum Effect {
         /// Company's "put them onto the battlefield").
         #[serde(default)]
         to_battlefield: bool,
+        /// "If you put a [filter] card into your hand this way, you gain N
+        /// life" (Chrome Courier's artifact rider).
+        #[serde(default)]
+        gain_life_if_pick: Option<(SelectionRequirement, u32)>,
+        /// "You gain life equal to the greatest power among creature cards
+        /// put into your graveyard this way" (Discerning Taste). Only
+        /// meaningful with `rest_to_graveyard`.
+        #[serde(default)]
+        gain_life_greatest_power_rest: bool,
     },
     /// "Look at the top `count` cards; put one back on top and the rest into
     /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
@@ -3075,8 +3084,15 @@ pub enum Effect {
     /// CR 702.26 — phase out every permanent the selector resolves to. The
     /// permanent moves to `GameState.phased_out` (treated as nonexistent) and
     /// phases back in during its controller's next untap step. Vodalian
-    /// Illusionist.
-    PhaseOut { what: Selector },
+    /// Illusionist. With `until_source_leaves` the permanents skip the
+    /// untap-step phase-in and only return when the source leaves the
+    /// battlefield (Out of Time); the source gains one time counter per
+    /// permanent phased out this way.
+    PhaseOut {
+        what: Selector,
+        #[serde(default)]
+        until_source_leaves: bool,
+    },
     /// Untap every permanent the selector resolves to. The optional
     /// `up_to` cap limits the count to "up to N" — used by Frantic
     /// Search ("untap up to three lands"), Cryptolith Rite-style
@@ -3278,6 +3294,34 @@ pub enum Effect {
     /// additional counter of that kind on it." Auto-picks +1/+1 when present,
     /// else the most numerous kind.
     AddCounterOfPresentKind { what: Selector },
+    /// "Move `amount` [counter] counters from [from] onto [to]" (Steel
+    /// Dromedary). Capped by the source's live count; no-ops when `from`
+    /// and `to` resolve to the same permanent.
+    MoveCounters { from: Selector, to: Selector, counter: crate::card::CounterType, amount: Value },
+    /// CR 702.43c — the Modular death trigger's counter move: put the dying
+    /// source's last-known +1/+1 counters on the targeted artifact creature.
+    /// A `StaticEffect::ModularBonusCounters` (Zabaz) controlled by the
+    /// recipient's controller adds its bonus.
+    ModularCounters { what: Selector },
+    /// CR 702.62e-f — exile the selected creature with `time_counters` time
+    /// counters; if it doesn't have suspend, it gains suspend (the card
+    /// "Suspend"). Its owner's `process_suspend` ticks it down and free-casts
+    /// it when the last counter is removed.
+    GrantSuspend { what: Selector, time_counters: u32 },
+    /// "You may cast spells from your hand this turn without paying their
+    /// mana costs" (Yusri's five-win jackpot). Sets the controller's
+    /// `free_spells_from_hand_this_turn` flag, cleared at end-of-turn.
+    FreeSpellsFromHandThisTurn,
+    /// Yusri, Fortune's Flame — choose a number 1..=`max`, flip that many
+    /// coins; run `per_win` per won flip and `per_loss` per lost flip, then
+    /// `all_won` if the chosen number was `all_won_min`+ and every flip won.
+    FlipCoinsChooseCount {
+        max: u32,
+        per_win: Box<Effect>,
+        per_loss: Box<Effect>,
+        all_won: Box<Effect>,
+        all_won_min: u32,
+    },
     /// Vraska, Betrayal's Sting's −2 — "[what] becomes a Treasure artifact
     /// with '{T}, Sacrifice: add one mana of any color' and loses all other
     /// card types and abilities" (layer 4 type swap + layer 6 ability wipe +

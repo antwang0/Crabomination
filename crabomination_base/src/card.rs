@@ -117,6 +117,8 @@ pub enum CreatureType {
     Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).
     Capybara,
+    // Modern Horizons 2 (Steel Dromedary).
+    Camel,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
     // Ravnica Weird (Turn // Burn's 0/1).
@@ -426,6 +428,9 @@ pub enum CounterType {
     /// Muster counter — Assemble the Legion tallies one each upkeep and mints a
     /// Soldier token per counter on it.
     Muster,
+    /// Acorn counter — Chitterspitter accrues one per sacrificed token and
+    /// scales its Squirrel anthem by the count.
+    Acorn,
 }
 
 /// Every zone a card can occupy.
@@ -617,6 +622,10 @@ pub enum Keyword {
     /// Crusader). Can't be blocked/damaged/targeted/enchanted by a source that
     /// is two or more colors.
     ProtectionFromMulticolored,
+    /// CR 702.16j — protection from a card type (Serra's Emissary's granted
+    /// "protection from the chosen card type"): can't be blocked, damaged,
+    /// enchanted/equipped, or targeted by a source of that type.
+    ProtectionFromCardType(CardType),
     /// CR 702.16 — "protection from instants" (Hexdrinker level 3-7). Cast-time
     /// targeting gate: an instant spell can't target this permanent. (Instants
     /// are never permanents/blockers/combat sources, so this only matters at the
@@ -735,6 +744,10 @@ pub enum Keyword {
     /// `SelectionRequirement`/`Effect` sizes and deep debug-build recursion).
     Typecycling(Box<(crate::mana::ManaCost, SelectionRequirement)>),
     Echo(crate::mana::ManaCost),
+    /// CR 702.29b — Echo with a non-mana cost: "Echo—Discard a card"
+    /// (Rakdos Headliner). Processed by the same `process_echo` turn-based
+    /// check as `Echo`.
+    EchoDiscard,
     /// CR 702.24 — Cumulative upkeep: at the controller's upkeep, add an age
     /// counter, then pay the cost once per age counter or sacrifice this.
     CumulativeUpkeep(CumulativeUpkeepCost),
@@ -762,6 +775,9 @@ pub enum Keyword {
     Phasing,
     Dredge(u32),
     Annihilator(u32),
+    /// "This doesn't untap during your untap step if it has a [kind] counter
+    /// on it" (Steel Dromedary). Checked in `do_untap`.
+    DoesntUntapWhileCounter(CounterType),
     /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
     /// you don't lose this mana as steps and phases end (until end of combat)."
     Firebending(u32),
@@ -1311,6 +1327,12 @@ pub enum SelectionRequirement {
     /// "nonbasic lands … enter the battlefield tapped" clause and any
     /// nonbasic-land targeting filter.
     IsNonbasicLand,
+    /// A permanent with a mana ability that could produce {C} (an
+    /// `Effect::AddMana` whose payload adds colorless). "Land that … could
+    /// produce {C}" — Break the Ice, Obsidian Charmaw.
+    ProducesColorless,
+    /// A snow permanent/card (CR 205.4g — the Snow supertype). Break the Ice.
+    IsSnow,
     IsAttacking,
     /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
     /// combat state — Sneak's "return an unblocked creature you control".
@@ -1956,6 +1978,10 @@ pub struct CardDefinition {
     /// members and all are flagged, the SBA skips it.
     #[serde(default)]
     pub legend_pair_exempt: bool,
+    /// "[This] isn't legendary if it's a token" (Aeve, Progenitor Ooze).
+    /// The legend-rule SBA skips token instances of this definition.
+    #[serde(default)]
+    pub nonlegendary_as_token: bool,
     /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
     /// A combined chapter ("I, II — …") is listed once per number with the
     /// same effect. Non-empty marks the card a Saga: it enters with one lore
@@ -2957,6 +2983,31 @@ impl CardDefinition {
         self.is_instant() || self.keywords.contains(&Keyword::Flash)
     }
 
+    /// True if any activated ability could add {C} ("could produce {C}" —
+    /// Break the Ice, Obsidian Charmaw). Walks `AddMana` payloads, seeing
+    /// through `Restricted` wrappers and `Seq` bodies.
+    pub fn produces_colorless(&self) -> bool {
+        fn payload_colorless(p: &crate::effect::ManaPayload) -> bool {
+            use crate::effect::ManaPayload as MP;
+            match p {
+                MP::Colorless(_) => true,
+                MP::Restricted(inner, _) | MP::RestrictedToChosenType(inner) => {
+                    payload_colorless(inner)
+                }
+                _ => false,
+            }
+        }
+        fn effect_colorless(e: &crate::effect::Effect) -> bool {
+            use crate::effect::Effect;
+            match e {
+                Effect::AddMana { pool, .. } => payload_colorless(pool),
+                Effect::Seq(v) => v.iter().any(effect_colorless),
+                _ => false,
+            }
+        }
+        self.activated_abilities.iter().any(|a| effect_colorless(&a.effect))
+    }
+
     /// Printed colors from the mana cost's colored pips (CR 105.2), with
     /// the Devoid CDA (CR 702.114) yielding colorless.
     pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
@@ -3528,6 +3579,21 @@ pub struct CardInstance {
     /// A number chosen as this permanent entered (Sanctum Prelate — "choose a
     /// number"). Read by `noncreature_spell_cast_locked` for the chosen-MV lock.
     pub chosen_number: Option<u32>,
+    /// A card type chosen as this permanent entered (Serra's Emissary).
+    /// Read by the chosen-card-type protection static.
+    pub chosen_card_type: Option<CardType>,
+    /// CR 702.29 — set once this permanent's echo cost has been paid (or on
+    /// a permanent without echo). `false` on battlefield entry; `process_echo`
+    /// checks unpaid echoes at the controller's upkeep.
+    pub echo_paid: bool,
+    /// CR 702.62e — this exiled card gained suspend from an effect (the card
+    /// "Suspend"): `process_suspend` ticks it even though its definition
+    /// carries no `Keyword::Suspend`.
+    pub granted_suspend: bool,
+    /// This permanent is phased out "until [source] leaves the battlefield"
+    /// (Out of Time): `do_phasing` skips it, and it phases in when the
+    /// source leaves.
+    pub phased_out_by: Option<CardId>,
     /// Another permanent chosen and remembered as this one entered (Dauntless
     /// Bodyguard — "As this enters, choose another creature you control").
     /// `Selector::ChosenPermanentOfSource` resolves to it. `None` until the
@@ -3840,6 +3906,10 @@ impl CardInstance {
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_number: None,
+            chosen_card_type: None,
+            echo_paid: false,
+            granted_suspend: false,
+            phased_out_by: None,
             chosen_permanent: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
@@ -4343,6 +4413,14 @@ struct CardInstanceWire {
     #[serde(default)]
     chosen_number: Option<u32>,
     #[serde(default)]
+    chosen_card_type: Option<CardType>,
+    #[serde(default)]
+    echo_paid: bool,
+    #[serde(default)]
+    granted_suspend: bool,
+    #[serde(default)]
+    phased_out_by: Option<CardId>,
+    #[serde(default)]
     chosen_permanent: Option<CardId>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
@@ -4536,6 +4614,10 @@ impl serde::Serialize for CardInstance {
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             chosen_number: self.chosen_number,
+            chosen_card_type: self.chosen_card_type.clone(),
+            echo_paid: self.echo_paid,
+            granted_suspend: self.granted_suspend,
+            phased_out_by: self.phased_out_by,
             chosen_permanent: self.chosen_permanent,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),
@@ -4660,6 +4742,10 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_number = wire.chosen_number;
+        c.chosen_card_type = wire.chosen_card_type;
+        c.echo_paid = wire.echo_paid;
+        c.granted_suspend = wire.granted_suspend;
+        c.phased_out_by = wire.phased_out_by;
         c.chosen_permanent = wire.chosen_permanent;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.exhausted_abilities = wire.exhausted_abilities;

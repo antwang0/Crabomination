@@ -1006,6 +1006,8 @@ pub fn organ_hoarder() -> CardDefinition {
             pick_filter: None,
             take: Some(Value::Const(1)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -1041,6 +1043,8 @@ pub fn scattered_thoughts() -> CardDefinition {
             pick_filter: None,
             take: Some(Value::Const(2)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -1958,6 +1962,8 @@ pub fn mulch() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Land),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -1979,6 +1985,8 @@ pub fn tapping_at_the_window() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Creature),
             take: Some(Value::Const(1)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -2677,6 +2685,8 @@ pub fn gavony_dawnguard() -> CardDefinition {
                     pick_filter: Some(SelectionRequirement::Creature),
                     take: Some(Value::Const(1)),
                     to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 },
             },
         ],

@@ -2166,6 +2166,8 @@ pub fn experimental_augury() -> CardDefinition {
                 pick_filter: None,
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             Effect::Proliferate,
         ]),
@@ -4050,6 +4052,8 @@ pub fn testament_bearer() -> CardDefinition {
             pick_filter: None,
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -4597,6 +4601,7 @@ pub fn mite_overseer() -> CardDefinition {
                 keywords: vec![Keyword::FirstStrike],
                 opponents: false,
                 only_your_turn: true,
+                scale_by_counters_on_self: None,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -6384,6 +6389,8 @@ pub fn green_suns_twilight() -> CardDefinition {
                 pick_filter: Some(dig_filter()),
                 take: Some(Value::Const(2)),
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             }),
         },
         ..Default::default()
@@ -6652,6 +6659,8 @@ pub fn contagious_vorrac() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Land),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         };
         match extra {
             Some(e) => Effect::Seq(vec![look, e]),

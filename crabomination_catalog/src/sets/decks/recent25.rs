@@ -282,6 +282,8 @@ pub fn living_phone() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2))),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }

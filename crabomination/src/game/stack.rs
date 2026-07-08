@@ -316,6 +316,9 @@ impl GameState {
                 // CR 702.24 — cumulative upkeep: age counter + pay-or-sacrifice.
                 let mut cu = self.process_cumulative_upkeep();
                 events.append(&mut cu);
+                // CR 702.29 — echo: pay-or-sacrifice on the first upkeep.
+                let mut echo = self.process_echo();
+                events.append(&mut echo);
                 // CR 702.50a — Epic spells copy at the controller's upkeep.
                 let mut epic = self.process_epic();
                 events.append(&mut epic);
@@ -1601,11 +1604,13 @@ impl GameState {
                 .collect();
             to_phase_out.extend(attached);
         }
-        // Phase IN: every phased-out permanent this player controls returns.
+        // Phase IN: every phased-out permanent this player controls returns —
+        // except "until [source] leaves" phase-outs (CR 702.26 — Out of
+        // Time), which `on_left_battlefield` returns instead.
         let mut phased_in: Vec<crate::card::CardId> = Vec::new();
         let mut i = 0;
         while i < self.phased_out.len() {
-            if self.phased_out[i].controller == p {
+            if self.phased_out[i].controller == p && self.phased_out[i].phased_out_by.is_none() {
                 let c = self.phased_out.remove(i);
                 phased_in.push(c.id);
                 self.battlefield.push(c);
@@ -1803,6 +1808,17 @@ impl GameState {
                     }
                     continue;
                 }
+                // Steel Dromedary — "doesn't untap during your untap step if
+                // it has a [kind] counter on it".
+                if card.definition.keywords.iter().any(|k| {
+                    matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
+                        if card.counter_count(*kind) > 0)
+                }) {
+                    if active {
+                        card.summoning_sick = false;
+                    }
+                    continue;
+                }
                 // A locked permanent skips its untap while its source is still
                 // tapped on the battlefield; otherwise the lock releases.
                 if let Some(src) = card.untap_locked_by {
@@ -1914,6 +1930,7 @@ impl GameState {
             pl.hexproof_from_colors_this_turn.clear();
             pl.cast_blue_or_black_this_turn = false;
             pl.cant_cast_noncreature_this_turn = false;
+            pl.free_spells_from_hand_this_turn = false;
             pl.silenced_this_turn = false;
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
@@ -2394,6 +2411,8 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.definition.supertypes.contains(&Supertype::Legendary))
+                // Aeve — "isn't legendary if it's a token".
+                .filter(|c| !(c.is_token && c.definition.nonlegendary_as_token))
                 .collect();
             by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
             for c in by_id {

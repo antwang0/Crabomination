@@ -1264,7 +1264,7 @@ fn cr_702_26e_phase_out_removes_attacker_from_combat() {
     // Phase the attacker out mid-combat: it leaves combat and the battlefield.
     let ctx = EffectContext::for_spell(0, Some(Target::Permanent(atk)), 0, 0);
     let _ = g.resolve_effect(
-        &Effect::PhaseOut { what: Selector::Target(0) }, &ctx,
+        &Effect::PhaseOut { what: Selector::Target(0), until_source_leaves: false }, &ctx,
     ).expect("phase out resolves");
     assert!(g.battlefield_find(atk).is_none(), "attacker phased out");
     assert!(g.attacking().is_empty(), "phased-out attacker no longer in combat");

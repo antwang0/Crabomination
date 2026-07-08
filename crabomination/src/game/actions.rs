@@ -316,6 +316,21 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
 /// CR 601.2f / 117.7c: cost reductions can never reduce a colored or X
 /// pip. The caller funnels the returned reduction through
 /// `ManaCost::reduce_generic`, which clamps at the generic pip total.
+/// True if the filter tree names a controller clause explicitly
+/// (`ControlledByYou` / `ControlledByOpponent`) — such filters replace the
+/// implicit "you control" scope of affinity-style counts.
+fn requirement_mentions_controller(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::ControlledByYou | R::ControlledByOpponent => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_controller(a) || requirement_mentions_controller(b)
+        }
+        R::Not(inner) => requirement_mentions_controller(inner),
+        _ => false,
+    }
+}
+
 pub(crate) fn cost_reduction_for_spell(
     state: &crate::game::GameState,
     caster: usize,
@@ -564,11 +579,15 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             // Evaluate through the battlefield-aware path so board-state filters
             // (IsModified, Tapped, …) resolve — `evaluate_requirement_on_card`
             // treats those as false. Walking Skyscraper counts modified creatures.
+            // The implicit "you control" is skipped when the printed filter
+            // names a controller itself (Obsidian Charmaw counts *opponents'*
+            // colorless lands via `ControlledByOpponent`).
+            let filter_names_controller = requirement_mentions_controller(filter);
             let n = state
                 .battlefield
                 .iter()
                 .filter(|c| {
-                    c.controller == caster
+                    (filter_names_controller || c.controller == caster)
                         && state.evaluate_requirement_static(
                             filter,
                             &crate::game::Target::Permanent(c.id),
@@ -4282,6 +4301,14 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16j — protection from a card type (Serra's Emissary
+                // grant): can't be targeted by a spell of that type.
+                if let Keyword::ProtectionFromCardType(t) = kw
+                    && card.definition.card_types.contains(t)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // "Can't be targeted by nongreen spells opponents control"
                 // (Thrun): an opponent's spell that shares none of the listed
                 // colors can't target this. Own spells are unaffected.
@@ -4336,6 +4363,19 @@ impl GameState {
         if hexproof_violation {
             self.players[p].hand.push(card);
             return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
+        }
+
+        // CR 702.16j — a player with protection from a card type (Serra's
+        // Emissary) can't be targeted by a spell of that type.
+        if let Some(Target::Player(tp)) = target
+            && tp != p
+            && self
+                .player_protection_card_types(tp)
+                .iter()
+                .any(|t| card.definition.card_types.contains(t))
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::TargetHasProtection(crate::card::CardId(0)));
         }
 
         // Enforce the spell's target selection requirement (e.g. Terror's
@@ -4487,6 +4527,11 @@ impl GameState {
         // Trinisphere floor (CR 117.7 / replacement-style): applied after
         // every reduction so a discounted spell still owes the minimum.
         apply_spell_cost_floor(self, &mut cost);
+        // Yusri's jackpot — "you may cast spells from your hand this turn
+        // without paying their mana costs" zeroes the whole cost.
+        if self.players[p].free_spells_from_hand_this_turn {
+            cost.symbols.clear();
+        }
 
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
@@ -7394,6 +7439,7 @@ impl GameState {
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
+                    | Keyword::ProtectionFromCardType(_)
                     | Keyword::ProtectionFromEverything
                     | Keyword::HexproofExceptColors(_)
             )
@@ -7435,6 +7481,7 @@ impl GameState {
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
+            Keyword::ProtectionFromCardType(t) => src.card_types.contains(t),
             Keyword::ProtectionFromEverything => true,
             // "Abilities from nongreen sources opponents control can't target
             // this" (Thrun) — opponent's source sharing none of the colors.
@@ -7443,6 +7490,23 @@ impl GameState {
             }
             _ => false,
         })
+    }
+
+    /// Card types `player` has protection from via
+    /// `StaticEffect::YouAndCreaturesProtectionFromChosenCardType`
+    /// permanents they control (Serra's Emissary).
+    pub(crate) fn player_protection_card_types(&self, player: usize) -> Vec<crate::card::CardType> {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .filter(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::YouAndCreaturesProtectionFromChosenCardType)
+                })
+            })
+            .filter_map(|c| c.chosen_card_type.clone())
+            .collect()
     }
 
     /// True if `player` controls any permanent granting "you have hexproof"

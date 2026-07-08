@@ -2955,15 +2955,10 @@ pub fn on_combat_damage_to_player_drain(amount: i32) -> TriggeredAbility {
 pub fn modular_dies() -> TriggeredAbility {
     on_dies(Effect::MayDo {
         description: "Put +1/+1 counters on target artifact creature".into(),
-        body: Box::new(Effect::AddCounter {
+        body: Box::new(Effect::ModularCounters {
             what: target_filtered(
                 SelectionRequirement::Artifact.and(SelectionRequirement::Creature),
             ),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::CountersOn {
-                what: Box::new(Selector::This),
-                kind: CounterType::PlusOnePlusOne,
-            },
         }),
     })
 }

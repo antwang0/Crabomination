@@ -363,6 +363,8 @@ pub fn codecracker_hound() -> CardDefinition {
             pick_filter: None,
             take: Some(Value::Const(1)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         alternative_cost: Some(warp(cost(&[generic(2), u()]))),
         ..Default::default()
@@ -5137,6 +5139,8 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }

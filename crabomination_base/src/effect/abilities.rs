@@ -933,6 +933,11 @@ pub enum StaticEffect {
         /// Spira). Defaults false (always on) for snapshot back-compat.
         #[serde(default)]
         only_your_turn: bool,
+        /// "[filter] get +P/+T *for each [kind] counter on this*"
+        /// (Chitterspitter's acorn-scaled Squirrel anthem). Multiplies
+        /// `power`/`toughness` by the source's live counter count.
+        #[serde(default)]
+        scale_by_counters_on_self: Option<crate::card::CounterType>,
     },
     /// "As long as [condition], this has [keyword]" — the self keyword-grant
     /// sibling of `SetBasePtIf` / `PumpSelfIf`, gated on a live `Predicate`
@@ -942,6 +947,20 @@ pub enum StaticEffect {
     /// (a `SelectionRequirement` over the source's own characteristics) this
     /// reads game state via the `Predicate` machinery.
     SelfHasKeywordIf { keyword: Keyword, condition: Predicate },
+    /// "You and creatures you control have protection from the chosen card
+    /// type" (Serra's Emissary). The type is the source's
+    /// `chosen_card_type`; grants `Keyword::ProtectionFromCardType` to the
+    /// controller's creatures at layer 6, and the player-side half is read
+    /// directly at the spell/ability targeting and damage gates.
+    YouAndCreaturesProtectionFromChosenCardType,
+    /// "Planeswalkers' loyalty abilities you activate cost an additional
+    /// [+N] to activate" (Carth the Lion). Shifts every loyalty ability's
+    /// cost by +N for the controller.
+    LoyaltyAbilitiesCostExtra(i32),
+    /// CR 614 — "If a modular triggered ability would put one or more +1/+1
+    /// counters on a creature you control, that many plus N are put instead"
+    /// (Zabaz, the Glimmerwasp).
+    ModularBonusCounters(u32),
     /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
     /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
     /// list is accepted on any spell whose controller has this static, not

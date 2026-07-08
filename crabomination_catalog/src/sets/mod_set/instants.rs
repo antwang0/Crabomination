@@ -775,6 +775,8 @@ pub fn dig_through_time() -> CardDefinition {
             pick_filter: None,
             take: Some(Value::Const(2)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -1648,6 +1650,7 @@ pub fn teferis_protection() -> CardDefinition {
             Effect::PreventAllDamageThisTurn { target: Selector::You },
             Effect::PhaseOut {
                 what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                until_source_leaves: false,
             },
         ]),
         ..Default::default()

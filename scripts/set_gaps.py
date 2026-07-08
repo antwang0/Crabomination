@@ -12,7 +12,8 @@ def in_catalog(name):
     return bool(subprocess.run(["grep","-rqF",f'"{name}"',"crabomination_catalog/src"]).returncode==0)
 code=sys.argv[1]
 for c in fetch_set(code):
-    nm=c["name"].split(" // ")[0]
-    if not in_catalog(nm):
+    nm=c["name"]
+    if nm.startswith("A-"): continue  # Alchemy rebalances
+    if not in_catalog(nm) and not in_catalog(nm.split(" // ")[0]):
         tl=c.get("type_line","");cost=c.get("mana_cost","")
         print(f"{c['name']} | {cost} | {tl} | {c.get('rarity','')}")

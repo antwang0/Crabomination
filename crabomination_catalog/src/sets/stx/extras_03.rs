@@ -752,6 +752,8 @@ pub fn quandrix_quickener() -> CardDefinition {
             
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             Effect::Untap {
                 what: target_filtered(

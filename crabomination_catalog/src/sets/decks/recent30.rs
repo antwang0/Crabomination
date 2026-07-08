@@ -449,6 +449,8 @@ pub fn dredgers_insight() -> CardDefinition {
                 ),
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)

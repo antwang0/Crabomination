@@ -309,6 +309,8 @@ pub fn tezzeret_agent_of_bolas() -> CardDefinition {
                     pick_filter: Some(SelectionRequirement::Artifact),
                     take: None,
                     to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 },
                 ..Default::default()
             },

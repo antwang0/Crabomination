@@ -3614,6 +3614,8 @@ pub fn nessian_wanderer() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Land),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -5102,6 +5104,8 @@ pub fn thassas_intervention() -> CardDefinition {
                 pick_filter: None,
                 take: Some(Value::Const(2)),
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
@@ -5129,6 +5133,8 @@ pub fn relentless_pursuit() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
             take: Some(Value::Const(2)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -5579,6 +5585,8 @@ pub fn calix_destinys_hand() -> CardDefinition {
                     pick_filter: Some(SelectionRequirement::Enchantment),
                     take: None,
                     to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 },
                 ..Default::default()
             },
@@ -6170,6 +6178,8 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
                 pick_filter: Some(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::AuraAttached, EventScope::YourControl),

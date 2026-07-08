@@ -602,6 +602,8 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
                     pick_filter: Some(R::Creature),
                     take: None,
                     to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 },
                 ..Default::default()
             },

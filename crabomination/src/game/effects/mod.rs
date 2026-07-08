@@ -992,6 +992,147 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FreeSpellsFromHandThisTurn => {
+                self.players[ctx.controller].free_spells_from_hand_this_turn = true;
+                Ok(())
+            }
+
+            Effect::FlipCoinsChooseCount { max, per_win, per_loss, all_won, all_won_min } => {
+                // Yusri — choose 1..=max, flip that many coins, run the
+                // per-flip bodies, and the jackpot body on max wins.
+                use crate::decision::{Decision, DecisionAnswer};
+                let me = ctx.controller;
+                let src = ctx.source.unwrap_or(crate::card::CardId(0));
+                let n = match self.decider.decide(&Decision::ChooseAmount {
+                    source: src,
+                    prompt: "Flip how many coins?".into(),
+                    max: *max,
+                }) {
+                    DecisionAnswer::Amount(a) => a.clamp(1, *max),
+                    _ => 1,
+                };
+                let mut wins = 0u32;
+                for _ in 0..n {
+                    if self.flip_one_coin(me) {
+                        wins += 1;
+                        events.push(GameEvent::CoinFlipWon { player: me });
+                        self.run_effect(per_win, ctx, events)?;
+                    } else {
+                        events.push(GameEvent::CoinFlipLost { player: me });
+                        self.run_effect(per_loss, ctx, events)?;
+                    }
+                }
+                if n >= *all_won_min && wins == n {
+                    self.run_effect(all_won, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::MoveCounters { from, to, counter, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let from_id = self
+                    .resolve_selector(from, ctx)
+                    .iter()
+                    .find_map(|e| e.as_permanent_id());
+                let to_id = self
+                    .resolve_selector(to, ctx)
+                    .iter()
+                    .find_map(|e| e.as_permanent_id());
+                if let (Some(fid), Some(tid)) = (from_id, to_id)
+                    && fid != tid {
+                        let avail = self
+                            .battlefield_find(fid)
+                            .map(|c| c.counter_count(*counter))
+                            .unwrap_or(0);
+                        let moved = avail.min(n);
+                        if moved > 0 {
+                            if let Some(f) = self.battlefield_find_mut(fid) {
+                                f.remove_counters(*counter, moved);
+                            }
+                            events.push(GameEvent::CounterRemoved {
+                                card_id: fid,
+                                counter_type: *counter,
+                                count: moved,
+                            });
+                            // CR 122.5 — moving isn't "placing" for doubling
+                            // purposes; add the raw count.
+                            if let Some(t) = self.battlefield_find_mut(tid) {
+                                t.add_counters(*counter, moved);
+                            }
+                            events.push(GameEvent::CounterAdded {
+                                card_id: tid,
+                                counter_type: *counter,
+                                count: moved,
+                            });
+                        }
+                    }
+                Ok(())
+            }
+
+            Effect::ModularCounters { what } => {
+                // CR 702.43c — the dying source's last-known +1/+1 counters
+                // move to the target; Zabaz adds its bonus per recipient.
+                use crate::card::CounterType;
+                let base = self
+                    .evaluate_value(
+                        &crate::effect::Value::CountersOn {
+                            what: Box::new(crate::effect::Selector::This),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                        ctx,
+                    )
+                    .max(0) as u32;
+                if base == 0 {
+                    return Ok(());
+                }
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(ctrl) = self.battlefield_find(cid).map(|c| c.controller) else {
+                        continue;
+                    };
+                    let bonus: u32 = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == ctrl)
+                        .flat_map(|c| c.definition.static_abilities.iter())
+                        .filter_map(|sa| match sa.effect {
+                            crate::effect::StaticEffect::ModularBonusCounters(n) => Some(n),
+                            _ => None,
+                        })
+                        .sum();
+                    let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, base + bonus, true);
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.add_counters(CounterType::PlusOnePlusOne, n);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: CounterType::PlusOnePlusOne,
+                            count: n,
+                        });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                Ok(())
+            }
+
+            Effect::GrantSuspend { what, time_counters } => {
+                // CR 702.62e-f — exile with time counters; the owner's
+                // upkeep ticks it via `granted_suspend`.
+                let ids: Vec<crate::card::CardId> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    self.remove_from_battlefield_to_exile(cid);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.granted_suspend = true;
+                        c.add_counters(crate::card::CounterType::Time, *time_counters);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::FlipCoinsUntilLoseOrStop { tiers } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let me = ctx.controller;
@@ -5066,7 +5207,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PhaseOut { what } => {
+            Effect::PhaseOut { what, until_source_leaves } => {
                 // CR 702.26 — collect the targeted permanents (and anything
                 // attached to them) and move them to the phased-out zone.
                 let mut ids: std::collections::HashSet<crate::card::CardId> = self
@@ -5074,6 +5215,13 @@ impl GameState {
                     .iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
+                let source = ctx.source;
+                if *until_source_leaves
+                    && let Some(src) = source {
+                        // The linking source stays behind to anchor the return.
+                        ids.remove(&src);
+                    }
+                let mut phased = 0u32;
                 if !ids.is_empty() {
                     let attached: Vec<crate::card::CardId> = self
                         .battlefield
@@ -5085,20 +5233,36 @@ impl GameState {
                     let mut idx = 0;
                     while idx < self.battlefield.len() {
                         if ids.contains(&self.battlefield[idx].id) {
-                            let c = self.battlefield.remove(idx);
+                            let mut c = self.battlefield.remove(idx);
                             // CR 702.26e — a phased-out permanent is treated as
                             // though it doesn't exist, so remove it from combat
                             // if `Effect::PhaseOut` fires mid-combat (the
                             // untap-step `do_phasing` path can't, but a cast /
                             // ETB phase-out can — Talon Gates, Reality Ripple).
                             self.remove_from_combat(c.id);
+                            if *until_source_leaves {
+                                c.phased_out_by = source;
+                            }
                             events.push(GameEvent::PermanentPhasedOut { card_id: c.id });
                             self.phased_out.push(c);
+                            phased += 1;
                         } else {
                             idx += 1;
                         }
                     }
                 }
+                // Out of Time — one time counter on the source per permanent
+                // phased out this way.
+                if *until_source_leaves && phased > 0
+                    && let Some(sid) = source
+                    && let Some(src) = self.battlefield_find_mut(sid) {
+                        src.add_counters(crate::card::CounterType::Time, phased);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: sid,
+                            counter_type: crate::card::CounterType::Time,
+                            count: phased,
+                        });
+                    }
                 Ok(())
             }
 
@@ -8773,7 +8937,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -8839,6 +9003,8 @@ impl GameState {
                     to_battlefield: *to_battlefield,
                     tapped: false,
                     keep_on_top: false,
+                    gain_life_if_pick: gain_life_if_pick.clone(),
+                    gain_life_greatest_power_rest: *gain_life_greatest_power_rest,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -8898,6 +9064,8 @@ impl GameState {
                     to_battlefield: true,
                     tapped: true,
                     keep_on_top: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -8935,6 +9103,8 @@ impl GameState {
                     to_battlefield: false,
                     tapped: false,
                     keep_on_top: true,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

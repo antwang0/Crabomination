@@ -114,6 +114,8 @@ pub fn tajuru_paragon() -> CardDefinition {
                 pick_filter: Some(R::Creature),
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             }),
             else_: Box::new(Effect::Noop),
         })],

@@ -2161,6 +2161,18 @@ impl GameState {
                 if self.all_damage_to_player_prevented(p) {
                     return 0;
                 }
+                // CR 702.16j — protection from a card type (Serra's Emissary):
+                // no combat damage from an attacker of that type.
+                if let Some(src) = source {
+                    let types = self.player_protection_card_types(p);
+                    if !types.is_empty()
+                        && self
+                            .computed_permanent(src)
+                            .is_some_and(|c| types.iter().any(|t| c.card_types.contains(t)))
+                    {
+                        return 0;
+                    }
+                }
                 self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {

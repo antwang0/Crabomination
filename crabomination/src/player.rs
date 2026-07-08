@@ -603,6 +603,10 @@ pub struct Player {
     /// active player's `do_untap`. Consulted by the cast-legality gate.
     #[serde(default)]
     pub cant_cast_noncreature_this_turn: bool,
+    /// "You may cast spells from your hand this turn without paying their
+    /// mana costs" (Yusri's five-win jackpot). Cleared at end-of-turn.
+    #[serde(default)]
+    pub free_spells_from_hand_this_turn: bool,
     /// Card names this player's opponents can't cast until this player's next
     /// turn (Academic Probation mode 0 — "Opponents can't cast spells with the
     /// chosen name until your next turn"). Reset for every player at the active
@@ -705,6 +709,7 @@ impl Player {
             hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,
             cant_cast_noncreature_this_turn: false,
+            free_spells_from_hand_this_turn: false,
             opponents_cant_cast_named: Vec::new(),
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,

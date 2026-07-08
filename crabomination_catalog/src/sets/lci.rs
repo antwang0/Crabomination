@@ -2125,6 +2125,8 @@ pub fn staunch_crewmate() -> CardDefinition {
             ),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -3809,6 +3811,8 @@ pub fn confounding_riddle() -> CardDefinition {
                 pick_filter: None,
                 take: None,
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             Effect::CounterUnlessPaid {
                 what: crate::effect::shortcut::target(),
@@ -3910,6 +3914,8 @@ pub fn in_the_presence_of_ages() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
             take: Some(Value::Const(2)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         },
         ..Default::default()
     }
@@ -4441,6 +4447,8 @@ pub fn sinuous_benthisaur() -> CardDefinition {
             pick_filter: None,
             take: Some(Value::Const(2)),
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
@@ -4618,6 +4626,8 @@ pub fn orazca_puzzle_door() -> CardDefinition {
                 pick_filter: None,
                 take: Some(Value::Const(1)),
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
             ..Default::default()
         }],
@@ -4959,6 +4969,8 @@ pub fn akal_pakal_first_among_equals() -> CardDefinition {
                 pick_filter: None,
                 take: Some(Value::Const(1)),
                 to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
             },
         }],
         ..Default::default()

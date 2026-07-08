@@ -37,6 +37,8 @@ pub fn ainok_wayfarer() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Land),
             take: None,
             to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }

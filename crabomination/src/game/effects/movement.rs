@@ -356,6 +356,24 @@ impl GameState {
         {
             return;
         }
+        // CR 702.16j — a player with protection from a card type (Serra's
+        // Emissary) takes no damage from a source of that type.
+        if let (EntityRef::Player(p), Some(src)) = (ent, source) {
+            let types = self.player_protection_card_types(p);
+            if !types.is_empty() {
+                let src_types = self
+                    .computed_permanent(src)
+                    .map(|c| c.card_types)
+                    .or_else(|| {
+                        self.find_card_anywhere(src)
+                            .map(|c| c.definition.card_types.clone())
+                    })
+                    .unwrap_or_default();
+                if types.iter().any(|t| src_types.contains(t)) {
+                    return;
+                }
+            }
+        }
         // CR 615 — Mark-of-Asylum-style "prevent all noncombat damage to
         // creatures you control" (this funnel only carries noncombat damage to
         // permanents; combat damage is marked elsewhere).
@@ -990,6 +1008,8 @@ impl GameState {
                 card.perm_power_bonus = 0;
                 card.perm_toughness_bonus = 0;
                 card.attached_to = None;
+                // CR 702.29 — a fresh battlefield object owes echo again.
+                card.echo_paid = false;
                 // CR 122.2 cleared the counters above; re-seed a
                 // planeswalker's starting loyalty (CR 306.5b) so a reanimated
                 // / blinked planeswalker enters with full base loyalty rather
@@ -1110,6 +1130,23 @@ impl GameState {
     /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         self.return_linked_exiles(id, events);
+        // CR 702.26 — permanents phased out "until [this] leaves the
+        // battlefield" (Out of Time) phase in now.
+        let mut i = 0;
+        let mut phased_in: Vec<CardId> = Vec::new();
+        while i < self.phased_out.len() {
+            if self.phased_out[i].phased_out_by == Some(id) {
+                let mut c = self.phased_out.remove(i);
+                c.phased_out_by = None;
+                phased_in.push(c.id);
+                self.battlefield.push(c);
+            } else {
+                i += 1;
+            }
+        }
+        for card_id in phased_in {
+            events.push(GameEvent::PermanentPhasedIn { card_id });
+        }
         // Source-bound control steals end with their source (Sower of
         // Temptation — CR 800.4 hands the permanent back).
         let mut kept = Vec::new();
