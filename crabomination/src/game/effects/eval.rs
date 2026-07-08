@@ -416,6 +416,19 @@ impl GameState {
                 self.permanents_destroyed_this_resolution as i32
             }
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::CardTypesInGraveyard(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| self.distinct_card_types_in_graveyard(p) as i32)
+                .unwrap_or(0),
+            Value::CardTypesInAllGraveyards => {
+                self.distinct_card_types_in_all_graveyards() as i32
+            }
+            Value::CardsDiscardedThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.players[p].cards_discarded_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::SquadCount => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))
@@ -1501,14 +1514,7 @@ impl GameState {
             }
             Predicate::DeliriumActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
-                let mut kinds: std::collections::HashSet<&crate::card::CardType> =
-                    std::collections::HashSet::new();
-                for c in &self.players[p].graveyard {
-                    for t in &c.definition.card_types {
-                        kinds.insert(t);
-                    }
-                }
-                kinds.len() >= 4
+                self.delirium_active(p)
             }
             Predicate::DescendActive { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };

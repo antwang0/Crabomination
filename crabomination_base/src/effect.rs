@@ -360,6 +360,15 @@ pub enum Value {
     /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
     /// Backed by `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
+    /// Distinct card types among cards in `who`'s graveyard (the delirium
+    /// count as a number — Lucid Dreams' "draw X").
+    CardTypesInGraveyard(PlayerRef),
+    /// Cards `who` has discarded this turn (max over resolved players).
+    /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
+    CardsDiscardedThisTurn(PlayerRef),
+    /// Distinct card types across every graveyard (Altar of the Goyf,
+    /// Lhurgoyf-style counts as a spell value).
+    CardTypesInAllGraveyards,
     /// Noncreature spells `who` has cast so far this turn — the **maximum**
     /// over the resolved players. Backed by
     /// `Player.noncreature_spells_cast_this_game_turn`. Magebane Lizard's

@@ -385,6 +385,9 @@ mod tests_mh2b;
 #[path = "../tests/mh2c.rs"]
 mod tests_mh2c;
 #[cfg(test)]
+#[path = "../tests/mh2d.rs"]
+mod tests_mh2d;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -6254,13 +6257,19 @@ impl GameState {
     /// types. Shared by the Delirium predicate and the combat-restriction
     /// keyword (Patchwork Beastie).
     pub fn delirium_active(&self, seat: usize) -> bool {
+        self.distinct_card_types_in_graveyard(seat) >= 4
+    }
+
+    /// Distinct card types among cards in `seat`'s graveyard — the delirium
+    /// count as a number (`Value::CardTypesInGraveyard`, Lucid Dreams).
+    pub fn distinct_card_types_in_graveyard(&self, seat: usize) -> usize {
         let mut kinds: std::collections::HashSet<&CardType> = std::collections::HashSet::new();
         for c in &self.players[seat].graveyard {
             for t in &c.definition.card_types {
                 kinds.insert(t);
             }
         }
-        kinds.len() >= 4
+        kinds.len()
     }
 
     /// CR 700.11 — the number of permanent cards in `seat`'s graveyard
