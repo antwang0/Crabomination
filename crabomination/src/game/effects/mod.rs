@@ -3261,7 +3261,7 @@ impl GameState {
                 }
                 let name = self
                     .battlefield_find(id)
-                    .map(|c| c.definition.name.clone())
+                    .map(|c| c.definition.name)
                     .unwrap_or_default();
                 let label = match mana_cost {
                     Some(mc) => format!("Pay echo {} for {name}? (sacrifice it otherwise)", mc.summary()),
@@ -3313,7 +3313,7 @@ impl GameState {
                 let Some(id) = ctx.source else { return Ok(()) };
                 let Some(card) = self.battlefield_find(id) else { return Ok(()) };
                 let n = card.counter_count(CounterType::Age).max(1);
-                let name = card.definition.name.clone();
+                let name = card.definition.name;
                 let label = format!(
                     "Pay cumulative upkeep ({} × {n}) for {name}? (sacrifice it otherwise)",
                     cost.summary(),
@@ -7353,15 +7353,15 @@ impl GameState {
                 let new_ctrl = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    if let Some(prev) = self.change_control(cid, new_ctrl) {
-                        if !self.temporary_control.iter().any(|t| t.card == cid) {
-                            self.temporary_control.push(crate::game::TempControl {
-                                card: cid,
-                                original_controller: prev,
-                                duration: crate::effect::Duration::Permanent,
-                                source: Some(src),
-                            });
-                        }
+                    if let Some(prev) = self.change_control(cid, new_ctrl)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: crate::effect::Duration::Permanent,
+                            source: Some(src),
+                        });
                     }
                 }
                 Ok(())

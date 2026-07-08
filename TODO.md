@@ -39,6 +39,31 @@ factory doc comment:
 - ✅ **Yusri's ChooseAmount** now suspends for a `wants_ui` seat
   (`AmountAnswerPending`), same shape as `SacrificeAnyNumber`.
 
+- ⏳ **Noticed this run (recent110/111 sweep):**
+  - **Counter-placer attribution** still open (see All Will Be One entry) —
+    `GameEvent::CounterAdded` has ~55 construction sites; a `placed_by`
+    field is mechanical but wide.
+  - **Skipped cards needing a primitive each:** Lightning Storm (any-player
+    stack-only activated ability), Tibalt's Trickery (random 1–3 mill +
+    exile-until-different-name free cast), Phyrexian Unlife (don't-lose-at-0
+    + damage-as-poison at ≤0), Salvage Titan (sac-3-artifacts alt cost +
+    gy self-return), Bottled Cloister (end-step hand exile / upkeep return),
+    Cenn's Tactician (counter-gated multi-block), Nourishing Shoal (pitch-X
+    alt cost reading the pitched card's MV), Prismatic Strands
+    (prevent-by-color + tap-white-creature flashback cost), Abundance
+    (draw-replacement dig), Qasali Ambusher (free flash cast when attacked
+    with Forest+Plains), Pili-Pala ({Q} untap-symbol costs), Mycosynth
+    Lattice (all-colorless + spend-any halves).
+  - **Approximations to revisit:** Tidebinder Mage's lock is a one-shot
+    `SkipNextUntap` (printed: while you control it); Hypergenesis dumps all
+    hand permanents at once (printed: alternating one-at-a-time loop);
+    Molten Psyche's metalcraft burn reads the first opponent's draw count
+    (exact in 1v1); Loaming Shaman shuffles the whole graveyard (printed:
+    any number of target cards); Hurkyl's Recall bounces artifacts the
+    target *controls* (printed: owns); Emrakul's cast-trigger mind-control
+    turn unmodeled; Oath of Nissa's planeswalker any-color rider unmodeled;
+    Balance auto-picks keeps (a wants_ui picker would be faithful).
+
 - ✅ **`FromYourGraveyard`-scoped triggers fired from the battlefield too.**
   The battlefield gather didn't exclude the scope, so a Bloodghast-class
   trigger could fire while its card was in play (Voidwing Hybrid would have
@@ -2891,6 +2916,22 @@ picking an item up.
 - ✅ **CR 702.65 — Aura swap** — `Effect::AuraSwapFromHand` exchanges the Aura
   with a hand Aura on the same host (Arcanum Wings;
   `cr_702_65_aura_swap_exchanges_with_hand`).
+- ✅ **CR 702.71 — Fortify** — `equip()` accepts Fortifications (land targets,
+  CR 702.71c); `CardDefinition::has_fortify`. Darksteel Garrison
+  (`cr_702_71_*`, `tests/recent110.rs`).
+- ✅ **CR 702.24 — cumulative upkeep prompt** — a `wants_ui` controller gets a
+  real pay-or-sacrifice trigger (`Effect::CumulativeUpkeepPayOrSacrifice`,
+  mana/life kinds; `cr_702_24_wants_ui_prompt_pays_scaled_upkeep`); echo got
+  the same shape (`Effect::EchoPayOrSacrifice`, CR 702.29).
+- ✅ **CR 601.3e — no mana cost** — `CardDefinition.no_mana_cost` rejects the
+  pay-the-cost cast path generally (replaces `suspend_only`; Ancestral
+  Vision / Lotus Bloom / Crashing Footfalls / Living End / Restore Balance /
+  Wheel of Fate / Hypergenesis); `{0}` stays castable
+  (`cr_601_3e_no_mana_cost_rejected_but_zero_cost_castable`).
+- ✅ **CR 702.29b — echo re-armed on control change** — the
+  `GameState::change_control` funnel resets `echo_paid` and applies CR 302.6
+  sickness at every steal/exchange/revert site
+  (`cr_702_29b_stolen_echo_owed_by_new_controller`).
 
 One line per wired rule; implementation detail (code symbols, tests) elided —
 recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline.
@@ -4912,8 +4953,9 @@ Cross-references the detailed entries below where one exists.
 - ⏳ **Finish the hover oracle panel** — `ui::hover_info_lines` shows type
   line + keyword reminders; add triggered/activated-ability short text
   (see "X-ray card inspector").
-- ⏳ **Game-over stats** — turns, damage dealt, cards drawn, from the
-  event stream; show on the game-over modal.
+- ✅ **Game-over stats** — `systems/match_stats.rs` tracks turns and
+  per-seat draws / spells / damage taken from the wire events; shown on the
+  game-over modal.
 
 **Bigger projects**
 - 🟡 **Settings screen** — ✅ main-menu Settings panel
@@ -5630,5 +5672,5 @@ in the topical sections above, are:
 ### Server
 - Trigger-filter debug logging (`TriggerFiltered { source, kind, scope, reason }`);
   snapshot round-trip tests for new `#[serde(default)]` fields; a
-  mana-paid-for-optional audit event; per-cast-face metrics; Ward factored into
-  the bot's legal-action generation.
+  mana-paid-for-optional audit event; per-cast-face metrics. (Ward is now
+  factored into hostile auto-targeting — un-warded candidates first.)

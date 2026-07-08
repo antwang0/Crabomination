@@ -325,7 +325,7 @@ impl GameState {
                         continue;
                     }
                     for t in &cp.subtypes.creature_types {
-                        *counts.entry(t.clone()).or_default() += 1;
+                        *counts.entry(*t).or_default() += 1;
                     }
                 }
                 counts.values().max().copied().unwrap_or(0) + changelings

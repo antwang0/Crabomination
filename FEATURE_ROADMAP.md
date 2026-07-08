@@ -318,6 +318,18 @@ exercising each) was elided in a compaction pass; recover it from
 
 ---
 
+- **Upkeep-cost prompts + control funnel (modern_decks, this run):**
+  `GameState::change_control` (single funnel for steals/exchanges/reverts —
+  CR 302.6 sickness + CR 702.29b echo re-arm); wants_ui pay-or-sacrifice
+  prompts for echo (`Effect::EchoPayOrSacrifice`) and cumulative upkeep
+  (`Effect::CumulativeUpkeepPayOrSacrifice`); `CardDefinition.no_mana_cost`
+  (CR 601.3e general gate, replaces `suspend_only`); CR 702.71 **Fortify**
+  (`equip()` accepts Fortifications onto lands — Darksteel Garrison);
+  `Effect::Balance` (Restore Balance); `Effect::GenesisWave`;
+  `SpendRestriction::InstantSorceryUncounterable` (Boseiju);
+  `Value::LargestCreatureTypeCount`; ward-aware hostile auto-targeting
+  (bot stops feeding wards); client game-over match-stats block.
+
 ## Tier 1 — High-leverage engine primitives
 
 Each unblocks a large swath of cards.
@@ -431,8 +443,9 @@ Each unblocks a large swath of cards.
   (`AttackTarget::Battle`), combat damage removes defense counters (CR 310.10),
   defeat→exile/transform SBA (CR 704.5x). 6 MOM Invasions in `decks::mom`; tests
   in `tests/mom.rs`. Remaining: multiplayer protector choice.
-- 🟡 **Sagas** (714). `saga_chapters` + `saga_advance` (History of Benalia, The
-  Eldest Reborn). Remaining: DFC sagas, read-ahead/chapter-choice.
+- ✅ **Sagas** (714). `saga_chapters` + `saga_advance` (History of Benalia, The
+  Eldest Reborn); DFC sagas ✅ (`ExileSelfReturnTransformed` — Fable of the
+  Mirror-Breaker); Read Ahead ✅ (702.155 starting-chapter choice).
 - ✅ **Split cards** (709) + **Fuse** — `CardDefinition.split`,
   `CastSplitRight`/`CastSplitFused` (Wear // Tear).
 - ✅ **Adventure** (715) — `CardDefinition.adventure` + `CastAdventure` (Bonecrusher
@@ -528,7 +541,7 @@ Each a small targeted feature; sweep batch by batch.
   Amass — all via `shortcut::*` builders.
 - **Cast-from-elsewhere:** ✅ play-from-library-top statics (Courser, Oracle of
   Mul Daya, Mystic Forge), ✅ Suspend (creature-suspend haste + free-cast target
-  UI are follow-ups), ✅ Forecast, ✅ Hideaway, ⏳ Aftermath,
+  UI are follow-ups), ✅ Forecast, ✅ Hideaway, ✅ Aftermath (`CastAftermath`),
   ✅ Unearth (CR 702.84 — `shortcut::unearth`: a `from_graveyard` sorcery-speed
   ability that returns the card with haste + an end-step exile; the bot offers
   graveyard-activated abilities, the client hover panel labels them).
@@ -610,8 +623,9 @@ Each a small targeted feature; sweep batch by batch.
   affinity-style `SelfCostReducedPerPermanentMatching` now honors board-state
   filters (Walking Skyscraper "per modified creature"). Remaining: per-mode
   Spree costs.
-- ⏳ **{X} in activated abilities** generalized; **delve/convoke colored**
-  contribution.
+- ✅ **{X} in activated abilities** — `activate_ability` pays
+  `mana_cost.with_x_value(x)` (Necropolis Fiend, Kasmina's `-X`). Remaining ⏳:
+  **delve/convoke colored** contribution.
 - ⏳ **Snow-mana-only** and **mana-value-X** cost gates.
 
 ## Tier 6 — Combat fidelity

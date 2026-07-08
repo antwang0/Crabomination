@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::mh2i` — MH2 sweep batch 10.
 
-use crate::card::{CardType, CounterType};
+use crate::card::CounterType;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::Target;
