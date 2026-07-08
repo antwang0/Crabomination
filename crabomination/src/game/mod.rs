@@ -379,6 +379,9 @@ mod tests_recent108;
 #[path = "../tests/recent109.rs"]
 mod tests_recent109;
 #[cfg(test)]
+#[path = "../tests/mh2b.rs"]
+mod tests_mh2b;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -1414,6 +1417,10 @@ pub struct GameState {
     /// damage event). Transient.
     #[serde(skip)]
     pub(crate) in_damage_redirect: bool,
+    /// Reentrancy guard for token-mint replacements (Academy Manufactor) —
+    /// the replacement's extra mints aren't re-replaced (CR 614.5). Transient.
+    #[serde(skip)]
+    pub(crate) in_token_replacement: bool,
     /// Temporary control changes awaiting reversion (Act of Treason /
     /// Threaten / Tempted by the Oriq). `Effect::GainControl` with a
     /// non-`Permanent` duration records the controller the permanent had
@@ -1646,6 +1653,7 @@ impl Clone for GameState {
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             in_draw_double: self.in_draw_double,
             in_damage_redirect: self.in_damage_redirect,
+            in_token_replacement: self.in_token_replacement,
             temporary_control: self.temporary_control.clone(),
             temporary_copies: self.temporary_copies.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
@@ -1798,6 +1806,7 @@ impl GameState {
             resolving_spell_lifelink_seat: None,
             in_draw_double: false,
             in_damage_redirect: false,
+            in_token_replacement: false,
             temporary_control: Vec::new(),
             temporary_copies: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
@@ -3875,6 +3884,43 @@ impl GameState {
         self.last_created_token = Some(id);
         self.last_created_tokens.push(id);
         self.fire_self_etb_triggers(id, ctrl);
+        // CR 614 — Academy Manufactor: a Clue/Food/Treasure mint becomes one
+        // of each. The extra mints aren't re-replaced (CR 614.5).
+        let minted_name = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| c.definition.name)
+            .unwrap_or_default();
+        if !self.in_token_replacement
+            && matches!(minted_name, "Clue" | "Food" | "Treasure")
+            && self.battlefield.iter().any(|c| {
+                c.controller == ctrl
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::ClueFoodTreasureMintsOneOfEach
+                        )
+                    })
+            })
+        {
+            self.in_token_replacement = true;
+            for other in [
+                crabomination_base::tokens::clue_token(),
+                crabomination_base::tokens::food_token(),
+                crabomination_base::tokens::treasure_token(),
+            ] {
+                if other.name != minted_name {
+                    self.mint_token_onto_battlefield(
+                        crabomination_base::tokens::token_to_card_definition(&other),
+                        ctrl,
+                        tapped,
+                        events,
+                    );
+                }
+            }
+            self.in_token_replacement = false;
+        }
         id
     }
 
@@ -5745,6 +5791,9 @@ impl GameState {
                 }
                 crate::card::DynamicPt::CreatureCardsInAllGraveyards { base_p, base_t } => {
                     (base_p + creatures_in_gys, base_t + creatures_in_gys)
+                }
+                crate::card::DynamicPt::CreatureCardsInAllGraveyardsPower { base_t } => {
+                    (creatures_in_gys, base_t)
                 }
                 crate::card::DynamicPt::BasePlusLandsInControllerGraveyard { base_p, base_t } => {
                     let n = self.players[card.controller].graveyard.iter()
@@ -12302,6 +12351,9 @@ fn static_effect_to_effects(
             // TokenCreationAddsToken — consulted in the resolve_effect
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }
+            | StaticEffect::TokenCreationAddsTokenPerToken { .. }
+            // Consulted at the mint funnel (Academy Manufactor).
+            | StaticEffect::ClueFoodTreasureMintsOneOfEach
             // GrantActivatedAbility — surfaced as a virtual activated ability
             // in `activate_ability`; not a characteristic layer effect.
             | StaticEffect::GrantActivatedAbility { .. }
@@ -12518,6 +12570,7 @@ fn static_effect_to_effects(
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
+            | StaticEffect::SelfCostReducedPerSpellCastThisTurn { .. }
             | StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { .. }
             | StaticEffect::SelfCostReducedPerOpponent { .. }
             // SelfCostReducedIfControlEach (Of One Mind) — read off the spell.

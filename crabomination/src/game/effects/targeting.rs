@@ -401,6 +401,18 @@ impl GameState {
                 } else if is_legal(&player_opp) {
                     found = Some(player_opp);
                 }
+                // Graveyard-preferring effects (reanimate / regrow — Young
+                // Necromancer's reflexive return) must not grab a battlefield
+                // permanent that happens to match the filter; sweep
+                // graveyards first for those.
+                if found.is_none() && eff.prefers_graveyard_target() {
+                    found = self
+                        .players
+                        .iter()
+                        .flat_map(|p| p.graveyard.iter())
+                        .map(|c| Target::Permanent(c.id))
+                        .find(|t| is_legal(t));
+                }
                 // Battlefield: walk all permanents, prefer one not already
                 // picked by slot 0 or earlier slots to avoid double-targeting
                 // when the filter is permissive.

@@ -378,6 +378,10 @@ pub enum StaticEffect {
     /// opponent." Read off the spell being cast in `cost_reduction_for_spell`.
     /// Generic-only.
     SelfCostReducedPerOpponent { per: u32 },
+    /// "This spell costs {N} less to cast for each other spell cast this
+    /// turn" (Thrasta). Counts every player's casts; this spell isn't cast
+    /// yet at cost time, so no self-exclusion is needed. Generic-only.
+    SelfCostReducedPerSpellCastThisTurn { per: u32 },
     /// Card-intrinsic "This spell costs `amount` less to cast if you control a
     /// permanent matching each of `filters`" (Of One Mind — a Human creature
     /// *and* a non-Human creature). Read by `cost_reduction_for_spell` off the
@@ -1141,6 +1145,15 @@ pub enum StaticEffect {
     /// Applied once per resolution that minted 1+ tokens for the controller
     /// (CR 614.13-style single application).
     TokenCreationAddsToken { definition: crate::card::TokenDefinition },
+    /// Chatterfang — "If one or more tokens would be created under your
+    /// control, those tokens plus that many [definition] tokens are created
+    /// instead." Like `TokenCreationAddsToken` but scaled to the number of
+    /// tokens the resolution minted for the controller.
+    TokenCreationAddsTokenPerToken { definition: crate::card::TokenDefinition },
+    /// Academy Manufactor — "If you would create a Clue, Food, or Treasure
+    /// token, instead create one of each." Applied at the mint funnel with a
+    /// CR 614.5 reentrancy guard (the extra mints aren't re-replaced).
+    ClueFoodTreasureMintsOneOfEach,
     /// Necrotic Ooze — "As long as this is on the battlefield, it has all
     /// activated abilities of all creature cards in all graveyards." Surfaced
     /// by `granted_abilities_for` (which walks every graveyard for creature

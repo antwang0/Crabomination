@@ -53,6 +53,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::FirstStrike => "First strike",
         Keyword::DoubleStrike => "Double strike",
         Keyword::Trample => "Trample",
+        Keyword::TrampleOverPlaneswalkers => "Trample over planeswalkers",
         Keyword::Lifelink => "Lifelink",
         Keyword::Deathtouch => "Deathtouch",
         Keyword::Indestructible => "Indestructible",

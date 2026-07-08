@@ -140,10 +140,11 @@ fn cr_113_11_archetype_strips_and_blocks_keyword() {
 
 // ── CR 702.19i — trample over planeswalkers ──────────────────────────────────
 
-/// An attacker with trample assigns lethal to the planeswalker and the
-/// excess to its controller; without trample the excess is lost.
+/// An attacker with trample over planeswalkers (CR 702.19c) assigns lethal
+/// to the planeswalker and the excess to its controller; plain trample
+/// never spills past a planeswalker (CR 702.19f).
 #[test]
-fn cr_702_19i_trample_spills_over_planeswalker() {
+fn cr_702_19c_trample_over_planeswalkers_spills_excess() {
     use crate::card::CounterType;
     let mut g = two_player_game();
     let atk = g.add_card_to_battlefield(
@@ -153,7 +154,10 @@ fn cr_702_19i_trample_spills_over_planeswalker() {
             card_types: vec![crate::card::CardType::Creature],
             power: 6,
             toughness: 6,
-            keywords: vec![crate::card::Keyword::Trample],
+            keywords: vec![
+                crate::card::Keyword::Trample,
+                crate::card::Keyword::TrampleOverPlaneswalkers,
+            ],
             ..Default::default()
         },
     );
@@ -177,4 +181,36 @@ fn cr_702_19i_trample_spills_over_planeswalker() {
         "planeswalker took lethal loyalty damage"
     );
     assert_eq!(g.players[1].life, life - 2, "6 power − 4 loyalty spills 2 to the player");
+}
+
+/// CR 702.19f — plain trample assigns nothing past a planeswalker.
+#[test]
+fn cr_702_19f_plain_trample_does_not_spill_over_planeswalker() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(
+        0,
+        crate::card::CardDefinition {
+            name: "Wagon",
+            card_types: vec![crate::card::CardType::Creature],
+            power: 6,
+            toughness: 6,
+            keywords: vec![crate::card::Keyword::Trample],
+            ..Default::default()
+        },
+    );
+    g.clear_sickness(atk);
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+    let life = g.players[1].life;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: atk,
+        target: crate::game::types::AttackTarget::Planeswalker(pw),
+    }]))
+    .unwrap();
+    g.step = crate::game::types::TurnStep::DeclareBlockers;
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].life, life, "no spill without the variant keyword");
 }

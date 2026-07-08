@@ -756,20 +756,39 @@ impl GameState {
             v
         };
         for p in minted_for {
-            let riders: Vec<crate::card::TokenDefinition> = self
+            // Chatterfang scales by the tokens this resolution minted for
+            // `p`; count before the riders mint their own.
+            let minted_count = self
+                .last_created_tokens
+                .iter()
+                .filter(|id| {
+                    self.battlefield_find(**id).is_some_and(|c| c.controller == p)
+                })
+                .count();
+            let riders: Vec<(crate::card::TokenDefinition, usize)> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
                 .flat_map(|c| c.definition.static_abilities.iter())
                 .filter_map(|sa| match &sa.effect {
                     crate::effect::StaticEffect::TokenCreationAddsToken { definition } => {
-                        Some(definition.clone())
+                        Some((definition.clone(), 1))
                     }
+                    crate::effect::StaticEffect::TokenCreationAddsTokenPerToken {
+                        definition,
+                    } => Some((definition.clone(), minted_count)),
                     _ => None,
                 })
                 .collect();
-            for def in riders {
-                self.mint_token_onto_battlefield(token_to_card_definition(&def), p, false, &mut events);
+            for (def, count) in riders {
+                for _ in 0..count {
+                    self.mint_token_onto_battlefield(
+                        token_to_card_definition(&def),
+                        p,
+                        false,
+                        &mut events,
+                    );
+                }
             }
         }
         Ok(events)

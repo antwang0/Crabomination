@@ -1650,6 +1650,7 @@ impl GameState {
                     defender_player,
                     power: combat_damage_value(cp),
                     has_trample: kws.contains(&Keyword::Trample),
+                    has_trample_over_pw: kws.contains(&Keyword::TrampleOverPlaneswalkers),
                     has_lifelink: kws.contains(&Keyword::Lifelink),
                     has_deathtouch: kws.contains(&Keyword::Deathtouch),
                     has_infect: kws.contains(&Keyword::Infect),
@@ -2256,14 +2257,15 @@ impl GameState {
                 self.fire_combat_damage_to_player_triggers(atk.id, p, amount);
             }
             AttackTarget::Planeswalker(pw_id) => {
-                // CR 702.19i — trample over planeswalkers: an attacker with
-                // trample assigns lethal (= remaining loyalty) to the
-                // planeswalker and the excess to its controller.
+                // CR 702.19c — "trample over planeswalkers" (Thrasta): the
+                // attacker assigns lethal (= remaining loyalty) to the
+                // planeswalker and the excess to its controller. Plain
+                // trample never spills past a planeswalker (CR 702.19f).
                 let mut spill = 0u32;
                 let mut spill_to: Option<usize> = None;
                 if let Some(pw) = self.battlefield_find(pw_id) {
                     let current = pw.counter_count(crate::card::CounterType::Loyalty);
-                    if atk.has_trample && amount > current {
+                    if atk.has_trample_over_pw && amount > current {
                         spill = amount - current;
                         spill_to = Some(pw.controller);
                     }
@@ -2663,6 +2665,8 @@ struct AttackerInfo {
     defender_player: usize,
     power: i32,
     has_trample: bool,
+    /// CR 702.19c — the "trample over planeswalkers" variant (Thrasta).
+    has_trample_over_pw: bool,
     has_lifelink: bool,
     has_deathtouch: bool,
     has_infect: bool,

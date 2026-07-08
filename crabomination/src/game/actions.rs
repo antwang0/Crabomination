@@ -681,6 +681,14 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             reduction = reduction.saturating_add(per * opponents);
         }
     }
+    // "Costs {N} less for each other spell cast this turn" (Thrasta) —
+    // every player's casts count. Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerSpellCastThisTurn { per } = &sa.effect {
+            let count: u32 = state.players.iter().map(|p| p.spells_cast_this_turn).sum();
+            reduction = reduction.saturating_add(per * count);
+        }
+    }
     // Card-intrinsic "costs {N} less per creature you attacked with this turn"
     // (Search Party Captain). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

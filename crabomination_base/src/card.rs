@@ -556,6 +556,9 @@ pub enum Keyword {
     FirstStrike,
     DoubleStrike,
     Trample,
+    /// CR 702.19c — "trample over planeswalkers" (Thrasta): excess combat
+    /// damage past an attacked planeswalker's loyalty hits its controller.
+    TrampleOverPlaneswalkers,
     Exert,
     Lifelink,
     Deathtouch,
@@ -2662,6 +2665,9 @@ pub enum DynamicPt {
     /// Power = base_p + creature cards in all graveyards; toughness = base_t +
     /// that count. Lhurgoyf (0/1+*), Mortivore (0/0 + {B} regenerate).
     CreatureCardsInAllGraveyards { base_p: i32, base_t: i32 },
+    /// Power = creature cards in all graveyards; toughness is the fixed
+    /// `base_t`. Necrogoyf (`*`/4).
+    CreatureCardsInAllGraveyardsPower { base_t: i32 },
     /// Power = toughness = base + land cards in the *controller's*
     /// graveyard. Wight of the Reliquary (base 1/1, +1/+1 per land in
     /// your graveyard).
