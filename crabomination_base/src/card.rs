@@ -2824,6 +2824,9 @@ pub enum DynamicPt {
     /// P/T = base + 1/+1 for each land of `land_type` the controller controls.
     /// Outcaster Greenblade (1/2, +1/+1 per Desert).
     BasePlusLandsOfTypeControlled { land_type: LandType, base_p: i32, base_t: i32 },
+    /// Base P/T plus +1/+0 per land of `land_type` you control (Tempest
+    /// Djinn's "+1/+0 for each basic Island").
+    PowerPlusLandsOfTypeControlled { land_type: LandType, base_p: i32, base_t: i32 },
     /// Power = `base_p` + the greatest mana value among *other* artifacts the
     /// controller controls; toughness = the fixed `base_t`. Models "gets +X/+0,
     /// where X is the greatest mana value among other artifacts you control"
@@ -3309,6 +3312,13 @@ impl CardDefinition {
     pub fn has_reconfigure(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Reconfigure(cost) = kw { Some(cost) } else { None }
+        })
+    }
+
+    /// The Fortify cost (CR 702.71), if this card has the keyword.
+    pub fn has_fortify(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Fortify(cost) = kw { Some(cost) } else { None }
         })
     }
 }

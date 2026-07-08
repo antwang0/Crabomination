@@ -421,6 +421,11 @@ pub enum SpendRestriction {
     AbilitiesOnly,
     /// "Spend this mana only to cast Lesson spells." (Hermitic Herbalist.)
     LessonSpellsOnly,
+    /// "If that mana is spent on an instant or sorcery spell, that spell
+    /// can't be countered." (Boseiju, Who Shelters All.) Unrestricted spend;
+    /// funding an instant/sorcery stamps the cast uncounterable like
+    /// `CreatureOfTypeUncounterable`.
+    InstantSorceryUncounterable,
     /// "Spend this mana only to cast an Equipment spell or activate an equip
     /// ability." (Freya Crescent.) Approximated as any ability of an Equipment.
     EquipmentOnly,
@@ -444,6 +449,8 @@ impl SpendRestriction {
             }
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
+            // Not a restriction — a rider that stamps I/S casts uncounterable.
+            SpendRestriction::InstantSorceryUncounterable => true,
             SpendRestriction::EquipmentOnly => kind.equipment,
         }
     }

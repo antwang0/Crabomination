@@ -2389,6 +2389,15 @@ pub enum Effect {
     /// Echo—Discard a card. Prompted via the seat-routed yes/no ask; a paid
     /// mana echo auto-taps lands like the synchronous `process_echo` path.
     EchoPayOrSacrifice { mana_cost: Option<crate::mana::ManaCost> },
+    /// CR 702.24 — the `wants_ui` sibling for cumulative upkeep: "sacrifice
+    /// this unless you pay `cost` × its age counters". Mana/Life kinds only;
+    /// the age counter was already added by `process_cumulative_upkeep`.
+    CumulativeUpkeepPayOrSacrifice { cost: crate::card::CumulativeUpkeepCost },
+    /// Balance (Restore Balance): each player sacrifices lands/creatures down
+    /// to the fewest controlled by any player, and discards down to the
+    /// smallest hand. Each player keeps their best (highest-MV, then power)
+    /// permanents and highest-MV cards; a `wants_ui` picker is a follow-up.
+    Balance,
     /// CR 107.16 — exile the top card of the controller's library, then they
     /// may pay `energy` {E}; if they do, they may cast that card without
     /// paying its mana cost (the spell stays exiled if not cast). Amped
@@ -2862,6 +2871,9 @@ pub enum Effect {
     /// Shuffle `who`'s hand and graveyard into their library (Day's
     /// Undoing, Timetwister).
     ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef },
+    /// Each resolved player shuffles their hand into their library, then
+    /// draws that many cards (Molten Psyche, Winds of Change).
+    ShuffleHandsDrawSame { who: PlayerRef },
     /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
     ShuffleLibrary { who: PlayerRef },
     /// Spellskite — change the primary target of the selected stack spell

@@ -43966,6 +43966,39 @@ fn cr_702_24_cumulative_upkeep_pays_or_sacrifices() {
     assert!(g.battlefield_find(remora).is_none(), "unpaid cumulative upkeep sacrifices Remora");
 }
 
+/// CR 702.24 — a `wants_ui` controller gets a cumulative-upkeep prompt; yes
+/// auto-taps the scaled cost, no sacrifices.
+#[test]
+fn cr_702_24_wants_ui_prompt_pays_scaled_upkeep() {
+    use crate::card::CounterType;
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let remora = g.add_card_to_battlefield(0, catalog::mystic_remora());
+    g.battlefield_find_mut(remora).unwrap().add_counters(CounterType::Age, 1);
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    g.active_player_idx = 0;
+    g.process_cumulative_upkeep();
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("upkeep prompt suspends");
+    assert!(matches!(pd.decision, Decision::OptionalTrigger { .. }));
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(remora).is_some(), "paid via prompt");
+    assert_eq!(g.battlefield_find(remora).unwrap().counter_count(CounterType::Age), 2);
+    let tapped = g.battlefield.iter().filter(|c| c.definition.is_land() && c.tapped).count();
+    assert_eq!(tapped, 2, "{{1}} × 2 age counters auto-tapped");
+    // Declining next upkeep sacrifices.
+    g.process_cumulative_upkeep();
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_some());
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false))).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(remora).is_none(), "declined upkeep → sacrificed");
+}
+
 /// CR 702.24 — Phyrexian Soulgorger's sacrifice cumulative upkeep eats another
 /// creature to survive, and is sacrificed when none is available.
 #[test]

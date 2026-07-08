@@ -771,6 +771,9 @@ impl Effect {
             Effect::ExileLastCreatedTokensAtNextEndStep
             | Effect::SacrificeLastCreatedTokensAtNextEndStep => false,
             Effect::EchoPayOrSacrifice { .. } => false,
+            Effect::CumulativeUpkeepPayOrSacrifice { .. } => false,
+            Effect::Balance => false,
+            Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
         }
     }
 

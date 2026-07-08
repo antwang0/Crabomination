@@ -3303,6 +3303,139 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CumulativeUpkeepPayOrSacrifice { cost } => {
+                // CR 702.24 — interactive cumulative upkeep (wants_ui seats;
+                // the synchronous path lives in `process_cumulative_upkeep`).
+                // The age counter is already on the permanent; total = cost ×
+                // age counters.
+                use crate::card::{CounterType, CumulativeUpkeepCost};
+                let p = ctx.controller;
+                let Some(id) = ctx.source else { return Ok(()) };
+                let Some(card) = self.battlefield_find(id) else { return Ok(()) };
+                let n = card.counter_count(CounterType::Age).max(1);
+                let name = card.definition.name.clone();
+                let label = format!(
+                    "Pay cumulative upkeep ({} × {n}) for {name}? (sacrifice it otherwise)",
+                    cost.summary(),
+                );
+                let mut cursor = 0usize;
+                let Some(pay) = self.ask_seat_bool(&mut cursor, p, label, id, effect) else {
+                    return Ok(()); // suspended for the seat's answer
+                };
+                self.clear_answer_log();
+                let paid = pay
+                    && match cost {
+                        CumulativeUpkeepCost::Mana(mc) => {
+                            let mut symbols = Vec::new();
+                            for _ in 0..n {
+                                symbols.extend(mc.symbols.iter().cloned());
+                            }
+                            match self.try_pay_with_auto_tap(p, &crate::mana::ManaCost::new(symbols)) {
+                                Ok(receipt) => {
+                                    events.extend(receipt.auto_events);
+                                    true
+                                }
+                                Err(_) => false,
+                            }
+                        }
+                        CumulativeUpkeepCost::Life(per) => {
+                            let total = per * n;
+                            if self.players[p].life > total as i32 {
+                                let applied = self.adjust_life_applied(p, -(total as i32));
+                                if applied < 0 {
+                                    events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        // Coin-flip / sacrifice kinds never route here.
+                        _ => false,
+                    };
+                if !paid {
+                    self.sacrifice_one(id, p, events);
+                }
+                Ok(())
+            }
+
+            Effect::Balance => {
+                // Restore Balance — for lands and creatures: every player
+                // sacrifices down to the fewest controlled by any player
+                // (keeping their highest-MV, then highest-power, permanents);
+                // hands discard down to the smallest hand (keeping highest MV).
+                for is_creature in [false, true] {
+                    let count_for = |g: &Self, seat: usize| {
+                        g.battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == seat
+                                    && if is_creature {
+                                        c.definition.is_creature()
+                                    } else {
+                                        c.definition.is_land()
+                                    }
+                            })
+                            .count()
+                    };
+                    let min = (0..self.players.len())
+                        .filter(|&s| !self.players[s].eliminated)
+                        .map(|s| count_for(self, s))
+                        .min()
+                        .unwrap_or(0);
+                    for seat in 0..self.players.len() {
+                        if self.players[seat].eliminated {
+                            continue;
+                        }
+                        let mut mine: Vec<CardId> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == seat
+                                    && if is_creature {
+                                        c.definition.is_creature()
+                                    } else {
+                                        c.definition.is_land()
+                                    }
+                            })
+                            .map(|c| c.id)
+                            .collect();
+                        // Sacrifice the excess, worst (lowest MV, then power) first.
+                        mine.sort_by_key(|id| {
+                            let c = self.battlefield_find(*id);
+                            (
+                                c.map(|c| c.definition.cost.cmc()).unwrap_or(0),
+                                c.map(|c| c.power()).unwrap_or(0),
+                            )
+                        });
+                        let excess = mine.len().saturating_sub(min);
+                        for &id in mine.iter().take(excess) {
+                            self.sacrifice_one(id, seat, events);
+                        }
+                    }
+                }
+                let min_hand = (0..self.players.len())
+                    .filter(|&s| !self.players[s].eliminated)
+                    .map(|s| self.players[s].hand.len())
+                    .min()
+                    .unwrap_or(0);
+                for seat in 0..self.players.len() {
+                    if self.players[seat].eliminated {
+                        continue;
+                    }
+                    while self.players[seat].hand.len() > min_hand {
+                        let pick = self.players[seat]
+                            .hand
+                            .iter()
+                            .min_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| c.id);
+                        let Some(cid) = pick else { break };
+                        self.discard_card(seat, cid, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileTopMayPayEnergyToCast { energy } => {
                 use crate::card::Zone;
                 use crate::decision::{Decision, DecisionAnswer};
@@ -10355,6 +10488,20 @@ impl GameState {
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
                     self.players[p].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
+            Effect::ShuffleHandsDrawSame { who } => {
+                use rand::seq::SliceRandom;
+                for p in self.resolve_players(who, ctx) {
+                    let hand = std::mem::take(&mut self.players[p].hand);
+                    let n = hand.len() as u32;
+                    self.players[p].library.extend(hand);
+                    self.players[p].library.shuffle(&mut rand::rng());
+                    for _ in 0..n {
+                        self.draw_one(p, events);
+                    }
                 }
                 Ok(())
             }

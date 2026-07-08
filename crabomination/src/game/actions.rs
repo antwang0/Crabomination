@@ -560,6 +560,21 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .count() as u32;
         reduction = reduction.saturating_add(n);
     }
+    // Card-intrinsic "costs {1} less for each card type among cards in your
+    // graveyard" (Emrakul, the Promised End). Generic-only, clamped by caller.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedPerCardTypeInGraveyard))
+    {
+        let types: std::collections::HashSet<crate::card::CardType> = state.players[caster]
+            .graveyard
+            .iter()
+            .flat_map(|c| c.definition.card_types.iter().cloned())
+            .collect();
+        reduction = reduction.saturating_add(types.len() as u32);
+    }
     // Card-intrinsic "costs {per} less for each [filter] card in your
     // graveyard" (Serpent of the Pass). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {
@@ -1173,11 +1188,18 @@ impl crate::game::GameState {
     /// Note restricted-mana riders from a cast's payment: spending
     /// Cavern-of-Souls mana stamps the cast uncounterable (consumed by
     /// `finalize_cast`).
-    pub(crate) fn note_cast_payment_riders(&mut self, receipt: &PaymentReceipt) {
+    pub(crate) fn note_cast_payment_riders(
+        &mut self,
+        receipt: &PaymentReceipt,
+        kind: &crate::mana::SpellKind,
+    ) {
         use crate::mana::SpendRestriction;
-        if receipt.side_effects.spent_restrictions.iter()
-            .any(|r| matches!(r, SpendRestriction::CreatureOfTypeUncounterable(_)))
-        {
+        if receipt.side_effects.spent_restrictions.iter().any(|r| match r {
+            SpendRestriction::CreatureOfTypeUncounterable(_) => true,
+            // Boseiju — only an instant/sorcery funded this way is stamped.
+            SpendRestriction::InstantSorceryUncounterable => kind.instant_or_sorcery,
+            _ => false,
+        }) {
             self.cast_paid_uncounterable = true;
         }
     }
@@ -4617,7 +4639,7 @@ impl GameState {
             }
         };
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt);
+        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
 
         // CR 702.150 — Compleated: remember the life paid to Phyrexian pips so
         // the planeswalker enters with that much less loyalty.
@@ -5731,7 +5753,7 @@ impl GameState {
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
         )?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt);
+        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
         let mana_spent = receipt
             .pool_before
             .total()
@@ -5938,7 +5960,7 @@ impl GameState {
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), spend_float,
         )?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt);
+        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
         let mana_spent = receipt
             .pool_before
             .total()
@@ -6053,7 +6075,7 @@ impl GameState {
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
         )?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt);
+        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
 
         // CR 702.180b — tap the nominated creature as the cost is paid.
         if let Some(cid) = tap_creature
@@ -7159,7 +7181,7 @@ impl GameState {
                 return Err(e);
             }
         };
-        self.note_cast_payment_riders(&receipt);
+        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let alt_mana_spent = receipt
             .pool_before

@@ -379,6 +379,9 @@ mod tests_recent108;
 #[path = "../tests/recent109.rs"]
 mod tests_recent109;
 #[cfg(test)]
+#[path = "../tests/recent110.rs"]
+mod tests_recent110;
+#[cfg(test)]
 #[path = "../tests/mh2b.rs"]
 mod tests_mh2b;
 #[cfg(test)]
@@ -3112,6 +3115,26 @@ impl GameState {
                 count: 1,
             });
             let n = self.battlefield_find(id).map(|c| c.counter_count(CounterType::Age)).unwrap_or(1);
+            // A wants_ui controller gets a real pay-or-sacrifice trigger for
+            // mana/life cumulative upkeeps (coin-flip and sacrifice kinds have
+            // no meaningful decline and stay synchronous).
+            if self.players.get(active).is_some_and(|p| p.wants_ui)
+                && matches!(cost, CumulativeUpkeepCost::Mana(_) | CumulativeUpkeepCost::Life(_))
+            {
+                self.push_pending_trigger(
+                    PendingTriggerPush {
+                        source: id,
+                        controller: active,
+                        effect: Effect::CumulativeUpkeepPayOrSacrifice { cost: cost.clone() },
+                        subject: None,
+                        event_amount: 0,
+                        mode: None,
+                        intervening_if: None,
+                    },
+                    None,
+                );
+                continue;
+            }
             let paid = match &cost {
                 CumulativeUpkeepCost::Mana(mc) => {
                     // Total = cost × age counters (repeat the pip list N times).
@@ -6028,6 +6051,13 @@ impl GameState {
                     }).count() as i32;
                     (base_p + n, base_t + n)
                 }
+                crate::card::DynamicPt::PowerPlusLandsOfTypeControlled { land_type, base_p, base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.subtypes.land_types.contains(&land_type)
+                    }).count() as i32;
+                    (base_p + n, base_t)
+                }
                 crate::card::DynamicPt::BasePlusGreatestOtherArtifactMv { base_p, base_t } => {
                     let greatest = self.battlefield.iter().filter(|c| {
                         c.id != card.id
@@ -8253,9 +8283,9 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) && !self.controller_equips_at_instant_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        // Locate the Equipment; it must be on the battlefield, controlled by
-        // the activating player, and actually be an Equipment with an equip
-        // cost.
+        // Locate the Equipment (or Fortification — CR 702.71 fortify mirrors
+        // equip with "land" for "creature"); it must be on the battlefield,
+        // controlled by the activating player, with an equip/fortify cost.
         let equip_pos = self
             .battlefield
             .iter()
@@ -8264,28 +8294,34 @@ impl GameState {
         if self.battlefield[equip_pos].controller != p {
             return Err(GameError::NotYourPriority);
         }
-        if !self.battlefield[equip_pos].definition.is_equipment() {
+        let fortify = self.battlefield[equip_pos].definition.has_fortify().cloned();
+        if !self.battlefield[equip_pos].definition.is_equipment() && fortify.is_none() {
             return Err(GameError::NotEquipment(equipment));
         }
-        let mut equip_cost = self.battlefield[equip_pos]
-            .definition
-            .has_equip()
-            .cloned()
-            .ok_or(GameError::NotEquipment(equipment))?;
+        let mut equip_cost = match &fortify {
+            Some(c) => c.clone(),
+            None => self.battlefield[equip_pos]
+                .definition
+                .has_equip()
+                .cloned()
+                .ok_or(GameError::NotEquipment(equipment))?,
+        };
         // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper).
         let reduction = self.equip_cost_reduction_for(p);
         if reduction > 0 {
             equip_cost.reduce_generic(reduction);
         }
-        // The target must be a creature the activating player controls
-        // (CR 702.6c). Use the computed view so animated/becomes-a-creature
-        // permanents are honored.
+        // The target must be a creature (equip, CR 702.6c) — or a land
+        // (fortify, CR 702.71c) — the activating player controls. Use the
+        // computed view so animated permanents are honored.
+        let wanted = if fortify.is_some() {
+            crate::card::CardType::Land
+        } else {
+            crate::card::CardType::Creature
+        };
         let target_ok = self
             .computed_permanent(target)
-            .is_some_and(|c| {
-                c.controller == p
-                    && c.card_types.contains(&crate::card::CardType::Creature)
-            });
+            .is_some_and(|c| c.controller == p && c.card_types.contains(&wanted));
         if !target_ok {
             return Err(GameError::InvalidTarget);
         }
@@ -12771,6 +12807,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByTotalPower
             // SelfCostReducedPerCreatureInGraveyard (Ghoultree) — same.
             | StaticEffect::SelfCostReducedPerCreatureInGraveyard
+            // SelfCostReducedPerCardTypeInGraveyard (Emrakul) — same.
+            | StaticEffect::SelfCostReducedPerCardTypeInGraveyard
             // SelfCostReducedPerGraveyardCardMatching (Serpent of the Pass) —
             // read in `cost_reduction_for_spell`; no layer effect.
             | StaticEffect::SelfCostReducedPerGraveyardCardMatching { .. }

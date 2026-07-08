@@ -332,6 +332,10 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         per: u32,
     },
+    /// Card-intrinsic "This spell costs {1} less to cast for each card type
+    /// among cards in your graveyard" (Emrakul, the Promised End). Distinct
+    /// card types, not card count. Generic-only; clamped by the caller.
+    SelfCostReducedPerCardTypeInGraveyard,
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
