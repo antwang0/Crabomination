@@ -3290,8 +3290,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   ("if the sacrificed permanent was an artifact" predicate over the
   sacrifice-as-additional-cost), Obsidian Charmaw (cost reduction keyed on
   opponents' {C}-producing lands), Grist (not-on-battlefield CDA identity),
-  Garth One-Eye (named-card copy casts). ~140 MH2 cards remain —
-  `python3 scripts/set_gaps.py mh2`.
+  Garth One-Eye (named-card copy casts). ~120 MH2 cards remain —
+  `python3 scripts/set_gaps.py mh2` (63 shipped in `decks::mh2b`).
 - ⏳ **All Will Be One placer attribution** — `GameEvent::CounterAdded` carries
   no "who placed" seat, so the enchantment fires off counters landing on your
   permanents + poison hitting opponents (exact in two-player). Threading the
