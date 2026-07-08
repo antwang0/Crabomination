@@ -321,6 +321,7 @@ impl Effect {
             | Effect::GristPlusOne => false,
             // Targets a spell on the stack.
             Effect::ChefsKiss => true,
+            Effect::AdjustBattleDefense { what } => sel_has_target(what),
             // Targets an opponent (player slot 0).
             Effect::OpponentRevealsPickToBattlefield { .. } => true,
             Effect::RollDie { count, results, .. } => {

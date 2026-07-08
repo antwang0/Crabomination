@@ -172,6 +172,7 @@ mod tests {
                 life: 20,
                 starting_life: 20,
                 poison_counters: 0,
+                phased_out: vec![],
                 energy: 0,
                 experience: 0,
                 rad_counters: 0,

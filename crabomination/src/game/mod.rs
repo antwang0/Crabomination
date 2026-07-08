@@ -403,6 +403,9 @@ mod tests_mh2h;
 #[path = "../tests/mh2i.rs"]
 mod tests_mh2i;
 #[cfg(test)]
+#[path = "../tests/echo.rs"]
+mod tests_echo;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]

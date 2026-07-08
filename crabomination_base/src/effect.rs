@@ -3353,6 +3353,9 @@ pub enum Effect {
     /// Grist's +1 — create a 1/1 black-green Insect, then mill a card; if an
     /// Insect card was milled, add a loyalty counter and repeat (loop-capped).
     GristPlusOne,
+    /// Portent Tracker — choose target battle: if an opponent protects it,
+    /// remove a defense counter; otherwise put one on it (CR 310.7).
+    AdjustBattleDefense { what: Selector },
     /// Yusri, Fortune's Flame — choose a number 1..=`max`, flip that many
     /// coins; run `per_win` per won flip and `per_loss` per lost flip, then
     /// `all_won` if the chosen number was `all_won_min`+ and every flip won.

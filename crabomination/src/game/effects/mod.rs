@@ -1243,6 +1243,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AdjustBattleDefense { what } => {
+                // Portent Tracker — opponent-protected battles lose a defense
+                // counter (the SBA defeats them at zero), yours gain one.
+                use crate::card::CounterType;
+                let me = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                    if !c.definition.is_battle() {
+                        continue;
+                    }
+                    if c.protected_by.is_some_and(|p| p != me) {
+                        c.remove_counters(CounterType::Defense, 1);
+                        events.push(GameEvent::CounterRemoved {
+                            card_id: cid,
+                            counter_type: CounterType::Defense,
+                            count: 1,
+                        });
+                    } else {
+                        c.add_counters(CounterType::Defense, 1);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: CounterType::Defense,
+                            count: 1,
+                        });
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::GristPlusOne => {
                 use crate::card::{CardType, CounterType, CreatureType, Subtypes, TokenDefinition};
                 let p = ctx.controller;

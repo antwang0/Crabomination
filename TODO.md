@@ -2288,8 +2288,10 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   creature on top of library", split mill.
 - **Oracle of Mul Daya / play-from-top-of-library.** Needs a
   "play lands from the top of your library" permission + top-card reveal.
-- **Echo + ETB land destruction (Avalanche Riders).** Echo keyword exists;
-  pair with `Effect::Destroy` over a land target.
+- ✅ ~~Echo + ETB land destruction (Avalanche Riders)~~ — shipped in
+  `decks::echo` (echo is now enforced at upkeep) along with Keldon Vandals,
+  Deranged Hermit, Multani's Acolyte, Radiant's Dragoons, Ticking Gnomes,
+  Great Whale, and the Urza's Legacy manlands.
 
 - **Client modals for `ChooseMode` / `ChooseModes` / `DivideDamage` /
   `ChooseAmount` / `NameCard`.** `decision_ui.rs` only renders Scry / Search /
@@ -3283,10 +3285,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - ✅ ~~Angel's Grace~~ — shipped (`Player.{cant_lose_this_turn,
     damage_floor_this_turn}` + `player_cant_{lose,win}_game` at every loss/win
     site; `decks::recent109`).
-  - **Zabaz, the Glimmerwasp** — modular-counter +1 replacement (a
-    modular-scoped `ExtraCounterAllKinds` sibling; the counter funnel can't
-    see that its caller was a modular trigger).
-  - **Portent Tracker** — battle defense-counter manipulation targeting.
+  - ✅ ~~Zabaz, the Glimmerwasp~~ — shipped: `Effect::ModularCounters` gives
+    the modular death trigger its own funnel; `StaticEffect::
+    ModularBonusCounters` adds the +1 (`tests/mh2h.rs`).
+  - ✅ ~~Portent Tracker~~ — shipped: `Effect::AdjustBattleDefense`
+    (CR 310.7; `decks::echo`, test `cr_310_7_portent_tracker_battle_defense`).
   - **Mycosynth Lattice** — "all permanents are artifacts" fits
     `AddCardTypeToMatching`, but the all-colorless + spend-any-color halves
     have no primitives.
