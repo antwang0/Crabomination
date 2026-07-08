@@ -3943,6 +3943,10 @@ pub enum Effect {
     /// equal to the nonland reveals to `to` (doubled when the land has
     /// `double_if`'s subtype); all reveals go to the bottom.
     RevealUntilLandDamage { to: Selector, double_if: Option<crate::card::LandType> },
+    /// Calibrated Blast: reveal from the top until a nonland card, deal
+    /// damage equal to that card's mana value to `to`, and bottom the
+    /// reveals in a random order.
+    RevealUntilNonlandDamage { to: Selector },
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.

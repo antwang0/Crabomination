@@ -68,6 +68,7 @@ pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
 pub mod bot;
 pub mod lobby;
+mod replay;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tcp;
 pub mod view;
@@ -479,6 +480,12 @@ fn run_match_inner(
 ) -> MatchOutcome {
     let n = occupants.len();
     assert_eq!(n, state.players.len(), "occupant count must match player count");
+
+    // Optional replay log (CRAB_REPLAY_DIR): armed for this thread until the
+    // guard drops on any return path below.
+    let _replay = replay::MatchReplay::begin(
+        &state.players.iter().map(|p| p.name.clone()).collect::<Vec<_>>(),
+    );
 
     // Only run the pre-game mulligan when the state is genuinely at game
     // start (Untap of turn 1). Tests/fixtures that hand-craft a state mid-game
@@ -1083,6 +1090,7 @@ fn broadcast_update(
     seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
     spectator_tx: &[mpsc::Sender<ServerMsg>],
 ) {
+    replay::log_events(wire_events);
     for (i, maybe_tx) in seat_tx.iter().enumerate() {
         if let Some(tx) = maybe_tx {
             let _ = tx.send(ServerMsg::Update {

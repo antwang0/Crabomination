@@ -1,11 +1,14 @@
-//! Floating power/toughness overlay for modified battlefield creatures.
+//! Floating power/toughness overlay for modified battlefield creatures,
+//! and a loyalty badge for planeswalkers.
 //!
 //! Whenever a creature's *computed* power/toughness (after counters,
 //! auras, and other layer effects) differs from its *printed* base, we
 //! float a small `P/T` text badge at the card's bottom-right corner —
 //! the same spot the printed P/T box sits — so the player can read the
 //! real fighting stats at a glance. Unmodified creatures show nothing
-//! (their printed P/T is already on the card art).
+//! (their printed P/T is already on the card art). Planeswalkers always
+//! carry a `◆N` badge in the same corner: their live loyalty total is
+//! otherwise only readable by counting 3-D counter coins.
 //!
 //! Mechanism mirrors `game_ui::crest`'s floating life numeral: a
 //! screen-space UI text node is reprojected from the card's world
@@ -67,20 +70,29 @@ pub fn sync_pt_labels(
         card_corner.insert(gid.0, gtf.transform_point(bottom_right_local));
     }
 
-    // Desired badges: creatures whose computed P/T differs from base and
-    // whose card has a live battlefield entity to anchor against.
-    let mut desired: HashMap<CardId, (i32, i32)> = HashMap::new();
+    // Desired badges: creatures whose computed P/T differs from base
+    // (showing "P/T"), plus every planeswalker (showing "◆loyalty"). A
+    // creature-planeswalker (Grist) prefers the combat-relevant P/T.
+    let mut desired: HashMap<CardId, String> = HashMap::new();
     for p in &cv.battlefield {
-        if !p.is_creature() {
-            continue;
-        }
-        if p.power == p.base_power && p.toughness == p.base_toughness {
-            continue;
-        }
         if !card_corner.contains_key(&p.id) {
             continue;
         }
-        desired.insert(p.id, (p.power, p.toughness));
+        if p.is_creature() {
+            if p.power != p.base_power || p.toughness != p.base_toughness {
+                desired.insert(p.id, format!("{}/{}", p.power, p.toughness));
+            }
+            continue;
+        }
+        if p.card_types.contains(&crabomination::card::CardType::Planeswalker) {
+            let loyalty = p
+                .counters
+                .iter()
+                .find(|(k, _)| *k == crabomination::card::CounterType::Loyalty)
+                .map(|(_, n)| *n)
+                .unwrap_or(0);
+            desired.insert(p.id, format!("\u{25c6}{loyalty}"));
+        }
     }
 
     /// Project a card-corner world point to a viewport pixel anchor,
@@ -98,7 +110,7 @@ pub fn sync_pt_labels(
     let mut seen: HashSet<CardId> = HashSet::new();
     for (e, label, mut node, mut text) in &mut labels {
         match desired.get(&label.0) {
-            Some(&(pw, tf)) => {
+            Some(body) => {
                 seen.insert(label.0);
                 if let Some(world) = card_corner.get(&label.0).copied()
                     && let Some((x, y)) = anchor(camera, cam_xform, world)
@@ -109,7 +121,7 @@ pub fn sync_pt_labels(
                 } else {
                     node.display = Display::None;
                 }
-                *text = Text::new(format!("{pw}/{tf}"));
+                *text = Text::new(body.clone());
             }
             None => {
                 commands.entity(e).despawn();
@@ -117,8 +129,8 @@ pub fn sync_pt_labels(
         }
     }
 
-    // Spawn badges for newly-modified creatures.
-    for (id, (pw, tf)) in desired {
+    // Spawn badges for newly-modified creatures / new planeswalkers.
+    for (id, body) in desired {
         if seen.contains(&id) {
             continue;
         }
@@ -129,7 +141,7 @@ pub fn sync_pt_labels(
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             PtLabel(id),
-            Text::new(format!("{pw}/{tf}")),
+            Text::new(body),
             ui_fonts.tf(18.0),
             // Black text on a white background — mirrors the printed
             // P/T box.

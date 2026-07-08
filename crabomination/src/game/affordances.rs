@@ -336,18 +336,19 @@ impl GameState {
     /// currently-declared attackers — only meaningful during the Declare
     /// Blockers step with attackers on the board. Drives the client's
     /// legal-blocker highlight (roadmap Tier 8). Uses
-    /// `can_block_any_attacker` so flying / menace-style restrictions apply.
+    /// `can_block_any_computed_attacker` so flying / menace-style restrictions apply.
     pub fn legal_blockers(&self, seat: usize) -> Vec<CardId> {
         if self.step != crate::TurnStep::DeclareBlockers || self.attacking().is_empty() {
             return Vec::new();
         }
-        // `can_block_any_attacker` recomputes the battlefield per blocker —
-        // share one layer gather across the scan.
+        // Share one layer gather across the scan, and compute each
+        // attacker's view once instead of per blocker candidate.
         self.with_frozen_layers(|g| {
+            let attackers = g.computed_attackers();
             g.battlefield
                 .iter()
                 .filter(|c| c.controller == seat && c.can_block())
-                .filter(|c| g.can_block_any_attacker(c.id))
+                .filter(|c| g.can_block_any_computed_attacker(c.id, &attackers))
                 .map(|c| c.id)
                 .collect()
         })

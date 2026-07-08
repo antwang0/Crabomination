@@ -664,6 +664,7 @@ impl Effect {
             Effect::PayLifeLookTake { .. } => false,
             Effect::PayLifeDraw { .. } => false,
             Effect::RevealUntilLandDamage { to, .. } => sel_has_target(to),
+            Effect::RevealUntilNonlandDamage { to } => sel_has_target(to),
             Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
@@ -784,6 +785,8 @@ impl Effect {
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
+            // Land hosing targets the land slot (Tide Shaper's kicked mode).
+            Effect::BecomeBasicLand { what, .. } => sel_filter(what),
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),

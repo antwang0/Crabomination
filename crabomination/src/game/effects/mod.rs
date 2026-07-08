@@ -10781,6 +10781,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealUntilNonlandDamage { to } => {
+                let p = ctx.controller;
+                let mut mv = 0u32;
+                let mut revealed: Vec<CardInstance> = Vec::new();
+                while !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    let is_nonland = !card.definition.is_land();
+                    if is_nonland {
+                        mv = card.definition.cost.cmc();
+                    }
+                    revealed.push(card);
+                    if is_nonland {
+                        break;
+                    }
+                }
+                {
+                    use rand::seq::SliceRandom;
+                    revealed.shuffle(&mut rand::rng());
+                }
+                for c in revealed {
+                    self.players[p].library.push(c);
+                }
+                if mv > 0 {
+                    for ent in self.resolve_selector(to, ctx) {
+                        self.deal_damage_to_from(ent, mv, ctx.source, events);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::PayLifeLookTake { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

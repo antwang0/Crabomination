@@ -388,6 +388,9 @@ mod tests_mh2c;
 #[path = "../tests/mh2d.rs"]
 mod tests_mh2d;
 #[cfg(test)]
+#[path = "../tests/mh2e.rs"]
+mod tests_mh2e;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -6863,7 +6866,30 @@ impl GameState {
 
 
     /// True if `blocker_id` can legally block at least one current attacker.
-    pub fn can_block_any_attacker(&self, blocker_id: CardId) -> bool {
+    /// Each declared attacker's live `CardInstance` paired with its computed
+    /// view, gathered once. Hoisted out of the per-blocker scan so
+    /// `legal_blockers` / the bot's block planner pay `apply_layers_one`
+    /// per *attacker*, not per attacker × blocker (audit P2).
+    pub(crate) fn computed_attackers(&self) -> Vec<(&CardInstance, ComputedPermanent)> {
+        self.attacking
+            .iter()
+            .filter_map(|atk| {
+                let card = self.battlefield.iter().find(|c| c.id == atk.attacker)?;
+                let cp = self.computed_permanent(atk.attacker)?;
+                Some((card, cp))
+            })
+            .collect()
+    }
+
+    /// True if `blocker_id` can legally block at least one of the prebuilt
+    /// attacker views (build them with [`computed_attackers`]).
+    ///
+    /// [`computed_attackers`]: Self::computed_attackers
+    pub(crate) fn can_block_any_computed_attacker(
+        &self,
+        blocker_id: CardId,
+        attackers: &[(&CardInstance, ComputedPermanent)],
+    ) -> bool {
         let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
             return false;
         };
@@ -6890,18 +6916,14 @@ impl GameState {
         {
             return false;
         }
-        self.attacking.iter().any(|atk| {
-            let attacker = self.battlefield.iter().find(|c| c.id == atk.attacker);
-            let atk_cp = self.computed_permanent(atk.attacker);
-            let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
-            let atk_colors = atk_cp.as_ref().map(|c| c.colors.as_slice()).unwrap_or(&[]);
-            let atk_power = atk_cp.as_ref().map(|c| c.power)
-                .or_else(|| attacker.map(|a| a.power()))
-                .unwrap_or(0);
-            attacker.is_some()
-                && can_block_attacker_computed(
-                    blocker, blocker_cp, atk_kws, atk_colors, atk_power,
-                )
+        attackers.iter().any(|(_, atk_cp)| {
+            can_block_attacker_computed(
+                blocker,
+                blocker_cp,
+                atk_cp.keywords.as_slice(),
+                atk_cp.colors.as_slice(),
+                atk_cp.power,
+            )
         })
     }
 
@@ -11557,6 +11579,9 @@ impl GameState {
         if let Some(src) = self.battlefield.iter().find(|c| c.id == source) {
             ctx.kicked = src.kicked;
             ctx.bargained = src.bargained;
+            // "Escapes with …" / cast-zone riders (Tizerus Charger) read
+            // the source's cast zone through `Predicate::CastFromGraveyard`.
+            ctx.cast_from_hand = src.cast_from_hand;
         }
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);
