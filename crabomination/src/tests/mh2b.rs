@@ -359,3 +359,279 @@ fn vile_entomber_entombs() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Serra Angel"));
 }
+
+// ── Batch 2 — modular Arcbounds + misc ───────────────────────────────────────
+
+/// Arcbound Mouser enters as a 1/1 (modular 1) and passes its counters to
+/// another artifact creature on death.
+#[test]
+fn arcbound_mouser_modular() {
+    let mut g = two_player_game();
+    let mouser = g.add_card_to_battlefield(0, catalog::arcbound_mouser());
+    g.battlefield_find_mut(mouser).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let cp = g.computed_permanent(mouser).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    let proto = g.add_card_to_battlefield(0, catalog::arcbound_prototype());
+    g.battlefield_find_mut(proto).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let _ = g.remove_to_graveyard_with_triggers(mouser);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(proto).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "modular passed the counter"
+    );
+}
+
+/// Arcbound Shikari's ETB puts a counter on each other artifact creature.
+#[test]
+fn arcbound_shikari_etb_counters() {
+    let mut g = two_player_game();
+    let proto = g.add_card_to_battlefield(0, catalog::arcbound_prototype());
+    g.battlefield_find_mut(proto).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let shikari = g.add_card_to_battlefield(0, catalog::arcbound_shikari());
+    g.battlefield_find_mut(shikari).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.fire_self_etb_triggers(shikari, 0);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(proto).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3
+    );
+    assert_eq!(
+        g.battlefield_find(shikari).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "not itself"
+    );
+}
+
+/// General Ferrous Rokiric mints a Golem on a multicolored cast and dodges
+/// monocolored targeting.
+#[test]
+fn rokiric_golem_and_monocolored_hexproof() {
+    let mut g = two_player_game();
+    let rokiric = g.add_card_to_battlefield(0, catalog::general_ferrous_rokiric());
+    // Multicolored cast → Golem.
+    let agony = g.add_card_to_hand(0, catalog::terminal_agony());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: agony, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Terminal Agony");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Golem"), "Golem minted");
+    // Opponent's monocolored removal can't target him.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(rokiric)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "hexproof from monocolored blocks the Bolt");
+}
+
+/// Captain Ripley Vance fires on exactly the third spell.
+#[test]
+fn ripley_vance_third_spell() {
+    let mut g = two_player_game();
+    let ripley = g.add_card_to_battlefield(0, catalog::captain_ripley_vance());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[0].spells_cast_this_turn = 2;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("third spell");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ripley).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+    // Ripley (3 + 1 counter = 4 power) burns the auto-picked 4/4 down.
+    assert!(g.battlefield_find(angel).is_none(), "Serra Angel died to the 4-damage ping");
+}
+
+/// Phantasmal Dreadmaw dies to any targeting.
+#[test]
+fn phantasmal_dreadmaw_sacrifices_when_targeted() {
+    let mut g = two_player_game();
+    let maw = g.add_card_to_battlefield(0, catalog::phantasmal_dreadmaw());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(maw)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("target the illusion");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(maw).is_none(), "sacrificed on becoming a target");
+}
+
+/// Flametongue Yearling kicked twice enters 4/3 and burns for its power.
+#[test]
+fn flametongue_yearling_multikick() {
+    let d = catalog::flametongue_yearling();
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Multikicker(_))));
+    assert!(matches!(
+        d.enters_with_counters,
+        Some((CounterType::PlusOnePlusOne, crate::card::Value::TimesKicked))
+    ));
+}
+
+/// Underworld Hermit's Squirrel count reads devotion to black.
+#[test]
+fn underworld_hermit_devotion_squirrels() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vermin_gorger()); // {1}{B} → 1 pip
+    let hermit = g.add_card_to_battlefield(0, catalog::underworld_hermit()); // {4}{B}{B}
+    g.fire_self_etb_triggers(hermit, 0);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Squirrel").count(),
+        3,
+        "devotion 3 (BB + B)"
+    );
+}
+
+/// Vermin Gorger drains off another creature's body.
+#[test]
+fn vermin_gorger_drains() {
+    let mut g = two_player_game();
+    let gorger = g.add_card_to_battlefield(0, catalog::vermin_gorger());
+    g.clear_sickness(gorger);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let (p0, p1) = (g.players[0].life, g.players[1].life);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gorger, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2);
+    assert_eq!(g.players[0].life, p0 + 2);
+}
+
+/// Legion Vanguard explores off a sacrifice.
+#[test]
+fn legion_vanguard_explores() {
+    let mut g = two_player_game();
+    let vanguard = g.add_card_to_battlefield(0, catalog::legion_vanguard());
+    g.clear_sickness(vanguard);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vanguard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("explore");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "revealed land to hand");
+}
+
+/// Tormod's Cryptkeeper exiles a graveyard.
+#[test]
+fn tormods_cryptkeeper_exiles_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let keeper = g.add_card_to_battlefield(0, catalog::tormods_cryptkeeper());
+    g.clear_sickness(keeper);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: keeper, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("exile graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty());
+    assert_eq!(g.exile.len(), 2);
+}
+
+/// Kaleidoscorch's converge damage reads the colors spent.
+#[test]
+fn kaleidoscorch_converge() {
+    let mut g = two_player_game();
+    let scorch = g.add_card_to_hand(0, catalog::kaleidoscorch());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let p1 = g.players[1].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: scorch, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2, "two colors spent → 2 damage");
+}
+
+/// Myr Scrapling's sacrifice feeds a counter to a creature.
+#[test]
+fn myr_scrapling_sacrifices_for_counter() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_battlefield(0, catalog::myr_scrapling());
+    g.clear_sickness(myr);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: myr, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(myr).is_none());
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Tavern Scoundrel mints two Treasures on a won flip.
+#[test]
+fn tavern_scoundrel_treasures_on_win() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tavern_scoundrel());
+    g.dispatch_triggers_for_events(&[GameEvent::CoinFlipWon { player: 0 }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(),
+        2
+    );
+}
+
+/// Abiding Grace's mode 1 reanimates a one-drop at end step.
+#[test]
+fn abiding_grace_returns_one_drop() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::abiding_grace());
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_some(), "Llanowar Elves returned");
+}
+
+/// Jade Avenger and Sinister Starfish stat checks.
+#[test]
+fn jade_avenger_and_starfish_stats() {
+    assert!(catalog::jade_avenger().keywords.contains(&Keyword::Bushido(2)));
+    let fish = catalog::sinister_starfish();
+    assert_eq!((fish.power, fish.toughness), (0, 3));
+}

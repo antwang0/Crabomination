@@ -4295,7 +4295,12 @@ impl GameState {
                         .map(|cp| cp.keywords)
                         .unwrap_or_else(|| tc.definition.keywords.clone())
                         .iter()
-                        .any(|kw| matches!(kw, Keyword::HexproofFromColor(c) if spell_colors.contains(c)));
+                        .any(|kw| match kw {
+                            Keyword::HexproofFromColor(c) => spell_colors.contains(c),
+                            // CR 702.11f — exactly one color on the spell.
+                            Keyword::HexproofFromMonocolored => spell_colors.len() == 1,
+                            _ => false,
+                        });
                     printed
                         || self.players[controller]
                             .hexproof_from_colors_this_turn
@@ -7348,10 +7353,12 @@ impl GameState {
         let src_is_opponent = self
             .battlefield_find(source)
             .is_some_and(|c| c.controller != tgt_controller);
-        let printed_hexproof_color = tgt
-            .keywords
-            .iter()
-            .any(|kw| matches!(kw, Keyword::HexproofFromColor(_)));
+        let printed_hexproof_color = tgt.keywords.iter().any(|kw| {
+            matches!(
+                kw,
+                Keyword::HexproofFromColor(_) | Keyword::HexproofFromMonocolored
+            )
+        });
         let turn_hexproof_color = !self.players[tgt_controller]
             .hexproof_from_colors_this_turn
             .is_empty();
@@ -7389,9 +7396,12 @@ impl GameState {
             {
                 return true;
             }
-            if tgt.keywords.iter().any(
-                |kw| matches!(kw, Keyword::HexproofFromColor(c) if src.colors.contains(c)),
-            ) {
+            if tgt.keywords.iter().any(|kw| match kw {
+                Keyword::HexproofFromColor(c) => src.colors.contains(c),
+                // CR 702.11f — an exactly-one-color source.
+                Keyword::HexproofFromMonocolored => src.colors.len() == 1,
+                _ => false,
+            }) {
                 return true;
             }
         }

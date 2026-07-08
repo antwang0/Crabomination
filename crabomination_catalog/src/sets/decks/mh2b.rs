@@ -560,3 +560,474 @@ pub fn gargadon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 2 — modular Arcbounds + misc value ─────────────────────────────────
+
+use crate::effect::shortcut::{modular_dies, riot};
+
+/// Shared Arcbound shell: 0/0 artifact creature entering with N +1/+1
+/// counters and the modular dies-trigger.
+fn arcbound(
+    name: &'static str,
+    mana: &[crate::mana::ManaSymbol],
+    types: Vec<CreatureType>,
+    n: i32,
+    kws: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(mana),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(n))),
+        keywords: kws,
+        triggered_abilities: vec![modular_dies()],
+        ..Default::default()
+    }
+}
+
+/// Arcbound Mouser — {W} 0/0 Cat. Lifelink, modular 1.
+pub fn arcbound_mouser() -> CardDefinition {
+    arcbound("Arcbound Mouser", &[w()], vec![CreatureType::Cat], 1, vec![Keyword::Lifelink])
+}
+
+/// Arcbound Prototype — {1}{W} 0/0. Modular 2.
+pub fn arcbound_prototype() -> CardDefinition {
+    arcbound(
+        "Arcbound Prototype",
+        &[generic(1), w()],
+        vec![CreatureType::AssemblyWorker],
+        2,
+        vec![],
+    )
+}
+
+/// Arcbound Tracker — {2}{R} 0/0 Dog. Menace, modular 2; each spell after
+/// your first each turn adds a +1/+1 counter.
+pub fn arcbound_tracker() -> CardDefinition {
+    let mut def = arcbound(
+        "Arcbound Tracker",
+        &[generic(2), r()],
+        vec![CreatureType::Dog],
+        2,
+        vec![Keyword::Menace],
+    );
+    def.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::SpellsCastThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(2),
+            },
+        ),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+    });
+    def
+}
+
+/// Arcbound Slasher — {4}{R} 0/0 Cat. Modular 4, riot.
+pub fn arcbound_slasher() -> CardDefinition {
+    let mut def =
+        arcbound("Arcbound Slasher", &[generic(4), r()], vec![CreatureType::Cat], 4, vec![]);
+    def.triggered_abilities.push(riot());
+    def
+}
+
+/// Arcbound Whelp — {3}{R} 0/0 Dragon. Flying, modular 2; {R}: +1/+0.
+pub fn arcbound_whelp() -> CardDefinition {
+    let mut def = arcbound(
+        "Arcbound Whelp",
+        &[generic(3), r()],
+        vec![CreatureType::Dragon],
+        2,
+        vec![Keyword::Flying],
+    );
+    def.activated_abilities = vec![ActivatedAbility {
+        mana_cost: cost(&[r()]),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::ONE,
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }];
+    def
+}
+
+/// Arcbound Shikari — {1}{R}{W} 0/0 Cat Soldier. First strike, modular 2;
+/// ETB: +1/+1 counter on each other artifact creature you control.
+pub fn arcbound_shikari() -> CardDefinition {
+    let mut def = arcbound(
+        "Arcbound Shikari",
+        &[generic(1), r(), w()],
+        vec![CreatureType::Cat, CreatureType::Soldier],
+        2,
+        vec![Keyword::FirstStrike],
+    );
+    def.triggered_abilities.push(etb(Effect::AddCounter {
+        what: Selector::EachPermanent(
+            R::Artifact
+                .and(R::Creature)
+                .and(R::ControlledByYou)
+                .and(R::OtherThanSource),
+        ),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    }));
+    def
+}
+
+/// General Ferrous Rokiric — {1}{R}{W} 3/1. Hexproof from monocolored;
+/// casting a multicolored spell mints a 4/4 Golem.
+pub fn general_ferrous_rokiric() -> CardDefinition {
+    CardDefinition {
+        name: "General Ferrous Rokiric",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::HexproofFromMonocolored],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Multicolored,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Golem".into(),
+                    power: 4,
+                    toughness: 4,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    colors: vec![Color::Red, Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Golem],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Captain Ripley Vance — {2}{R} 3/2. Your third spell each turn: +1/+1
+/// counter, then she deals damage equal to her power to any target.
+pub fn captain_ripley_vance() -> CardDefinition {
+    CardDefinition {
+        name: "Captain Ripley Vance",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::DealDamageEqualToPower {
+                    source: Selector::This,
+                    target: crate::effect::shortcut::target(),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abiding Grace — {2}{W}. Your end step, choose one: gain 1 life, or
+/// return a mana-value-1 creature card from your graveyard.
+pub fn abiding_grace() -> CardDefinition {
+    CardDefinition {
+        name: "Abiding Grace",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::ChooseMode(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::ManaValueAtMost(1))),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phantasmal Dreadmaw — {2}{U}{U} 6/6 trample. Targeted → sacrifice it.
+pub fn phantasmal_dreadmaw() -> CardDefinition {
+    CardDefinition {
+        name: "Phantasmal Dreadmaw",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::SacrificeSource,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Flametongue Yearling — {R}{R} 2/1. Multikicker {2}; enters with a +1/+1
+/// counter per kick; ETB: deals damage equal to its power to target creature.
+pub fn flametongue_yearling() -> CardDefinition {
+    CardDefinition {
+        name: "Flametongue Yearling",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kavu], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Multikicker(cost(&[generic(2)]))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(R::Creature),
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jade Avenger — {1}{G} 2/2 Frog Samurai. Bushido 2.
+pub fn jade_avenger() -> CardDefinition {
+    CardDefinition {
+        name: "Jade Avenger",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Samurai],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Bushido(2)],
+        ..Default::default()
+    }
+}
+
+/// Sinister Starfish — {1}{B} 0/3. {T}: Surveil 1.
+pub fn sinister_starfish() -> CardDefinition {
+    CardDefinition {
+        name: "Sinister Starfish",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Starfish], ..Default::default() },
+        power: 0,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tavern Scoundrel — {1}{R} 1/3. Win a coin flip: two Treasures; {1}, {T},
+/// sac another permanent: flip a coin.
+pub fn tavern_scoundrel() -> CardDefinition {
+    CardDefinition {
+        name: "Tavern Scoundrel",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crabomination_base::tokens::treasure_token(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Permanent, 1)),
+            effect: Effect::FlipCoin {
+                count: Value::ONE,
+                on_heads: Box::new(Effect::Noop),
+                on_tails: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kaleidoscorch — {1}{R} Sorcery. Converge — X damage to any target;
+/// Flashback {4}{R}.
+pub fn kaleidoscorch() -> CardDefinition {
+    CardDefinition {
+        name: "Kaleidoscorch",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
+        effect: Effect::DealDamage {
+            to: crate::effect::shortcut::target(),
+            amount: Value::ConvergedValue,
+        },
+        ..Default::default()
+    }
+}
+
+/// Myr Scrapling — {1} 1/1 Myr. Sacrifice: +1/+1 counter on target creature.
+pub fn myr_scrapling() -> CardDefinition {
+    CardDefinition {
+        name: "Myr Scrapling",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tormod's Cryptkeeper — {3} 3/2 vigilance. {T}, sac: exile target
+/// player's graveyard.
+pub fn tormods_cryptkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Tormod's Cryptkeeper",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Move {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::Target(0),
+                    zone: Zone::Graveyard,
+                    filter: R::Any,
+                },
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Legion Vanguard — {1}{B} 2/2. {1}, sac another creature: explores.
+pub fn legion_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Legion Vanguard",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Explore { who: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vermin Gorger — {1}{B} 2/2. {T}, sac another creature: each opponent
+/// loses 2, you gain 2.
+pub fn vermin_gorger() -> CardDefinition {
+    CardDefinition {
+        name: "Vermin Gorger",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Underworld Hermit — {4}{B}{B} 3/3. ETB: Squirrels equal to your devotion
+/// to black.
+pub fn underworld_hermit() -> CardDefinition {
+    CardDefinition {
+        name: "Underworld Hermit",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::DevotionTo(vec![Color::Black]),
+            definition: squirrel_token(),
+        })],
+        ..Default::default()
+    }
+}

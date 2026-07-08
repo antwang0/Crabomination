@@ -52,7 +52,7 @@ pub enum CreatureType {
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith, Lamia, Nightstalker,
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal, Hyena,
-    Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
+    Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
     Sheep,
     Basilisk, Cockatrice,
@@ -632,6 +632,10 @@ pub enum Keyword {
     /// half of protection-from-color (Witchbane Orb-style, Veil of Summer's
     /// rider granted via the turn-scoped player flag).
     HexproofFromColor(Color),
+    /// CR 702.11f — "hexproof from monocolored": can't be the target of
+    /// exactly-one-color spells or abilities opponents control (General
+    /// Ferrous Rokiric).
+    HexproofFromMonocolored,
     /// "Can't be the target of nongreen spells opponents control or abilities
     /// from nongreen sources opponents control" and its siblings (Thrun,
     /// Breaker of Silence). Blocks an opponent's spell/ability whose source
