@@ -313,6 +313,9 @@ impl Effect {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::FreeSpellsFromHandThisTurn => false,
+            Effect::ChooseCardTypeForSource => false,
+            // Targets an opponent (player slot 0).
+            Effect::OpponentRevealsPickToBattlefield { .. } => true,
             Effect::RollDie { count, results, .. } => {
                 value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
             }

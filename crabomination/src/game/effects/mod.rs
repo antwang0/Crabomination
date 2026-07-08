@@ -997,6 +997,90 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseCardTypeForSource => {
+                use crate::card::CardType;
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let options = [
+                    CardType::Creature,
+                    CardType::Instant,
+                    CardType::Sorcery,
+                    CardType::Artifact,
+                    CardType::Enchantment,
+                    CardType::Planeswalker,
+                    CardType::Land,
+                ];
+                let n = match self.decider.decide(&Decision::ChooseMode {
+                    source,
+                    num_modes: options.len(),
+                    mode_texts: options.iter().map(|t| format!("{t:?}")).collect(),
+                }) {
+                    DecisionAnswer::Mode(m) => m.min(options.len() - 1),
+                    _ => 0,
+                };
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_card_type = Some(options[n].clone());
+                }
+                Ok(())
+            }
+
+            Effect::OpponentRevealsPickToBattlefield { count, max_mv } => {
+                // Lonis — target opponent reveals top N; steal one nonland
+                // permanent card with MV ≤ max_mv (auto-pick: highest MV).
+                let Some(opp) = ctx
+                    .targets
+                    .first()
+                    .and_then(|t| match t {
+                        Target::Player(p) => Some(*p),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[opp].library.iter().take(n).map(|c| c.id).collect();
+                let pick = self.players[opp]
+                    .library
+                    .iter()
+                    .take(n)
+                    .filter(|c| {
+                        c.definition.is_permanent()
+                            && !c.definition.is_land()
+                            && c.definition.cost.cmc() <= cap
+                    })
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                if let Some(pid) = pick
+                    && let Some(card) = Self::take_card(&mut self.players[opp].library, pid)
+                {
+                    self.place_card_in_dest(
+                        card,
+                        ctx.controller,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                        events,
+                    );
+                }
+                // Rest to the bottom in random order.
+                let mut rest: Vec<crate::card::CardInstance> = Vec::new();
+                for rid in revealed {
+                    if Some(rid) == pick {
+                        continue;
+                    }
+                    if let Some(card) = Self::take_card(&mut self.players[opp].library, rid) {
+                        rest.push(card);
+                    }
+                }
+                use rand::seq::SliceRandom;
+                rest.shuffle(&mut rand::rng());
+                self.players[opp].library.extend(rest);
+                Ok(())
+            }
+
             Effect::FlipCoinsChooseCount { max, per_win, per_loss, all_won, all_won_min } => {
                 // Yusri — choose 1..=max, flip that many coins, run the
                 // per-flip bodies, and the jackpot body on max wins.

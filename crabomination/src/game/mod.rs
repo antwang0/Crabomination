@@ -397,6 +397,9 @@ mod tests_mh2f;
 #[path = "../tests/mh2g.rs"]
 mod tests_mh2g;
 #[cfg(test)]
+#[path = "../tests/mh2h.rs"]
+mod tests_mh2h;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -8956,6 +8959,7 @@ impl GameState {
                     crate::effect::EventKind::Attacks
                         | crate::effect::EventKind::CreatureDied
                         | crate::effect::EventKind::CreatureOrArtifactDied
+                        | crate::effect::EventKind::PermanentDied
                         | crate::effect::EventKind::CreatureSacrificed
                         | crate::effect::EventKind::PermanentSacrificed
                         | crate::effect::EventKind::PermanentLeavesBattlefield

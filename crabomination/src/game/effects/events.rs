@@ -22,6 +22,7 @@ pub(crate) fn event_matches_spec(
             EventKind::CreatureOrArtifactDied,
             GameEvent::PermanentDied { is_creature, is_artifact, .. },
         ) => *is_creature || *is_artifact,
+        (EventKind::PermanentDied, GameEvent::PermanentDied { .. }) => true,
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
         (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,

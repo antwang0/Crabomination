@@ -9665,6 +9665,17 @@ impl GameState {
             }
         }
 
+        // Pre-flight "Remove X [kind] counters" gate (Arcbound Javelineer).
+        if let Some(kind) = ability.remove_counter_x.as_ref() {
+            let have = self
+                .battlefield_find(card_id)
+                .map(|c| c.counter_count(*kind))
+                .unwrap_or(0);
+            if have < x_value.unwrap_or(0) {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
         if let Some((kind, count, filter)) = ability.remove_counter_among_filter.as_ref() {
@@ -9698,7 +9709,11 @@ impl GameState {
         } else {
             ability.mana_cost.clone()
         };
-        let activated_x = if ability.mana_cost.has_x() || ability.sac_other_x || ability.exile_other_x {
+        let activated_x = if ability.mana_cost.has_x()
+            || ability.sac_other_x
+            || ability.exile_other_x
+            || ability.remove_counter_x.is_some()
+        {
             x_value.unwrap_or(0)
         } else {
             0
@@ -10076,6 +10091,13 @@ impl GameState {
             if kind == crate::card::CounterType::Oil {
                 self.players[ctrl].oil_activity_this_turn = true;
             }
+        }
+
+        // Remove-X-counters-as-cost (Arcbound Javelineer): strip the paid X.
+        if let Some(kind) = ability.remove_counter_x
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            c.remove_counters(kind, x_value.unwrap_or(0));
         }
 
         // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`

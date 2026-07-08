@@ -1668,6 +1668,11 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// "Remove X [kind] counters from this creature:" (Arcbound Javelineer).
+    /// X comes from the activation's `x_value`; the pre-flight gate requires
+    /// that many counters, and the body reads `Value::XFromCost`.
+    #[serde(default)]
+    pub remove_counter_x: Option<crate::card::CounterType>,
     /// Optional cost: remove `u32` counters of the named kind (`None` = any
     /// mix of kinds — Tekuthal's "remove three counters") from among
     /// permanents matching the filter the activator controls (CR 602.5b —

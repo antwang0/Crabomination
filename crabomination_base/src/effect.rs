@@ -1445,6 +1445,11 @@ pub enum EventKind {
     /// each turn" (G'raha Tia). Scope by `YourControl`; exclude the source with
     /// a `Predicate` filter for the "another" rider.
     CreatureOrArtifactDied,
+    /// Any permanent hit a graveyard from the battlefield (matches
+    /// `GameEvent::PermanentDied`). Filter the subject via
+    /// `Predicate::EntityMatches { what: TriggerSource, .. }` — Carth the
+    /// Lion's "or a planeswalker you control dies".
+    PermanentDied,
     /// A creature was sacrificed. Per CR 701.16, "sacrifice" is a distinct
     /// game event from "die" — Mortician Beetle / Yahenni / Bone Picker
     /// ("Whenever a player sacrifices a creature") want this specific
@@ -3312,6 +3317,16 @@ pub enum Effect {
     /// mana costs" (Yusri's five-win jackpot). Sets the controller's
     /// `free_spells_from_hand_this_turn` flag, cleared at end-of-turn.
     FreeSpellsFromHandThisTurn,
+    /// "As this enters, choose a card type" (Serra's Emissary). Asks the
+    /// controller via `ChooseMode` over the permanent+spell card types and
+    /// stamps `CardInstance.chosen_card_type` on the source.
+    ChooseCardTypeForSource,
+    /// Lonis's steal: target opponent reveals the top `count` cards of their
+    /// library; you may put a nonland permanent card with mana value at most
+    /// `max_mv` from among them onto the battlefield under your control; the
+    /// rest go to the bottom in random order. Auto-picks the highest-MV
+    /// legal card.
+    OpponentRevealsPickToBattlefield { count: Value, max_mv: Value },
     /// Yusri, Fortune's Flame — choose a number 1..=`max`, flip that many
     /// coins; run `per_win` per won flip and `per_loss` per lost flip, then
     /// `all_won` if the chosen number was `all_won_min`+ and every flip won.
