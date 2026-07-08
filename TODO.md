@@ -2848,6 +2848,18 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired
+- ✅ **CR 104.3d — can't lose / can't win** — Angel's Grace's turn-scoped
+  `Player.cant_lose_this_turn` (+ damage-to-1 floor) and the permanent
+  `ControllerCant{Lose,Win}Game` statics (Platinum Angel, Abyssal Persecutor)
+  gate the SBA loss loop, `lose_to_empty_draw`, and the WinGame/LoseGame/
+  PayOrLoseGame effects; Worship rides the same floor
+  (`DamageWontReduceControllerLifeBelowOne`). `tests/recent109.rs`.
+- ✅ **CR 113.11 — "can't have or gain [keyword]"** —
+  `Modification::CantHaveKeyword` strips after every grant regardless of
+  timestamp (the Theros Archetype cycle; `cr_113_11_*`).
+- ✅ **CR 702.19c/f — trample over planeswalkers** —
+  `Keyword::TrampleOverPlaneswalkers` spills excess past loyalty to the
+  walker's controller; plain trample doesn't (Thrasta; `cr_702_19c_*`).
 - ✅ **CR 702.150 — Compleated** — `Keyword::Compleated` + `{A/B/P}`
   PhyrexianHybrid pips; life paid to Phyrexian pips at cast drops the entering
   planeswalker's loyalty (tests `compleated_*`, ONE's five compleated walkers).
@@ -3256,22 +3268,30 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Deferred this run (noticed, not tackled):**
-  - **Angel's Grace** — needs `Player.cant_lose_this_turn` (+ opponents
-    can't-win) consulted at the SBA loss check / decking / lose-effects, and a
-    damage-to-1 floor in `adjust_life`.
+- ⏳ **Deferred (noticed, not tackled):**
+  - ✅ ~~Angel's Grace~~ — shipped (`Player.{cant_lose_this_turn,
+    damage_floor_this_turn}` + `player_cant_{lose,win}_game` at every loss/win
+    site; `decks::recent109`).
   - **Zabaz, the Glimmerwasp** — modular-counter +1 replacement (a
-    modular-scoped `ExtraCounterAllKinds` sibling).
+    modular-scoped `ExtraCounterAllKinds` sibling; the counter funnel can't
+    see that its caller was a modular trigger).
   - **Portent Tracker** — battle defense-counter manipulation targeting.
   - **Mycosynth Lattice** — "all permanents are artifacts" fits
     `AddCardTypeToMatching`, but the all-colorless + spend-any-color halves
     have no primitives.
   - **Glimpse of Tomorrow / Emperor of Bones** — shuffle-permanents-and-
     redeploy; exiled-with + counters-added reflexive return.
-  - **Dies-redirects vs dies-triggers** — SBA callers fire `CreatureDied`
-    before `remove_from_battlefield_to_graveyard_raw` resolves a
-    Finality/`DiesToLibraryTopInstead` redirect, so dies-triggers can fire for
-    a creature that never reached a graveyard.
+  - ✅ ~~Dies-redirects vs dies-triggers~~ — fixed: `death_was_replaced`
+    (exile *or* library) gates dies-trigger dispatch, the `PermanentDied`
+    synthesis, and `WhenCardDies` delayed watchers.
+- ⏳ **MH2 sweep deferrals (`decks::mh2b`)** — Arcbound Javelineer (remove-X
+  +1/+1 counters as an activation cost), Breathless Knight (needs an
+  "entered from / cast from a graveyard" entry-origin flag), Foundry Helix
+  ("if the sacrificed permanent was an artifact" predicate over the
+  sacrifice-as-additional-cost), Obsidian Charmaw (cost reduction keyed on
+  opponents' {C}-producing lands), Grist (not-on-battlefield CDA identity),
+  Garth One-Eye (named-card copy casts). ~140 MH2 cards remain —
+  `python3 scripts/set_gaps.py mh2`.
 - ⏳ **All Will Be One placer attribution** — `GameEvent::CounterAdded` carries
   no "who placed" seat, so the enchantment fires off counters landing on your
   permanents + poison hitting opponents (exact in two-player). Threading the
@@ -3283,9 +3303,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ⏳ **CastWithoutPayingImmediate copy-mode** — Capricious Hellraiser should
   cast a *copy* (original stays exiled); a `copy: bool` rider on the effect
   would also serve future "copy it and you may cast the copy" cards.
-- ⏳ **Random graveyard exile selector** — `Selector::Take` is deterministic
-  (top of the vec); a `TakeRandom` sibling would make Hellraiser and
-  Sin-style random exiles faithful.
+- ✅ ~~Random graveyard exile selector~~ — `Selector::TakeRandom` already
+  ships; wire Hellraiser/Sin onto it when revisited.
 
 - ⏳ **recent34–38 follow-ups / deferred cards (this run):**
   - ✅ Quest cycle complete (`decks::quests`): Pure Flame

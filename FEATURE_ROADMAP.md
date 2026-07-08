@@ -201,6 +201,18 @@ exercising each) was elided in a compaction pass; recover it from
   `EquippedByAtLeast`) live-resolve per recompute (Hexgold Hoverwings, Kemba);
   `LandType::Sphere`. Server lobby-phase chat; client lobby chat panel +
   Corrupted HUD chip. ~135 ONE cards in `sets::one` (143 tests).
+- **Loss/win + layer primitives (modern_decks — this run):** CR 104.3d
+  can't-lose/can't-win (Angel's Grace / Platinum Angel / Abyssal Persecutor /
+  Worship's damage floor); CR 113.11 `CantHaveKeyword` anti-grant (Theros
+  Archetypes); CR 702.19c trample over planeswalkers (Thrasta); CR 700.4
+  death-redirect guard extended to library-top redirects; token-mint
+  replacements (`ClueFoodTreasureMintsOneOfEach` — Academy Manufactor,
+  `TokenCreationAddsTokenPerToken` — Chatterfang);
+  `SelfCostReducedPerSpellCastThisTurn` (Thrasta);
+  `DynamicPt::CreatureCardsInAllGraveyardsPower` (Necrogoyf);
+  `Keyword::HexproofFromMonocolored` (Rokiric); graveyard-first slot
+  auto-targeting for reanimation reflexives. MH2 sweep started
+  (`decks::mh2b`, 40 cards; gaps via `scripts/set_gaps.py mh2`).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
@@ -667,8 +679,9 @@ Each a small targeted feature; sweep batch by batch.
   persisted across launches.
 - 🟡 **Chat** — free in-match chat ships (`T`), and lobby-phase chat relays
   to lobby members (same `T` input + a lobby panel). Remaining ⏳: emotes, mute.
-- 🟡 **Timers** — per-action rope ships server-side + client countdown banner.
-  Remaining: per-game chess clock.
+- ✅ **Timers** — per-action rope (`CRAB_ACTION_TIMEOUT_SECS`) + per-game
+  chess clock (`CRAB_CHESS_CLOCK_SECS`: per-seat match budget, flag fall
+  concedes; `ServerMsg::Clock` + a client m:ss chip).
 - ⏳ **Friends / invites / ratings / leaderboards**.
 - ⏳ **Free-for-all politics** UI for 3+ player tables.
 
