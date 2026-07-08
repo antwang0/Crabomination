@@ -12012,6 +12012,20 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::CantHaveKeyword { applies_to, keyword } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::CantHaveKeyword(keyword.clone()),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::GrantAllBasicLandTypes { applies_to } => {
                 use crate::card::LandType;
                 match selector_to_affected(applies_to, card) {

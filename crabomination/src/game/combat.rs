@@ -2256,6 +2256,19 @@ impl GameState {
                 self.fire_combat_damage_to_player_triggers(atk.id, p, amount);
             }
             AttackTarget::Planeswalker(pw_id) => {
+                // CR 702.19i — trample over planeswalkers: an attacker with
+                // trample assigns lethal (= remaining loyalty) to the
+                // planeswalker and the excess to its controller.
+                let mut spill = 0u32;
+                let mut spill_to: Option<usize> = None;
+                if let Some(pw) = self.battlefield_find(pw_id) {
+                    let current = pw.counter_count(crate::card::CounterType::Loyalty);
+                    if atk.has_trample && amount > current {
+                        spill = amount - current;
+                        spill_to = Some(pw.controller);
+                    }
+                }
+                let amount = amount - spill;
                 if let Some(pw) = self.battlefield_find_mut(pw_id) {
                     let current = pw.counter_count(crate::card::CounterType::Loyalty);
                     let new_loyalty = current.saturating_sub(amount);
@@ -2272,6 +2285,13 @@ impl GameState {
                         card_id: pw_id,
                         new_loyalty: new_loyalty as i32,
                     });
+                }
+                if let Some(p) = spill_to
+                    && spill > 0
+                {
+                    let mut spilled = atk.clone();
+                    spilled.target = AttackTarget::Player(p);
+                    self.deal_combat_damage_to_target(&spilled, spill, events);
                 }
             }
             AttackTarget::Battle(b_id) => {
@@ -2635,6 +2655,7 @@ fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
 /// Resolution-time snapshot of one attacker's combat-relevant data. Captures
 /// the attacker's target so damage routes correctly even if the target moves
 /// during the loop.
+#[derive(Clone)]
 struct AttackerInfo {
     id: CardId,
     controller: usize,

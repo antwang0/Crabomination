@@ -101,3 +101,80 @@ fn worship_floors_damage_while_controlling_a_creature() {
     g.deal_damage_to_from(EntityRef::Player(0), 7, None, &mut evs);
     assert_eq!(g.players[0].life, -6, "no creature, no floor");
 }
+
+// ── CR 113.11 — "can't have or gain" (Archetypes) ─────────────────────────────
+
+/// Archetype of Imagination: your team gains flying; opponents' creatures
+/// lose printed flying and can't gain it even from a later grant.
+#[test]
+fn cr_113_11_archetype_strips_and_blocks_keyword() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archetype_of_imagination());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::Flying),
+        "your creatures gain flying"
+    );
+    assert!(
+        !g.computed_permanent(angel).unwrap().keywords.contains(&crate::card::Keyword::Flying),
+        "opponent's printed flying is stripped"
+    );
+    // A grant with a later timestamp still loses to the can't-have.
+    let ctx =
+        crate::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(angel)), 0, 0);
+    g.resolve_effect(
+        &crate::effect::Effect::GrantKeyword {
+            what: crate::card::Selector::Target(0),
+            keyword: crate::card::Keyword::Flying,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert!(
+        !g.computed_permanent(angel).unwrap().keywords.contains(&crate::card::Keyword::Flying),
+        "a later EOT grant can't restore the keyword"
+    );
+}
+
+// ── CR 702.19i — trample over planeswalkers ──────────────────────────────────
+
+/// An attacker with trample assigns lethal to the planeswalker and the
+/// excess to its controller; without trample the excess is lost.
+#[test]
+fn cr_702_19i_trample_spills_over_planeswalker() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(
+        0,
+        crate::card::CardDefinition {
+            name: "Wagon",
+            card_types: vec![crate::card::CardType::Creature],
+            power: 6,
+            toughness: 6,
+            keywords: vec![crate::card::Keyword::Trample],
+            ..Default::default()
+        },
+    );
+    g.clear_sickness(atk);
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler()); // loyalty 4
+    let life = g.players[1].life;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: atk,
+        target: crate::game::types::AttackTarget::Planeswalker(pw),
+    }]))
+    .unwrap();
+    g.step = crate::game::types::TurnStep::DeclareBlockers;
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert!(
+        g.battlefield_find(pw)
+            .is_none_or(|c| c.counter_count(CounterType::Loyalty) == 0),
+        "planeswalker took lethal loyalty damage"
+    );
+    assert_eq!(g.players[1].life, life - 2, "6 power − 4 loyalty spills 2 to the player");
+}

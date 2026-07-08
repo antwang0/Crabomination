@@ -112,6 +112,11 @@ pub enum Modification {
     // ── Layer 6 ──────────────────────────────────────────────────────────────
     AddKeyword(Keyword),
     RemoveKeyword(Keyword),
+    /// CR 113.11 — "loses [keyword] and can't have or gain [keyword]"
+    /// (the Theros Archetypes). Unlike `RemoveKeyword`, wins over *any*
+    /// grant regardless of timestamp: collected during the walk and
+    /// stripped after every Add has applied.
+    CantHaveKeyword(Keyword),
     RemoveAllAbilities,
 
     // ── Layer 7 ──────────────────────────────────────────────────────────────
@@ -417,6 +422,7 @@ fn compute_permanent_pass(
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
     let mut lost_all_abilities = false;
+    let mut cant_have_keywords: Vec<Keyword> = Vec::new();
 
     // Sort effects by layer, then sublayer, then timestamp.
     let mut sorted: Vec<&ContinuousEffect> = effects
@@ -498,6 +504,10 @@ fn compute_permanent_pass(
                 }
             }
             Modification::RemoveKeyword(kw) => keywords.retain(|k| k != kw),
+            Modification::CantHaveKeyword(kw) => {
+                keywords.retain(|k| k != kw);
+                cant_have_keywords.push(kw.clone());
+            }
             Modification::RemoveAllAbilities => {
                 keywords.clear();
                 lost_all_abilities = true;
@@ -529,6 +539,9 @@ fn compute_permanent_pass(
     // Until-EOT keyword removals (Shadowspear) apply last — the removal's
     // timestamp is by construction later than any static grant this turn.
     keywords.retain(|k| !card.removed_keywords_eot.contains(k));
+    // CR 113.11 — "can't have or gain" beats any grant, whatever its
+    // timestamp (Archetype of Courage vs. a later first-strike anthem).
+    keywords.retain(|k| !cant_have_keywords.contains(k));
 
     // Compute final P/T.
     let (mut power, mut toughness) = if let Some((p, t)) = set_pt {

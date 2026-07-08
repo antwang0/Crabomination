@@ -220,6 +220,10 @@ pub enum StaticEffect {
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.
     LoseKeyword { applies_to: Selector, keyword: Keyword },
+    /// CR 113.11 — "lose [keyword] and can't have or gain [keyword]" (the
+    /// Theros Archetypes). Beats any grant regardless of timestamp; a
+    /// layer-6 `Modification::CantHaveKeyword`.
+    CantHaveKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
     EntersTapped { applies_to: Selector },
     /// "Lands you control enter the battlefield untapped" (Spelunking, Amulet
