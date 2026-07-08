@@ -423,6 +423,7 @@ impl GameState {
             Value::CardTypesInAllGraveyards => {
                 self.distinct_card_types_in_all_graveyards() as i32
             }
+            Value::LastDiscardedCardTypes => self.last_discarded_card_types as i32,
             Value::CardsDiscardedThisTurn(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -1350,6 +1351,17 @@ impl GameState {
                 // abilities default `cast_from_hand` to `true` which
                 // matches their non-spell-resolution context.
                 ctx.cast_from_hand
+            }
+            Predicate::SacrificedWasArtifact => {
+                self.sacrificed_was_artifact.unwrap_or(false)
+            }
+            Predicate::TriggerSourceEnteredFromGraveyard => {
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.entered_from_graveyard_this_turn.contains(&cid)
+                    || self.battlefield_find(cid).is_some_and(|c| !c.cast_from_hand)
             }
             Predicate::SpellWasKicked => {
                 // CR 702.32 — true iff the kicker cost was paid at cast

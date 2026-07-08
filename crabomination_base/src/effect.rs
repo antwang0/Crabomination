@@ -366,6 +366,10 @@ pub enum Value {
     /// Cards `who` has discarded this turn (max over resolved players).
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),
+    /// Number of card types on the most recently discarded card (Mount
+    /// Velus Manticore's "X = the number of card types the discarded card
+    /// has"). Backed by `GameState.last_discarded_card_types`.
+    LastDiscardedCardTypes,
     /// Distinct card types across every graveyard (Altar of the Goyf,
     /// Lhurgoyf-style counts as a spell value).
     CardTypesInAllGraveyards,
@@ -1124,6 +1128,14 @@ pub enum Predicate {
     /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
     /// contexts default `kicked` to `false`.
     SpellWasKicked,
+    /// "If the sacrificed permanent was an artifact" — reads the
+    /// additional-cast-cost sacrifice scratch (Foundry Helix).
+    SacrificedWasArtifact,
+    /// The entering permanent bound to `ctx.trigger_source` arrived from a
+    /// graveyard this turn, or was cast from one (escape / unearth — read
+    /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).
+    /// Breathless Knight.
+    TriggerSourceEnteredFromGraveyard,
     /// CR 702.85 — Heroic. True when the just-cast spell (the trigger source,
     /// an `EntityRef::Card` on the stack) targets the trigger's own source
     /// permanent (`ctx.source`). Gates "Whenever you cast a spell that targets
@@ -2314,6 +2326,9 @@ pub enum Effect {
     /// gain hexproof from [colors] until end of turn" (Veil of Summer's
     /// rider). Cleared at the next untap.
     GrantHexproofFromColorThisTurn { who: Selector, colors: Vec<crate::mana::Color> },
+    /// "You gain hexproof until your next turn" (Blossoming Calm). Sets
+    /// `Player.hexproof_until_next_turn`; cleared at that player's untap.
+    GainHexproofUntilYourNextTurn { who: PlayerRef },
     /// Stamp `uncounterable` on a target spell already on the stack —
     /// "Target spell can't be countered" (Vexing Shusher's activation).
     MakeSpellUncounterable { what: Selector },

@@ -4855,7 +4855,7 @@ impl GameState {
                     // (tokens first, then lowest mana value, then lowest power)
                     // for any remainder. The first sacrifice's power becomes
                     // the spell's X.
-                    let chosen: Vec<(CardId, u32, bool, i32, u32)> = {
+                    let chosen: Vec<(CardId, u32, bool, i32, u32, bool)> = {
                         let mut picked: Vec<&crate::card::CardInstance> = Vec::new();
                         if let Some(ids) = chosen_override.take() {
                             for id in ids {
@@ -4909,11 +4909,12 @@ impl GameState {
                                     c.definition.is_creature(),
                                     c.toughness(),
                                     c.definition.cost.cmc(),
+                                    c.definition.is_artifact(),
                                 )
                             })
                             .collect()
                     };
-                    for (idx, (id, power, is_creature, tough, mv)) in
+                    for (idx, (id, power, is_creature, tough, mv, is_artifact)) in
                         chosen.into_iter().enumerate()
                     {
                         if idx == 0 {
@@ -4924,6 +4925,7 @@ impl GameState {
                             self.sacrificed_power = Some(power as i32);
                             self.sacrificed_toughness = Some(tough);
                             self.sacrificed_mana_value = Some(mv);
+                            self.sacrificed_was_artifact = Some(is_artifact);
                         }
                         if is_creature {
                             if let Some(c) = self.dying_snapshot(id) {
@@ -7447,13 +7449,14 @@ impl GameState {
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
-        self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
-        })
+        self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn)
+            || self.battlefield.iter().any(|c| {
+                c.controller == player
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
+            })
     }
 
     /// True when `player` controls a permanent with the "opponents can't make
@@ -9645,6 +9648,28 @@ impl GameState {
                 effective_mana_cost.reduce_generic(count);
             }
         }
+        // "Costs {1} less for each [kind] counter on [filter] you control"
+        // (Deepwood Denizen).
+        if let Some((kind, filter)) = &ability.cost_reduction_per_counter {
+            let count: u32 = self.with_frozen_layers(|g| {
+                g.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && g.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                Some(card_id),
+                            )
+                    })
+                    .map(|c| c.counter_count(*kind))
+                    .sum()
+            });
+            if count > 0 {
+                effective_mana_cost.reduce_generic(count);
+            }
+        }
         // "Costs {1} less for each [filter] you control" (channel lands).
         if let Some(filter) = &ability.cost_reduction_per {
             let count = self.with_frozen_layers(|g| {
@@ -10039,6 +10064,14 @@ impl GameState {
         // Fauna Shaman's "Discard a creature card:" cost runs here.
         for cid in discard_picks {
             self.discard_card(p, cid, &mut events);
+        }
+
+        // Discard-your-hand-as-cost (Diamond Lion / Lion's Eye Diamond).
+        if ability.discard_hand_cost {
+            let hand: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
+            for cid in hand {
+                self.discard_card(p, cid, &mut events);
+            }
         }
 
         // Tap-another-as-cost (CR 602.5b): with tap/mana/life paid, tap the

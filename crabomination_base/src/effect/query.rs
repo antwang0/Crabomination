@@ -733,6 +733,7 @@ impl Effect {
             Effect::LifeGainLockGame { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
+            Effect::GainHexproofUntilYourNextTurn { who } => player_has_target(who),
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),

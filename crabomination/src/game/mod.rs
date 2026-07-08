@@ -391,6 +391,9 @@ mod tests_mh2d;
 #[path = "../tests/mh2e.rs"]
 mod tests_mh2e;
 #[cfg(test)]
+#[path = "../tests/mh2f.rs"]
+mod tests_mh2f;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -848,6 +851,17 @@ pub struct GameState {
     /// Reset between independent resolutions.
     #[serde(default)]
     pub(crate) sacrificed_mana_value: Option<u32>,
+    /// Transient: whether the most-recently-sacrificed cost permanent was an
+    /// artifact ("if the sacrificed permanent was an artifact" — Foundry
+    /// Helix's `Predicate::SacrificedWasArtifact`). Set on the additional-
+    /// cast-cost sacrifice path; reset between resolutions.
+    #[serde(default)]
+    pub(crate) sacrificed_was_artifact: Option<bool>,
+    /// Transient: card-type count of the most recently discarded card
+    /// (`Value::LastDiscardedCardTypes` — Mount Velus Manticore). Stamped in
+    /// `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_card_types: u32,
     /// Mana value of the last card discarded during the current resolution
     /// (Argentum Masticore's "MV ≤ the discarded card" reflexive gate).
     pub(crate) last_discarded_mana_value: Option<u32>,
@@ -1576,6 +1590,8 @@ impl Clone for GameState {
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
+            sacrificed_was_artifact: self.sacrificed_was_artifact,
+            last_discarded_card_types: self.last_discarded_card_types,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
             last_discarded_mana_value: self.last_discarded_mana_value,
@@ -1729,6 +1745,8 @@ impl GameState {
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
+            sacrificed_was_artifact: None,
+            last_discarded_card_types: 0,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
             last_discarded_mana_value: None,
@@ -7568,6 +7586,7 @@ impl GameState {
         self.players[p].discarded_this_turn.insert(card_id);
         self.cards_discarded_this_resolution += 1;
         self.last_discarded_mana_value = Some(card.definition.cost.cmc());
+        self.last_discarded_card_types = card.definition.card_types.len() as u32;
         *self
             .cards_discarded_per_player_this_resolution
             .entry(p)

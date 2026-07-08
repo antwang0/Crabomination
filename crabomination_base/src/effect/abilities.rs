@@ -1629,6 +1629,15 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub discard_cost: Option<(SelectionRequirement, u32)>,
+    /// "Discard your hand" as an activation cost (Diamond Lion / Lion's Eye
+    /// Diamond). The whole hand is discarded, firing discard triggers.
+    #[serde(default)]
+    pub discard_hand_cost: bool,
+    /// "{N} less to activate for each `counter_type` counter on permanents
+    /// matching the filter" (Deepwood Denizen — {1} less per +1/+1 counter
+    /// on creatures you control). Generic-only reduction.
+    #[serde(default)]
+    pub cost_reduction_per_counter: Option<(crate::card::CounterType, SelectionRequirement)>,
     /// Optional cost: remove `count` counters of the given type from the
     /// source permanent (CR 602.5b "Remove a [kind] counter from this:"
     /// cost lines). Modeled as a real cost — not an effect — so the ability

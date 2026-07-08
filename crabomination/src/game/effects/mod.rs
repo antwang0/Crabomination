@@ -2482,6 +2482,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GainHexproofUntilYourNextTurn { who } => {
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].hexproof_until_next_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantHexproofFromColorThisTurn { who, colors } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {

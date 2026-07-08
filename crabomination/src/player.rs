@@ -592,6 +592,11 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub cast_blue_or_black_this_turn: bool,
+    /// True while this player has hexproof until the start of their next
+    /// turn (Blossoming Calm). Set by `Effect::GainHexproofUntilYourNextTurn`;
+    /// cleared at this player's `do_untap`. `#[serde(default)]`.
+    #[serde(default)]
+    pub hexproof_until_next_turn: bool,
     /// True while this player can't cast noncreature spells for the rest of
     /// the turn (Ranger-Captain of Eos's sacrifice ability). Set by
     /// `Effect::CantCastNoncreatureThisTurn`; reset for every player at the
@@ -697,6 +702,7 @@ impl Player {
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,
             hexproof_from_colors_this_turn: Vec::new(),
+            hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,
             cant_cast_noncreature_this_turn: false,
             opponents_cant_cast_named: Vec::new(),
