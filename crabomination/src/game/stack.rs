@@ -1931,6 +1931,8 @@ impl GameState {
             pl.cast_blue_or_black_this_turn = false;
             pl.cant_cast_noncreature_this_turn = false;
             pl.free_spells_from_hand_this_turn = false;
+            pl.play_from_graveyard_this_turn = false;
+            pl.graveyard_bound_exiled_this_turn = false;
             pl.silenced_this_turn = false;
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;

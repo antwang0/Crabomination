@@ -1863,6 +1863,10 @@ pub enum GameError {
     SorcerySpeedOnly,
     #[error("You can't cast noncreature spells this turn")]
     CantCastNoncreature,
+    /// CR 601.3e — the card has no mana cost and can only be cast via
+    /// suspend (Gaea's Will, Inevitable Betrayal, Glimpse of Tomorrow).
+    #[error("card can only be cast via suspend")]
+    SuspendOnly,
     #[error("You can't cast permanent spells")]
     CantCastPermanentSpells,
     #[error("You can't cast spells or activate loyalty abilities this turn")]

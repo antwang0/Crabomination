@@ -11,7 +11,7 @@ use crate::effect::shortcut::{etb, investigate, modular_dies, outlast, target_fi
 use crate::effect::{
     Duration, Effect, LibraryPosition, PlayerRef, Predicate, StaticEffect, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 use SelectionRequirement as R;
 

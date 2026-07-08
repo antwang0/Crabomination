@@ -314,6 +314,13 @@ impl Effect {
             }
             Effect::FreeSpellsFromHandThisTurn => false,
             Effect::ChooseCardTypeForSource => false,
+            Effect::PlayFromGraveyardThisTurn
+            | Effect::ExileYourGraveyardBoundThisTurn
+            | Effect::GlimpseOfTomorrow
+            | Effect::GarthOneEye { .. }
+            | Effect::GristPlusOne => false,
+            // Targets a spell on the stack.
+            Effect::ChefsKiss => true,
             // Targets an opponent (player slot 0).
             Effect::OpponentRevealsPickToBattlefield { .. } => true,
             Effect::RollDie { count, results, .. } => {
@@ -850,6 +857,11 @@ impl Effect {
             // The target may be the moved object (`what`: Kor Outfitter's
             // "target Equipment") or the host (`to`: Maul's "attach this to
             // target creature"). Prefer whichever sub-selector carries slot 0.
+            // Chef's Kiss targets a spell on the stack.
+            Effect::ChefsKiss => {
+                const F: SelectionRequirement = SelectionRequirement::IsSpellOnStack;
+                Some(&F)
+            }
             Effect::Attach { what, to } => sel_filter(what).or_else(|| sel_filter(to)),
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.

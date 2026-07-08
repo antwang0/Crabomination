@@ -607,6 +607,13 @@ pub struct Player {
     /// mana costs" (Yusri's five-win jackpot). Cleared at end-of-turn.
     #[serde(default)]
     pub free_spells_from_hand_this_turn: bool,
+    /// Gaea's Will — lands playable from this player's graveyard this turn.
+    #[serde(default)]
+    pub play_from_graveyard_this_turn: bool,
+    /// Gaea's Will — this player's graveyard-bound cards exile instead this
+    /// turn (CR 614.6, own cards only).
+    #[serde(default)]
+    pub graveyard_bound_exiled_this_turn: bool,
     /// Card names this player's opponents can't cast until this player's next
     /// turn (Academic Probation mode 0 — "Opponents can't cast spells with the
     /// chosen name until your next turn"). Reset for every player at the active
@@ -710,6 +717,8 @@ impl Player {
             cast_blue_or_black_this_turn: false,
             cant_cast_noncreature_this_turn: false,
             free_spells_from_hand_this_turn: false,
+            play_from_graveyard_this_turn: false,
+            graveyard_bound_exiled_this_turn: false,
             opponents_cant_cast_named: Vec::new(),
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,

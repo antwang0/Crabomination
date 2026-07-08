@@ -997,6 +997,304 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayFromGraveyardThisTurn => {
+                use crate::card::{MayPlayDuration, MayPlayPermission};
+                let p = ctx.controller;
+                let turn = self.turn_number;
+                self.players[p].play_from_graveyard_this_turn = true;
+                for card in self.players[p].graveyard.iter_mut() {
+                    if card.definition.is_land() {
+                        continue; // lands ride the land-play gate
+                    }
+                    card.may_play_until = Some(MayPlayPermission {
+                        player: p,
+                        granted_turn: turn,
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        exile_after: false,
+                    });
+                    // Pay-own-cost cast, not free.
+                    card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                }
+                Ok(())
+            }
+
+            Effect::ExileYourGraveyardBoundThisTurn => {
+                self.players[ctx.controller].graveyard_bound_exiled_this_turn = true;
+                Ok(())
+            }
+
+            Effect::GlimpseOfTomorrow => {
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                // Shuffle all permanents you OWN into your library.
+                let owned: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.owner == p)
+                    .map(|c| c.id)
+                    .collect();
+                let n = owned.len();
+                for cid in owned {
+                    if let Some(mut card) = Self::take_card(&mut self.battlefield, cid) {
+                        self.remove_effects_from_source(cid);
+                        self.remove_from_combat(cid);
+                        self.on_left_battlefield(cid, events);
+                        if card.is_token {
+                            continue; // tokens cease to exist (CR 111.7)
+                        }
+                        card.counters.clear();
+                        card.attached_to = None;
+                        self.players[p].library.push(card);
+                    }
+                }
+                self.players[p].library.shuffle(&mut rand::rng());
+                // Reveal that many; permanents enter (non-Aura first), rest
+                // bottoms in random order.
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                let is_aura = |c: &crate::card::CardInstance| {
+                    c.definition.aura_enchant_filter().is_some()
+                        || c.definition
+                            .subtypes
+                            .enchantment_subtypes
+                            .contains(&crate::card::EnchantmentSubtype::Aura)
+                };
+                let mut auras = Vec::new();
+                let mut rest = Vec::new();
+                for rid in revealed {
+                    let Some(card) = Self::take_card(&mut self.players[p].library, rid) else {
+                        continue;
+                    };
+                    if card.definition.is_permanent() && !is_aura(&card) {
+                        self.place_card_in_dest(
+                            card,
+                            p,
+                            &crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::You,
+                                tapped: false,
+                            },
+                            events,
+                        );
+                    } else if card.definition.is_permanent() {
+                        auras.push(card);
+                    } else {
+                        rest.push(card);
+                    }
+                }
+                // Auras second: attach each to the first legal host, else bottom.
+                for card in auras {
+                    let filter = card.definition.aura_enchant_filter().cloned()
+                        .unwrap_or(crate::card::SelectionRequirement::Creature);
+                    let host = self
+                        .battlefield
+                        .iter()
+                        .find(|h| {
+                            self.evaluate_requirement_static(
+                                &filter,
+                                &Target::Permanent(h.id),
+                                p,
+                                None,
+                            )
+                        })
+                        .map(|h| h.id);
+                    match host {
+                        Some(hid) => {
+                            let cid = card.id;
+                            self.place_card_in_dest(
+                                card,
+                                p,
+                                &crate::effect::ZoneDest::Battlefield {
+                                    controller: crate::effect::PlayerRef::You,
+                                    tapped: false,
+                                },
+                                events,
+                            );
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.attached_to = Some(hid);
+                            }
+                        }
+                        None => rest.push(card),
+                    }
+                }
+                rest.shuffle(&mut rand::rng());
+                self.players[p].library.extend(rest);
+                Ok(())
+            }
+
+            Effect::GarthOneEye { names } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let used = self
+                    .battlefield_find(source)
+                    .map(|c| c.name_choices_used)
+                    .unwrap_or(0);
+                let available: Vec<(usize, &String)> = names
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| used & (1 << i) == 0)
+                    .collect();
+                if available.is_empty() {
+                    return Ok(());
+                }
+                let pick = match self.decider.decide(&Decision::ChooseMode {
+                    source,
+                    num_modes: available.len(),
+                    mode_texts: available.iter().map(|(_, n)| n.to_string()).collect(),
+                }) {
+                    DecisionAnswer::Mode(m) => m.min(available.len() - 1),
+                    _ => 0,
+                };
+                let (idx, name) = (available[pick].0, available[pick].1.clone());
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.name_choices_used |= 1 << idx;
+                }
+                // Approximation: the copy is created in the controller's hand
+                // as a real castable card (a true copy would cease to exist
+                // if not cast — CR 704.5e).
+                if let Some(def) = crate::catalog::lookup_by_name(&name) {
+                    let id = self.next_id();
+                    let inst = crate::card::CardInstance::new(id, def, ctx.controller);
+                    self.players[ctx.controller].hand.push(inst);
+                }
+                Ok(())
+            }
+
+            Effect::ChefsKiss => {
+                use rand::seq::IndexedRandom;
+                // Steal target single-target spell, copy it, retarget both at
+                // random among legal targets that aren't yours.
+                let Some(Target::Permanent(spell_id)) = ctx.targets.first().cloned() else {
+                    return Ok(());
+                };
+                let me = ctx.controller;
+                let Some(pos) = self.stack.iter().position(|si| {
+                    matches!(si, StackItem::Spell { card, .. } if card.id == spell_id)
+                }) else {
+                    return Ok(());
+                };
+                // Gain control of the spell.
+                if let StackItem::Spell { caster, .. } = &mut self.stack[pos] {
+                    *caster = me;
+                }
+                // Copy it (the copy is a token spell, uncounterable).
+                let new_id = self.next_id();
+                let copy = {
+                    let StackItem::Spell { card, target, additional_targets, mode, x_value, converged_value, .. } =
+                        &self.stack[pos]
+                    else {
+                        return Ok(());
+                    };
+                    let mut inst =
+                        crate::card::CardInstance::new(new_id, card.definition.clone(), me);
+                    inst.is_token = true;
+                    StackItem::Spell {
+                        card: Box::new(inst),
+                        caster: me,
+                        target: target.clone(),
+                        additional_targets: additional_targets.clone(),
+                        mode: *mode,
+                        x_value: *x_value,
+                        converged_value: *converged_value,
+                        mana_spent: 0,
+                        uncounterable: true,
+                    }
+                };
+                self.stack.push(copy);
+                let copy_pos = self.stack.len() - 1;
+                // Random retarget: legal picks are permanents you don't
+                // control and players other than you, matching the spell's
+                // own filter for permanents. Keeps the old target when none.
+                let filter = {
+                    let StackItem::Spell { card, .. } = &self.stack[pos] else { return Ok(()) };
+                    card.definition.effect.primary_target_filter().cloned()
+                };
+                let f = filter.unwrap_or(crate::card::SelectionRequirement::Any);
+                let mut candidates: Vec<Target> = Vec::new();
+                let ids: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller != me)
+                    .map(|c| c.id)
+                    .collect();
+                for cid in ids {
+                    if self.evaluate_requirement_static(&f, &Target::Permanent(cid), me, None) {
+                        candidates.push(Target::Permanent(cid));
+                    }
+                }
+                // Player targets when the filter admits them.
+                if matches!(
+                    f,
+                    crate::card::SelectionRequirement::Player
+                        | crate::card::SelectionRequirement::Any
+                ) {
+                    for (i, pl) in self.players.iter().enumerate() {
+                        if i != me && pl.is_alive() {
+                            candidates.push(Target::Player(i));
+                        }
+                    }
+                }
+                for idx in [pos, copy_pos] {
+                    if let Some(pick) = candidates.choose(&mut rand::rng())
+                        && let StackItem::Spell { target, .. } = &mut self.stack[idx]
+                    {
+                        *target = Some(pick.clone());
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GristPlusOne => {
+                use crate::card::{CardType, CounterType, CreatureType, Subtypes, TokenDefinition};
+                let p = ctx.controller;
+                let insect = TokenDefinition {
+                    name: "Insect".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Insect],
+                        ..Default::default()
+                    },
+                    colors: vec![crate::mana::Color::Black, crate::mana::Color::Green],
+                    ..Default::default()
+                };
+                for _ in 0..100 {
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: crate::effect::PlayerRef::You,
+                            count: crate::effect::Value::ONE,
+                            definition: insect.clone(),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    let milled_insect = card.definition.subtypes.creature_types.contains(&CreatureType::Insect)
+                        && (card.definition.is_creature() || card.definition.creature_off_battlefield);
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
+                    if !milled_insect {
+                        break;
+                    }
+                    if let Some(src) = ctx.source
+                        && let Some(c) = self.battlefield_find_mut(src)
+                    {
+                        c.add_counters(CounterType::Loyalty, 1);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: src,
+                            counter_type: CounterType::Loyalty,
+                            count: 1,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChooseCardTypeForSource => {
                 use crate::card::CardType;
                 use crate::decision::{Decision, DecisionAnswer};
@@ -8780,9 +9078,27 @@ impl GameState {
                     candidates,
                     eligible: eligible.clone(),
                 };
+                // SearchPickedBy (Inevitable Betrayal): "put onto the
+                // battlefield under YOUR control" — pre-resolve the dest's
+                // `You` to the effect controller, since `place_card_in_dest`
+                // later resolves refs against the *searched* player.
+                let to = if picker_ref.is_some() {
+                    match to.clone() {
+                        crate::effect::ZoneDest::Battlefield { controller, tapped } => {
+                            let seat = self.resolve_player(&controller, ctx).unwrap_or(p);
+                            crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(seat),
+                                tapped,
+                            }
+                        }
+                        other => other,
+                    }
+                } else {
+                    to.clone()
+                };
                 let pending = PendingEffectState::SearchPending {
                     player: p,
-                    to: to.clone(),
+                    to,
                     eligible,
                     include_graveyard,
                 };

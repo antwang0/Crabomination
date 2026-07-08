@@ -400,6 +400,9 @@ mod tests_mh2g;
 #[path = "../tests/mh2h.rs"]
 mod tests_mh2h;
 #[cfg(test)]
+#[path = "../tests/mh2i.rs"]
+mod tests_mh2i;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -3622,7 +3625,11 @@ impl GameState {
     ) -> (bool, bool) {
         use crate::effect::StaticEffect;
         let owner = card.owner;
-        let mut redirects = false;
+        // Gaea's Will — the owner's graveyard-bound cards exile this turn.
+        let mut redirects = self
+            .players
+            .get(owner)
+            .is_some_and(|pl| pl.graveyard_bound_exiled_this_turn);
         let mut void = false;
         for c in &self.battlefield {
             for sa in &c.definition.static_abilities {

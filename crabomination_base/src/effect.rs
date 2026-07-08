@@ -3327,6 +3327,32 @@ pub enum Effect {
     /// rest go to the bottom in random order. Auto-picks the highest-MV
     /// legal card.
     OpponentRevealsPickToBattlefield { count: Value, max_mv: Value },
+    /// Gaea's Will — until end of turn you may play lands and cast spells
+    /// from your graveyard: every card currently there gets a pay-own-cost
+    /// `may_play_until` permission and lands ride the graveyard land-play
+    /// gate. Cards reaching the graveyard later this turn aren't granted.
+    PlayFromGraveyardThisTurn,
+    /// Gaea's Will — "If a card would be put into your graveyard from
+    /// anywhere this turn, exile it instead" (turn-scoped Rest in Peace,
+    /// own cards only).
+    ExileYourGraveyardBoundThisTurn,
+    /// Glimpse of Tomorrow — shuffle all permanents you own into your
+    /// library, reveal that many cards; non-Aura permanents enter the
+    /// battlefield, then Auras (auto-attached), the rest to the bottom in
+    /// random order.
+    GlimpseOfTomorrow,
+    /// Garth One-Eye — choose a not-yet-chosen name among `names`, create a
+    /// copy of that card and you may cast it (approximated: the copy is put
+    /// into your hand as a real card; used names tracked in
+    /// `CardInstance.name_choices_used`).
+    GarthOneEye { names: Vec<String> },
+    /// Chef's Kiss — gain control of target single-target spell, copy it,
+    /// and reselect each target at random among legal targets that aren't
+    /// you or your permanents (keeps the old target when none exist).
+    ChefsKiss,
+    /// Grist's +1 — create a 1/1 black-green Insect, then mill a card; if an
+    /// Insect card was milled, add a loyalty counter and repeat (loop-capped).
+    GristPlusOne,
     /// Yusri, Fortune's Flame — choose a number 1..=`max`, flip that many
     /// coins; run `per_win` per won flip and `per_loss` per lost flip, then
     /// `all_won` if the chosen number was `all_won_min`+ and every flip won.

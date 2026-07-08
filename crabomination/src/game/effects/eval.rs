@@ -1817,7 +1817,12 @@ impl GameState {
                 };
                 use crate::card::CardType as CT;
                 match req {
-                    R::Creature => has_type(CT::Creature),
+                    // CR 604.3 — Grist is a creature everywhere but the
+                    // battlefield.
+                    R::Creature => {
+                        has_type(CT::Creature)
+                            || (card.definition.creature_off_battlefield && computed.is_none())
+                    }
                     R::Artifact => has_type(CT::Artifact),
                     R::Enchantment => has_type(CT::Enchantment),
                     R::Planeswalker => has_type(CT::Planeswalker),
@@ -2163,7 +2168,12 @@ impl GameState {
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
             R::OwnedByYou => card.owner == controller,
-            R::Creature => card.definition.is_creature(),
+            R::Creature => {
+                // CR 604.3 — Grist is a creature everywhere but the battlefield.
+                card.definition.is_creature()
+                    || (card.definition.creature_off_battlefield
+                        && self.battlefield_find(card.id).is_none())
+            }
             R::Artifact => card.definition.is_artifact(),
             R::Enchantment => card.definition.is_enchantment(),
             R::Planeswalker => card.definition.is_planeswalker(),

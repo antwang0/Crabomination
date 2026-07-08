@@ -266,6 +266,8 @@ pub enum PlaneswalkerSubtype {
     Kasmina,
     // STX Dean/Strixhaven planeswalker MDFCs.
     Rowan, Will, Lukka,
+    // MH2 (Grist, the Hunger Tide).
+    Grist,
     // Cube expansion: Wrenn (Wrenn and Six).
     Wrenn,
     // NEO: The Wandering Emperor.
@@ -1982,6 +1984,16 @@ pub struct CardDefinition {
     /// The legend-rule SBA skips token instances of this definition.
     #[serde(default)]
     pub nonlegendary_as_token: bool,
+    /// CR 601.3e — a card with no mana cost that can only be cast via
+    /// suspend (Gaea's Will, Inevitable Betrayal, Glimpse of Tomorrow).
+    /// The from-hand cast path rejects it.
+    #[serde(default)]
+    pub suspend_only: bool,
+    /// CR 604.3 CDA — "As long as [this] isn't on the battlefield, it's a
+    /// 1/1 Insect creature in addition to its other types" (Grist). Zone
+    /// filters treat the card as a creature everywhere but the battlefield.
+    #[serde(default)]
+    pub creature_off_battlefield: bool,
     /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
     /// A combined chapter ("I, II — …") is listed once per number with the
     /// same effect. Non-empty marks the card a Saga: it enters with one lore
@@ -3594,6 +3606,9 @@ pub struct CardInstance {
     /// (Out of Time): `do_phasing` skips it, and it phases in when the
     /// source leaves.
     pub phased_out_by: Option<CardId>,
+    /// Bitmask of name choices already taken from this permanent's
+    /// choose-a-name ability (Garth One-Eye — each name once per game).
+    pub name_choices_used: u32,
     /// Another permanent chosen and remembered as this one entered (Dauntless
     /// Bodyguard — "As this enters, choose another creature you control").
     /// `Selector::ChosenPermanentOfSource` resolves to it. `None` until the
@@ -3910,6 +3925,7 @@ impl CardInstance {
             echo_paid: false,
             granted_suspend: false,
             phased_out_by: None,
+            name_choices_used: 0,
             chosen_permanent: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
@@ -4421,6 +4437,8 @@ struct CardInstanceWire {
     #[serde(default)]
     phased_out_by: Option<CardId>,
     #[serde(default)]
+    name_choices_used: u32,
+    #[serde(default)]
     chosen_permanent: Option<CardId>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
@@ -4618,6 +4636,7 @@ impl serde::Serialize for CardInstance {
             echo_paid: self.echo_paid,
             granted_suspend: self.granted_suspend,
             phased_out_by: self.phased_out_by,
+            name_choices_used: self.name_choices_used,
             chosen_permanent: self.chosen_permanent,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),
@@ -4746,6 +4765,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.echo_paid = wire.echo_paid;
         c.granted_suspend = wire.granted_suspend;
         c.phased_out_by = wire.phased_out_by;
+        c.name_choices_used = wire.name_choices_used;
         c.chosen_permanent = wire.chosen_permanent;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.exhausted_abilities = wire.exhausted_abilities;

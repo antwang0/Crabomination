@@ -1278,6 +1278,9 @@ impl crate::game::GameState {
     /// `StaticEffect::MayPlayLandsFromGraveyard` permanent.
     pub fn player_may_play_lands_from_graveyard(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
+        if self.players[player].play_from_graveyard_this_turn {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition
@@ -2132,6 +2135,13 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // CR 601.3e — suspend-only cards can't be cast from hand.
+        {
+            let p = self.priority.player_with_priority;
+            if self.players[p].hand.iter().any(|c| c.id == card_id && c.definition.suspend_only) {
+                return Err(GameError::SuspendOnly);
+            }
+        }
         // Muldrotha — cast a permanent spell of each permanent type from
         // your graveyard during each of your turns. Hop the card into hand
         // for the normal cast pipeline; restore on failure, record the
