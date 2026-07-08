@@ -444,7 +444,9 @@ impl GameState {
                         self.players[p].creatures_that_damaged_me_this_turn.push(src);
                     }
                 }
-                if source_has_infect {
+                // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.
+                let unlife_infect = self.players[p].life <= 0 && self.player_unlife_active(p);
+                if source_has_infect || unlife_infect {
                     self.players[p].poison_counters =
                         self.players[p].poison_counters.saturating_add(amount);
                     events.push(GameEvent::PoisonAdded { player: p, amount });

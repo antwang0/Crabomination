@@ -2211,7 +2211,8 @@ impl GameState {
                     });
                     return;
                 }
-                if atk.has_infect {
+                // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.
+                if atk.has_infect || (self.players[p].life <= 0 && self.player_unlife_active(p)) {
                     self.add_poison(p, amount, events);
                 } else {
                     // Angel's Grace / Worship — damage lands in full, but the

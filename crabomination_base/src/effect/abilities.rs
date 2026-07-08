@@ -340,6 +340,11 @@ pub enum StaticEffect {
     /// total mana value of noncreature artifacts you control" (Metalwork
     /// Colossus). Generic-only; clamped by the caller.
     SelfCostReducedByNoncreatureArtifactMv,
+    /// "You don't lose the game for having 0 or less life. As long as you
+    /// have 0 or less life, all damage is dealt to you as though its source
+    /// had infect." (Phyrexian Unlife.) Gates the CR 704.5a loss SBA and
+    /// flips both player-damage funnels to poison at ≤ 0 life.
+    ControllerDoesntLoseFromLife,
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
@@ -1441,6 +1446,11 @@ pub struct TriggeredAbility {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ActivatedAbility {
     pub tap_cost: bool,
+    /// CR 107.17 — the untap symbol `{Q}`: the source must be tapped and
+    /// untaps as a cost (Pili-Pala). Shares `{T}`'s CR 602.5g/h
+    /// summoning-sickness gate.
+    #[serde(default)]
+    pub untap_self_cost: bool,
     pub mana_cost: crate::mana::ManaCost,
     pub effect: Effect,
     pub once_per_turn: bool,

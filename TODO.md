@@ -45,15 +45,15 @@ factory doc comment:
     field is mechanical but wide.
   - **Skipped cards needing a primitive each:** Lightning Storm (any-player
     stack-only activated ability), Tibalt's Trickery (random 1–3 mill +
-    exile-until-different-name free cast), Phyrexian Unlife (don't-lose-at-0
-    + damage-as-poison at ≤0), Salvage Titan (sac-3-artifacts alt cost +
-    gy self-return), Bottled Cloister (end-step hand exile / upkeep return),
-    Cenn's Tactician (counter-gated multi-block), Nourishing Shoal (pitch-X
-    alt cost reading the pitched card's MV), Prismatic Strands
-    (prevent-by-color + tap-white-creature flashback cost), Abundance
-    (draw-replacement dig), Qasali Ambusher (free flash cast when attacked
-    with Forest+Plains), Pili-Pala ({Q} untap-symbol costs), Mycosynth
-    Lattice (all-colorless + spend-any halves).
+    exile-until-different-name free cast), Bottled Cloister (end-step hand
+    exile / upkeep return), Cenn's Tactician (counter-gated multi-block),
+    Nourishing Shoal (pitch-X alt cost reading the pitched card's MV),
+    Prismatic Strands (prevent-by-color + tap-white-creature flashback
+    cost), Abundance (draw-replacement dig), Experimental Frenzy
+    (can't-play-from-hand static + top-of-library play), Mycosynth Lattice
+    (all-colorless + spend-any halves). (Pili-Pala / Phyrexian Unlife /
+    Salvage Titan / Qasali Ambusher shipped in `recent112` — {Q} costs via
+    `ActivatedAbility.untap_self_cost`, `ControllerDoesntLoseFromLife`.)
   - **Approximations to revisit:** Tidebinder Mage's lock is a one-shot
     `SkipNextUntap` (printed: while you control it); Hypergenesis dumps all
     hand permanents at once (printed: alternating one-at-a-time loop);

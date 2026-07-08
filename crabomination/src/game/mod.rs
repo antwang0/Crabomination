@@ -385,6 +385,9 @@ mod tests_recent110;
 #[path = "../tests/recent111.rs"]
 mod tests_recent111;
 #[cfg(test)]
+#[path = "../tests/recent112.rs"]
+mod tests_recent112;
+#[cfg(test)]
 #[path = "../tests/mh2b.rs"]
 mod tests_mh2b;
 #[cfg(test)]
@@ -4298,6 +4301,19 @@ impl GameState {
                 StaticEffect::ControllerCantWinGame => !self.same_team(src.controller, seat),
                 _ => false,
             })
+        })
+    }
+
+    /// Phyrexian Unlife — true when `seat` controls a
+    /// `ControllerDoesntLoseFromLife` static: the life-≤-0 loss SBA is
+    /// skipped, and at ≤ 0 life all damage to them lands as poison.
+    pub fn player_unlife_active(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            src.controller == seat
+                && src.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::ControllerDoesntLoseFromLife)
+                })
         })
     }
 
@@ -12863,6 +12879,8 @@ fn static_effect_to_effects(
             // CR 104.3d — consulted at the loss/win sites, no layer effect.
             | StaticEffect::ControllerCantLoseGame
             | StaticEffect::ControllerCantWinGame
+            // Phyrexian Unlife — consulted at the loss SBA + damage funnels.
+            | StaticEffect::ControllerDoesntLoseFromLife
             // Consulted at the damage-to-player life sites.
             | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
             | StaticEffect::OneSpellPerTurn

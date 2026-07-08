@@ -9176,10 +9176,10 @@ impl GameState {
             }
         }
 
-        // CR 602.5g — a creature's ability with a {T} cost can't be activated
-        // while the creature is summoning-sick, unless it has haste or its
-        // controller has a Tyvar-style "as though they had haste" static.
-        if ability.tap_cost && !source_in_gy && !source_in_hand {
+        // CR 602.5g/h — a creature's ability with a {T} or {Q} cost can't be
+        // activated while the creature is summoning-sick, unless it has haste
+        // or its controller has a Tyvar-style "as though they had haste" static.
+        if (ability.tap_cost || ability.untap_self_cost) && !source_in_gy && !source_in_hand {
             let sick = self.battlefield_find(card_id).is_some_and(|c| {
                 c.summoning_sick
                     && self
@@ -9916,6 +9916,21 @@ impl GameState {
             }
             perm.tapped = true;
         }
+        // CR 107.17 — pay a {Q} cost: the source must be tapped; untap it.
+        if ability.untap_self_cost {
+            if source_in_gy || source_in_hand || source_in_exile {
+                return Err(GameError::CardIsTapped(card_id));
+            }
+            let perm = self
+                .battlefield
+                .iter_mut()
+                .find(|c| c.id == card_id)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            if !perm.tapped {
+                return Err(GameError::CardIsTapped(card_id));
+            }
+            perm.tapped = false;
+        }
 
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
@@ -9961,6 +9976,9 @@ impl GameState {
         // succeeded so a rolled-back activation never announces a tap.
         if ability.tap_cost {
             events.push(GameEvent::PermanentTapped { card_id });
+        }
+        if ability.untap_self_cost {
+            events.push(GameEvent::PermanentUntapped { card_id });
         }
         // Mana abilities don't emit the activation event — every printed
         // "whenever an opponent activates an ability" trigger carves them
