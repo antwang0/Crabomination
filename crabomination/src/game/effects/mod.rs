@@ -1417,11 +1417,24 @@ impl GameState {
                 use crate::decision::{Decision, DecisionAnswer};
                 let me = ctx.controller;
                 let src = ctx.source.unwrap_or(crate::card::CardId(0));
-                let n = match self.decider.decide(&Decision::ChooseAmount {
+                let decision = Decision::ChooseAmount {
                     source: src,
                     prompt: "Flip how many coins?".into(),
                     max: *max,
-                }) {
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[me].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: *max },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let n = match answer {
                     DecisionAnswer::Amount(a) => a.clamp(1, *max),
                     _ => 1,
                 };

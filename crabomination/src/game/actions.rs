@@ -2135,11 +2135,12 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // CR 601.3e — suspend-only cards can't be cast from hand.
+        // CR 601.3e — a card with no mana cost can't be cast by paying it
+        // (suspend / free-cast paths bypass this method).
         {
             let p = self.priority.player_with_priority;
-            if self.players[p].hand.iter().any(|c| c.id == card_id && c.definition.suspend_only) {
-                return Err(GameError::SuspendOnly);
+            if self.players[p].hand.iter().any(|c| c.id == card_id && c.definition.no_mana_cost) {
+                return Err(GameError::NoManaCost);
             }
         }
         // Muldrotha — cast a permanent spell of each permanent type from

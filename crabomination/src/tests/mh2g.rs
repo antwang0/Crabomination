@@ -285,6 +285,35 @@ fn yusri_flip_mix() {
     assert!(!g.players[0].free_spells_from_hand_this_turn);
 }
 
+/// A `wants_ui` Yusri controller is prompted for the flip count instead of
+/// riding the synchronous decider.
+#[test]
+fn yusri_wants_ui_prompts_flip_count() {
+    use crate::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let yusri = g.add_card_to_battlefield(0, catalog::yusri_fortunes_flame());
+    g.add_card_to_library(0, catalog::island());
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    let eff = catalog::yusri_fortunes_flame().triggered_abilities[0].effect.clone();
+    g.push_pending_trigger(
+        crate::game::PendingTriggerPush {
+            source: yusri, controller: 0, effect: eff,
+            subject: None, event_amount: 0, mode: None, intervening_if: None,
+        },
+        None,
+    );
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("ChooseAmount suspends");
+    assert!(matches!(pd.decision, Decision::ChooseAmount { .. }));
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(1))).unwrap();
+    drain_stack(&mut g);
+    let drew = g.players[0].hand.len() == hand + 1;
+    let burned = g.players[0].life == life - 2;
+    assert!(drew ^ burned, "exactly one flip resolved (win draws, loss burns)");
+}
+
 /// Yusri's five-win jackpot: spells from hand are free this turn.
 #[test]
 fn yusri_jackpot_free_spells() {

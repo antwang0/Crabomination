@@ -43,7 +43,7 @@ pub fn gaeas_will() -> CardDefinition {
         name: "Gaea's Will",
         cost: ManaCost::default(),
         card_types: vec![CardType::Sorcery],
-        suspend_only: true,
+        no_mana_cost: true,
         keywords: vec![Keyword::Suspend(4, cost(&[g()]))],
         effect: Effect::Seq(vec![
             Effect::PlayFromGraveyardThisTurn,
@@ -60,7 +60,7 @@ pub fn inevitable_betrayal() -> CardDefinition {
         name: "Inevitable Betrayal",
         cost: ManaCost::default(),
         card_types: vec![CardType::Sorcery],
-        suspend_only: true,
+        no_mana_cost: true,
         keywords: vec![Keyword::Suspend(3, cost(&[generic(1), u(), u()]))],
         effect: Effect::SearchPickedBy {
             who: PlayerRef::Target(0),
@@ -79,7 +79,7 @@ pub fn glimpse_of_tomorrow() -> CardDefinition {
         name: "Glimpse of Tomorrow",
         cost: ManaCost::default(),
         card_types: vec![CardType::Sorcery],
-        suspend_only: true,
+        no_mana_cost: true,
         keywords: vec![Keyword::Suspend(3, cost(&[r(), r()]))],
         effect: Effect::GlimpseOfTomorrow,
         ..Default::default()

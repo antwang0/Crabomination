@@ -734,6 +734,25 @@ fn suspend_ancestral_vision_draws_three() {
     assert_eq!(g.players[0].hand.len(), hand_before + 3, "controller draws three");
 }
 
+/// CR 601.3e — no-mana-cost cards can't be cast from hand, while a printed
+/// {0} cost (Ornithopter) still can.
+#[test]
+fn cr_601_3e_no_mana_cost_rejected_but_zero_cost_castable() {
+    let mut g = two_player_game();
+    let av = g.add_card_to_hand(0, catalog::ancestral_vision());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: av, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(err, Err(crate::game::GameError::NoManaCost)));
+    let orn = g.add_card_to_hand(0, catalog::ornithopter());
+    g.perform_action(GameAction::CastSpell {
+        card_id: orn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{0} is a payable printed cost");
+}
+
 /// Search for Tomorrow, when its suspend resolves, fetches a basic land onto
 /// the battlefield.
 #[test]

@@ -245,6 +245,7 @@ pub fn lava_dart() -> CardDefinition {
 pub fn ancestral_vision() -> CardDefinition {
     CardDefinition {
         name: "Ancestral Vision",
+        no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(4, cost(&[u()]))],
         effect: Effect::Draw {
@@ -261,6 +262,7 @@ pub fn lotus_bloom() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Lotus Bloom",
+        no_mana_cost: true,
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Suspend(3, ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
@@ -43635,6 +43637,7 @@ pub fn oliphaunt() -> CardDefinition {
 pub fn crashing_footfalls() -> CardDefinition {
     CardDefinition {
         name: "Crashing Footfalls",
+        no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(4, cost(&[g()]))],
         effect: Effect::CreateToken {
@@ -44016,6 +44019,7 @@ pub fn sigardas_aid() -> CardDefinition {
 pub fn living_end() -> CardDefinition {
     CardDefinition {
         name: "Living End",
+        no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(3, cost(&[generic(2), b(), b()]))],
         effect: Effect::LivingEnd,

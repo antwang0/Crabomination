@@ -26,21 +26,18 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
-- ⏳ **{0}-cost vs "no mana cost" indistinguishable.** Ornithopter (`{0}`)
-  and Ancestral Vision-style unpayable cards both encode as empty
-  `ManaCost.symbols`, so the CR 601.3e "can't cast a card with no mana cost"
-  rule can't be enforced generally — `CardDefinition.suspend_only` covers
-  the three MH2 suspend spells card-by-card. A `ManaCost::Unpayable` marker
-  (or `has_printed_cost: bool`) would generalize it.
-- ⏳ **Echo control-change window.** `echo_paid` resets on battlefield
-  re-entry but not on control change, so a stolen echo permanent doesn't owe
-  echo to its new controller (CR 702.29b "came under your control"). Needs a
-  gain-control funnel hook.
-- ⏳ **Echo pay prompt.** `process_echo` auto-pays when affordable
-  (auto-tapping lands). A `wants_ui` controller should get a MayPay prompt —
-  sometimes sacrificing is right (mirrors the cumulative-upkeep note).
-- ⏳ **Yusri's ChooseAmount for humans** rides the synchronous decider; the
-  networked seat needs the (already-tracked) ChooseAmount client modal.
+- ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
+  `suspend_only`; serde alias kept) rejects the pay-the-cost cast path per
+  CR 601.3e; Ancestral Vision / Lotus Bloom / Crashing Footfalls / Living End
+  stamped (they were castable from hand for free). `{0}` stays castable.
+- ✅ **Echo control-change window** — `GameState::change_control` funnel
+  (all steals/exchanges/reverts) resets `echo_paid` (CR 702.29b) and applies
+  CR 302.6 summoning sickness in one place.
+- ✅ **Echo pay prompt** — a `wants_ui` controller gets a real echo trigger
+  (`Effect::EchoPayOrSacrifice`) with a pay-or-sacrifice ask; payment
+  auto-taps. Bots/tests keep the synchronous path.
+- ✅ **Yusri's ChooseAmount** now suspends for a `wants_ui` seat
+  (`AmountAnswerPending`), same shape as `SacrificeAnyNumber`.
 
 - ✅ **`FromYourGraveyard`-scoped triggers fired from the battlefield too.**
   The battlefield gather didn't exclude the scope, so a Bloodghast-class

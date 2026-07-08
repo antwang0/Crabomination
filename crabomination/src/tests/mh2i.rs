@@ -53,7 +53,7 @@ fn cr_601_3e_suspend_only_cast_rejected() {
     let err = g.perform_action(GameAction::CastSpell {
         card_id: will, target: None, additional_targets: vec![], mode: None, x_value: None,
     });
-    assert!(matches!(err, Err(GameError::SuspendOnly)));
+    assert!(matches!(err, Err(GameError::NoManaCost)));
 }
 
 /// Gaea's Will opens the graveyard for the turn and exiles graveyard-bound cards.

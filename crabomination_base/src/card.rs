@@ -1984,11 +1984,12 @@ pub struct CardDefinition {
     /// The legend-rule SBA skips token instances of this definition.
     #[serde(default)]
     pub nonlegendary_as_token: bool,
-    /// CR 601.3e — a card with no mana cost that can only be cast via
-    /// suspend (Gaea's Will, Inevitable Betrayal, Glimpse of Tomorrow).
-    /// The from-hand cast path rejects it.
-    #[serde(default)]
-    pub suspend_only: bool,
+    /// CR 202.1a / 601.3e — this card has **no printed mana cost** (distinct
+    /// from `{0}`, which is payable): the normal pay-the-cost cast path
+    /// rejects it; suspend / "cast without paying its mana cost" still work
+    /// (Ancestral Vision, Living End, Gaea's Will, Lotus Bloom).
+    #[serde(default, alias = "suspend_only")]
+    pub no_mana_cost: bool,
     /// CR 604.3 CDA — "As long as [this] isn't on the battlefield, it's a
     /// 1/1 Insect creature in addition to its other types" (Grist). Zone
     /// filters treat the card as a creature everywhere but the battlefield.
