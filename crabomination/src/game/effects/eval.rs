@@ -309,6 +309,27 @@ impl GameState {
                 .map(|c| c.mutate_stack.len().saturating_sub(1) as i32)
                 .unwrap_or(0),
             Value::DevotionTo(colors) => self.devotion_to(ctx.controller, colors),
+            Value::LargestCreatureTypeCount => {
+                // Greatest number of the controller's creatures sharing a
+                // creature type; changelings count for every type.
+                use std::collections::HashMap;
+                let mut counts: HashMap<crate::card::CreatureType, i32> = HashMap::new();
+                let mut changelings = 0i32;
+                for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
+                    let Some(cp) = self.computed_permanent(c.id) else { continue };
+                    if !cp.card_types.contains(&crate::card::CardType::Creature) {
+                        continue;
+                    }
+                    if cp.keywords.contains(&crate::card::Keyword::Changeling) {
+                        changelings += 1;
+                        continue;
+                    }
+                    for t in &cp.subtypes.creature_types {
+                        *counts.entry(t.clone()).or_default() += 1;
+                    }
+                }
+                counts.values().max().copied().unwrap_or(0) + changelings
+            }
             Value::AurasYouControlledOnDyingSubject => ctx
                 .trigger_source
                 .and_then(|e| e.as_card_id())

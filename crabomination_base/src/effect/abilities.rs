@@ -336,6 +336,10 @@ pub enum StaticEffect {
     /// among cards in your graveyard" (Emrakul, the Promised End). Distinct
     /// card types, not card count. Generic-only; clamped by the caller.
     SelfCostReducedPerCardTypeInGraveyard,
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is the
+    /// total mana value of noncreature artifacts you control" (Metalwork
+    /// Colossus). Generic-only; clamped by the caller.
+    SelfCostReducedByNoncreatureArtifactMv,
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },

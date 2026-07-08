@@ -575,6 +575,26 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .collect();
         reduction = reduction.saturating_add(types.len() as u32);
     }
+    // Card-intrinsic "costs {X} less, X = total MV of noncreature artifacts
+    // you control" (Metalwork Colossus). Generic-only, clamped by the caller.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByNoncreatureArtifactMv))
+    {
+        let total: u32 = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == caster
+                    && c.definition.is_artifact()
+                    && !c.definition.is_creature()
+            })
+            .map(|c| c.definition.cost.cmc())
+            .sum();
+        reduction = reduction.saturating_add(total);
+    }
     // Card-intrinsic "costs {per} less for each [filter] card in your
     // graveyard" (Serpent of the Pass). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

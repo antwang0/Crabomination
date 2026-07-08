@@ -10492,6 +10492,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GenesisWave => {
+                // Reveal top X, deploy permanents with MV ≤ X, rest to gy.
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let x = ctx.x_value;
+                let revealed: Vec<CardId> = self.players[p]
+                    .library
+                    .iter()
+                    .take(x as usize)
+                    .map(|c| c.id)
+                    .collect();
+                for cid in revealed {
+                    let deploy = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .is_some_and(|c| {
+                            c.definition.is_permanent() && c.definition.cost.cmc() <= x
+                        });
+                    let dest = if deploy {
+                        ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(p), tapped: false }
+                    } else {
+                        ZoneDest::Graveyard
+                    };
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ShuffleHandsDrawSame { who } => {
                 use rand::seq::SliceRandom;
                 for p in self.resolve_players(who, ctx) {

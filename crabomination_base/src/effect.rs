@@ -429,6 +429,10 @@ pub enum Value {
     /// color half they contain. Drives Gray Merchant of Asphodel, the Nyx
     /// gods, Nykthos.
     DevotionTo(Vec<crate::mana::Color>),
+    /// The greatest number of the controller's creatures that share a
+    /// creature type (Skemfar Shadowsage — "creatures you control that have
+    /// a creature type in common"). Changelings count for every type.
+    LargestCreatureTypeCount,
     /// Counters of the given type on `what`.
     CountersOn { what: Box<Selector>, kind: CounterType },
     /// All counters (every kind) on `what` — "for each counter on it"
@@ -2398,6 +2402,11 @@ pub enum Effect {
     /// smallest hand. Each player keeps their best (highest-MV, then power)
     /// permanents and highest-MV cards; a `wants_ui` picker is a follow-up.
     Balance,
+    /// Genesis Wave — reveal the top X cards (X from the cast cost), put
+    /// every permanent card with mana value ≤ X onto the battlefield, and
+    /// the rest into the graveyard. (Printed "any number" collapses to
+    /// "all matching".)
+    GenesisWave,
     /// CR 107.16 — exile the top card of the controller's library, then they
     /// may pay `energy` {E}; if they do, they may cast that card without
     /// paying its mana cost (the spell stays exiled if not cast). Amped

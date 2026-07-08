@@ -773,6 +773,7 @@ impl Effect {
             Effect::EchoPayOrSacrifice { .. } => false,
             Effect::CumulativeUpkeepPayOrSacrifice { .. } => false,
             Effect::Balance => false,
+            Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
         }
     }

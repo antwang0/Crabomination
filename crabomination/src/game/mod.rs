@@ -382,6 +382,9 @@ mod tests_recent109;
 #[path = "../tests/recent110.rs"]
 mod tests_recent110;
 #[cfg(test)]
+#[path = "../tests/recent111.rs"]
+mod tests_recent111;
+#[cfg(test)]
 #[path = "../tests/mh2b.rs"]
 mod tests_mh2b;
 #[cfg(test)]
@@ -12809,6 +12812,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedPerCreatureInGraveyard
             // SelfCostReducedPerCardTypeInGraveyard (Emrakul) — same.
             | StaticEffect::SelfCostReducedPerCardTypeInGraveyard
+            // SelfCostReducedByNoncreatureArtifactMv (Metalwork Colossus) — same.
+            | StaticEffect::SelfCostReducedByNoncreatureArtifactMv
             // SelfCostReducedPerGraveyardCardMatching (Serpent of the Pass) —
             // read in `cost_reduction_for_spell`; no layer effect.
             | StaticEffect::SelfCostReducedPerGraveyardCardMatching { .. }
