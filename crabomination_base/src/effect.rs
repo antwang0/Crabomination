@@ -1041,6 +1041,14 @@ pub enum Predicate {
     /// payoff modal) and Increment's "mana spent > P or T" gate (read
     /// from `ctx.mana_spent` at trigger-resolution time).
     CastSpellManaSpentAtLeast(u32),
+    /// CR 702.137 (Adamant) — at least `at_least` mana of `color` was spent
+    /// casting the resolving spell. Reads the per-color payment breakdown
+    /// stamped at cast time (`EffectContext.mana_spent_by_color`).
+    ManaSpentOfColorAtLeast { color: crate::mana::Color, at_least: u32 },
+    /// True if no *colored* mana was spent casting the just-cast spell
+    /// (`ctx.trigger_source`) — Void Mirror's counter gate. Free casts
+    /// (suspend, cascade) spend no mana, so they match.
+    CastSpellNoColoredManaSpent,
     /// True if the just-cast spell's *owner* is not `ctx.controller`. A
     /// spell's owner is the player who owns the physical card (CR
     /// 108.3) — typically the same as its controller, but they diverge

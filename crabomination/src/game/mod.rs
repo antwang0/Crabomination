@@ -8899,6 +8899,7 @@ impl GameState {
                                 x_value: 0,
                                 converged_value: 0,
                                 mana_spent: 0,
+                                mana_spent_by_color: Vec::new(),
                                 source_name: None,
                                 cast_from_hand: true,
                                 event_amount: self.event_amount_for(ev),
@@ -9305,6 +9306,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                     mana_spent: 0,
+                    mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand: true,
                     event_amount,
@@ -11284,6 +11286,7 @@ impl GameState {
         ctx.cast_via_waterbend = card.cast_via_waterbend;
         ctx.entwined = card.entwined;
         ctx.spree_modes = card.spree_modes.clone();
+        ctx.mana_spent_by_color = card.cast_mana_spent_by_color.clone();
         // Stamp the resolving spell's identity so source-aware damage
         // replacements (Torbran) can read its controller/colors while the
         // card is in no visible zone.

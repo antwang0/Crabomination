@@ -2893,6 +2893,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.104 — Tribute, seat-routed
 - ✅ CR 700.4 — "dies" under graveyard→exile replacements
 - ✅ CR 702.31 — Horsemanship
+- ✅ CR 702.14c — filtered landwalk (`Keyword::LandwalkFiltered` — artifact
+  landwalk on Vectis Gloves; `cr_702_14c_artifact_landwalk`)
 - ✅ CR 701.30 — Clash
 - ✅ CR 510.1d — full damage assignment
 - ✅ CR 701.37 / 712.16 — Meld
@@ -3255,7 +3257,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 301 — Artifacts** — see git.
 - ✅ **CR 701.8 — Destroy / 701.19 Regenerate** — `regeneration_shields` replace destruction on the SBA lethal-damage path, `Effect::Destroy`, and consume one shield (tap + remove-from-combat + heal). `DestroyNoRegen` bypasses. Toughness≤0 SBA correctly ignores shields.
 - 🟡 **CR 800 — Multiplayer / leaving the game** — see git.
-- 🟡 **CR 903 — Commander Variant** — MDFC back-face color identity (903.4d); 903.9 optional rider.
+- 🟡 **CR 903 — Commander Variant** — 903.4d back-face identity ✅; 903.4
+  color-indicator + activated-ability-cost + adventure/split-half identity ✅
+  (`format::color_identity` unions them; `cr_903_4_identity_*`). Remaining:
+  903.9 optional rider.
 
 ### Todo (⏳)
 - ✅ **CR 612 — Text-Changing Effects** — layer-3 `Modification::ReplaceColorWord`
@@ -3434,11 +3439,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - Card approximations: Surging Æther's "target spell or permanent" → creature;
     Surging Sentinels' protection-on-white-cast rider dropped.
 
-- ⏳ **Per-color mana-spent tracking** (unblocks Adamant, CR 702.137; and any
-  "if N mana of one color was spent" rider). `ConvergedValue` tracks *distinct*
-  colors but not per-color counts; `mana_spent` is a bare `u32`. Thread a
-  per-color breakdown from `PaymentReceipt` (`pool_before` − post-pay pool) onto
-  the spell stack item + `EffectContext`, then add `Predicate::ManaSpentOfColorAtLeast`.
+- ✅ **Per-color mana-spent tracking** (CR 702.137 Adamant / CR 601). The cast
+  path stamps `CardInstance.cast_mana_spent_by_color` (pool diff per color);
+  `EffectContext.mana_spent_by_color` reads it at resolution.
+  `Predicate::ManaSpentOfColorAtLeast` (Slaying Fire's adamant 4, Searing
+  Barrage's controller burn — both upgraded from approximations) and
+  `Predicate::CastSpellNoColoredManaSpent` (Void Mirror counters generic-paid
+  and free casts). Tests `cr_702_137_*`, `cr_601_void_mirror_*`.
 - ✅ **Multi-slot targets on triggered abilities.** `auto_extra_distinct_slot_targets`
   fills slots 1.. of a trigger whose effect surfaces a *distinct* per-slot
   filter (gated on slot-0 ≠ slot-1 so same-filter "up to N" divide effects keep

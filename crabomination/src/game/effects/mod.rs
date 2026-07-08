@@ -103,6 +103,10 @@ pub struct EffectContext {
     /// (Increment / Opus payoffs). Computed at cast time and
     /// threaded through `StackItem::Spell` / `StackItem::Trigger`.
     pub mana_spent: u32,
+    /// Per-color breakdown of the mana spent on the originating spell's
+    /// cost (CR 702.137 Adamant — `Predicate::ManaSpentOfColorAtLeast`).
+    /// Stamped from `CardInstance.cast_mana_spent_by_color` at resolution.
+    pub mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     /// The resolving spell's printed name. Stamped by
     /// `for_spell_with_source` so predicates that need to introspect the
     /// spell's name (e.g. `Predicate::SameNamedInZoneAtLeast` for
@@ -165,6 +169,7 @@ impl EffectContext {
             x_value,
             converged_value: 0,
             mana_spent: 0,
+            mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
             event_amount: 0,
@@ -246,6 +251,7 @@ impl EffectContext {
             x_value,
             converged_value,
             mana_spent,
+            mana_spent_by_color: Vec::new(),
             source_name: Some(spell_name),
             cast_from_hand,
             event_amount: 0,
@@ -272,6 +278,7 @@ impl EffectContext {
             x_value: 0,
             converged_value: 0,
             mana_spent: 0,
+            mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
             event_amount: 0,
@@ -297,6 +304,7 @@ impl EffectContext {
             x_value: 0,
             converged_value: 0,
             mana_spent: 0,
+            mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
             event_amount: 0,

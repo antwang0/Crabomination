@@ -108,6 +108,23 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
     count
 }
 
+/// Per-color breakdown of the mana drained between two pool snapshots
+/// (CR 601 — stamped onto `CardInstance.cast_mana_spent_by_color` for
+/// Adamant / Void Mirror reads). Colorless is not a color and is omitted.
+fn spent_by_color(
+    before: &crate::mana::ManaPool,
+    after: &crate::mana::ManaPool,
+) -> Vec<(crate::mana::Color, u32)> {
+    use crate::mana::Color;
+    Color::ALL
+        .iter()
+        .filter_map(|&c| {
+            let spent = before.amount(c).saturating_sub(after.amount(c));
+            (spent > 0).then_some((c, spent))
+        })
+        .collect()
+}
+
 /// CR 701.67 — resolve a card's printed waterbend amount given the chosen X.
 /// Returns `(amount, optional)`, or `None` if the card has no waterbend.
 /// Supports `Value::Const(n)` and the chosen-X form (`Value::XFromCost`);
@@ -4575,6 +4592,8 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
+        card.cast_mana_spent_by_color =
+            spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
 
         let mut auto_events = receipt.auto_events;
         auto_events.push(GameEvent::SpellCast {
@@ -5577,6 +5596,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                     mana_spent: 0,
+                    mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand: true,
                     event_amount: 0,
@@ -6761,6 +6781,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
                 mana_spent: 0,
+                mana_spent_by_color: Vec::new(),
                 source_name: None,
                 cast_from_hand: true,
                 event_amount: 0,
@@ -7636,6 +7657,7 @@ impl GameState {
                     x_value: 0,
                     converged_value,
                     mana_spent,
+                    mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand,
                     event_amount: 0,
@@ -9145,6 +9167,7 @@ impl GameState {
                 x_value: 0,
                 converged_value: 0,
                 mana_spent: 0,
+                mana_spent_by_color: Vec::new(),
                 source_name: None,
                 cast_from_hand: true,
                 event_amount: 0,

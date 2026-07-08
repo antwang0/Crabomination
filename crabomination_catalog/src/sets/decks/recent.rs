@@ -11977,29 +11977,49 @@ pub fn scorching_dragonfire() -> CardDefinition {
     }
 }
 
-/// Slaying Fire — {2}{R} Instant. Deal 3 damage to any target. (Adamant's
-/// "4 instead if three red was spent" is dropped — no per-color spend tracking.)
+/// Slaying Fire — {1}{R}{R} sorcery. 3 damage to any target; Adamant —
+/// 4 instead if at least three red mana was spent (CR 702.137).
 pub fn slaying_fire() -> CardDefinition {
     CardDefinition {
         name: "Slaying Fire",
-        cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::IfPred {
+                pred: Box::new(Predicate::ManaSpentOfColorAtLeast {
+                    color: crate::mana::Color::Red,
+                    at_least: 3,
+                }),
+                then: Box::new(Value::Const(4)),
+                else_: Box::new(Value::Const(3)),
+            },
+        },
         ..Default::default()
     }
 }
 
-/// Searing Barrage — {4}{R} Instant. Deal 5 damage to target creature.
-/// (Adamant's controller-burn rider is dropped — no per-color spend tracking.)
+/// Searing Barrage — {4}{R} instant. 5 damage to target creature; Adamant —
+/// if at least three red mana was spent, 3 to that creature's controller too.
 pub fn searing_barrage() -> CardDefinition {
     CardDefinition {
         name: "Searing Barrage",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(5),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(5),
+            },
+            Effect::If {
+                cond: Predicate::ManaSpentOfColorAtLeast { color: crate::mana::Color::Red, at_least: 3 },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(3),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

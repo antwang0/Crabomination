@@ -628,7 +628,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Skulk => "Can't be blocked by creatures with greater power.",
         K::Shadow => "Can only block or be blocked by creatures with shadow.",
         K::Horsemanship => "Can only be blocked by creatures with horsemanship.",
-        K::Landwalk(_) => "Can't be blocked if the defending player controls a land of the named type.",
+        K::Landwalk(_) | K::LandwalkFiltered(_) => "Can't be blocked if the defending player controls a land of the named type.",
         K::Unblockable => "Can't be blocked.",
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature.",
         K::CantBeBlockedExceptByN(_) => "Can't be blocked except by that many or more creatures.",
@@ -941,6 +941,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         }
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
+        K::LandwalkFiltered(f) => {
+            format!("{}walk", f.target_noun().unwrap_or_else(|| "land".into()))
+        }
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
         K::CantBeBlockedExceptBy(_) => "Can't be blocked except by certain creatures".into(),
         K::CantBeBlockedBy(_) => "Can't be blocked by certain creatures".into(),

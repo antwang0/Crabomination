@@ -68,7 +68,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Skulk => "Skk",
         Shadow => "Shd",
         Horsemanship => "Hrs",
-        Landwalk(_) => "Wlk",
+        Landwalk(_) | LandwalkFiltered(_) => "Wlk",
         Protection(_) => "Pro",
         ProtectionFromManaValueExcept(_) => "ProMV",
         ProtectionFromManaValueParity { odd } => if *odd { "Pro-odd" } else { "Pro-even" },

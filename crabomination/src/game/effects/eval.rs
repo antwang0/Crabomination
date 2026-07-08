@@ -1206,6 +1206,24 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::ManaSpentOfColorAtLeast { color, at_least } => {
+                ctx.mana_spent_by_color
+                    .iter()
+                    .find(|(c, _)| c == color)
+                    .is_some_and(|(_, n)| *n >= *at_least)
+            }
+            Predicate::CastSpellNoColoredManaSpent => {
+                // Read the just-cast spell's per-color payment off the stack.
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => {
+                        card.cast_mana_spent_by_color.iter().all(|(_, n)| *n == 0)
+                    }
+                    _ => false,
+                })
+            }
             Predicate::CastSpellManaSpentAtLeast(min) => {
                 // First try the most precise read: the just-cast spell's
                 // `StackItem::Spell.mana_spent`. Falls back to

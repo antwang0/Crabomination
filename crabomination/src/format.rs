@@ -496,15 +496,34 @@ pub fn companion_restriction_met(
 /// identity is correct for Commander deck-validation.
 pub fn color_identity(def: &CardDefinition) -> ColorSet {
     let mut out = ColorSet::empty();
-    union_cost_identity(&mut out, def);
+    union_face_identity(&mut out, def);
     if let Some(back) = &def.back_face {
-        union_cost_identity(&mut out, back.as_ref());
+        union_face_identity(&mut out, back.as_ref());
     }
     out
 }
 
-fn union_cost_identity(out: &mut ColorSet, def: &CardDefinition) {
-    for s in &def.cost.symbols {
+/// CR 903.4 — a face's identity is its mana cost, its color indicator
+/// (105.2c — costless DFC back faces like werewolves), its activated-ability
+/// mana costs, and the costs of its alternate halves (adventure / split).
+fn union_face_identity(out: &mut ColorSet, def: &CardDefinition) {
+    union_cost_identity(out, &def.cost);
+    for c in &def.color_indicator {
+        out.insert(*c);
+    }
+    for ab in &def.activated_abilities {
+        union_cost_identity(out, &ab.mana_cost);
+    }
+    if let Some(adv) = &def.adventure {
+        union_cost_identity(out, &adv.cost);
+    }
+    if let Some(split) = &def.split {
+        union_cost_identity(out, &split.right.cost);
+    }
+}
+
+fn union_cost_identity(out: &mut ColorSet, cost: &crate::mana::ManaCost) {
+    for s in &cost.symbols {
         match s {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => out.insert(*c),
             ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {

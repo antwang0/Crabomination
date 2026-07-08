@@ -585,6 +585,7 @@ impl GameState {
                     x_value: 0,
                     converged_value: 0,
                     mana_spent: 0,
+                    mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand: true,
                     event_amount: 0,
@@ -787,6 +788,20 @@ impl GameState {
             for kw in kws_of(attacker_id) {
                 if let Keyword::Landwalk(lt) = kw
                     && self.defender_controls_land_type(defender_idx, lt)
+                {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
+                // CR 702.14c — filtered landwalk (artifact/nonbasic/snow).
+                if let Keyword::LandwalkFiltered(f) = kw
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == defender_idx
+                            && self.evaluate_requirement_static(
+                                f,
+                                &crate::game::types::Target::Permanent(c.id),
+                                defender_idx,
+                                None,
+                            )
+                    })
                 {
                     return Err(GameError::CannotBlock(blocker_id));
                 }

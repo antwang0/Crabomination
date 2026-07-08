@@ -1147,6 +1147,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         x_value: 0,
         converged_value: 0,
         mana_spent: 0,
+        mana_spent_by_color: Vec::new(),
         source_name: None,
         cast_from_hand: true,
         event_amount: 0,

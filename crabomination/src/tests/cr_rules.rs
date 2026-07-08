@@ -6778,3 +6778,137 @@ fn cr_702_62e_suspend_final_cast_blocked_by_drannith() {
     assert_eq!(card.counter_count(CounterType::Time), 0, "counters still ticked away");
     assert!(g.battlefield_find(id).is_none(), "never entered the battlefield");
 }
+
+// ── CR 702.137 — Adamant (per-color mana-spent tracking) ────────────────────
+
+/// Slaying Fire deals 4 with three red spent, 3 on a mixed payment.
+#[test]
+fn cr_702_137_adamant_reads_colored_payment() {
+    let mut g = two_player_game();
+    let fire = g.add_card_to_hand(0, catalog::slaying_fire());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fire, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4, "RRR payment: adamant 4");
+
+    let fire2 = g.add_card_to_hand(0, catalog::slaying_fire());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fire2, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 7, "GRR payment: plain 3");
+}
+
+// ── CR 601 — Void Mirror's "no colored mana spent" gate ──────────────────────
+
+/// Void Mirror counters an all-generic-paid spell but not a colored one.
+#[test]
+fn cr_601_void_mirror_counters_colorless_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::void_mirror());
+    // A colorless artifact paid with colorless mana: countered.
+    let bone = g.add_card_to_hand(1, catalog::batterbone());
+    g.players[1].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bone, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bone).is_none(), "countered — no colored mana spent");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bone));
+    // A creature paid with colored mana resolves.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "colored payment resolves");
+}
+
+// ── CR 702.14c — filtered landwalk (artifact landwalk) ───────────────────────
+
+/// Vectis Gloves grants artifact landwalk: unblockable only while the
+/// defending player controls an artifact land.
+#[test]
+fn cr_702_14c_artifact_landwalk() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gloves = g.add_card_to_battlefield(0, catalog::vectis_gloves());
+    g.battlefield.iter_mut().find(|c| c.id == gloves).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _citadel = g.add_card_to_battlefield(1, catalog::darksteel_citadel());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).is_err(),
+        "artifact landwalk: unblockable while they control Darksteel Citadel"
+    );
+    // Without the artifact land the block is legal.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gloves = g.add_card_to_battlefield(0, catalog::vectis_gloves());
+    g.battlefield.iter_mut().find(|c| c.id == gloves).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    let r = g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)]));
+    assert!(r.is_ok(), "block should be legal without an artifact land: {r:?}");
+}
+
+// ── CR 903.4 — color identity includes indicators + ability costs ────────────
+
+/// A costless card with a red color indicator and a {W} activated ability has
+/// a white-red identity.
+#[test]
+fn cr_903_4_identity_reads_indicator_and_abilities() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::Effect;
+    let def = CardDefinition {
+        name: "Identity Probe",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Red],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: crate::mana::cost(&[crate::mana::w()]),
+            effect: Effect::Noop,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let id = crate::format::color_identity(&def);
+    assert!(id.contains(Color::Red), "color indicator counts (CR 903.4)");
+    assert!(id.contains(Color::White), "activated-ability cost counts");
+    assert!(!id.contains(Color::Green));
+}

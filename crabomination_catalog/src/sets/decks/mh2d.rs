@@ -979,3 +979,39 @@ pub fn sanctum_weaver() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Void Mirror — {2} artifact. Whenever a player casts a spell, if no
+/// colored mana was spent to cast it, counter that spell.
+pub fn void_mirror() -> CardDefinition {
+    CardDefinition {
+        name: "Void Mirror",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::CastSpellNoColoredManaSpent),
+            effect: Effect::CounterSpell { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vectis Gloves — {2} Equipment. +2/+0 and artifact landwalk; equip {2}.
+pub fn vectis_gloves() -> CardDefinition {
+    CardDefinition {
+        name: "Vectis Gloves",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::LandwalkFiltered(Box::new(R::Land.and(R::Artifact)))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

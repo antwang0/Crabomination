@@ -533,6 +533,10 @@ pub enum Keyword {
     /// defending player controls a land of the named type (Forestwalk,
     /// Islandwalk, Swampwalk, Mountainwalk, Plainswalk, …).
     Landwalk(LandType),
+    /// CR 702.14c — generalized landwalk: can't be blocked while the
+    /// defending player controls a land matching the filter (artifact
+    /// landwalk — Vectis Gloves; nonbasic/snow landwalk variants).
+    LandwalkFiltered(Box<SelectionRequirement>),
     /// Flanking (CR 702.25) — a creature without flanking that blocks this gets -1/-1 until EOT.
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
@@ -3369,6 +3373,11 @@ pub struct CardInstance {
     /// (`Value::CastSpellManaSpent`, `ManaValueAtMostCastManaSpent` — Astelli
     /// Reclaimer). Defaults to 0.
     pub cast_mana_spent: u32,
+    /// CR 601 — per-color breakdown of the mana spent paying this spell's
+    /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
+    /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
+    /// (Void Mirror). Empty for free/uncast objects.
+    pub cast_mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     /// CR 702.176 — true if this spell was cast paying its optional Bargain
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
@@ -3794,6 +3803,7 @@ impl CardInstance {
             kick_count: 0,
             squad_count: 0,
             cast_mana_spent: 0,
+            cast_mana_spent_by_color: Vec::new(),
             bargained: false,
             pending_etb_counters: Vec::new(),
             spree_modes: Vec::new(),
@@ -4237,6 +4247,8 @@ struct CardInstanceWire {
     /// Mana spent to cast this permanent's spell. `#[serde(default)]`.
     #[serde(default)]
     cast_mana_spent: u32,
+    #[serde(default)]
+    cast_mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     bargained: bool,
@@ -4489,6 +4501,7 @@ impl serde::Serialize for CardInstance {
             kick_count: self.kick_count,
             squad_count: self.squad_count,
             cast_mana_spent: self.cast_mana_spent,
+            cast_mana_spent_by_color: self.cast_mana_spent_by_color.clone(),
             bargained: self.bargained,
             pending_etb_counters: self.pending_etb_counters.clone(),
             spliced_effects: self.spliced_effects.clone(),
@@ -4587,6 +4600,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
         c.cast_mana_spent = wire.cast_mana_spent;
+        c.cast_mana_spent_by_color = wire.cast_mana_spent_by_color;
         c.bargained = wire.bargained;
         c.pending_etb_counters = wire.pending_etb_counters.clone();
         c.spliced_effects = wire.spliced_effects.clone();
