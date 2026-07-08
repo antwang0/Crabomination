@@ -476,3 +476,60 @@ fn zhalfirin_decoy_entered_gate() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).unwrap().tapped, "victim tapped");
 }
+
+/// Murasa Behemoth swells while a land sits in the graveyard.
+#[test]
+fn murasa_behemoth_land_in_graveyard() {
+    let mut g = two_player_game();
+    let beh = g.add_card_to_battlefield(0, catalog::murasa_behemoth());
+    let cp = g.computed_permanent(beh).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "no land in graveyard");
+    g.add_card_to_graveyard(0, catalog::island());
+    let cp = g.computed_permanent(beh).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8), "+3/+3 with a graveyard land");
+}
+
+/// Knight of Old Benalia rallies the team when it enters.
+#[test]
+fn knight_of_old_benalia_etb_pump() {
+    let mut g = two_player_game();
+    let friend = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::knight_of_old_benalia());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(friend).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "other creature gets +1/+1");
+}
+
+/// Rank Officer drains each opponent by exiling a creature from the graveyard.
+#[test]
+fn rank_officer_graveyard_drain() {
+    let mut g = two_player_game();
+    let officer = g.add_card_to_battlefield(0, catalog::rank_officer());
+    g.clear_sickness(officer);
+    let fodder = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: officer, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "opponent lost 2");
+    assert!(g.exile.iter().any(|c| c.id == fodder), "creature exiled as the cost");
+}
+
+/// Silumgar Scavenger grows when another creature you control dies.
+#[test]
+fn silumgar_scavenger_grows_on_death() {
+    let mut g = two_player_game();
+    let scav = g.add_card_to_battlefield(0, catalog::silumgar_scavenger());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(fodder).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(scav).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+1 counter from the death");
+}

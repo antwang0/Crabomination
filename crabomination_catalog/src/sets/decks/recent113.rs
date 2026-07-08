@@ -930,3 +930,141 @@ pub fn zhalfirin_decoy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Modern Horizons (MH1) — batch 3 ───────────────────────────────────────────
+
+/// Murasa Behemoth — {4}{G}{G} 5/5 Beast. Trample; +3/+3 while a land card is in
+/// your graveyard.
+pub fn murasa_behemoth() -> CardDefinition {
+    CardDefinition {
+        name: "Murasa Behemoth",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +3/+3 as long as a land card is in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Land,
+                }),
+                power: 3,
+                toughness: 3,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Knight of Old Benalia — {3}{W}{W} 3/3 Human Knight. Suspend 5—{W}; ETB: other
+/// creatures you control get +1/+1 until end of turn.
+pub fn knight_of_old_benalia() -> CardDefinition {
+    CardDefinition {
+        name: "Knight of Old Benalia",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Suspend(5, cost(&[w()]))],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Rank Officer — {3}{B} 3/1 Zombie Soldier. ETB: may discard a card to make a
+/// 2/2 Zombie. {1}{B}, {T}, exile a creature from your graveyard: each opponent
+/// loses 2 life.
+pub fn rank_officer() -> CardDefinition {
+    CardDefinition {
+        name: "Rank Officer",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::MayDiscard {
+            description: "Discard a card to create a 2/2 Zombie?".into(),
+            count: Value::Const(1),
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Zombie".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Zombie],
+                        ..Default::default()
+                    },
+                    colors: vec![Color::Black],
+                    ..Default::default()
+                },
+            }),
+            else_: None,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: true,
+            exile_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Silumgar Scavenger — {4}{B} 2/3 Zombie Bird. Flying; exploit; whenever
+/// another creature you control dies, put a +1/+1 counter on it. (The
+/// haste-if-exploited rider is approximated away.)
+pub fn silumgar_scavenger() -> CardDefinition {
+    use crate::effect::shortcut::exploit;
+    CardDefinition {
+        name: "Silumgar Scavenger",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            exploit(Effect::Noop),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
