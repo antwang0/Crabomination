@@ -7101,15 +7101,15 @@ fn scorching_dragonfire_exiles_on_kill() {
     assert!(g.exile.iter().any(|c| c.id == foe), "exiled, not in graveyard");
 }
 
-/// Slaying Fire deals 3 to any target.
+/// Slaying Fire deals 3 to any target on a non-adamant payment.
 #[test]
 fn slaying_fire_burns() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_hand(0, catalog::slaying_fire());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
     cast_at(&mut g, bolt, Target::Player(1));
-    assert_eq!(g.players[1].life, 17, "3 damage");
+    assert_eq!(g.players[1].life, 17, "3 damage without three red");
 }
 
 /// Searing Barrage deals 5 to a creature.

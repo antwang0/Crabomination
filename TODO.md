@@ -3295,8 +3295,25 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   ("if the sacrificed permanent was an artifact" predicate over the
   sacrifice-as-additional-cost), Obsidian Charmaw (cost reduction keyed on
   opponents' {C}-producing lands), Grist (not-on-battlefield CDA identity),
-  Garth One-Eye (named-card copy casts). ~120 MH2 cards remain —
-  `python3 scripts/set_gaps.py mh2` (63 shipped in `decks::mh2b`).
+  Garth One-Eye (named-card copy casts). ~33 MH2 cards remain —
+  `python3 scripts/set_gaps.py mh2`, which also false-positives on implemented
+  split cards (it greps the left-half name). 149 shipped across
+  `decks::mh2b`–`mh2f`. Still-deferred gaps each want a primitive:
+  Aeve (storm creature copies-as-tokens), Altar of the Goyf (attacks-alone
+  trigger), Arcus Acolyte (grant-outlast static), Carth (loyalty cost
+  modifier), Chitterspitter (counter-scaled team anthem), Dermotaxi
+  (imprint copy), Ghost-Lit Drifter (X-target grant), Grist (off-battlefield
+  CDA), Out of Time (mass phasing), Rakdos Headliner (echo—discard),
+  Rise and Shine (overload each + animate), Serra's Emissary (protection
+  from chosen card type), Steel Dromedary (conditional self no-untap),
+  Suspend-the-card ("gains suspend"), Verdant Command (choose-two with
+  loyalty-ability counter), Wren's Run Hydra (Reinforce X), Yusri
+  (win-five free-casts), Zabaz (modular counter bonus), Chrome Courier
+  (picked-card-was-artifact rider), Discerning Taste (greatest-power-milled
+  value), Shattered Ego (library-third-from-top), suspend-only trio
+  (Gaea's Will / Glimpse of Tomorrow / Inevitable Betrayal), Break the Ice
+  ("could produce {C}"), Obsidian Charmaw (same), Chef's Kiss (random
+  retarget), Garth One-Eye, Lonis (steal-top-X), A-DRC (Alchemy).
 - ⏳ **All Will Be One placer attribution** — `GameEvent::CounterAdded` carries
   no "who placed" seat, so the enchantment fires off counters landing on your
   permanents + poison hitting opponents (exact in two-player). Threading the

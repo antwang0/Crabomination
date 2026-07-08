@@ -1852,6 +1852,8 @@ impl Effect {
                 | Effect::AddRandomMissingCounter { what, .. } => sel_find(what, slot),
                 Effect::BecomeBasicLand { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
+                Effect::RevealUntilLandDamage { to, .. }
+                | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }

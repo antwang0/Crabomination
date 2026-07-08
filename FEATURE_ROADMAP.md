@@ -213,6 +213,20 @@ exercising each) was elided in a compaction pass; recover it from
   `Keyword::HexproofFromMonocolored` (Rokiric); graveyard-first slot
   auto-targeting for reanimation reflexives. MH2 sweep started
   (`decks::mh2b`, 40 cards; gaps via `scripts/set_gaps.py mh2`).
+- **MH2-sweep primitives (modern_decks, this run):** per-color mana-spent
+  tracking (CR 702.137 Adamant — `cast_mana_spent_by_color` +
+  `Predicate::{ManaSpentOfColorAtLeast, CastSpellNoColoredManaSpent}`, Void
+  Mirror / Slaying Fire); `Keyword::LandwalkFiltered` (CR 702.14c artifact
+  landwalk — Vectis Gloves); CR 903.4 color identity now unions color
+  indicators + activated-ability + adventure/split-half costs;
+  `Value::{CardTypesInGraveyard, CardTypesInAllGraveyards,
+  CardsDiscardedThisTurn, LastDiscardedCardTypes}`;
+  `Effect::{RevealUntilNonlandDamage, GainHexproofUntilYourNextTurn}` (player
+  hexproof until your next turn — Blossoming Calm);
+  `Predicate::{SacrificedWasArtifact, TriggerSourceEnteredFromGraveyard}`;
+  `ActivatedAbility.{discard_hand_cost, cost_reduction_per_counter}` (Diamond
+  Lion, Deepwood Denizen); trigger ctx now stamps `cast_from_hand` (escape
+  riders on ETBs); ETB triggers surface `BecomeBasicLand` target filters.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
@@ -654,6 +668,8 @@ Each a small targeted feature; sweep batch by batch.
 - 🟡 **Floating life deltas** ✅; per-turn life-history graph ⏳.
 - ✅ **Commander-damage HUD** (903.10a) — per-source `⚔ <cmdr> N/21` chip,
   amber→red near loss.
+- ✅ **P/T + loyalty badges** — modified creatures get a floating `P/T` badge;
+  planeswalkers always carry a `◆loyalty` badge (`systems/pt_label`).
 - ⏳ **Hand sorting / auto-tap prefs / "play tapped land" prompt**.
 - ✅ **Squad / Replicate pay-N stepper**; impending countdown badge; NameCard
   picker.
@@ -736,8 +752,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Tier 14 — Replays, analysis & observability
 
-- ⏳ **Action-log replay viewer** (snapshots + `GameEvent` stream are the
-  foundation).
+- 🟡 **Action-log replay viewer** — the capture side ships: `CRAB_REPLAY_DIR`
+  appends one JSONL replay per match (header/players, one line per broadcast
+  event batch, footer). Remaining: the viewer.
 - ✅ **Game history / match results persistence** — `CRAB_MATCH_LOG` appends
   one JSON line per finished match (lobby/bot/pair paths;
   `crabomination_server::history`).
