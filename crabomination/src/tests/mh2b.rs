@@ -635,3 +635,226 @@ fn jade_avenger_and_starfish_stats() {
     let fish = catalog::sinister_starfish();
     assert_eq!((fish.power, fish.toughness), (0, 3));
 }
+
+// ── Batch 3 — commons/uncommons ──────────────────────────────────────────────
+
+/// Late to Dinner reanimates and serves Food.
+#[test]
+fn late_to_dinner_reanimates_with_food() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    resolve_spell(&mut g, catalog::late_to_dinner(), vec![Target::Permanent(bear)]);
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"));
+}
+
+/// Skophos Reaver hits harder on its controller's turn.
+#[test]
+fn skophos_reaver_turn_pump() {
+    let mut g = two_player_game();
+    let reaver = g.add_card_to_battlefield(0, catalog::skophos_reaver());
+    g.active_player_idx = 0;
+    assert_eq!(g.computed_permanent(reaver).unwrap().power, 4, "your turn: +2/+0");
+    g.active_player_idx = 1;
+    assert_eq!(g.computed_permanent(reaver).unwrap().power, 2, "off turn: printed");
+}
+
+/// Foul Watcher grows with delirium.
+#[test]
+fn foul_watcher_delirium() {
+    let mut g = two_player_game();
+    let watcher = g.add_card_to_battlefield(0, catalog::foul_watcher());
+    assert_eq!(g.computed_permanent(watcher).unwrap().power, 1);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::island());
+    g.add_card_to_graveyard(0, catalog::worship());
+    assert_eq!(g.computed_permanent(watcher).unwrap().power, 2, "4 card types → +1/+0");
+}
+
+/// Hell Mongrel pumps off a discard.
+#[test]
+fn hell_mongrel_discard_pump() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::hell_mongrel());
+    g.clear_sickness(dog);
+    g.add_card_to_hand(0, catalog::island());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dog, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("discard to pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(dog).unwrap().power, 5);
+    assert!(g.players[0].hand.is_empty(), "card discarded");
+}
+
+/// Urban Daggertooth proliferates when damaged (enrage).
+#[test]
+fn urban_daggertooth_enrage_proliferates() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::urban_daggertooth());
+    g.battlefield_find_mut(dino).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crate::game::effects::EntityRef::Permanent(dino), 1, None, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(dino).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "proliferate added one"
+    );
+}
+
+/// Jewel-Eyed Cobra leaves a Treasure behind.
+#[test]
+fn jewel_eyed_cobra_treasure_on_death() {
+    let mut g = two_player_game();
+    let cobra = g.add_card_to_battlefield(0, catalog::jewel_eyed_cobra());
+    let _ = g.remove_to_graveyard_with_triggers(cobra);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"));
+}
+
+/// Disciple of the Sun regrows a cheap permanent.
+#[test]
+fn disciple_of_the_sun_returns_cheap_permanent() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let disciple = g.add_card_to_battlefield(0, catalog::disciple_of_the_sun());
+    g.fire_self_etb_triggers(disciple, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf));
+}
+
+/// Fairgrounds Patrol's graveyard exile mints a Thopter.
+#[test]
+fn fairgrounds_patrol_graveyard_thopter() {
+    let mut g = two_player_game();
+    let patrol = g.add_card_to_graveyard(0, catalog::fairgrounds_patrol());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: patrol, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate from graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Thopter"));
+    assert!(g.exile.iter().any(|c| c.id == patrol));
+}
+
+/// Knighted Myr adapts and gains double strike from the counter.
+#[test]
+fn knighted_myr_adapt_double_strike() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_battlefield(0, catalog::knighted_myr());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("adapt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(myr).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Soul of Migration brings Birds and can be evoked.
+#[test]
+fn soul_of_migration_birds() {
+    let mut g = two_player_game();
+    let soul = g.add_card_to_battlefield(0, catalog::soul_of_migration());
+    g.fire_self_etb_triggers(soul, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird").count(), 2);
+    assert!(catalog::soul_of_migration().alternative_cost.is_some());
+}
+
+/// Thraben Watcher is a nontoken-only anthem.
+#[test]
+fn thraben_watcher_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thraben_watcher());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Steelfin Whale untaps when an artifact arrives.
+#[test]
+fn steelfin_whale_untaps_on_artifact() {
+    let mut g = two_player_game();
+    let whale = g.add_card_to_battlefield(0, catalog::steelfin_whale());
+    g.battlefield_find_mut(whale).unwrap().tapped = true;
+    let stone = g.add_card_to_battlefield(0, catalog::brainstone());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: stone }]);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(whale).unwrap().tapped);
+}
+
+/// Tragic Fall scales to -13/-13 with an empty hand.
+#[test]
+fn tragic_fall_hellbent() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[0].hand.clear();
+    resolve_spell(&mut g, catalog::tragic_fall(), vec![Target::Permanent(angel)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(angel).is_none(), "-13/-13 kills the 4/4");
+}
+
+/// Echoing Return scoops up every namesake.
+#[test]
+fn echoing_return_grabs_namesakes() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    resolve_spell(&mut g, catalog::echoing_return(), vec![Target::Permanent(a)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a));
+    assert!(g.players[0].hand.iter().any(|c| c.id == b), "namesake came along");
+    assert_eq!(g.players[0].graveyard.len(), 1, "the Elves stay");
+}
+
+/// Lens Flare only aims at combatants.
+#[test]
+fn lens_flare_needs_a_combatant() {
+    let d = catalog::lens_flare();
+    assert!(d.affinity_filter.is_some());
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: atk,
+        target: crate::game::types::AttackTarget::Player(0),
+    }]))
+    .unwrap();
+    resolve_spell(&mut g, catalog::lens_flare(), vec![Target::Permanent(atk)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(atk).is_none(), "5 damage kills the attacker");
+}
+
+/// Batch-3 stat spot checks.
+#[test]
+fn batch3_stats() {
+    assert!(catalog::kitchen_imp().keywords.contains(&Keyword::Haste));
+    assert!(catalog::healers_flock().keywords.contains(&Keyword::Lifelink));
+    assert!(catalog::rift_sower().keywords.iter().any(|k| matches!(k, Keyword::Suspend(2, _))));
+    assert!(catalog::terramorph().keywords.contains(&Keyword::Rebound));
+    assert!(catalog::mental_journey().keywords.iter().any(|k| matches!(k, Keyword::Typecycling(_))));
+    assert!(catalog::orchard_strider().keywords.iter().any(|k| matches!(k, Keyword::Typecycling(_))));
+    let (p, t) = (catalog::funnel_web_recluse().power, catalog::funnel_web_recluse().toughness);
+    assert_eq!((p, t), (3, 5));
+    assert_eq!(catalog::floodhound().cost.cmc(), 1);
+}

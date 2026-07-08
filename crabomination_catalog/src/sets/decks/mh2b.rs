@@ -1031,3 +1031,540 @@ pub fn underworld_hermit() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 3 — commons/uncommons on existing primitives ───────────────────────
+
+/// Late to Dinner — {3}{W} Sorcery. Reanimate a creature card; create a Food.
+pub fn late_to_dinner() -> CardDefinition {
+    CardDefinition {
+        name: "Late to Dinner",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crabomination_base::tokens::food_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kitchen Imp — {3}{B} 2/2 flying haste. Madness {B}.
+pub fn kitchen_imp() -> CardDefinition {
+    CardDefinition {
+        name: "Kitchen Imp",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Madness(cost(&[b()]))],
+        ..Default::default()
+    }
+}
+
+/// Hell Mongrel — {3}{B} 4/3. Discard a card: +1/+1 EOT. Madness {2}{B}.
+pub fn hell_mongrel() -> CardDefinition {
+    CardDefinition {
+        name: "Hell Mongrel",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Madness(cost(&[generic(2), b()]))],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skophos Reaver — {2}{R} 2/3. +2/+0 during your turn. Madness {1}{R}.
+pub fn skophos_reaver() -> CardDefinition {
+    CardDefinition {
+        name: "Skophos Reaver",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Madness(cost(&[generic(1), r()]))],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, this creature gets +2/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Foul Watcher — {1}{U} 1/2 flying. ETB surveil 1; delirium +1/+0.
+pub fn foul_watcher() -> CardDefinition {
+    CardDefinition {
+        name: "Foul Watcher",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::ONE,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Delirium — This creature gets +1/+0 as long as there are four or more card types among cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DeliriumActive { who: PlayerRef::You },
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rift Sower — {2}{G} 1/3. {T}: any color. Suspend 2—{G}.
+pub fn rift_sower() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Rift Sower",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Suspend(2, cost(&[g()]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Orchard Strider — {4}{G}{G} 6/4. ETB: two Foods; basic landcycling {1}{G}.
+pub fn orchard_strider() -> CardDefinition {
+    CardDefinition {
+        name: "Orchard Strider",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        power: 6,
+        toughness: 4,
+        keywords: vec![Keyword::Typecycling(Box::new((
+            cost(&[generic(1), g()]),
+            R::IsBasicLand,
+        )))],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: crabomination_base::tokens::food_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Terramorph — {3}{G} Sorcery. Fetch a basic onto the battlefield; rebound.
+pub fn terramorph() -> CardDefinition {
+    CardDefinition {
+        name: "Terramorph",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Funnel-Web Recluse — {4}{G} 3/5 reach. Morbid ETB: investigate.
+pub fn funnel_web_recluse() -> CardDefinition {
+    CardDefinition {
+        name: "Funnel-Web Recluse",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE },
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crabomination_base::tokens::clue_token(),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Urban Daggertooth — {2}{G}{G} 4/3 vigilance. Enrage: proliferate.
+pub fn urban_daggertooth() -> CardDefinition {
+    CardDefinition {
+        name: "Urban Daggertooth",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jewel-Eyed Cobra — {2}{G} 3/1 deathtouch. Dies: a Treasure.
+pub fn jewel_eyed_cobra() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Jewel-Eyed Cobra",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: crabomination_base::tokens::treasure_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Healer's Flock — {W}{W}{W} 3/3 flying lifelink.
+pub fn healers_flock() -> CardDefinition {
+    CardDefinition {
+        name: "Healer's Flock",
+        cost: cost(&[w(), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Disciple of the Sun — {4}{W} 3/3 lifelink. ETB: return a MV≤3 permanent
+/// card from your graveyard to hand.
+pub fn disciple_of_the_sun() -> CardDefinition {
+    CardDefinition {
+        name: "Disciple of the Sun",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::Permanent.and(R::ManaValueAtMost(3))),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fairgrounds Patrol — {1}{W} 2/1. {1}{W}, exile from graveyard: a 1/1
+/// flying Thopter. Sorcery speed.
+pub fn fairgrounds_patrol() -> CardDefinition {
+    CardDefinition {
+        name: "Fairgrounds Patrol",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Thopter".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    keywords: vec![Keyword::Flying],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Thopter],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Knighted Myr — {2}{W} 2/2. {2}{W}: adapt 1; counters put on it grant
+/// double strike this turn.
+pub fn knighted_myr() -> CardDefinition {
+    use crate::effect::shortcut::adapt;
+    CardDefinition {
+        name: "Knighted Myr",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: adapt(1),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::SelfSource,
+            ),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soul of Migration — {5}{W}{W} 2/4 flying. ETB: two 1/1 flying Birds.
+/// Evoke {3}{W}.
+pub fn soul_of_migration() -> CardDefinition {
+    CardDefinition {
+        name: "Soul of Migration",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(3), w()]))),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Bird".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                keywords: vec![Keyword::Flying],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Bird],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Thraben Watcher — {2}{W}{W} 2/2 flying vigilance. Other nontoken
+/// creatures you control get +1/+1 and have vigilance.
+pub fn thraben_watcher() -> CardDefinition {
+    let others = Selector::EachPermanent(
+        R::Creature.and(R::ControlledByYou).and(R::NotToken).and(R::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Thraben Watcher",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other nontoken creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others.clone(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other nontoken creatures you control have vigilance.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others,
+                    keyword: Keyword::Vigilance,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Floodhound — {U} 1/2. {3}, {T}: investigate.
+pub fn floodhound() -> CardDefinition {
+    CardDefinition {
+        name: "Floodhound",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crabomination_base::tokens::clue_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mental Journey — {4}{U}{U} Instant. Draw three; basic landcycling {1}{U}.
+pub fn mental_journey() -> CardDefinition {
+    CardDefinition {
+        name: "Mental Journey",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Typecycling(Box::new((
+            cost(&[generic(1), u()]),
+            R::IsBasicLand,
+        )))],
+        effect: draw(3),
+        ..Default::default()
+    }
+}
+
+/// Steelfin Whale — {5}{U} 3/4. Affinity for artifacts; an artifact ETB
+/// untaps it.
+pub fn steelfin_whale() -> CardDefinition {
+    CardDefinition {
+        name: "Steelfin Whale",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        affinity_filter: Some(R::Artifact),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                }),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tragic Fall — {1}{B} Instant. -3/-3; hellbent: -13/-13 instead.
+pub fn tragic_fall() -> CardDefinition {
+    let shrink = |n: i32| {
+        Box::new(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(n),
+            toughness: Value::Const(n),
+            duration: Duration::EndOfTurn,
+        })
+    };
+    CardDefinition {
+        name: "Tragic Fall",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::HellbentActive { who: PlayerRef::You },
+            then: shrink(-13),
+            else_: shrink(-3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Echoing Return — {B} Sorcery. Return a creature card and its namesakes
+/// from your graveyard to hand.
+pub fn echoing_return() -> CardDefinition {
+    CardDefinition {
+        name: "Echoing Return",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::SharingNameWith(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            })),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lens Flare — {4}{W} Instant. Affinity for artifacts; 5 damage to target
+/// attacking or blocking creature.
+pub fn lens_flare() -> CardDefinition {
+    CardDefinition {
+        name: "Lens Flare",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Instant],
+        affinity_filter: Some(R::Artifact),
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}

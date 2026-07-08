@@ -13966,23 +13966,38 @@ impl GameState {
 
             Selector::SharingNameWith(inner) => {
                 // Resolve the anchor, read its printed name, then collect
-                // every battlefield permanent (anchor included) with that
-                // name. The anchor's name is read from the battlefield so a
-                // freshly-resolved target still matches.
+                // everything with that name in the anchor's zone: battlefield
+                // for a battlefield anchor (Bile Blight), the owner's
+                // graveyard for a graveyard anchor (Echoing Return).
                 let anchor = self
                     .resolve_selector(inner, ctx)
                     .into_iter()
                     .find_map(|e| e.as_permanent_id());
                 let Some(anchor_id) = anchor else { return vec![] };
-                let Some(name) = self.battlefield_find(anchor_id).map(|c| c.definition.name)
-                else {
-                    return vec![];
-                };
-                self.battlefield
-                    .iter()
-                    .filter(|c| c.definition.name == name)
-                    .map(|c| EntityRef::Permanent(c.id))
-                    .collect()
+                if let Some(name) = self.battlefield_find(anchor_id).map(|c| c.definition.name) {
+                    return self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.definition.name == name)
+                        .map(|c| EntityRef::Permanent(c.id))
+                        .collect();
+                }
+                for p in &self.players {
+                    if let Some(name) = p
+                        .graveyard
+                        .iter()
+                        .find(|c| c.id == anchor_id)
+                        .map(|c| c.definition.name)
+                    {
+                        return p
+                            .graveyard
+                            .iter()
+                            .filter(|c| c.definition.name == name)
+                            .map(|c| EntityRef::Card(c.id))
+                            .collect();
+                    }
+                }
+                vec![]
             }
 
             Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
