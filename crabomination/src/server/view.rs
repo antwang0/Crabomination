@@ -553,6 +553,12 @@ fn project_player(
             .iter()
             .map(|c| graveyard_entry(c, state, player_seat))
             .collect(),
+        phased_out: state
+            .phased_out
+            .iter()
+            .filter(|c| c.controller == player_seat)
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect(),
         hand: player
             .hand
             .iter()

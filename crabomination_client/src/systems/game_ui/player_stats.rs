@@ -97,6 +97,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Summon-saga growth — a woodland green matching the Fenrir/Brynhildr
         // "your next creature" riders.
         StatChipKind::Summon => (Color::srgba(0.16, 0.30, 0.16, 1.0), theme::TEXT_PRIMARY),
+        // Phased out (CR 702.26) — a ghostly translucent grey; the permanents
+        // are treated as nonexistent until they phase in.
+        StatChipKind::PhasedOut => (Color::srgba(0.20, 0.20, 0.28, 0.9), theme::TEXT_SECONDARY),
     }
 }
 
@@ -135,6 +138,9 @@ pub(super) enum StatChipKind {
     /// CR 603.7e — a pending "your next creature spell enters with +1/+1 /
     /// haste" rider (the FIN "Summon" saga chapters).
     Summon,
+    /// CR 702.26 — phased-out permanents (Out of Time, Teferi's Veil). They
+    /// occupy no visible zone, so the chip is the only sign they still exist.
+    PhasedOut,
 }
 
 /// Label for the pending "your next creature spell" rider chip (CR 603.7e),
@@ -628,6 +634,17 @@ pub fn update_player_stats_chips(
         // poison-mill clock).
         if p.rad_counters > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
+        }
+        // CR 702.26 phased-out permanents — named when few, counted when many.
+        if !p.phased_out.is_empty() {
+            let label = if p.phased_out.len() <= 2 {
+                let names: Vec<&str> =
+                    p.phased_out.iter().map(|(_, n)| n.as_str()).collect();
+                format!("◌ {}", names.join(", "))
+            } else {
+                format!("◌ phased ×{}", p.phased_out.len())
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::PhasedOut, label);
         }
         // Storm / magecraft count — surface once a second spell lands this
         // turn so Storm / prowess / magecraft payoffs can be read at a glance.

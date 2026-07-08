@@ -2109,8 +2109,12 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   computed keywords, so a layer-granted Phasing phases out at the untap step.
   **Mid-combat `Effect::PhaseOut` ✅** — removes the permanent from the combat
   arrays (702.26e). **"When this phases in" triggers ✅** — `EventKind::PhasesIn`
-  + `GameEvent::PermanentPhasedIn`. The side-zone model (`GameState.phased_out`)
-  is the hook.
+  + `GameEvent::PermanentPhasedIn`. **Linked "until [source] leaves" ✅** —
+  `PhaseOut.until_source_leaves` + `CardInstance.phased_out_by`: skipped by
+  the untap-step phase-in, returned by `on_left_battlefield` (Out of Time,
+  with a time counter per phased permanent). Phased-out permanents surfaced
+  per player via `PlayerView.phased_out` + a client HUD chip. The side-zone
+  model (`GameState.phased_out`) is the hook.
 - ✅ **Changeling (CR 702.73) honored in general type-filter eval** (this run).
   Both `effects/eval.rs` `R::HasCreatureType` sites now OR in
   `has_keyword(Changeling)`, matching the block-restriction path — a Changeling
@@ -2507,7 +2511,9 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   (`check_target_legality`) or combat-damage prevention reads — extend those
   to read computed protection if a card needs it (Giver of Runes "protection
   from colorless" also needs a colorless option).
-- **Suspend (CR 702.62) — ✅ DONE (primitive + haste + accelerant).**
+- **Suspend (CR 702.62) — ✅ DONE (primitive + haste + accelerant +
+  granted suspend 702.62e via `Effect::GrantSuspend`/`granted_suspend`, and
+  the CR 601.3e suspend-only cast gate `CardDefinition.suspend_only`).**
   `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend`
   ship the exile-with-time-counters → tick-at-upkeep → free-cast loop
   (Rift Bolt, Ancestral Vision, Lotus Bloom). A suspend-cast creature now
@@ -3289,31 +3295,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - ✅ ~~Dies-redirects vs dies-triggers~~ — fixed: `death_was_replaced`
     (exile *or* library) gates dies-trigger dispatch, the `PermanentDied`
     synthesis, and `WhenCardDies` delayed watchers.
-- ⏳ **MH2 sweep deferrals (`decks::mh2b`)** — Arcbound Javelineer (remove-X
-  +1/+1 counters as an activation cost), Breathless Knight (needs an
-  "entered from / cast from a graveyard" entry-origin flag), Foundry Helix
-  ("if the sacrificed permanent was an artifact" predicate over the
-  sacrifice-as-additional-cost), Obsidian Charmaw (cost reduction keyed on
-  opponents' {C}-producing lands), Grist (not-on-battlefield CDA identity),
-  Garth One-Eye (named-card copy casts). ~33 MH2 cards remain —
-  `python3 scripts/set_gaps.py mh2`, which also false-positives on implemented
-  split cards (it greps the left-half name). 149 shipped across
-  `decks::mh2b`–`mh2f`. Still-deferred gaps each want a primitive:
-  Aeve (storm creature copies-as-tokens), Altar of the Goyf (attacks-alone
-  trigger), Arcus Acolyte (grant-outlast static), Carth (loyalty cost
-  modifier), Chitterspitter (counter-scaled team anthem), Dermotaxi
-  (imprint copy), Ghost-Lit Drifter (X-target grant), Grist (off-battlefield
-  CDA), Out of Time (mass phasing), Rakdos Headliner (echo—discard),
-  Rise and Shine (overload each + animate), Serra's Emissary (protection
-  from chosen card type), Steel Dromedary (conditional self no-untap),
-  Suspend-the-card ("gains suspend"), Verdant Command (choose-two with
-  loyalty-ability counter), Wren's Run Hydra (Reinforce X), Yusri
-  (win-five free-casts), Zabaz (modular counter bonus), Chrome Courier
-  (picked-card-was-artifact rider), Discerning Taste (greatest-power-milled
-  value), Shattered Ego (library-third-from-top), suspend-only trio
-  (Gaea's Will / Glimpse of Tomorrow / Inevitable Betrayal), Break the Ice
-  ("could produce {C}"), Obsidian Charmaw (same), Chef's Kiss (random
-  retarget), Garth One-Eye, Lonis (steal-top-X), A-DRC (Alchemy).
+- ✅ **MH2 sweep — COMPLETE.** `python3 scripts/set_gaps.py mh2` reports 0
+  missing (the script now checks full split-card names and skips `A-`
+  Alchemy rebalances). ~180 cards across `decks::mh2b`–`mh2i`. Remaining
+  per-card approximations are noted on their factory docs (Garth's copy is a
+  real hand card; Ghost-Lit Drifter's channel hits one target; Chef's Kiss
+  keeps the target when no hostile retarget exists).
 - ⏳ **All Will Be One placer attribution** — `GameEvent::CounterAdded` carries
   no "who placed" seat, so the enchantment fires off counters landing on your
   permanents + poison hitting opponents (exact in two-player). Threading the

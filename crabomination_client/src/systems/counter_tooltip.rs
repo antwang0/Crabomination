@@ -1115,6 +1115,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Fire => "Fire",
         CounterType::Conqueror => "Conqueror",
         CounterType::Muster => "Muster",
+        CounterType::Acorn => "Acorn",
     }
 }
 
@@ -1140,6 +1141,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Fire => "Firebending tally — the permanent becomes a creature (or scales damage) once enough accumulate.",
         CounterType::Conqueror => "Zhao's conquest tally — while present, nonbasic lands become Mountains.",
         CounterType::Muster => "Assemble the Legion tally — mints a Soldier token per counter each upkeep.",
+        CounterType::Acorn => "Chitterspitter tally — Squirrels you control get +1/+1 per acorn.",
         _ => return None,
     })
 }

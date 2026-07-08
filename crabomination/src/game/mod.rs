@@ -3233,7 +3233,15 @@ impl GameState {
             .collect();
         for (id, cost) in affected {
             let paid = match &cost {
-                Some(mc) => self.players[active].mana_pool.pay(mc).is_ok(),
+                // Auto-tap lands like a real payment — at upkeep the pool is
+                // empty, so pool-only payment would always sacrifice.
+                Some(mc) => match self.try_pay_with_auto_tap(active, mc) {
+                    Ok(receipt) => {
+                        events.extend(receipt.auto_events);
+                        true
+                    }
+                    Err(_) => false,
+                },
                 None => {
                     // Echo—Discard a card: auto-discard the lowest-MV hand
                     // card if the hand isn't empty.

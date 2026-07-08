@@ -211,8 +211,8 @@ exercising each) was elided in a compaction pass; recover it from
   `SelfCostReducedPerSpellCastThisTurn` (Thrasta);
   `DynamicPt::CreatureCardsInAllGraveyardsPower` (Necrogoyf);
   `Keyword::HexproofFromMonocolored` (Rokiric); graveyard-first slot
-  auto-targeting for reanimation reflexives. MH2 sweep started
-  (`decks::mh2b`, 40 cards; gaps via `scripts/set_gaps.py mh2`).
+  auto-targeting for reanimation reflexives. **MH2 sweep complete**
+  (`decks::mh2b`–`mh2i`, ~180 cards; `scripts/set_gaps.py mh2` → 0).
 - **MH2-sweep primitives (modern_decks, this run):** per-color mana-spent
   tracking (CR 702.137 Adamant — `cast_mana_spent_by_color` +
   `Predicate::{ManaSpentOfColorAtLeast, CastSpellNoColoredManaSpent}`, Void
@@ -227,6 +227,29 @@ exercising each) was elided in a compaction pass; recover it from
   `ActivatedAbility.{discard_hand_cost, cost_reduction_per_counter}` (Diamond
   Lion, Deepwood Denizen); trigger ctx now stamps `cast_from_hand` (escape
   riders on ETBs); ETB triggers surface `BecomeBasicLand` target filters.
+- **MH2-completion primitives (modern_decks, this run):** CR 702.29 **echo
+  enforcement** (`process_echo` upkeep turn-based action: auto-pay-or-
+  sacrifice + `Keyword::EchoDiscard`; echo was previously display-only);
+  CR 702.26 **linked phasing** (`PhaseOut.until_source_leaves` +
+  `CardInstance.phased_out_by` — Out of Time, with a per-player HUD chip +
+  `PlayerView.phased_out`); CR 702.16j **protection from a card type**
+  (`Keyword::ProtectionFromCardType` + the player-side
+  `YouAndCreaturesProtectionFromChosenCardType` static and
+  `Effect::ChooseCardTypeForSource` — Serra's Emissary); CR 601.3e
+  **suspend-only** cast gate (`CardDefinition.suspend_only`); CR 604.3
+  **off-battlefield CDA types** (`creature_off_battlefield` — Grist);
+  CR 702.62e **granted suspend** (`Effect::GrantSuspend` +
+  `CardInstance.granted_suspend`); `Effect::{MoveCounters,
+  FlipCoinsChooseCount, ModularCounters, OpponentRevealsPickToBattlefield,
+  GlimpseOfTomorrow, GarthOneEye, ChefsKiss, GristPlusOne,
+  PlayFromGraveyardThisTurn, ExileYourGraveyardBoundThisTurn,
+  FreeSpellsFromHandThisTurn}; `StaticEffect::{LoyaltyAbilitiesCostExtra,
+  ModularBonusCounters}`; `ActivatedAbility.remove_counter_x`;
+  `R::{ProducesColorless, IsSnow}`; `EventKind::PermanentDied`;
+  `AnthemForFilter.scale_by_counters_on_self`; LookPickToHand life riders;
+  affinity-style counts honor explicit controller clauses;
+  `SearchPickedBy` dest resolves "under YOUR control" to the effect
+  controller.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

@@ -549,6 +549,11 @@ pub struct PlayerView {
     pub mana_pool: ManaPool,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
+    /// CR 702.26 — this player's phased-out permanents (id + name). They're
+    /// in no visible zone, so the HUD needs its own listing to show they
+    /// still exist (Out of Time, Vodalian Illusionist).
+    #[serde(default)]
+    pub phased_out: Vec<(CardId, String)>,
     /// One entry per card in hand. Each entry is either `Known` (the viewer is
     /// entitled to see the card — always for your own hand, sometimes for an
     /// opponent's via Peek/Thoughtseize/Telepathy-style reveals) or `Hidden`
