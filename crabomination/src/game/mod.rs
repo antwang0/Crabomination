@@ -376,6 +376,9 @@ mod tests_recent107;
 #[path = "../tests/recent108.rs"]
 mod tests_recent108;
 #[cfg(test)]
+#[path = "../tests/recent109.rs"]
+mod tests_recent109;
+#[cfg(test)]
 #[path = "../tests/abilitywords.rs"]
 mod tests_abilitywords;
 #[cfg(test)]
@@ -4077,6 +4080,75 @@ impl GameState {
         })
     }
 
+    /// CR 104.3d — true when `seat` can't lose the game right now: Angel's
+    /// Grace this turn, a Platinum-Angel static they control, or an
+    /// opponent's Abyssal-Persecutor static ("your opponents can't lose").
+    /// Concession (CR 104.3a) bypasses this.
+    pub fn player_cant_lose_game(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        if self.players[seat].cant_lose_this_turn {
+            return true;
+        }
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::ControllerCantLoseGame => src.controller == seat,
+                StaticEffect::ControllerCantWinGame => !self.same_team(src.controller, seat),
+                _ => false,
+            })
+        })
+    }
+
+    /// CR 104.3d — true when `seat` can't win the game right now: their own
+    /// Abyssal-Persecutor static, an opponent's Platinum-Angel static, or an
+    /// opponent under Angel's Grace this turn. Gates the win *effects*
+    /// (`Effect::WinGame`, `WinInsteadOfDrawFromEmpty`); elimination-based
+    /// endings are already blocked by the paired can't-lose checks.
+    pub fn player_cant_win_game(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        if self
+            .players
+            .iter()
+            .enumerate()
+            .any(|(i, pl)| !self.same_team(i, seat) && pl.cant_lose_this_turn)
+        {
+            return true;
+        }
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::ControllerCantWinGame => src.controller == seat,
+                StaticEffect::ControllerCantLoseGame => !self.same_team(src.controller, seat),
+                _ => false,
+            })
+        })
+    }
+
+    /// Angel's Grace / Worship — clamp a would-be damage life delta so it
+    /// can't take `seat` below 1 life while a floor effect is active. The
+    /// damage itself is still dealt (CR 614 — only the life reduction is
+    /// replaced); a life total already ≤ 1 just doesn't move.
+    pub(crate) fn clamp_damage_to_life_floor(&self, seat: usize, amount: u32) -> u32 {
+        use crate::effect::StaticEffect;
+        let floored = self.players[seat].damage_floor_this_turn
+            || self.battlefield.iter().any(|src| {
+                src.controller == seat
+                    && src.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            StaticEffect::DamageWontReduceControllerLifeBelowOne { requires_creature }
+                            if !requires_creature
+                                || self.battlefield.iter().any(|c| {
+                                    c.controller == seat && c.definition.is_creature()
+                                })
+                        )
+                    })
+            });
+        if floored {
+            amount.min(self.effective_life(seat).saturating_sub(1).max(0) as u32)
+        } else {
+            amount
+        }
+    }
+
     /// CR 705.3 — coin-flip advantage for `seat` from active
     /// `StaticEffect::CoinFlipAdvantage` permanents (Krark's Thumb). Summed
     /// so multiple sources stack; added to `Player.coin_flip_advantage` by
@@ -7773,13 +7845,19 @@ impl GameState {
         });
         use crate::player::LossCause;
         if wins {
-            for (idx, pl) in self.players.iter_mut().enumerate() {
-                if idx != p {
-                    pl.eliminated = true;
-                    pl.loss_cause.get_or_insert(LossCause::Other);
+            // CR 104.3d — the replacement still swallows the failed draw,
+            // but a player who can't win isn't awarded the win, and
+            // opponents who can't lose stay in the game.
+            if self.player_cant_win_game(p) {
+                return;
+            }
+            for idx in 0..self.players.len() {
+                if idx != p && !self.player_cant_lose_game(idx) {
+                    self.players[idx].eliminated = true;
+                    self.players[idx].loss_cause.get_or_insert(LossCause::Other);
                 }
             }
-        } else {
+        } else if !self.player_cant_lose_game(p) {
             self.players[p].eliminated = true;
             self.players[p].loss_cause.get_or_insert(LossCause::Decked);
         }
@@ -8381,10 +8459,10 @@ impl GameState {
         let deaths = std::mem::take(&mut self.pending_permanent_deaths);
         let synthesized: Vec<GameEvent> = deaths
             .into_iter()
-            // CR 700.4 — a death redirected to exile (Rest in Peace, void
-            // counters, Kalitas) never happened; skip it, mirroring the
-            // `CreatureDied` exile guard below.
-            .filter(|(card_id, ..)| !self.exile.iter().any(|c| c.id == *card_id))
+            // CR 700.4 — a death redirected away from the graveyard (Rest in
+            // Peace, void counters, Kalitas, Pulmonic Sliver) never happened;
+            // skip it, mirroring the `CreatureDied` guard below.
+            .filter(|(card_id, ..)| !self.death_was_replaced(*card_id))
             .map(|(card_id, controller, is_creature, is_artifact)| GameEvent::PermanentDied {
                 card_id,
                 controller,
@@ -8462,6 +8540,9 @@ impl GameState {
                 | GameEvent::PermanentDied { card_id, .. } => Some(*card_id),
                 _ => None,
             })
+            // CR 700.4 — a redirected death (exile / library-top) never
+            // happened; "when [card] dies" watchers keep watching.
+            .filter(|card_id| !self.death_was_replaced(*card_id))
             .collect();
         if !died.is_empty() {
             use crate::game::types::DelayedKind;
@@ -8727,12 +8808,13 @@ impl GameState {
                         continue;
                     }
                     // CR 700.4 — a creature whose death-placement was
-                    // redirected to exile (Rest in Peace, void counters,
-                    // Kalitas) never died; "whenever a creature dies"
-                    // watchers don't fire. The redirected card sits in
-                    // exile at dispatch time.
+                    // redirected away from the graveyard (Rest in Peace, void
+                    // counters, Kalitas exile; Pulmonic Sliver library-top)
+                    // never died; "whenever a creature dies" watchers don't
+                    // fire. The redirected card sits in exile or a library at
+                    // dispatch time.
                     if let GameEvent::CreatureDied { card_id } = ev
-                        && self.exile.iter().any(|c| c.id == *card_id)
+                        && self.death_was_replaced(*card_id)
                     {
                         continue;
                     }
@@ -11482,6 +11564,19 @@ impl GameState {
         self.battlefield.iter().find(|c| c.id == id)
     }
 
+    /// CR 700.4 — true when a death's graveyard placement was replaced away
+    /// (Finality/void exile, Rest in Peace, Valentin, Pulmonic Sliver's
+    /// library-top): the card never reached a graveyard, so it never "died"
+    /// and dies-watchers must not fire. Checked at dispatch time, after the
+    /// removal chokepoint has resolved the redirect.
+    pub(crate) fn death_was_replaced(&self, card_id: CardId) -> bool {
+        self.exile.iter().any(|c| c.id == card_id)
+            || self
+                .players
+                .iter()
+                .any(|p| p.library.iter().any(|c| c.id == card_id))
+    }
+
     /// The firing event's magnitude for `Value::TriggerEventAmount` /
     /// `ManaValueLessThanEventAmount`. Mostly the event payload's `amount`;
     /// for died events it's the dying card's mana value (Scrap Trawler's
@@ -12416,6 +12511,11 @@ fn static_effect_to_effects(
             // SelfCostReducedIf (Gigastorm Titan) — read off the spell.
             | StaticEffect::SelfCostReducedIf { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
+            // CR 104.3d — consulted at the loss/win sites, no layer effect.
+            | StaticEffect::ControllerCantLoseGame
+            | StaticEffect::ControllerCantWinGame
+            // Consulted at the damage-to-player life sites.
+            | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::OneNoncreatureSpellPerTurn
             | StaticEffect::OneNonartifactSpellPerTurn

@@ -491,6 +491,15 @@ pub struct Player {
     /// the game. Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub loss_cause: Option<LossCause>,
+    /// CR 104.3d — Angel's Grace: this player can't lose the game this turn
+    /// (and their opponents can't win it). Cleared at the turn boundary.
+    #[serde(default)]
+    pub cant_lose_this_turn: bool,
+    /// Angel's Grace's second rider — damage that would reduce this player's
+    /// life below 1 reduces it to 1 instead, this turn. Cleared at the turn
+    /// boundary.
+    #[serde(default)]
+    pub damage_floor_this_turn: bool,
     /// Number of upcoming turns this player must skip. Read by the
     /// turn-advance logic in `do_cleanup` — when the engine would hand
     /// the next turn to this player, the counter is decremented and the
@@ -706,6 +715,8 @@ impl Player {
             max_hand_size: default_max_hand_size(),
             eliminated: false,
             loss_cause: None,
+            cant_lose_this_turn: false,
+            damage_floor_this_turn: false,
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_combat: 0,

@@ -2186,7 +2186,10 @@ impl GameState {
                 if atk.has_infect {
                     self.add_poison(p, amount, events);
                 } else {
-                    let applied = self.adjust_life_applied(p, -(amount as i32));
+                    // Angel's Grace / Worship — damage lands in full, but the
+                    // life reduction is clamped to the floor.
+                    let life_delta = self.clamp_damage_to_life_floor(p, amount);
+                    let applied = self.adjust_life_applied(p, -(life_delta as i32));
                     events.push(GameEvent::DamageDealt {
                         amount,
                         to_player: Some(p),

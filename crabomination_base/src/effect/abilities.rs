@@ -407,6 +407,19 @@ pub enum StaticEffect {
     /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by
     /// `lose_to_empty_draw`.
     WinInsteadOfDrawFromEmpty,
+    /// CR 104.3d — "You can't lose the game and your opponents can't win the
+    /// game" (Platinum Angel). Consulted by the SBA loss checks,
+    /// `lose_to_empty_draw`, and the win/lose one-shot effects.
+    ControllerCantLoseGame,
+    /// CR 104.3d flip side — "You can't win the game and your opponents
+    /// can't lose the game" (Abyssal Persecutor).
+    ControllerCantWinGame,
+    /// CR 614 — "Damage that would reduce your life total to less than 1
+    /// reduces it to 1 instead" (Worship, gated on controlling a creature
+    /// via `requires_creature`). Applied at the damage-to-player life sites;
+    /// the damage is still dealt (triggers fire), only the life change is
+    /// clamped.
+    DamageWontReduceControllerLifeBelowOne { requires_creature: bool },
     /// CR 601.2b — card-intrinsic optional additional cost: "you may sacrifice
     /// any number of creatures; this spell costs {N} less to cast for each."
     /// `per` is the per-creature generic reduction. Carried on the spell's own

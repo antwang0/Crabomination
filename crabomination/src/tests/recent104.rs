@@ -27,6 +27,25 @@ fn pulmonic_sliver_redirects_dying_slivers_to_library_top() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "non-Sliver dies normally");
 }
 
+/// CR 700.4 — a death redirected to the library (Pulmonic Sliver) never
+/// happened: "whenever a creature dies" watchers must not fire for it.
+#[test]
+fn library_redirected_death_does_not_fire_dies_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pulmonic_sliver());
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let sliver = g.add_card_to_battlefield(0, catalog::galerider_sliver());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let (p0, p1) = (g.players[0].life, g.players[1].life);
+    g.battlefield_find_mut(sliver).unwrap().damage = 9;
+    g.battlefield_find_mut(bear).unwrap().damage = 9;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 1, "Blood Artist fires only for the bear");
+    assert_eq!(g.players[1].life, p1 - 1);
+}
+
 /// Twilight Prophet with the city's blessing drains each opponent for the
 /// revealed card's mana value at upkeep (and puts it in hand).
 #[test]

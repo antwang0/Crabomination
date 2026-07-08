@@ -438,7 +438,11 @@ impl GameState {
                         from_controller,
                     });
                 } else {
-                    let applied = self.adjust_life_applied(p, -(amount as i32));
+                    // Angel's Grace / Worship — the damage is dealt in full
+                    // (the event below carries `amount`), but the life
+                    // reduction is clamped to the floor.
+                    let life_delta = self.clamp_damage_to_life_floor(p, amount);
+                    let applied = self.adjust_life_applied(p, -(life_delta as i32));
                     events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false, from_controller });
                     let lost = (-applied).max(0) as u32;
                     if lost > 0 {

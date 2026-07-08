@@ -2428,6 +2428,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantLoseThisTurn { damage_floor } => {
+                let p = ctx.controller;
+                self.players[p].cant_lose_this_turn = true;
+                if *damage_floor {
+                    self.players[p].damage_floor_this_turn = true;
+                }
+                Ok(())
+            }
+
             Effect::LifeGainLockGame { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
@@ -11285,10 +11294,16 @@ impl GameState {
                     events.append(&mut paid_events);
                 } else {
                     self.restore_payment_state(p, snapshot);
-                    self.players[p].eliminated = true;
-                    self.players[p].loss_cause.get_or_insert(crate::player::LossCause::Other);
-                    let mut sba = self.check_state_based_actions();
-                    events.append(&mut sba);
+                    // CR 104.3d — a Pact's "you lose the game" does nothing
+                    // to a player who can't lose.
+                    if !self.player_cant_lose_game(p) {
+                        self.players[p].eliminated = true;
+                        self.players[p]
+                            .loss_cause
+                            .get_or_insert(crate::player::LossCause::Other);
+                        let mut sba = self.check_state_based_actions();
+                        events.append(&mut sba);
+                    }
                 }
                 Ok(())
             }
@@ -13676,11 +13691,17 @@ impl GameState {
                         EntityRef::Player(p) => Some(p),
                         _ => None,
                     });
-                if let Some(w) = winner {
-                    for (idx, pl) in self.players.iter_mut().enumerate() {
-                        if idx != w {
-                            pl.eliminated = true;
-                            pl.loss_cause.get_or_insert(crate::player::LossCause::Other);
+                // CR 104.3d — a player who can't win isn't awarded the win,
+                // and opponents who can't lose stay in the game.
+                if let Some(w) = winner
+                    && !self.player_cant_win_game(w)
+                {
+                    for idx in 0..self.players.len() {
+                        if idx != w && !self.player_cant_lose_game(idx) {
+                            self.players[idx].eliminated = true;
+                            self.players[idx]
+                                .loss_cause
+                                .get_or_insert(crate::player::LossCause::Other);
                         }
                     }
                 }
@@ -13688,8 +13709,11 @@ impl GameState {
             }
             Effect::LoseGame { who } => {
                 // CR 104.3a — eliminate the named player; the SBA loop
-                // promotes the last player standing.
-                if let Some(loser) = self.resolve_player(who, ctx) {
+                // promotes the last player standing. CR 104.3d — a "you lose
+                // the game" effect does nothing to a player who can't lose.
+                if let Some(loser) = self.resolve_player(who, ctx)
+                    && !self.player_cant_lose_game(loser)
+                {
                     self.players[loser].eliminated = true;
                     let mut sba = self.check_state_based_actions();
                     events.append(&mut sba);

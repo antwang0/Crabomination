@@ -2270,6 +2270,12 @@ pub enum Effect {
     /// to (Skullcrack, Sulfurous Blast's flashback rider, future
     /// one-turn lifegain locks).
     LifeGainLockThisTurn { who: Selector },
+    /// CR 104.3d — Angel's Grace: until end of turn the controller can't
+    /// lose the game and their opponents can't win it. With `damage_floor`,
+    /// damage that would drop their life below 1 drops it to 1 instead.
+    /// Sets `Player.{cant_lose_this_turn, damage_floor_this_turn}`; cleared
+    /// by `do_untap` at the turn boundary.
+    CantLoseThisTurn { damage_floor: bool },
     /// Channel — until end of turn the controller may pay 1 life per point
     /// of colorless shortfall when paying costs ("you may pay 1 life: add
     /// {C}"). Sets `Player.channel_life_for_mana`; the payment funnel

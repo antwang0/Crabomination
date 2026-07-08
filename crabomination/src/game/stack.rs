@@ -1982,6 +1982,9 @@ impl GameState {
         // was targeted, not to the active player.
         for q in 0..self.players.len() {
             self.players[q].cannot_gain_life_this_turn = false;
+            // CR 104.3d — Angel's Grace's protections end with the turn.
+            self.players[q].cant_lose_this_turn = false;
+            self.players[q].damage_floor_this_turn = false;
         }
         // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
         // permanent that flipped tapped→untapped this step.
@@ -3009,7 +3012,10 @@ impl GameState {
             let lost = self.effective_life(i) <= 0
                 || self.players[i].poison_counters >= 10
                 || lost_to_commander;
-            if lost {
+            // CR 104.3d — a player who can't lose (Angel's Grace, Platinum
+            // Angel, an opponent's Abyssal Persecutor) skips the loss SBAs;
+            // the qualifying state (life ≤ 0, poison ≥ 10) persists.
+            if lost && !self.player_cant_lose_game(i) {
                 // Stamp the authoritative cause most-specific-first, matching
                 // the SBA order that would fire (life, then poison, then
                 // commander damage — CR 704.5a/c/v).
