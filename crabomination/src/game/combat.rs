@@ -732,6 +732,22 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // Void Winnower — a creature with an even mana value can't block
+            // while an opponent has the static (zero is even).
+            if blocker.definition.cost.cmc() % 2 == 0
+                && self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, blocker.controller)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv
+                            )
+                        })
+                })
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // "Can't block unless you control N+ [filter]" (Topiary Stomper).
             // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
             if let Some((req, min, excl)) = kws_of(blocker_id).iter().find_map(|kw| match kw {

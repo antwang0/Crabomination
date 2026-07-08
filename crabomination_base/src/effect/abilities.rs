@@ -147,6 +147,13 @@ pub enum StaticEffect {
     /// source's `chosen_color` ETB stamp (Iona, Shield of Emeria). Gated at
     /// the cast dispatch.
     OpponentsCantCastChosenColor,
+    /// Void Winnower — "Your opponents can't cast spells with even mana
+    /// values" (zero is even). Gated at the cast dispatch off the spell's
+    /// printed mana value.
+    OpponentsCantCastEvenMv,
+    /// Void Winnower — "Your opponents can't block with creatures with even
+    /// mana values" (zero is even). Consulted in the block-legality check.
+    OpponentsCantBlockWithEvenMv,
     /// "Each [creature_type] creature gets +P/+T for each *other*
     /// [creature_type] on the battlefield" (Sliver Legion). State-aware:
     /// gathered with the live battlefield count, one effect per matching
@@ -273,6 +280,12 @@ pub enum StaticEffect {
     /// controls the source and is about to cast their `nth` spell this turn
     /// (i.e. `Player.spells_cast_this_turn == nth - 1`). Generic-only.
     CostReductionNthSpell { filter: SelectionRequirement, nth: u32, amount: u32 },
+    /// "The first creature spell you cast each turn costs `amount` less"
+    /// (Conduit of Ruin). Unlike `CostReductionNthSpell` (which keys off the
+    /// total spell count), this gates on the controller's *creature*-spell
+    /// count for the turn (`Player.creatures_cast_this_turn == 0`).
+    /// Generic-only.
+    CostReductionFirstCreatureSpell { amount: u32 },
     /// Target-aware generic cost reduction for spells whose chosen target
     /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
     /// cast that target a creature cost {2} less to cast."

@@ -411,6 +411,13 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 {
                     reduction += amount;
                 }
+                StaticEffect::CostReductionFirstCreatureSpell { amount }
+                    if src.controller == caster
+                        && state.players[caster].creatures_cast_this_turn == 0
+                        && card.definition.card_types.contains(&CardType::Creature) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReductionTargetingFilter {
                     spell_filter,
                     target_filter,

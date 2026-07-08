@@ -532,6 +532,14 @@ fn project_player(
                 && any_static(&|e| matches!(e, StaticEffect::OneNonartifactSpellPerTurn)),
         }
     };
+    // CR 601.3e — an opponent's Void Winnower locks this player's even-MV casts.
+    let even_mv_cast_locked = state.battlefield.iter().any(|c| {
+        !state.same_team(c.controller, player_seat)
+            && c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantCastEvenMv))
+    });
     PlayerView {
         seat: player_seat,
         name: player.name.clone(),
@@ -585,6 +593,7 @@ fn project_player(
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         spells_cast_this_turn: player.spells_cast_this_turn,
         spell_cast_lock,
+        even_mv_cast_locked,
         skip_next_combat: player.skip_next_combat,
         max_hand_size: player.max_hand_size,
         // Command zone is public — every viewer sees every card as
@@ -3182,6 +3191,18 @@ mod tests {
         let after = project(&g, 0).players[0].spell_cast_lock.clone();
         assert!(after.noncreature_reached, "noncreature lock reached after a noncreature cast");
         assert!(!after.any_reached, "no Rule of Law in play → the any-spell lock stays clear");
+    }
+
+    #[test]
+    fn void_winnower_surfaces_even_mv_cast_lock() {
+        // No Void Winnower → not locked; the opponent's Void Winnower locks
+        // player 0's even-mv casts (CR 601.3e).
+        let mut g = two_player_game();
+        assert!(!project(&g, 0).players[0].even_mv_cast_locked, "unlocked without the source");
+        g.add_card_to_battlefield(1, catalog::void_winnower());
+        assert!(project(&g, 0).players[0].even_mv_cast_locked, "opponent's Void Winnower locks");
+        // The Void Winnower controller is unaffected by their own static.
+        assert!(!project(&g, 1).players[1].even_mv_cast_locked, "the controller isn't locked");
     }
 
     #[test]

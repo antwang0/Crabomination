@@ -682,6 +682,10 @@ pub fn update_player_stats_chips(
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, label.to_string());
             }
         }
+        // CR 601.3e — Void Winnower locks this player's even-mana-value casts.
+        if p.even_mv_cast_locked {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ even".to_string());
+        }
         // CR 506 skipped combat (Stonehorn Dignitary) — surface so the player
         // knows their next combat phase won't happen.
         if p.skip_next_combat > 0 {

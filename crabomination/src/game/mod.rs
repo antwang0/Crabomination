@@ -388,6 +388,9 @@ mod tests_recent111;
 #[path = "../tests/recent112.rs"]
 mod tests_recent112;
 #[cfg(test)]
+#[path = "../tests/recent113.rs"]
+mod tests_recent113;
+#[cfg(test)]
 #[path = "../tests/mh2b.rs"]
 mod tests_mh2b;
 #[cfg(test)]
@@ -7304,6 +7307,29 @@ impl GameState {
                 return Err(GameError::SilencedThisTurn);
             }
         }
+        // Void Winnower — opponents can't cast spells with even mana values
+        // (zero is even; read off the printed cost, X counts as 0).
+        if action.is_cast() {
+            let caster = self.priority.player_with_priority;
+            let even_mv = action
+                .cast_card_id()
+                .and_then(|id| self.find_card_anywhere(id))
+                .is_some_and(|c| c.definition.cost.cmc() % 2 == 0);
+            if even_mv {
+                let locked = self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, caster)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantCastEvenMv
+                            )
+                        })
+                });
+                if locked {
+                    return Err(GameError::SilencedThisTurn);
+                }
+            }
+        }
         // Voice of Victory — the active player's opponents can't cast spells
         // during that player's turn.
         if action.is_cast() {
@@ -12521,6 +12547,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
             | StaticEffect::CostReductionNthSpell { .. }
+            | StaticEffect::CostReductionFirstCreatureSpell { .. }
             | StaticEffect::CostReductionTargetingFilter { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
@@ -12908,6 +12935,9 @@ fn static_effect_to_effects(
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
             | StaticEffect::OpponentsCantActDuringYourTurn
+            // Void Winnower — cast gate + block-legality gate; no layer effect.
+            | StaticEffect::OpponentsCantCastEvenMv
+            | StaticEffect::OpponentsCantBlockWithEvenMv
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.

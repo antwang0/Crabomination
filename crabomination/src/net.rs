@@ -633,6 +633,11 @@ pub struct PlayerView {
     /// Ethersworn Canonist). UIs grey out further casts of the locked category.
     #[serde(default)]
     pub spell_cast_lock: SpellCastLock,
+    /// CR 601.3e — an opponent's Void Winnower is locking this player's
+    /// even-mana-value spells (zero is even). UIs grey out even-MV cards in
+    /// hand. Defaults to false.
+    #[serde(default)]
+    pub even_mv_cast_locked: bool,
     /// CR 506 — number of this player's upcoming combat phases that will be
     /// skipped (Stonehorn Dignitary). Surfaced so the UI can warn "next
     /// combat skipped." Defaults to 0.

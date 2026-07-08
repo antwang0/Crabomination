@@ -93,8 +93,8 @@ mod tests {
     #[test]
     fn replay_file_brackets_the_event_stream() {
         let dir = std::env::temp_dir().join(format!("crab-replay-test-{}", std::process::id()));
-        // SAFETY: single-threaded env mutation scoped to this test; the
-        // unique dir keeps concurrent matches from asserting on our file.
+        let _ = std::fs::remove_dir_all(&dir); // clear any stale file first
+        // SAFETY: single-threaded env mutation scoped to this test.
         unsafe { std::env::set_var("CRAB_REPLAY_DIR", &dir) };
         {
             let _guard = MatchReplay::begin(&["A".into(), "B".into()]);
@@ -102,8 +102,13 @@ mod tests {
             log_events(&[]); // empty batches are skipped
         }
         unsafe { std::env::remove_var("CRAB_REPLAY_DIR") };
-        let entry = std::fs::read_dir(&dir).unwrap().next().unwrap().unwrap();
-        let text = std::fs::read_to_string(entry.path()).unwrap();
+        // Pick our own file (matching the players header) in case a concurrent
+        // writer landed here while our env var was set.
+        let text = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| std::fs::read_to_string(e.unwrap().path()).ok())
+            .find(|t| t.contains("\"players\":[\"A\",\"B\"]"))
+            .expect("our replay file");
         let lines: Vec<&str> = text.lines().collect();
         assert_eq!(lines.len(), 3, "header + one batch + footer");
         assert!(lines[0].contains("\"players\":[\"A\",\"B\"]"));

@@ -3335,6 +3335,25 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
+  - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
+    land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the
+    mana-doubling half + opponent "that land doesn't untap next" half both
+    hang on it. Praetor cycle is otherwise complete.
+  - **It That Betrays** — "whenever an opponent sacrifices a nontoken
+    permanent, put that card onto the battlefield under your control": needs a
+    sacrifice-watching trigger + LKI of the sacrificed card for a reflexive
+    reanimation (no such event today).
+  - **Void Winnower** X-spell corner: the even-MV cast lock reads the *printed*
+    mana value, so an `{X}` spell counts as MV 0 (even) regardless of the
+    chosen X. Faithful for fixed-cost spells; thread the announced X to be
+    exact.
+  - **Bellowing Elk** — wants "another creature entered this turn" (exclude
+    self); `Predicate::CreatureEnteredThisTurn` currently counts the source's
+    own arrival, so the Elk is skipped for now. Add a self-excluding variant.
+  - **Windcaller Aven** cycle-trigger ("when you cycle this, target creature
+    gains flying") and **Twisted Reflection**'s switch-power/toughness mode
+    (no `SwitchPowerToughness` effect) are both dropped.
 - ⏳ **Deferred (noticed, not tackled):**
   - ✅ ~~Angel's Grace~~ — shipped (`Player.{cant_lose_this_turn,
     damage_floor_this_turn}` + `player_cant_{lose,win}_game` at every loss/win

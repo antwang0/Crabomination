@@ -1246,6 +1246,10 @@ pub enum Predicate {
     /// "If an artifact entered the battlefield under `who`'s control this turn"
     /// (Akal Pakal). Reads `Player.artifacts_entered_this_turn`.
     ArtifactEnteredThisTurn { who: PlayerRef },
+    /// "If a creature entered the battlefield under `who`'s control this turn"
+    /// (Zhalfirin Decoy's activation gate, Bellowing Elk's static). Reads
+    /// `Player.creatures_entered_this_turn`.
+    CreatureEnteredThisTurn { who: PlayerRef },
     /// **Threshold** (Odyssey ability word) — `who` has seven or more cards in
     /// their graveyard. Gates "as long as / if" threshold riders (Nimble
     /// Mongoose, Werebear, Mystic Enforcer).

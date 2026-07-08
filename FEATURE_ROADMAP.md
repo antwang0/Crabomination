@@ -330,6 +330,20 @@ exercising each) was elided in a compaction pass; recover it from
   `Value::LargestCreatureTypeCount`; ward-aware hostile auto-targeting
   (bot stops feeding wards); client game-over match-stats block.
 
+- **Even-mana-value locks + cost/entry primitives (modern_decks, this run):**
+  `StaticEffect::OpponentsCant{CastEvenMv,BlockWithEvenMv}` (Void Winnower —
+  CR 601.3e cast gate + CR 509.1 block gate, "zero is even"; surfaced to the
+  wire view as `PlayerView.even_mv_cast_locked` + a HUD chip so the client
+  greys out illegal casts); `StaticEffect::CostReductionFirstCreatureSpell`
+  (Conduit of Ruin — keyed off `Player.creatures_cast_this_turn`, distinct
+  from the total-spell `CostReductionNthSpell`); `Predicate::
+  CreatureEnteredThisTurn` (Zhalfirin Decoy — CR 603 activation gate reading
+  `Player.creatures_entered_this_turn`). Card batch (`decks::recent113`, 36
+  cards): the Void Winnower/Price of Progress/Conduit trio + a Modern Horizons
+  staple sweep (Changeling Outcast, King of the Pride, Vesperlark, Mother
+  Bear, Goblin War Party entwine, Orcish Hellraiser, Excavating Anurid
+  threshold, Headless Specter hellbent, …).
+
 ## Tier 1 — High-leverage engine primitives
 
 Each unblocks a large swath of cards.
