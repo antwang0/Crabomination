@@ -933,3 +933,77 @@ pub fn font_of_fertility() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 5: enchantment removal, Auras, and a God ───────────────────────────
+
+/// Serene Heart — {1}{G} Instant. Destroy all Auras.
+pub fn serene_heart() -> CardDefinition {
+    CardDefinition {
+        name: "Serene Heart",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::HasEnchantmentSubtype(
+                EnchantmentSubtype::Aura,
+            )),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Winds of Rath — {3}{W}{W} Sorcery. Destroy all creatures that aren't
+/// enchanted.
+pub fn winds_of_rath() -> CardDefinition {
+    CardDefinition {
+        name: "Winds of Rath",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsEnchanted))),
+            ),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Calming Verse — {3}{G} Sorcery. Destroy all enchantments you don't control.
+/// (The reflexive "then destroy your own if you control an untapped land"
+/// clause is dropped.)
+pub fn calming_verse() -> CardDefinition {
+    CardDefinition {
+        name: "Calming Verse",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Enchantment
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Root Out — {2}{G} Sorcery. Destroy target artifact or enchantment, then
+/// investigate.
+pub fn root_out() -> CardDefinition {
+    CardDefinition {
+        name: "Root Out",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            crate::effect::shortcut::investigate(1),
+        ]),
+        ..Default::default()
+    }
+}

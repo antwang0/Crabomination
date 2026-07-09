@@ -585,3 +585,73 @@ fn nyleas_presence_draws_and_grants_types() {
         "enchanted land gained all basic land types: {types:?}"
     );
 }
+
+// ── Batch 5 ──────────────────────────────────────────────────────────────────
+
+/// Serene Heart destroys all Auras and nothing else.
+#[test]
+fn serene_heart_destroys_auras() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::wild_growth());
+    let ench = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
+    let spell = g.add_card_to_hand(0, catalog::serene_heart());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell);
+    assert!(g.battlefield_find(aura).is_none(), "the Aura is destroyed");
+    assert!(g.battlefield_find(ench).is_some(), "a non-Aura enchantment survives");
+    assert!(g.battlefield_find(bear).is_some(), "creatures survive");
+}
+
+/// Winds of Rath spares enchanted creatures and wraths the rest.
+#[test]
+fn winds_of_rath_spares_enchanted() {
+    let mut g = two_player_game();
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let enchanted = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Give `enchanted` an Aura so it counts as enchanted.
+    let aura = g.add_card_to_hand(0, catalog::wild_growth()); // (a land aura won't attach to a creature)
+    let _ = aura;
+    let armor = g.add_card_to_hand(0, catalog::shielded_by_faith());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, armor, Target::Permanent(enchanted));
+    let spell = g.add_card_to_hand(0, catalog::winds_of_rath());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, spell);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(plain).is_none(), "unenchanted creature destroyed");
+    assert!(g.battlefield_find(enchanted).is_some(), "enchanted creature survives");
+}
+
+/// Calming Verse destroys the opponents' enchantments only.
+#[test]
+fn calming_verse_hits_opponents_only() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
+    let theirs = g.add_card_to_battlefield(1, catalog::sigil_of_the_empty_throne());
+    let spell = g.add_card_to_hand(0, catalog::calming_verse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, spell);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's enchantment destroyed");
+    assert!(g.battlefield_find(mine).is_some(), "your own enchantment survives");
+}
+
+/// Root Out destroys an enchantment and leaves a Clue.
+#[test]
+fn root_out_destroys_and_investigates() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::sigil_of_the_empty_throne());
+    let spell = g.add_card_to_hand(0, catalog::root_out());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, spell, Target::Permanent(target));
+    assert!(g.battlefield_find(target).is_none(), "the enchantment is destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Clue"),
+        "a Clue token was created"
+    );
+}
