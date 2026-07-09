@@ -15,6 +15,12 @@ fn fill_mana(g: &mut GameState) {
     g.players[0].mana_pool.add_colorless(8);
 }
 
+fn advance_to(g: &mut GameState, step: crate::game::TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 fn cast(g: &mut GameState, id: crate::card::CardId, target: Option<Target>) {
     fill_mana(g);
     g.perform_action(GameAction::CastSpell {
@@ -333,4 +339,100 @@ fn infernal_captor_exploit_steals() {
     cast(&mut g, id, None);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "exploit sacrificed a creature");
     let _ = victim;
+}
+
+// ── Batch 2 ──────────────────────────────────────────────────────────────────
+
+/// Metastatic Evangel proliferates when another nontoken creature enters.
+#[test]
+fn metastatic_evangel_proliferates() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::metastatic_evangel());
+    // A creature with a counter to grow.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, id, None);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferate grew the existing counter");
+}
+
+/// Obstinate Gargoyle only flies while modified.
+#[test]
+fn obstinate_gargoyle_flies_while_modified() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::obstinate_gargoyle());
+    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "no flying unmodified");
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "flies while modified");
+}
+
+/// Arcbound Condor enters as a 3/3 (modular 3) and shrinks an enemy when an
+/// artifact enters.
+#[test]
+fn arcbound_condor_modular_and_artifact_trigger() {
+    let mut g = two_player_game();
+    let condor = g.add_card_to_hand(0, catalog::arcbound_condor());
+    cast(&mut g, condor, None);
+    let cp = g.computed_permanent(condor).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "0/0 + modular 3");
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Cast an artifact → trigger targeting the enemy bear.
+    let art = g.add_card_to_hand(0, catalog::etched_slith());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    cast(&mut g, art, None);
+    let vc = g.computed_permanent(victim).unwrap();
+    assert_eq!((vc.power, vc.toughness), (1, 1), "enemy bear got -1/-1");
+}
+
+/// Kozilek's Unsealing makes two Spawn on a MV-5 creature cast.
+#[test]
+fn kozileks_unsealing_mv5_makes_spawn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kozileks_unsealing());
+    // Eldrazi Ravager is {5}{C} = MV 6.
+    let id = g.add_card_to_hand(0, catalog::eldrazi_ravager());
+    cast(&mut g, id, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count(), 2);
+}
+
+/// Mindless Conscription amasses Zombies 3 on entry.
+#[test]
+fn mindless_conscription_amasses() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mindless_conscription());
+    cast(&mut g, id, None);
+    let army = g.battlefield.iter().find(|c| c.definition.name == "Army");
+    assert!(army.is_some(), "made a Zombie Army");
+    assert_eq!(army.unwrap().counter_count(CounterType::PlusOnePlusOne), 3, "amass 3 counters");
+}
+
+/// Essence Reliquary bounces another permanent you control (your turn only).
+#[test]
+fn essence_reliquary_bounces_own() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(0, catalog::essence_reliquary());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(relic);
+    g.step = crate::game::TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bounced");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "to owner's hand");
+}
+
+/// Etched Slith grows when it deals combat damage to a player.
+#[test]
+fn etched_slith_grows_on_combat_damage() {
+    let mut g = two_player_game();
+    let slith = g.add_card_to_battlefield(0, catalog::etched_slith());
+    g.clear_sickness(slith);
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: slith, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(slith).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }

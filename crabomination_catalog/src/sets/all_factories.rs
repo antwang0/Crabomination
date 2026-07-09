@@ -6553,6 +6553,14 @@ static MH3B: &[Factory] = &[
     super::mh3b::brainsurge,
     super::mh3b::fangs_of_kalonia,
     super::mh3b::gravedig,
+    super::mh3b::metastatic_evangel,
+    super::mh3b::muster_the_departed,
+    super::mh3b::obstinate_gargoyle,
+    super::mh3b::arcbound_condor,
+    super::mh3b::kozileks_unsealing,
+    super::mh3b::mindless_conscription,
+    super::mh3b::essence_reliquary,
+    super::mh3b::etched_slith,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

@@ -605,3 +605,223 @@ pub fn gravedig() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 2 ──────────────────────────────────────────────────────────────────
+
+use crate::card::StaticAbility;
+use crate::effect::shortcut::{amass_zombies, modular_dies};
+use crate::game::TurnStep;
+
+fn spirit_flyer() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Metastatic Evangel — {1}{W} 3/1 Phyrexian Human Cleric. Whenever another
+/// nontoken creature you control enters, proliferate.
+pub fn metastatic_evangel() -> CardDefinition {
+    CardDefinition {
+        name: "Metastatic Evangel",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::NotToken).and(R::OtherThanSource),
+                },
+            ),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Muster the Departed — {2}{W} Enchantment. ETB: create a 1/1 white flying
+/// Spirit. Morbid — at the beginning of your end step, if a creature died this
+/// turn, populate.
+pub fn muster_the_departed() -> CardDefinition {
+    CardDefinition {
+        name: "Muster the Departed",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: spirit_flyer() }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::SelfSource)
+                    .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+                effect: Effect::If {
+                    cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE },
+                    then: Box::new(Effect::Populate { who: PlayerRef::You }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Obstinate Gargoyle — {1}{W}{B} 2/2 Gargoyle. Flying while modified. Persist.
+pub fn obstinate_gargoyle() -> CardDefinition {
+    CardDefinition {
+        name: "Obstinate Gargoyle",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Persist],
+        static_abilities: vec![StaticAbility {
+            description: "This creature has flying as long as it's modified.",
+            effect: StaticEffect::SelfHasKeywordWhile { keyword: Keyword::Flying, condition: R::IsModified },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Arcbound Condor — {2}{B}{B} 0/0 Artifact Bird. Flying. Modular 3. Whenever
+/// another artifact you control enters, target creature an opponent controls
+/// gets -1/-1 until end of turn.
+pub fn arcbound_condor() -> CardDefinition {
+    CardDefinition {
+        name: "Arcbound Condor",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        triggered_abilities: vec![
+            modular_dies(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Artifact.and(R::OtherThanSource),
+                    },
+                ),
+                effect: Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kozilek's Unsealing — {2}{U} Devoid Enchantment. Cast a creature with MV
+/// 4–6: create two Eldrazi Spawn. Cast a creature with MV 7+: draw three.
+pub fn kozileks_unsealing() -> CardDefinition {
+    let cast_creature_mv = |lo: u32, hi: Option<u32>, effect: Effect| {
+        let mut f = R::Creature.and(R::ManaValueAtLeast(lo));
+        if let Some(h) = hi {
+            f = f.and(R::ManaValueAtMost(h));
+        }
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: f }),
+            effect,
+        }
+    };
+    CardDefinition {
+        name: "Kozilek's Unsealing",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![
+            cast_creature_mv(
+                4,
+                Some(6),
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: crate::game::effects::eldrazi_spawn_token(),
+                },
+            ),
+            cast_creature_mv(7, None, Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mindless Conscription — {2}{B} Enchantment. When it enters and whenever you
+/// draw your third card each turn, amass Zombies 3.
+pub fn mindless_conscription() -> CardDefinition {
+    CardDefinition {
+        name: "Mindless Conscription",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(amass_zombies(3)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                    .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 3 })
+                    .once_per_turn(),
+                effect: amass_zombies(3),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Essence Reliquary — {2}{W} Artifact. {T}: return another target permanent
+/// you control to its owner's hand. Activate only during your turn.
+pub fn essence_reliquary() -> CardDefinition {
+    CardDefinition {
+        name: "Essence Reliquary",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Etched Slith — {1}{B} 1/1 Artifact Phyrexian Slith. Menace. Whenever it
+/// deals combat damage to a player, put a +1/+1 counter on it.
+pub fn etched_slith() -> CardDefinition {
+    CardDefinition {
+        name: "Etched Slith",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Slith],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
