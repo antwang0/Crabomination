@@ -215,8 +215,10 @@ exercising each) was elided in a compaction pass; recover it from
   (`decks::mh2b`–`mh2i`, ~180 cards; `scripts/set_gaps.py mh2` → 0).
 - **MH2-sweep primitives (modern_decks, this run):** per-color mana-spent
   tracking (CR 702.137 Adamant — `cast_mana_spent_by_color` +
-  `Predicate::{ManaSpentOfColorAtLeast, CastSpellNoColoredManaSpent}`, Void
-  Mirror / Slaying Fire); `Keyword::LandwalkFiltered` (CR 702.14c artifact
+  `Predicate::{ManaSpentOfColorAtLeast, CastSpellNoColoredManaSpent,
+  CastSpellColorlessManaSpent}` — the last gates "if {C} was/wasn't spent"
+  (Drowner of Truth), derived from total-minus-colored so a {C} on a generic
+  pip counts; Void Mirror / Slaying Fire); `Keyword::LandwalkFiltered` (CR 702.14c artifact
   landwalk — Vectis Gloves); CR 903.4 color identity now unions color
   indicators + activated-ability + adventure/split-half costs;
   `Value::{CardTypesInGraveyard, CardTypesInAllGraveyards,
