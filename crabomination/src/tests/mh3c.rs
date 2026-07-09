@@ -475,6 +475,41 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Imskir Iron-Eater's ETB draws and loses X = half your artifacts, rounded
+/// down. With four artifacts, X = 2.
+#[test]
+fn imskir_etb_draws_and_loses_half_artifacts() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let life = g.players[0].life;
+    let lib = g.players[0].library.len();
+    let imskir = g.add_card_to_hand(0, catalog::imskir_iron_eater());
+    cast(&mut g, imskir, None, vec![]);
+    assert_eq!(g.players[0].life, life - 2, "lose X=2 life");
+    assert_eq!(g.players[0].library.len(), lib - 2, "drew X=2 cards");
+}
+
+/// Imskir's activated ability sacrifices an artifact and deals its mana value
+/// as damage to any target.
+#[test]
+fn imskir_sac_artifact_deals_mana_value_damage() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let imskir = g.add_card_to_battlefield(0, catalog::imskir_iron_eater());
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone()); // MV 2
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imskir, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("{3}{R}, sac an artifact");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "MV-2 artifact deals 2 damage");
+    assert!(g.battlefield_find(stone).is_none(), "the artifact was sacrificed");
+}
+
 /// Deem Inferior tucks target permanent second from the top of its owner's
 /// library (owner chose "second from top").
 #[test]

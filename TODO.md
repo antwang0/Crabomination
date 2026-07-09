@@ -35,7 +35,8 @@ factory doc comment:
   `{C}-was/wasn't-spent` cast predicate (Drowner of Truth, Wumpus Aberration),
   Propagator Drone (tokens-have-evolve via `StaticEffect::GrantTriggeredAbility`),
   Path of Annihilation, Deem Inferior (`self_cost_reduction_per_cards_drawn` +
-  `LibraryPosition::SecondFromTopOrBottom`), Snow-Covered Wastes. Still open,
+  `LibraryPosition::SecondFromTopOrBottom`), Snow-Covered Wastes, Imskir
+  Iron-Eater (`Value::HalvedRoundDown` + affinity + sac-artifact damage). Still open,
   each needing one primitive: kicker "choose one; if kicked choose both" (Depth
   Defiler); kicker-changes-target (Expel the Unworthy); mana-Escalate at cast
   (Collective Resistance — `Effect::Escalate.cost` is resolution-time only);

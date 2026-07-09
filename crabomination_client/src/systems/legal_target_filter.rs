@@ -176,6 +176,7 @@ fn evaluate_via_catalog(
         R::IsBasicLand => def.is_land() && def
             .supertypes
             .contains(&crabomination::card::Supertype::Basic),
+        R::IsSnow => def.is_snow(),
         R::HasName(n) => def.name == n.as_str(),
         // Anything else (HasGreatestManaValueAmongControlled, etc.) is
         // server-evaluated; default to permissive and let the server

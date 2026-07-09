@@ -626,6 +626,37 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Imskir Iron-Eater — {6}{B}{R} 5/5 legendary Demon. Affinity for artifacts;
+/// ETB draw/lose X (half your artifacts, rounded down); {3}{R}, sacrifice an
+/// artifact: deal damage equal to its mana value to any target.
+pub fn imskir_iron_eater() -> CardDefinition {
+    let half_artifacts = || Value::HalvedRoundDown(Box::new(Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
+        filter: R::Artifact,
+    }));
+    CardDefinition {
+        name: "Imskir Iron-Eater",
+        cost: cost(&[generic(6), b(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: half_artifacts() },
+            Effect::LoseLife { who: Selector::You, amount: half_artifacts() },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            sac_other_filter: Some((R::Artifact, 1)),
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::SacrificedManaValue },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Deem Inferior — {3}{U} Sorcery. Costs {1} less for each card you've drawn
 /// this turn; the owner of target nonland permanent puts it into their library
 /// second from the top or on the bottom.

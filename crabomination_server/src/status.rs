@@ -59,6 +59,21 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     )
 }
 
+/// Route one request to `(status_line, content_type, body)`. Only GET/HEAD are
+/// served; unknown paths 404 and other methods 405 so scrapers and probes read
+/// correct semantics instead of a 200 status page for everything.
+fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'static str, &'static str, String) {
+    if method != "GET" && method != "HEAD" {
+        return ("405 Method Not Allowed", "text/plain", "method not allowed\n".to_string());
+    }
+    match path {
+        "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
+        "/status.json" | "/metrics.json" => ("200 OK", "application/json", render_status_json(started, slots)),
+        "/status" | "/" => ("200 OK", "text/plain", render_status(started, slots)),
+        _ => ("404 Not Found", "text/plain", "not found\n".to_string()),
+    }
+}
+
 /// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
 /// failures are non-fatal (the match server keeps running without telemetry).
 pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
@@ -71,7 +86,7 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
             return;
         }
     };
-    eprintln!("status endpoint listening on http://{bind} (/healthz, /status)");
+    eprintln!("status endpoint listening on http://{bind} (/healthz, /status, /status.json)");
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
@@ -84,18 +99,19 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
                 .lines()
                 .next()
                 .unwrap_or("");
-            let path = request_line.split_whitespace().nth(1).unwrap_or("");
-            let (body, content_type) = match path {
-                "/healthz" => ("ok\n".to_string(), "text/plain"),
-                "/status.json" => (render_status_json(started, &slots), "application/json"),
-                _ => (render_status(started, &slots), "text/plain"),
-            };
+            let mut parts = request_line.split_whitespace();
+            let method = parts.next().unwrap_or("");
+            let path = parts.next().unwrap_or("");
+            let (status, content_type, body) = route(method, path, started, &slots);
+            // HEAD gets headers only (CR-agnostic HTTP nicety for probes).
+            let payload = if method == "HEAD" { "" } else { &body };
             let _ = write!(
                 stream,
-                "HTTP/1.0 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n{}",
+                "HTTP/1.0 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                status,
                 content_type,
                 body.len(),
-                body
+                payload
             );
         }
     });
@@ -123,5 +139,17 @@ mod tests {
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0"] {
             assert!(body.contains(key), "missing {key} in {body}");
         }
+    }
+
+    #[test]
+    fn route_status_codes_and_content_types() {
+        let now = Instant::now();
+        let slots = SlotManager::new(10, 5);
+        assert_eq!(route("GET", "/healthz", now, &slots).0, "200 OK");
+        assert_eq!(route("GET", "/status.json", now, &slots).1, "application/json");
+        assert_eq!(route("GET", "/status", now, &slots).0, "200 OK");
+        assert_eq!(route("GET", "/bogus", now, &slots).0, "404 Not Found");
+        assert_eq!(route("POST", "/status", now, &slots).0, "405 Method Not Allowed");
+        assert_eq!(route("HEAD", "/healthz", now, &slots).0, "200 OK");
     }
 }

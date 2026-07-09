@@ -453,6 +453,9 @@ pub enum Value {
     /// Half the inner value, rounded up (Tamiyo -7's "half the number of
     /// cards in your library").
     HalvedRoundUp(Box<Value>),
+    /// Half the inner value, rounded down (Imskir Iron-Eater's "half the
+    /// number of artifacts you control, rounded down").
+    HalvedRoundDown(Box<Value>),
     /// Conditional: if `value` ≥ `threshold`, evaluate `then`, else `else_`.
     /// Powers "if X is 4 or more, …" scaling (Mossborn Hydra's doubled
     /// counters at X≥4).
