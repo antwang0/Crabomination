@@ -7168,3 +7168,74 @@ fn cr_119_life_lock_prevents_combat_damage_loss() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, before, "locked life total unchanged by the 2 combat damage");
 }
+
+// ── CR 702.92 — Battle cry ───────────────────────────────────────────────────
+
+/// CR 702.92a — "Whenever this creature attacks, each other attacking creature
+/// gets +1/+0 until end of turn." Granted mid-turn (Reckless Pyrosurfer's
+/// landfall) it still fires from the whole-batch attack view and skips itself.
+#[test]
+fn cr_702_92_battle_cry_pumps_only_other_attackers() {
+    let mut g = two_player_game();
+    let surfer = g.add_card_to_battlefield(0, catalog::reckless_pyrosurfer());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ally);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.declare_attackers(vec![
+        Attack { attacker: surfer, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "other attacker +1/+0");
+    assert_eq!(g.computed_permanent(surfer).unwrap().power, 2, "battle cry excludes its source");
+}
+
+// ── CR 122.1b — keyword counters ─────────────────────────────────────────────
+
+/// CR 122.1b — a keyword counter grants its keyword. A Saga chapter that puts a
+/// vigilance counter on a creature (Ajani Fells the Godsire II) makes that
+/// creature vigilant via the counter, not a granted-keyword static.
+#[test]
+fn cr_122_1b_keyword_counter_grants_keyword() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::ajani_fells_the_godsire());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Chapter I auto-targets nothing meaningful without an enemy, so seed one.
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.saga_advance(saga); // I
+    drain_stack(&mut g);
+    g.saga_advance(saga); // II — vigilance counter on a creature you control
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ally).unwrap().keyword_counters
+        .get(&crate::card::Keyword::Vigilance).copied().unwrap_or(0), 1,
+        "a vigilance counter is on the creature");
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&crate::card::Keyword::Vigilance),
+        "the keyword counter grants vigilance");
+}
+
+// ── CR 712 — modal double-faced cards ────────────────────────────────────────
+
+/// CR 712.9/712.14 — a modal DFC's back land face is chosen when the card is
+/// played; it enters and functions as that face only (Boggart Bog, the pain-
+/// land back of Boggart Trawler, taps for B).
+#[test]
+fn cr_712_modal_dfc_back_is_the_played_face() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::boggart_trawler());
+    g.perform_action(GameAction::PlayLandBack(id)).expect("play the land back");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(land.definition.name, "Boggart Bog");
+    assert!(land.definition.is_land(), "entered as its land face");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("taps for {B}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "back face taps for B");
+}
