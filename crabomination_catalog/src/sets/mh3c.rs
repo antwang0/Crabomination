@@ -3,9 +3,9 @@
 //! cycle. Tests in `tests/mh3c.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
-    Subtypes, TokenDefinition, Zone,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
+    StaticAbility, Subtypes, TokenDefinition, Zone,
 };
 use crate::effect::shortcut::{
     adapt, battle_cry, evolve, on_attack, on_cast, on_dies, target_any, target_filtered,
@@ -622,6 +622,52 @@ pub fn drowner_of_truth() -> CardDefinition {
             }),
             else_: Box::new(Effect::Noop),
         })],
+        ..Default::default()
+    }
+}
+
+/// Bespoke Battlewagon — {3}{U} 5/6 Vehicle, Crew 4. Energy engine: tap for
+/// {E}{E}; spend energy to tap a creature, draw, or self-animate for a turn.
+pub fn bespoke_battlewagon() -> CardDefinition {
+    CardDefinition {
+        name: "Bespoke Battlewagon",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Crew(4)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddEnergy(Value::Const(2)),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                energy_cost: 2,
+                effect: Effect::Tap { what: target_filtered(R::Creature) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                energy_cost: 3,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                energy_cost: 4,
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(5),
+                    toughness: Value::Const(6),
+                    creature_types: vec![],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

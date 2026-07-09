@@ -475,6 +475,42 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Bespoke Battlewagon taps for {E}{E}, spends {E}{E} to tap a creature, and
+/// spends {E}{E}{E}{E} to become a creature until end of turn.
+#[test]
+fn bespoke_battlewagon_energy_and_animate() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let wagon = g.add_card_to_battlefield(0, catalog::bespoke_battlewagon());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(wagon);
+    // {T}: get {E}{E}
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wagon, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for energy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 2, "two energy");
+    // Pay {E}{E}{E}{E} to self-animate (no tap needed) — top up first.
+    g.players[0].energy = 4;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wagon, ability_index: 3, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pay 4 energy to animate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(wagon).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "Vehicle is now an artifact creature");
+    assert_eq!(g.players[0].energy, 0, "spent all four energy");
+    // A second wagon can tap a creature for {E}{E}.
+    let w2 = g.add_card_to_battlefield(0, catalog::bespoke_battlewagon());
+    g.clear_sickness(w2);
+    g.players[0].energy = 2;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: w2, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap target creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "the bear is tapped");
+}
+
 /// Imskir Iron-Eater's ETB draws and loses X = half your artifacts, rounded
 /// down. With four artifacts, X = 2.
 #[test]
