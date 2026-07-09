@@ -32,12 +32,14 @@ factory doc comment:
   never dies as a 0/0. The controller picks via a `ChooseMode` decision.
   Corrupted Shapeshifter (MH3) shipped.
 - 🟡 **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`). Shipped since:
-  `{C}-was/wasn't-spent` cast predicate (Drowner of Truth, Wumpus Aberration),
-  Propagator Drone (tokens-have-evolve via `StaticEffect::GrantTriggeredAbility`),
-  Path of Annihilation, Deem Inferior (`self_cost_reduction_per_cards_drawn` +
-  `LibraryPosition::SecondFromTopOrBottom`), Snow-Covered Wastes, Imskir
-  Iron-Eater (`Value::HalvedRoundDown` + affinity + sac-artifact damage). Still open,
-  each needing one primitive: kicker "choose one; if kicked choose both" (Depth
+  the `{C}`-spent predicate (Drowner, Wumpus), Propagator Drone, Path of
+  Annihilation, Deem Inferior, Snow-Covered Wastes, Imskir Iron-Eater
+  (`Value::HalvedRoundDown`), Bespoke Battlewagon (energy Vehicle), Monstrous
+  Vortex (`Effect::Discover`), Aether Revolt
+  (`StaticEffect::NoncombatDamageToOpponentsBonus`), Idol of False Gods
+  (`StaticEffect::SelfHasKeywordWhileCountersAtLeast`), Spymaster's Vault
+  (targeted connive-X), Monumental Henge (dig-for-historic). Still open, each
+  needing one primitive: kicker "choose one; if kicked choose both" (Depth
   Defiler); kicker-changes-target (Expel the Unworthy); mana-Escalate at cast
   (Collective Resistance — `Effect::Escalate.cost` is resolution-time only);
   sacrifice-a-modified-creature additional cost + "if a modified creature was
@@ -45,8 +47,12 @@ factory doc comment:
   target's MV); Exalted counter type (Emissary of Soulfire); an Emerge card
   (`CardDefinition.emerge` exists but unused — Twisted Riddlekeeper, Herigast);
   a "counter-doubling once each turn" static (Cursed Wombat); the untap-at-most-
-  one-nonbasic static (Winter Moon); and optional Exert (CR 702.83a — combat.rs
-  auto-exerts; the "you may" is collapsed).
+  one-nonbasic static (Winter Moon); optional Exert (CR 702.83a); an
+  exert-as-activation-cost + haste-if-spent-on-creature mana (Arena of Glory);
+  energy equip cost (Inventor's Axe); an alt-cost-by-energy permission (Primal
+  Prayers); a "may reveal + else +1/+1 counter" look-top rider (Rosecot Knight —
+  `LookPickToHand` auto-fills the pick, so the optional whiff-counter is lost);
+  and a mill-then-pay-to-return-one gate (Ripples of Undeath).
 - ⏳ **Nested modal after a payment defaults to mode 0** — `Effect::ChooseMode`
   reads `ctx.mode` (picked at trigger-push), so a modal buried inside
   `MayDo`/`PayEnergy` can't get its own resolution-time pick; bots always take
