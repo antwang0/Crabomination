@@ -13,7 +13,7 @@ use crate::effect::shortcut::{
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
 };
-use crate::mana::{b, colorless, cost, g, generic, hybrid, r, w, Color};
+use crate::mana::{b, colorless, cost, g, generic, hybrid, r, u, w, Color};
 
 // ── Landfall-granted battle cry ──────────────────────────────────────────────
 
@@ -622,6 +622,26 @@ pub fn drowner_of_truth() -> CardDefinition {
             }),
             else_: Box::new(Effect::Noop),
         })],
+        ..Default::default()
+    }
+}
+
+/// Deem Inferior — {3}{U} Sorcery. Costs {1} less for each card you've drawn
+/// this turn; the owner of target nonland permanent puts it into their library
+/// second from the top or on the bottom.
+pub fn deem_inferior() -> CardDefinition {
+    CardDefinition {
+        name: "Deem Inferior",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        self_cost_reduction_per_cards_drawn: true,
+        effect: Effect::Move {
+            what: target_filtered(R::Nonland),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: crate::effect::LibraryPosition::SecondFromTopOrBottom,
+            },
+        },
         ..Default::default()
     }
 }

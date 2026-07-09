@@ -475,6 +475,39 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Deem Inferior tucks target permanent second from the top of its owner's
+/// library (owner chose "second from top").
+#[test]
+fn deem_inferior_tucks_second_from_top() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::grizzly_bears()); // library top exists
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let deem = g.add_card_to_hand(0, catalog::deem_inferior());
+    cast(&mut g, deem, Some(Target::Permanent(victim)), vec![]);
+    assert_eq!(g.players[1].library.get(1).map(|c| c.id), Some(victim),
+        "tucked second from the top of owner's library");
+}
+
+/// Deem Inferior costs {1} less per card drawn this turn — after two draws it
+/// is castable for {1}{U}.
+#[test]
+fn deem_inferior_cost_reduction_per_card_drawn() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.players[0].cards_drawn_this_turn = 2; // {3}{U} → {1}{U}
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1); // pays the reduced {1}
+    let deem = g.add_card_to_hand(0, catalog::deem_inferior());
+    g.perform_action(GameAction::CastSpell {
+        card_id: deem, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {1}{U} after two draws");
+}
+
 /// Snow-Covered Wastes is a snow land that taps for one colorless {C}.
 #[test]
 fn snow_covered_wastes_taps_for_colorless() {

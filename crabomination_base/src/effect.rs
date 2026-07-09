@@ -1314,6 +1314,11 @@ pub enum LibraryPosition {
     /// previous Run-Behind behavior. ScriptedDecider can flip to top
     /// for tests.
     OwnerChoice,
+    /// "The owner puts it into their library second from the top or on the
+    /// bottom" (Deem Inferior). The owner chooses via `Decision::
+    /// OptionalTrigger`; yes = second from top (`FromTop(1)`), no = bottom.
+    /// AutoDecider defaults to bottom.
+    SecondFromTopOrBottom,
     /// "Put this card Nth from the top of the owner's library." Used by
     /// Approach of the Second Sun ({6}{W}{W}: "If this spell was cast
     /// from your hand and you've cast another spell named Approach of

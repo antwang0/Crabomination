@@ -517,6 +517,11 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(amount);
     }
+    // Card-intrinsic "costs {1} less for each card you've drawn this turn"
+    // (Deem Inferior). Generic-only, clamped by the caller.
+    if card.definition.self_cost_reduction_per_cards_drawn {
+        reduction = reduction.saturating_add(state.players[caster].cards_drawn_this_turn);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by

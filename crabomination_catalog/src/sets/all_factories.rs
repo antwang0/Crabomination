@@ -6622,6 +6622,7 @@ static MH3C: &[Factory] = &[
     super::mh3c::wumpus_aberration,
     super::mh3c::propagator_drone,
     super::mh3c::path_of_annihilation,
+    super::mh3c::deem_inferior,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

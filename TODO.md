@@ -31,17 +31,17 @@ factory doc comment:
   `apply_enters_as_choice` before the first SBA sweep, so a printed `*/*` body
   never dies as a 0/0. The controller picks via a `ChooseMode` decision.
   Corrupted Shapeshifter (MH3) shipped.
-- 🟡 **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`). The `mh3c`
-  module covers the landfall-battle-cry / Eldrazi-Spawn / modified-matters /
-  saga / "spell // land" modal-DFC clusters. Still open, each needing one
-  primitive: `{C}-was/wasn't-spent` cast predicate (Drowner of Truth, Wumpus
-  Aberration — `cast_mana_spent_by_color` tracks colors only, not colorless
-  spend on generic); kicker "choose one; if kicked choose both" (Depth Defiler);
-  kicker-changes-target (Expel the Unworthy); mana-Escalate at cast (Collective
-  Resistance — `Effect::Escalate.cost` is resolution-time only); sacrifice-a-
-  modified-creature additional cost + "if a modified creature was sacrificed"
-  rider (Lethal Throwdown); Jolted Awake (dynamic `PayEnergy` = target's MV);
-  Exalted counter type (Emissary of Soulfire); an Emerge card
+- 🟡 **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`). Shipped since:
+  `{C}-was/wasn't-spent` cast predicate (Drowner of Truth, Wumpus Aberration),
+  Propagator Drone (tokens-have-evolve via `StaticEffect::GrantTriggeredAbility`),
+  Path of Annihilation, Deem Inferior (`self_cost_reduction_per_cards_drawn` +
+  `LibraryPosition::SecondFromTopOrBottom`), Snow-Covered Wastes. Still open,
+  each needing one primitive: kicker "choose one; if kicked choose both" (Depth
+  Defiler); kicker-changes-target (Expel the Unworthy); mana-Escalate at cast
+  (Collective Resistance — `Effect::Escalate.cost` is resolution-time only);
+  sacrifice-a-modified-creature additional cost + "if a modified creature was
+  sacrificed" rider (Lethal Throwdown); Jolted Awake (dynamic `PayEnergy` =
+  target's MV); Exalted counter type (Emissary of Soulfire); an Emerge card
   (`CardDefinition.emerge` exists but unused — Twisted Riddlekeeper, Herigast);
   a "counter-doubling once each turn" static (Cursed Wombat); the untap-at-most-
   one-nonbasic static (Winter Moon); and optional Exert (CR 702.83a — combat.rs

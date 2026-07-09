@@ -920,6 +920,23 @@ impl GameState {
                             self.players[p].library.push(card);
                         }
                     }
+                    LibraryPosition::SecondFromTopOrBottom => {
+                        // Deem Inferior — owner picks second-from-top or
+                        // bottom. Yes = second from top; no/default = bottom.
+                        let decision = crate::decision::Decision::OptionalTrigger {
+                            source: card.id,
+                            description: "Put second from the top of library? (no = bottom)".into(),
+                        };
+                        let second_from_top = matches!(
+                            self.decider.decide(&decision),
+                            crate::decision::DecisionAnswer::Bool(true)
+                        );
+                        if second_from_top && !self.players[p].library.is_empty() {
+                            self.players[p].library.insert(1, card);
+                        } else {
+                            self.players[p].library.push(card);
+                        }
+                    }
                     LibraryPosition::Shuffled => {
                         // Push the card in, then shuffle the entire library
                         // so the card lands at a random position (Chaos Warp,

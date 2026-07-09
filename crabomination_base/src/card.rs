@@ -2079,6 +2079,11 @@ pub struct CardDefinition {
     /// snapshot back-compat.
     #[serde(default)]
     pub self_cost_reduction_if_night: Option<u32>,
+    /// "This spell costs {1} less to cast for each card you've drawn this
+    /// turn" (Deem Inferior). Generic-only, clamped by the caller. Reads
+    /// `Player.cards_drawn_this_turn`. Defaults to `false`.
+    #[serde(default)]
+    pub self_cost_reduction_per_cards_drawn: bool,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
