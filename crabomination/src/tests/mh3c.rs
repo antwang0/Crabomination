@@ -475,6 +475,47 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Snow-Covered Wastes is a snow land that taps for one colorless {C}.
+#[test]
+fn snow_covered_wastes_taps_for_colorless() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::snow_covered_wastes());
+    assert!(g.battlefield.iter().find(|c| c.id == land).unwrap().definition.is_snow(), "is a snow land");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("{T}: Add {C}");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "one colorless mana");
+}
+
+/// Path of Annihilation makes two Eldrazi Spawn on entry and gains 4 life when
+/// you cast a mana-value-7-or-greater creature spell.
+#[test]
+fn path_of_annihilation_spawns_and_gains_life() {
+    let mut g = two_player_game();
+    let path = g.add_card_to_hand(0, catalog::path_of_annihilation());
+    cast(&mut g, path, None, vec![]);
+    let spawns = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawns, 2, "ETB makes two Eldrazi Spawn");
+    let life = g.players[0].life;
+    let big = g.add_card_to_hand(0, catalog::drowner_of_truth()); // {5}{G/U}{G/U} = MV 7
+    cast(&mut g, big, None, vec![]);
+    assert_eq!(g.players[0].life, life + 4, "MV-7 creature cast gains 4 life");
+}
+
+/// Propagator Drone grants evolve to your creature tokens: a bigger creature
+/// entering pumps an Eldrazi Spawn token (0/1) with a +1/+1 counter.
+#[test]
+fn propagator_drone_tokens_have_evolve() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::propagator_drone());
+    let spawn = g.add_token_to_battlefield(0, &crabomination_base::tokens::eldrazi_spawn_token());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None, vec![]); // 2/2 > 0/1 → evolve on the token
+    assert_eq!(g.battlefield.iter().find(|c| c.id == spawn).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1, "token evolved");
+}
+
 /// Wumpus Aberration: cast with no {C} → the opponent may drop a creature from
 /// hand onto the battlefield, and it enters under *their* control.
 #[test]

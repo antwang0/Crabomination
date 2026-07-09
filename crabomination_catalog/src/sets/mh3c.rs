@@ -8,7 +8,7 @@ use crate::card::{
     Subtypes, TokenDefinition, Zone,
 };
 use crate::effect::shortcut::{
-    adapt, battle_cry, on_attack, on_cast, on_dies, target_any, target_filtered,
+    adapt, battle_cry, evolve, on_attack, on_cast, on_dies, target_any, target_filtered,
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
@@ -622,6 +622,78 @@ pub fn drowner_of_truth() -> CardDefinition {
             }),
             else_: Box::new(Effect::Noop),
         })],
+        ..Default::default()
+    }
+}
+
+/// Path of Annihilation — {3}{G} devoid Enchantment. ETB make two Eldrazi
+/// Spawn; Eldrazi you control tap for any color; casting a MV-7+ creature
+/// spell gains you 4 life.
+pub fn path_of_annihilation() -> CardDefinition {
+    CardDefinition {
+        name: "Path of Annihilation",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+            }),
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::ManaValueAtLeast(7)),
+                    },
+                ),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Eldrazi you control have \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Eldrazi).and(R::ControlledByYou),
+                ),
+                ability: super::tap_add_any_color(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Propagator Drone — {1}{G} 2/2 devoid Eldrazi Drone. Creature tokens you
+/// control have evolve. {3}{G}: Create a 0/1 Eldrazi Spawn.
+pub fn propagator_drone() -> CardDefinition {
+    CardDefinition {
+        name: "Propagator Drone",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Devoid],
+        static_abilities: vec![StaticAbility {
+            description: "Creature tokens you control have evolve.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::ControlledByYou).and(R::IsToken),
+                ability: Box::new(evolve()),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

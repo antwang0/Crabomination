@@ -1,4 +1,4 @@
-use super::tap_add;
+use super::{tap_add, tap_add_colorless};
 use crate::card::{CardDefinition, CardType, LandType, Subtypes, Supertype};
 use crate::mana::Color;
 
@@ -153,4 +153,15 @@ pub fn snow_covered_mountain() -> CardDefinition {
 }
 pub fn snow_covered_forest() -> CardDefinition {
     snow_basic("Snow-Covered Forest", LandType::Forest, Color::Green)
+}
+/// Snow-Covered Wastes (MH3) — a basic snow land with no basic land type that
+/// taps for one true colorless {C}.
+pub fn snow_covered_wastes() -> CardDefinition {
+    CardDefinition {
+        name: "Snow-Covered Wastes",
+        supertypes: vec![Supertype::Basic, Supertype::Snow],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add_colorless()],
+        ..Default::default()
+    }
 }

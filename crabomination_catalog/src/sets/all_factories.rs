@@ -6490,6 +6490,7 @@ static LEA: &[Factory] = &[
     super::lea::snow_covered_swamp,
     super::lea::snow_covered_mountain,
     super::lea::snow_covered_forest,
+    super::lea::snow_covered_wastes,
     super::lea::wrath_of_god,
     super::lea::armageddon,
     super::lea::demonic_tutor,
@@ -6619,6 +6620,8 @@ static MH3C: &[Factory] = &[
     super::mh3c::kudo_king_among_bears,
     super::mh3c::drowner_of_truth,
     super::mh3c::wumpus_aberration,
+    super::mh3c::propagator_drone,
+    super::mh3c::path_of_annihilation,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
