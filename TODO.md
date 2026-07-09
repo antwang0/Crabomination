@@ -87,6 +87,22 @@ factory doc comment:
   cast-property intervening-ifs still read true. (Attack/etc. SelfSource triggers
   already went through the general dispatch, which evaluated filters.)
 
+### Enchantress package follow-ups (recent114)
+- **`EquipScale` breadth** — the P/T-per-count scale only counts the
+  *controller's* battlefield and can't honor `OtherThanSource`, so "for each
+  other enchantment on the battlefield" (Ancestral Mask) and "per card in your
+  hand" (Empyrial Armor) aren't expressible. Add an `all_players` flag + a
+  hand-count source, then wire those two Auras.
+- **`ExtraManaKind::AnyColor`** — Fertile Ground / Market Festival / New
+  Horizons want "add one/two mana of any color" on a triggered land-tap. Needs
+  either a wildcard mana token or a player choice at the trigger; deferred.
+- **Karmic Justice** — needs an event for "a spell/ability an opponent controls
+  destroys a *noncreature* permanent you control" (destroyer + victim-type).
+- **Aura re-attach riders** — Shielded by Faith / Ajani's Chosen's "attach to a
+  creature that enters" clauses are dropped; want a `MayAttachOnCreatureEnters`.
+- **Calix combat-copy** — the "copy a nonlegendary enchantment once per turn on
+  combat damage" half is dropped; the constellation +1/+1 is modeled.
+
 ## Phyrexia: All Will Be One (`sets::one`) — COMPLETE
 
 Every single-faced ONE card is implemented (`python3 scripts/set_gaps.py one`

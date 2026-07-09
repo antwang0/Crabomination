@@ -207,6 +207,7 @@ mod tests {
                 is_monarch: false,
                 has_city_blessing: false,
                 cannot_gain_life: false,
+                has_hexproof: false,
                 commander_damage_taken: vec![],
                 team: 0,
                 dungeon: None,

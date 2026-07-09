@@ -604,3 +604,166 @@ pub fn frozen_aether() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 3: Aura beats + enchantment removal ────────────────────────────────
+
+/// Griffin Guide — {2}{W} Aura. Enchanted creature gets +2/+2 and has flying.
+/// When it dies, create a 2/2 white Griffin with flying.
+pub fn griffin_guide() -> CardDefinition {
+    CardDefinition {
+        name: "Griffin Guide",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Griffin".into(),
+                    power: 2,
+                    toughness: 2,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Griffin],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Angelic Destiny — {2}{W}{W} Aura. Enchanted creature gets +4/+4 and has
+/// flying and first strike. When it dies, return this to its owner's hand.
+/// (The "is an Angel" type-add rider is dropped.)
+pub fn angelic_destiny() -> CardDefinition {
+    CardDefinition {
+        name: "Angelic Destiny",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 4,
+            toughness: 4,
+            keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tranquil Grove — {1}{G} Enchantment. {1}{G}{G}: Destroy all other
+/// enchantments.
+pub fn tranquil_grove() -> CardDefinition {
+    CardDefinition {
+        name: "Tranquil Grove",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g(), g()]),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Enchantment
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cho-Manno's Blessing — {W}{W} Aura. Flash. As it enters, choose a color;
+/// enchanted creature has protection from that color.
+pub fn cho_mannos_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Cho-Manno's Blessing",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseColorForSelf,
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has protection from the chosen color.",
+            effect: StaticEffect::GrantProtectionFromChosenColor {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Flickering Ward — {W} Aura. As it enters, choose a color; enchanted creature
+/// has protection from that color. {W}: Return this Aura to its owner's hand.
+pub fn flickering_ward() -> CardDefinition {
+    CardDefinition {
+        name: "Flickering Ward",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseColorForSelf,
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has protection from the chosen color.",
+            effect: StaticEffect::GrantProtectionFromChosenColor {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

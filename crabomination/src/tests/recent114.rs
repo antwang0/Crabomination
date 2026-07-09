@@ -9,15 +9,6 @@ use crate::game::types::{Target, TurnStep};
 use crate::game::*;
 use crate::mana::Color;
 
-fn advance_to(g: &mut GameState, step: TurnStep) {
-    let mut guard = 0;
-    while g.step != step {
-        g.perform_action(GameAction::PassPriority).expect("pass priority");
-        guard += 1;
-        assert!(guard < 80, "advance_to overran");
-    }
-}
-
 // ── Opalescence / Starfield (NonAuraEnchantmentsAreCreatures) ────────────────
 
 /// CR 613 — Opalescence makes each *other* non-Aura enchantment an `MV/MV`
@@ -377,4 +368,115 @@ fn frozen_aether_taps_opponent_permanents() {
     // The controller's own creature is unaffected.
     let mine = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
     assert!(!g.battlefield_find(mine).unwrap().tapped, "your own creature is untapped");
+}
+
+// ── Batch 3 ──────────────────────────────────────────────────────────────────
+
+/// Griffin Guide pumps + grants flying, and leaves a Griffin when the host dies.
+#[test]
+fn griffin_guide_pumps_and_leaves_a_griffin() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::griffin_guide());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Flying), "granted flying");
+    g.battlefield_find_mut(bear).unwrap().damage = 4; // lethal
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Griffin").count(),
+        1,
+        "a 2/2 Griffin replaces the fallen host"
+    );
+}
+
+/// Angelic Destiny returns to hand when the enchanted creature dies.
+#[test]
+fn angelic_destiny_returns_on_host_death() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::angelic_destiny());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "+4/+4");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike");
+    g.battlefield_find_mut(bear).unwrap().damage = 6;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Angelic Destiny"),
+        "the Aura returns to hand"
+    );
+}
+
+/// Tranquil Grove destroys every other enchantment, sparing itself.
+#[test]
+fn tranquil_grove_wipes_other_enchantments() {
+    let mut g = two_player_game();
+    let grove = g.add_card_to_battlefield(0, catalog::tranquil_grove());
+    let mine = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
+    let theirs = g.add_card_to_battlefield(1, catalog::sigil_of_the_empty_throne());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grove, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Tranquil Grove");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "all other enchantments gone");
+    assert!(g.battlefield_find(grove).is_some(), "Tranquil Grove spares itself");
+}
+
+/// Cho-Manno's Blessing grants the enchanted creature protection from a color.
+#[test]
+fn cho_mannos_blessing_grants_protection() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::cho_mannos_blessing());
+    g.players[0].mana_pool.add(Color::White, 2);
+    // Script the color choice → Red.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(Color::Red),
+    ]));
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(
+        cp.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Protection(Color::Red))),
+        "enchanted creature has protection from red: {:?}",
+        cp.keywords
+    );
+}
+
+/// Flickering Ward can bounce itself back to hand for {W}.
+#[test]
+fn flickering_ward_returns_to_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::flickering_ward());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(Color::Blue),
+    ]));
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let ward = g.battlefield.iter().find(|c| c.definition.name == "Flickering Ward").unwrap().id;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ward, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Flickering Ward bounce");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Flickering Ward"),
+        "the Aura returned to hand"
+    );
 }
