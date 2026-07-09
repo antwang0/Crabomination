@@ -745,6 +745,39 @@ fn temperamental_oozewagg_grants_modified_trample() {
         "modified creature gained trample");
 }
 
+/// Nyxborn Hydra enters with X +1/+1 counters as a creature.
+#[test]
+fn nyxborn_hydra_enters_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::nyxborn_hydra());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast for X=3");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "0/1 base + three +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Glyph Elemental grows a +1/+1 counter on landfall and, bestowed, hands its
+/// counter-scaled bonus to the host.
+#[test]
+fn glyph_elemental_landfall_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::glyph_elemental());
+    // A land entering under your control triggers the landfall counter.
+    g.active_player_idx = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = crate::game::TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "landfall added a +1/+1 counter");
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + the counter");
+}
+
 /// Skoa, Embermage deals 4 damage to any target when it enters.
 #[test]
 fn skoa_embermage_etb_bolt() {

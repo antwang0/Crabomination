@@ -515,6 +515,69 @@ pub fn kithkin_billyrider() -> CardDefinition {
     }
 }
 
+/// Nyxborn Hydra — {X}{G} 0/1 Enchantment Creature. Reach, trample. Enters with
+/// X +1/+1 counters. Bestow {X}{G}{G}; as an Aura it grants +1/+1 per +1/+1
+/// counter on it, plus reach and trample.
+pub fn nyxborn_hydra() -> CardDefinition {
+    use crate::card::EquipScale;
+    use crate::mana::x;
+    let scale = || EquipScale {
+        filter: R::Any,
+        per_power: 1,
+        per_toughness: 1,
+        count_self_counters: Some(CounterType::PlusOnePlusOne),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Nyxborn Hydra",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        bestow: Some(cost(&[x(), g(), g()])),
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Reach, Keyword::Trample],
+            scale: Some(scale()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Glyph Elemental — {1}{W} 2/2 Enchantment Creature. Bestow {1}{W}. Landfall:
+/// put a +1/+1 counter on it. As an Aura it grants +1/+1 per +1/+1 counter on it.
+pub fn glyph_elemental() -> CardDefinition {
+    use crate::card::EquipScale;
+    CardDefinition {
+        name: "Glyph Elemental",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        bestow: Some(cost(&[generic(1), w()])),
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: Some(CounterType::PlusOnePlusOne),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Skoa, Embermage — {4}{R}{R} 4/4 Legendary Goblin Wizard. ETB: deal 4 to any
 /// target. Grandeur (discard another Skoa, sacrifice two Mountains): deal 4 to
 /// any target.
