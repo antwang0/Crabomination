@@ -1,19 +1,18 @@
 //! Enchantress / enchantment-matters package (Legacy & Modern staples). New
 //! engine work: `StaticEffect::NonAuraEnchantmentsAreCreatures` (Opalescence /
 //! Starfield of Nyx animate non-Aura enchantments to `MV/MV` creatures via a
-//! layer-4 add-creature-type + layer-7 `SetPowerToughnessToManaValue`) and
-//! `ExtraManaKind::AnyColor` (Fertile Ground / Market Festival land-tap ramp).
+//! layer-4 add-creature-type + layer-7 `SetPowerToughnessToManaValue`).
 //! Tests in `tests/recent114.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
-    ExileReturnZone, Keyword, Predicate, SelectionRequirement, StaticAbility, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, Predicate,
+    SelectionRequirement, StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{cost, g, generic, hybrid, w, Color};
+use crate::mana::{cost, g, generic, hybrid, w, Color, ManaCost};
 
 /// "Whenever you cast an enchantment spell, `body`." (Argothian Enchantress /
 /// Enchantress's Presence shape.)
@@ -373,6 +372,233 @@ pub fn calix_guided_by_fate() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Batch 2: death-recursion, pillowfort, Auras ──────────────────────────────
+
+/// Angelic Renewal — {1}{W} Enchantment. Whenever a creature you control dies,
+/// you may sacrifice this enchantment; if you do, return that card to the
+/// battlefield.
+pub fn angelic_renewal() -> CardDefinition {
+    CardDefinition {
+        name: "Angelic Renewal",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Sacrifice Angelic Renewal to return the dead creature?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aura Fracture — {2}{W} Enchantment. Sacrifice a land: Destroy target
+/// enchantment.
+pub fn aura_fracture() -> CardDefinition {
+    CardDefinition {
+        name: "Aura Fracture",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::default(),
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Enchantment),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Solitary Confinement — {2}{W} Enchantment. Skip your draw step; you have
+/// hexproof; prevent all damage that would be dealt to you. At your upkeep,
+/// sacrifice this unless you discard a card. (Printed "shroud" is modeled as
+/// hexproof — the self-target case is vanishingly rare.)
+pub fn solitary_confinement() -> CardDefinition {
+    CardDefinition {
+        name: "Solitary Confinement",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::MayDiscard {
+                description: "Discard a card to keep Solitary Confinement?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Graveyard,
+                })),
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Skip your draw step.",
+                effect: StaticEffect::SkipStep { step: TurnStep::Draw, all_players: false },
+            },
+            StaticAbility {
+                description: "You have hexproof.",
+                effect: StaticEffect::ControllerHasHexproof,
+            },
+            StaticAbility {
+                description: "Prevent all damage that would be dealt to you.",
+                effect: StaticEffect::PreventAllDamageToController,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shielded by Faith — {1}{W}{W} Aura. Enchanted creature has indestructible.
+/// (The "attach on any creature entering" rider is dropped.)
+pub fn shielded_by_faith() -> CardDefinition {
+    CardDefinition {
+        name: "Shielded by Faith",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Indestructible],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Unquestioned Authority — {2}{W} Aura. ETB: draw a card. Enchanted creature
+/// has protection from creatures.
+pub fn unquestioned_authority() -> CardDefinition {
+    CardDefinition {
+        name: "Unquestioned Authority",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::ProtectionFromCreatures],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sacred Mesa — {2}{W} Enchantment. {1}{W}: Create a 1/1 white Pegasus with
+/// flying. At your upkeep, sacrifice this unless you sacrifice a Pegasus.
+pub fn sacred_mesa() -> CardDefinition {
+    CardDefinition {
+        name: "Sacred Mesa",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a Pegasus to keep Sacred Mesa?".into(),
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Pegasus),
+                count: Value::ONE,
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Graveyard,
+                })),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Pegasus".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Pegasus],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aegis of the Gods — {1}{W} 2/1 Human Soldier enchantment creature. You have
+/// hexproof.
+pub fn aegis_of_the_gods() -> CardDefinition {
+    CardDefinition {
+        name: "Aegis of the Gods",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof.",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frozen Aether — {3}{U} Enchantment. Artifacts, creatures, and lands your
+/// opponents control enter the battlefield tapped.
+pub fn frozen_aether() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        name: "Frozen Aether",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Artifacts, creatures, and lands your opponents control enter tapped.",
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::ControlledByOpponent.and(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Creature)
+                            .or(SelectionRequirement::Land),
+                    ),
+                ),
             },
         }],
         ..Default::default()

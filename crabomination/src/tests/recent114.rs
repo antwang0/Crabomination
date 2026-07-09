@@ -4,6 +4,7 @@
 
 use crate::catalog;
 use crate::card::CardType;
+use crate::game::effects::EntityRef;
 use crate::game::types::{Target, TurnStep};
 use crate::game::*;
 use crate::mana::Color;
@@ -248,3 +249,132 @@ fn calix_constellation_adds_counter() {
     assert_eq!(total, 1, "constellation put one +1/+1 counter on a creature");
 }
 
+
+// ── Batch 2 ──────────────────────────────────────────────────────────────────
+
+/// Angelic Renewal sacrifices itself to reanimate a dead creature.
+#[test]
+fn angelic_renewal_reanimates_dead_creature() {
+    let mut g = two_player_game();
+    let renewal = g.add_card_to_battlefield(0, catalog::angelic_renewal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.battlefield_find_mut(bear).unwrap().damage = 2; // lethal
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(renewal).is_none(), "sacrificed itself");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the dead creature returned to the battlefield"
+    );
+}
+
+/// Aura Fracture sacrifices a land to destroy an enchantment.
+#[test]
+fn aura_fracture_destroys_enchantment() {
+    let mut g = two_player_game();
+    let fracture = g.add_card_to_battlefield(0, catalog::aura_fracture());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let target = g.add_card_to_battlefield(1, catalog::enchantresss_presence());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fracture, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Aura Fracture");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "a land was sacrificed");
+    assert!(g.battlefield_find(target).is_none(), "target enchantment destroyed");
+}
+
+/// Solitary Confinement prevents all damage to its controller.
+#[test]
+fn solitary_confinement_prevents_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::solitary_confinement());
+    let life = g.players[0].life;
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 4, None, &mut events);
+    assert_eq!(g.players[0].life, life, "all damage to the controller prevented");
+    assert!(g.player_has_static_hexproof(0), "controller has hexproof");
+}
+
+/// Shielded by Faith makes the enchanted creature indestructible.
+#[test]
+fn shielded_by_faith_grants_indestructible() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::shielded_by_faith());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::Indestructible),
+        "enchanted creature is indestructible"
+    );
+    // Lethal damage doesn't kill it.
+    g.battlefield_find_mut(bear).unwrap().damage = 5;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_some(), "survives lethal damage");
+}
+
+/// Unquestioned Authority draws on ETB and grants protection from creatures.
+#[test]
+fn unquestioned_authority_draws_and_protects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::unquestioned_authority());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew a card on ETB");
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::ProtectionFromCreatures),
+        "enchanted creature has protection from creatures"
+    );
+}
+
+/// Sacred Mesa mints a 1/1 flying Pegasus for {1}{W}.
+#[test]
+fn sacred_mesa_makes_pegasi() {
+    let mut g = two_player_game();
+    let mesa = g.add_card_to_battlefield(0, catalog::sacred_mesa());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mesa, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Sacred Mesa");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Pegasus").count(),
+        1,
+        "one 1/1 Pegasus token"
+    );
+}
+
+/// Aegis of the Gods gives its controller hexproof.
+#[test]
+fn aegis_of_the_gods_grants_player_hexproof() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aegis_of_the_gods());
+    assert!(g.player_has_static_hexproof(0), "controller has hexproof");
+}
+
+/// Frozen Aether makes an opponent's creature enter tapped.
+#[test]
+fn frozen_aether_taps_opponent_permanents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::frozen_aether());
+    // A creature entering under the opponent (through the real ETB funnel)
+    // should arrive tapped.
+    let foe = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature entered tapped");
+    // The controller's own creature is unaffected.
+    let mine = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "your own creature is untapped");
+}

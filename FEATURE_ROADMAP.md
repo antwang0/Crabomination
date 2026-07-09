@@ -409,8 +409,12 @@ Each unblocks a large swath of cards.
   layer-4 set-creature-types ✅ as a one-shot (`Effect::BecomeCreatureType` —
   Turn to Frog / Snakeform / Polymorphist's Jest) **and** the CR 613.8 type-lord
   dependency (a retyped creature is now seen by `AllWithCreatureType` lords via
-  a `gate_types` second pass). Remaining: CDA corners, full text-box swaps,
-  "becomes a copy of" layer interaction, type-gated `CardMatch` lords.
+  a `gate_types` second pass); layer-4 add-creature-type + layer-7b
+  `SetPowerToughnessToManaValue` animating non-Aura enchantments to `MV/MV`
+  creatures ✅ (`StaticEffect::NonAuraEnchantmentsAreCreatures` — Opalescence,
+  Starfield of Nyx; the 5+-enchantment gate is materialized state-aware).
+  Remaining: CDA corners, full text-box swaps, "becomes a copy of" layer
+  interaction, type-gated `CardMatch` lords.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions, anthem stacking incl. disjunctive multi-type lords (Blex);
   devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion

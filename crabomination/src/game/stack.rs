@@ -2577,9 +2577,15 @@ impl GameState {
                 }
                 // CR 704.5g: lethal damage = damage >= toughness.
                 // CR 704.5h: any damage from a deathtouch source is lethal.
-                // Indestructible creatures (keyword or counter) don't die to
-                // either rule.
-                if c.is_indestructible() {
+                // Indestructible creatures don't die to either rule. Read the
+                // *computed* keyword so a layer-6 grant (Aura / Equipment /
+                // anthem — Shielded by Faith) counts, not just the printed
+                // keyword + indestructible counter on the instance.
+                let indestructible = cp
+                    .map(|cp| cp.keywords.contains(&crate::card::Keyword::Indestructible))
+                    .unwrap_or(false)
+                    || c.is_indestructible();
+                if indestructible {
                     return false;
                 }
                 // Zilortha — lethal is measured against power, not toughness,
