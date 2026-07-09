@@ -745,6 +745,22 @@ fn temperamental_oozewagg_grants_modified_trample() {
         "modified creature gained trample");
 }
 
+/// Territory Culler's landfall pulls a revealed creature off the top to hand.
+#[test]
+fn territory_culler_landfall_reveals_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::territory_culler());
+    // Stack a creature on top of the library.
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "revealed creature went to hand");
+}
+
 /// Quest for the Necropolis banks landfall counters and reanimates a creature.
 #[test]
 fn quest_for_the_necropolis_landfall_and_reanimate() {

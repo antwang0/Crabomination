@@ -515,6 +515,36 @@ pub fn kithkin_billyrider() -> CardDefinition {
     }
 }
 
+/// Territory Culler — {4}{G} 7/5 Devoid Eldrazi. Reach. Landfall: look at the
+/// top card; if it's a creature you may put it into your hand, otherwise you
+/// may put it into your graveyard.
+pub fn territory_culler() -> CardDefinition {
+    CardDefinition {
+        name: "Territory Culler",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 7,
+        toughness: 5,
+        keywords: vec![Keyword::Devoid, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                rest_to_graveyard: true,
+                pick_filter: Some(R::Creature),
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Quest for the Necropolis — {B} Enchantment. Landfall: put a quest counter on
 /// it. {5}{B}, Sacrifice this (sorcery speed): reanimate a creature from a
 /// graveyard; costs {1} less per quest counter.
