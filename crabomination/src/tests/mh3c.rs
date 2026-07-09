@@ -475,6 +475,28 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Monumental Henge's {2}{W}{W}, {T} digs five deep and puts a historic card
+/// (here a legendary) into hand; non-historic cards go to the bottom.
+#[test]
+fn monumental_henge_digs_for_historic() {
+    let mut g = two_player_game();
+    let henge = g.add_card_to_battlefield(0, catalog::monumental_henge());
+    g.players[0].library.clear();
+    // Top five (add_card_to_library appends to the bottom, so the first added
+    // is on top): a legendary (historic) then four vanilla creatures.
+    g.add_card_to_library(0, catalog::griselbrand()); // legendary → historic
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let hand = g.players[0].hand.len();
+    for c in [crate::mana::Color::White] { g.players[0].mana_pool.add(c, 4); }
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: henge, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("{2}{W}{W}, {T}: dig for historic");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one historic card taken to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Griselbrand"),
+        "the legendary was the historic pick");
+}
+
 /// Spymaster's Vault: {B}, {T} connives a creature X, where X = creatures that
 /// died this turn; nonland discards become +1/+1 counters on the target.
 #[test]

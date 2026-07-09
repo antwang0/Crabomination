@@ -626,6 +626,53 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Monumental Henge — a Land that enters tapped unless you control a Plains.
+/// {T}: Add {W}. {2}{W}{W}, {T}: look at the top five, put a historic card into
+/// your hand, the rest on the bottom.
+pub fn monumental_henge() -> CardDefinition {
+    use crate::card::{LandType, Supertype};
+    let historic = || R::Artifact
+        .or(R::HasSupertype(Supertype::Legendary))
+        .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga));
+    CardDefinition {
+        name: "Monumental Henge",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasLandType(LandType::Plains).and(R::ControlledByYou),
+                )),
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::White]) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), w(), w()]),
+                tap_cost: true,
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(5),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(historic()),
+                    take: None,
+                    to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Spymaster's Vault — a Land that enters tapped unless you control a Swamp.
 /// {T}: Add {B}. {B}, {T}: target creature you control connives X, where X is
 /// the number of creatures that died this turn.
