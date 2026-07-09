@@ -6616,6 +6616,7 @@ static MH3C: &[Factory] = &[
     super::mh3c::disciple_of_freyalise,
     super::mh3c::glasswing_grace,
     super::mh3c::strength_of_the_harvest,
+    super::mh3c::kudo_king_among_bears,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

@@ -421,3 +421,22 @@ fn strength_of_the_harvest_scales() {
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "2/2 + 3 (2 creatures + 1 enchantment)");
 }
+
+/// Kudo sets other creatures' base P/T to 2/2 and makes them Bears, but leaves
+/// itself alone.
+#[test]
+fn kudo_sets_base_pt_and_bear_type() {
+    let mut g = two_player_game();
+    let kudo = g.add_card_to_battlefield(0, catalog::kudo_king_among_bears());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 base
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 base
+    // Other creatures become base 2/2 (counters/auras still layer on top).
+    let a = g.computed_permanent(angel).unwrap();
+    assert_eq!((a.power, a.toughness), (2, 2), "Serra Angel's base is now 2/2");
+    assert!(a.subtypes.creature_types.contains(&crate::card::CreatureType::Bear), "and it's a Bear");
+    // Applies across the table, not just your creatures.
+    assert!(g.computed_permanent(enemy).unwrap().subtypes.creature_types
+        .contains(&crate::card::CreatureType::Bear), "opponent's creature is a Bear too");
+    // Kudo itself keeps its printed 2/2 and is unaffected by "other".
+    assert_eq!(g.computed_permanent(kudo).unwrap().power, 2);
+}

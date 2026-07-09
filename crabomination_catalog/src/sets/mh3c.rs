@@ -568,3 +568,34 @@ pub fn strength_of_the_harvest() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Static P/T + type lords ──────────────────────────────────────────────────
+
+/// Kudo, King Among Bears — {G}{W} 2/2 legendary Bear. Other creatures have
+/// base power and toughness 2/2 and are Bears in addition to their other types.
+pub fn kudo_king_among_bears() -> CardDefinition {
+    let others = || Selector::EachPermanent(R::Creature.and(R::OtherThanSource));
+    CardDefinition {
+        name: "Kudo, King Among Bears",
+        cost: cost(&[g(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other creatures have base power and toughness 2/2.",
+                effect: StaticEffect::SetBasePtForFilter { applies_to: others(), power: 2, toughness: 2 },
+            },
+            StaticAbility {
+                description: "Other creatures are Bears in addition to their other types.",
+                effect: StaticEffect::AddCreatureTypeToMatching {
+                    applies_to: others(),
+                    creature_type: CreatureType::Bear,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
