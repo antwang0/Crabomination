@@ -6912,3 +6912,48 @@ fn cr_903_4_identity_reads_indicator_and_abilities() {
     assert!(id.contains(Color::White), "activated-ability cost counts");
     assert!(!id.contains(Color::Green));
 }
+
+/// CR 704.5q — an Equipment attached to a creature that leaves the battlefield
+/// becomes unattached (as a state-based action) but stays on the battlefield.
+#[test]
+fn cr_704_5q_equipment_unattaches_when_host_dies() {
+    let mut g = two_player_game();
+    let sword = g.move_card_to_battlefield_for_test(0, catalog::warriors_sword());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero").unwrap().id;
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, Some(hero), "attached at first");
+    let evs = g.remove_to_graveyard_with_triggers(hero);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    // The stale-link SBA runs when a player would get priority.
+    g.check_state_based_actions();
+    let s = g.battlefield_find(sword).expect("Equipment stays on the battlefield");
+    assert_eq!(s.attached_to, None, "Equipment became unattached when its host left");
+}
+
+/// CR 707.2e — a token that's a copy of a permanent copies its printed
+/// characteristics, not the counters on it. The Fire Crystal copies a bear with
+/// a +1/+1 counter; the token is a printed 2/2, not 3/3.
+#[test]
+fn cr_707_2e_token_copy_ignores_source_counters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_fire_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "the source bear is a 3/3 with its counter");
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let crystal = g.battlefield.iter().find(|c| c.definition.name == "The Fire Crystal").unwrap().id;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crystal, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("copy the bear");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .expect("token copy exists");
+    let tp = g.computed_permanent(token.id).unwrap();
+    assert_eq!((tp.power, tp.toughness), (2, 2), "the copy uses printed P/T, ignoring the source's counter");
+}
