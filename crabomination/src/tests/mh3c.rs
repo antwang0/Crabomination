@@ -475,6 +475,29 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Spymaster's Vault: {B}, {T} connives a creature X, where X = creatures that
+/// died this turn; nonland discards become +1/+1 counters on the target.
+#[test]
+fn spymasters_vault_connives_by_creatures_died() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let vault = g.add_card_to_battlefield(0, catalog::spymasters_vault());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Two creatures died this turn → connive 2.
+    g.players[0].creatures_died_this_turn = 2;
+    // Stock the library and hand with nonland fodder so the draw+discard runs.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vault, ability_index: 1, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], x_value: None,
+    }).expect("{B}, {T}: connive X");
+    drain_stack(&mut g);
+    // Drew 2, discarded 2 nonland cards → two +1/+1 counters on the target.
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "connive 2 puts two counters (both discards were nonland)");
+}
+
 /// Idol of False Gods grows when your Eldrazi die and, at eight +1/+1 counters,
 /// becomes a 0/0 creature with annihilator 2.
 #[test]

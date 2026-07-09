@@ -626,6 +626,50 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Spymaster's Vault — a Land that enters tapped unless you control a Swamp.
+/// {T}: Add {B}. {B}, {T}: target creature you control connives X, where X is
+/// the number of creatures that died this turn.
+pub fn spymasters_vault() -> CardDefinition {
+    use crate::card::{CounterType, LandType};
+    let x = || Value::CreaturesDiedThisTurnTotal;
+    CardDefinition {
+        name: "Spymaster's Vault",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasLandType(LandType::Swamp).and(R::ControlledByYou),
+                )),
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Black]) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: x() },
+                    Effect::Discard { who: Selector::You, amount: x(), random: false },
+                    Effect::AddCounter {
+                        what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::count(Selector::DiscardedThisResolution { filter: R::Nonland }),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Idol of False Gods — {2} Kindred Artifact — Eldrazi. {1}{C}, {T}: make an
 /// Eldrazi Spawn. Another Eldrazi you control dying grows it; with eight or
 /// more +1/+1 counters it's a 0/0 creature with annihilator 2.
