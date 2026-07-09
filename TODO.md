@@ -46,6 +46,18 @@ factory doc comment:
   scaling triggered ability). (`Effect::LifeLockThisTurn` +
   `Player.life_locked_this_turn` shipped — Flare of Fortitude is now the full
   printed card.)
+- ⏳ **Nested modal after a payment defaults to mode 0** — `Effect::ChooseMode`
+  reads `ctx.mode` (picked at trigger-push), so a modal buried inside
+  `MayDo`/`PayEnergy` can't get its own resolution-time pick; bots always take
+  the first mode (Voltstorm Angel's combat modal). A `PayEnergy { then:
+  ChooseMode }` should re-prompt at resolution.
+- ⏳ **Reflexive "when you do" targets are chosen at trigger-push, not after the
+  payment** — Riddle Gate Gargoyle's on-attack pay-{E}{E}-then-target-a-creature
+  is modeled with the target on the trigger (CR 603.7 wants it post-payment).
+  Minor timing approximation.
+- ⏳ **Emerge is defined but unused** — `CardDefinition.emerge` exists yet no
+  catalog card sets it; Twisted Riddlekeeper (MH3) deferred until an emerge card
+  is wired and tested.
 - ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
   `suspend_only`; serde alias kept) rejects the pay-the-cost cast path per
   CR 601.3e; Ancestral Vision / Lotus Bloom / Crashing Footfalls / Living End
