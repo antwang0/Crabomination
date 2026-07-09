@@ -534,7 +534,7 @@ fn monumental_henge_digs_for_historic() {
     g.add_card_to_library(0, catalog::griselbrand()); // legendary → historic
     for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
     let hand = g.players[0].hand.len();
-    for c in [crate::mana::Color::White] { g.players[0].mana_pool.add(c, 4); }
+    g.players[0].mana_pool.add(crate::mana::Color::White, 4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: henge, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
     }).expect("{2}{W}{W}, {T}: dig for historic");

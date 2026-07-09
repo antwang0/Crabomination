@@ -3,7 +3,7 @@
 //! cycle. Tests in `tests/mh3c.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, Zone,
 };

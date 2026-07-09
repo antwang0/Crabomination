@@ -41,7 +41,11 @@ factory doc comment:
   (targeted connive-X), Monumental Henge (dig-for-historic), Inventor's Axe
   (`CardDefinition.equip_energy_cost`), Emissary of Soulfire (exalted counters
   modeled as permanently-granted `exalted()` via `Effect::GrantTriggeredAbility`
-  now honoring `Duration::Permanent`). Still open, each
+  now honoring `Duration::Permanent`), Winter Moon
+  (`StaticEffect::MaxOneNonbasicLandUntap`), Cursed Wombat
+  (`StaticEffect::CounterAmplifierOncePerTurn` — once-per-turn per-permanent
+  +1/+1 amplifier), Rush of Inspiration (energy modal DFC), Rosecot Knight
+  (ETB dig for artifact/enchantment). Still open, each
   needing one primitive: kicker "choose one; if kicked choose both" (Depth
   Defiler); kicker-changes-target (Expel the Unworthy); mana-Escalate at cast
   (Collective Resistance — `Effect::Escalate.cost` is resolution-time only);
@@ -49,8 +53,7 @@ factory doc comment:
   sacrificed" rider (Lethal Throwdown); Jolted Awake (dynamic `PayEnergy` =
   target's MV); an Emerge card
   (`CardDefinition.emerge` exists but unused — Twisted Riddlekeeper, Herigast);
-  a "counter-doubling once each turn" static (Cursed Wombat); the untap-at-most-
-  one-nonbasic static (Winter Moon); optional Exert (CR 702.83a); an
+  optional Exert (CR 702.83a); an
   exert-as-activation-cost + haste-if-spent-on-creature mana (Arena of Glory);
   energy equip cost (Inventor's Axe); an alt-cost-by-energy permission (Primal
   Prayers); a "may reveal + else +1/+1 counter" look-top rider (Rosecot Knight —
