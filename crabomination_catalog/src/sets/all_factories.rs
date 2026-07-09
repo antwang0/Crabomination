@@ -3929,6 +3929,7 @@ static DECKS: &[Factory] = &[
     super::decks::wildwood_rebirth,
     super::decks::nyleas_presence,
     super::decks::font_of_fertility,
+    super::decks::heliods_pilgrim,
     super::decks::serene_heart,
     super::decks::winds_of_rath,
     super::decks::calming_verse,
