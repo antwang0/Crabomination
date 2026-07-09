@@ -1948,6 +1948,13 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub enters_as_copy: Option<EntersAsCopy>,
+    /// CR 614 — "As this enters, it becomes your choice of [modes]." An
+    /// as-enters replacement that sets base P/T and grants keywords before the
+    /// first SBA sweep, so a printed `*/*` (0/0) body never dies before the
+    /// choice locks in. The controller picks a mode via a `ChooseMode`
+    /// decision at ETB. Corrupted Shapeshifter.
+    #[serde(default)]
+    pub enters_as_choice: Option<Vec<EntersChoiceMode>>,
     /// CR 122.4 — "This permanent can't have more than N counters of
     /// `kind` on it." When this card has more than `max` counters of
     /// `kind` on it, the state-based-action sweep removes the excess
@@ -2423,6 +2430,18 @@ pub struct EntersAsCopy {
     /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
     #[serde(default)]
     pub non_legendary: bool,
+}
+
+/// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters
+/// replacement. The chosen mode's `power`/`toughness` overwrite the printed
+/// (`*/*`) base and its `keywords` are granted. Corrupted Shapeshifter's
+/// "a 3/3 with flying, a 2/5 with vigilance, or a 0/12 with defender."
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct EntersChoiceMode {
+    pub power: i32,
+    pub toughness: i32,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
 }
 
 fn one_u32() -> u32 { 1 }

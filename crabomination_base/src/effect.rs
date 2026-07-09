@@ -482,6 +482,11 @@ pub enum Value {
     /// between independent resolutions, so a `Seq([Discard, Draw])`
     /// reads exactly the discards from this resolution.
     CardsDiscardedThisEffect,
+    /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
+    /// resolution. Reset between independent resolutions. Aether Spike's
+    /// "counter that spell unless its controller pays {1} for each {E} paid
+    /// this way" reads it as the `extra_generic` of a `CounterUnlessPaid`.
+    EnergyPaidThisEffect,
     /// Maximum, across all players, of cards discarded so far within
     /// the current effect resolution. Reads from
     /// `state.cards_discarded_per_player_this_resolution`. Used by
@@ -2380,6 +2385,13 @@ pub enum Effect {
     /// effective toughness, capped at available energy) or all available
     /// energy against a planeswalker / player. UI prompting is a follow-up.
     PayAnyEnergyDealDamage { to: Selector },
+    /// "You may pay any amount of {E}, then `then`." The controller chooses how
+    /// much energy to pay via `Decision::ChooseAmount` (capped at available
+    /// energy); the amount is stashed in `state.energy_paid_this_resolution`
+    /// so `then` can scale off `Value::EnergyPaidThisEffect`. Bots pay all
+    /// available energy. Aether Spike's "pay any amount of {E}; counter that
+    /// spell unless its controller pays {1} for each {E} paid this way."
+    PayAnyEnergy { then: Box<Effect> },
     /// "Sacrifice/return this unless you pay {E}…" (CR 107.16). Pays `amount`
     /// energy if the controller can afford it; otherwise resolves `otherwise`
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when

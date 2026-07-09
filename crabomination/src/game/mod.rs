@@ -962,6 +962,13 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) cards_discarded_this_resolution: u32,
+    /// Transient: amount of {E} paid by `Effect::PayAnyEnergy` within the
+    /// current resolution. Read by `Value::EnergyPaidThisEffect` so a later
+    /// step in the same `Effect::Seq` can scale off "each {E} paid this way"
+    /// (Aether Spike's counter-unless-pay-{1}-per-{E}). Reset between
+    /// independent resolutions.
+    #[serde(skip)]
+    pub(crate) energy_paid_this_resolution: u32,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -1635,6 +1642,7 @@ impl Clone for GameState {
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
+            energy_paid_this_resolution: self.energy_paid_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
@@ -1790,6 +1798,7 @@ impl GameState {
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
+            energy_paid_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
             nonland_cards_discarded_per_player_this_resolution: HashMap::new(),

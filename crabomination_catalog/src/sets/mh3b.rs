@@ -163,6 +163,91 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Aether Spike — {1}{U} Instant. Choose target spell. You get {E}{E}, then
+/// pay any amount of {E}. Counter it unless its controller pays {1} for each
+/// {E} paid this way.
+pub fn aether_spike() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Spike",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(2)),
+            Effect::PayAnyEnergy {
+                then: Box::new(Effect::CounterUnlessPaid {
+                    what: target_filtered(R::IsSpellOnStack),
+                    mana_cost: cost(&[]),
+                    exile: false,
+                    extra_generic: Some(Value::EnergyPaidThisEffect),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Corrupted Conscience — {3}{U}{U} Aura. Enchant creature. You control the
+/// enchanted creature and it has infect.
+pub fn corrupted_conscience() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility};
+    let enchanted = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Corrupted Conscience",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![crate::effect::shortcut::etb(
+            Effect::GainControlWhileSourceRemains { what: enchanted() },
+        )],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has infect.",
+            effect: StaticEffect::GrantKeyword { applies_to: enchanted(), keyword: Keyword::Infect },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ghostfire Slice — {2}{R} Devoid Instant. Costs {2} less if an opponent
+/// controls a multicolored permanent. Deals 4 damage to any target.
+pub fn ghostfire_slice() -> CardDefinition {
+    CardDefinition {
+        name: "Ghostfire Slice",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Devoid],
+        self_cost_reduction_if_control: vec![(R::Multicolored.and(R::ControlledByOpponent), 2)],
+        effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Corrupted Shapeshifter — {3}{U} Devoid Eldrazi Shapeshifter */*. As it
+/// enters, it becomes your choice of a 3/3 flyer, a 2/5 with vigilance, or a
+/// 0/12 with defender (`enters_as_choice`).
+pub fn corrupted_shapeshifter() -> CardDefinition {
+    use crate::card::EntersChoiceMode;
+    CardDefinition {
+        name: "Corrupted Shapeshifter",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Devoid],
+        enters_as_choice: Some(vec![
+            EntersChoiceMode { power: 3, toughness: 3, keywords: vec![Keyword::Flying] },
+            EntersChoiceMode { power: 2, toughness: 5, keywords: vec![Keyword::Vigilance] },
+            EntersChoiceMode { power: 0, toughness: 12, keywords: vec![Keyword::Defender] },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Hope-Ender Coatl — {2}{U} 2/2 Devoid Eldrazi Snake. Flash, Flying. When you
 /// cast this, counter target spell an opponent controls unless they pay {1}.
 pub fn hope_ender_coatl() -> CardDefinition {

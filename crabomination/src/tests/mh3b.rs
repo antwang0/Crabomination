@@ -514,6 +514,86 @@ fn not_forgotten_recycles_and_makes_spirit() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "made a Spirit");
 }
 
+/// Corrupted Conscience steals the enchanted creature and gives it infect.
+#[test]
+fn corrupted_conscience_steals_and_grants_infect() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::corrupted_conscience());
+    cast(&mut g, aura, Some(Target::Permanent(victim)));
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "gained control of the enchanted creature");
+    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
+}
+
+/// Aether Spike gives {E}{E}, pays it all, and counters the target spell
+/// unless its controller pays {1} per {E} paid — here {2}, unaffordable.
+#[test]
+fn aether_spike_counters_via_energy_tax() {
+    let mut g = two_player_game();
+    // P1 casts a creature spell, spending all their mana (nothing left to pay
+    // the {2} tax the two energy will demand).
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    let id = g.add_card_to_hand(0, catalog::aether_spike());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aether Spike");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "paid all gained energy into the tax");
+    assert!(g.battlefield_find(spell).is_none(), "spell countered — controller couldn't pay {{2}}");
+}
+
+/// Ghostfire Slice costs {2} less only when an opponent controls a
+/// multicolored permanent, and deals 4 damage to any target.
+#[test]
+fn ghostfire_slice_cost_reduction_and_damage() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let inst = crate::card::CardInstance::new(g.next_id(), catalog::ghostfire_slice(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &inst, None), 0, "no discount without a multicolored opponent permanent");
+    // Opponent controls a multicolored (U/R) creature.
+    g.add_card_to_battlefield(1, catalog::cyclops_superconductor());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &inst, None), 2, "{{2}} off vs a multicolored opponent permanent");
+    let id = g.add_card_to_hand(0, catalog::ghostfire_slice());
+    let before = g.players[1].life;
+    cast(&mut g, id, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, before - 4, "dealt 4 damage");
+}
+
+/// Corrupted Shapeshifter's chosen mode sets its base P/T and keyword as it
+/// enters — the printed */* never dies as a 0/0.
+#[test]
+fn corrupted_shapeshifter_enters_as_chosen_mode() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::corrupted_shapeshifter());
+    // Mode 1 → a 2/5 with vigilance.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, id, None);
+    let cp = g.computed_permanent(id).expect("shapeshifter survived ETB");
+    assert_eq!((cp.power, cp.toughness), (2, 5), "chose the 2/5 mode");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "gained the mode's keyword");
+}
+
+/// The default decider picks the first mode (3/3 flyer); the printed */* body
+/// still survives ETB because the choice is a pre-SBA replacement.
+#[test]
+fn corrupted_shapeshifter_default_mode_survives() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::corrupted_shapeshifter());
+    cast(&mut g, id, None);
+    let cp = g.computed_permanent(id).expect("shapeshifter survived ETB");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "default picked mode 0");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
 // ── Batch 4 (Flare cycle) ────────────────────────────────────────────────────
 
 /// Flare of Cultivation ramps a basic to the battlefield and one to hand.

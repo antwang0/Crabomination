@@ -620,6 +620,71 @@ impl GameState {
         true
     }
 
+    /// CR 614 — apply a permanent's `enters_as_choice` replacement as it
+    /// enters. The controller picks a mode via a `ChooseMode` decision; the
+    /// chosen mode's P/T overwrite the printed base and its keywords are
+    /// granted, all before the first SBA sweep (so a printed `*/*` body never
+    /// dies as a 0/0). No-op when the card has no such spec. Corrupted
+    /// Shapeshifter.
+    pub(crate) fn apply_enters_as_choice(&mut self, card_id: CardId) -> bool {
+        let modes = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.enters_as_choice.clone());
+        let Some(modes) = modes else { return false };
+        if modes.is_empty() {
+            return false;
+        }
+        use crate::decision::{Decision, DecisionAnswer};
+        let answer = self.decider.decide(&Decision::ChooseMode {
+            source: card_id,
+            num_modes: modes.len(),
+            mode_texts: modes
+                .iter()
+                .map(|m| {
+                    let kw = m
+                        .keywords
+                        .iter()
+                        .map(|k| format!("{k:?}").to_lowercase())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    if kw.is_empty() {
+                        format!("{}/{}", m.power, m.toughness)
+                    } else {
+                        format!("{}/{} with {kw}", m.power, m.toughness)
+                    }
+                })
+                .collect(),
+        });
+        let idx = match answer {
+            DecisionAnswer::Mode(i) => i.min(modes.len() - 1),
+            // Bots/scripts that don't answer: default to the sturdiest mode
+            // (highest toughness) so the body survives SBA.
+            _ => modes
+                .iter()
+                .enumerate()
+                .max_by_key(|(_, m)| m.toughness)
+                .map(|(i, _)| i)
+                .unwrap_or(0),
+        };
+        let mode = &modes[idx];
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+            let def = std::sync::Arc::make_mut(&mut c.definition);
+            def.power = mode.power;
+            def.toughness = mode.toughness;
+            for kw in &mode.keywords {
+                if !def.keywords.contains(kw) {
+                    def.keywords.push(kw.clone());
+                }
+            }
+            // The choice is a replacement, not a pump — the printed base is
+            // now the chosen P/T, so clear any leftover mode marker.
+            def.enters_as_choice = None;
+        }
+        true
+    }
+
     // ── Entry points ─────────────────────────────────────────────────────────
 
     /// Heuristic for `Effect::Punisher`: would the chooser (`ctx.controller`)
@@ -738,6 +803,7 @@ impl GameState {
         // only counts discards from *this* resolution (Borrowed Knowledge
         // mode 1's "draw cards equal to the number discarded this way").
         self.cards_discarded_this_resolution = 0;
+        self.energy_paid_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
         self.nonland_cards_discarded_per_player_this_resolution.clear();
@@ -3152,6 +3218,34 @@ impl GameState {
                     self.players[p].energy -= *amount;
                     self.run_effect(then, ctx, events)?;
                 }
+                Ok(())
+            }
+
+            Effect::PayAnyEnergy { then } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let avail = self.players[p].energy;
+                // A UI seat picks the amount; bots/tests pay all available
+                // energy (the aggressive default for a counter-tax payoff),
+                // mirroring `PayAnyEnergyDealDamage`'s heuristic.
+                let pay = if avail == 0 {
+                    0
+                } else if self.players[p].wants_ui {
+                    let source = ctx.source.unwrap_or(CardId(0));
+                    match self.decider.decide(&Decision::ChooseAmount {
+                        source,
+                        prompt: "Pay how much {E}?".to_string(),
+                        max: avail,
+                    }) {
+                        DecisionAnswer::Amount(n) => n.min(avail),
+                        _ => 0,
+                    }
+                } else {
+                    avail
+                };
+                self.players[p].energy -= pay;
+                self.energy_paid_this_resolution = pay;
+                self.run_effect(then, ctx, events)?;
                 Ok(())
             }
 

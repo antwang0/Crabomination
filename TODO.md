@@ -26,19 +26,24 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
-- ⏳ **Enters-as-a-choice-of-stats** — a "*/* creature that, as it enters,
-  becomes your choice of P/T + keyword" needs an as-enters replacement (not an
-  ETB trigger, which lets a printed 0/0 die to SBA first). Corrupted
-  Shapeshifter (MH3) deferred pending this; the rest of `sets::mh3b` shipped.
-- ⏳ **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`): mana-Escalate
-  spells (Collective Resistance — `Effect::Escalate.cost` only models a
-  resolution-time cost, not per-mode mana at cast), kicker-changes-target
-  (Expel the Unworthy), kicker "choose one; if kicked choose both" (Depth
-  Defiler), sacrifice-a-modified-creature additional cost with an "if a
-  modified creature was sacrificed" rider (Lethal Throwdown), the energy "pay
-  any amount of {E}" spells (Aether Spike, Jolted Awake), cost-reduction-if-
-  opponent-controls-multicolored (Ghostfire Slice), an Exalted counter type
-  (Emissary of Soulfire), and a "your life total can't change until end of
+- ✅ **Enters-as-a-choice-of-stats** — `CardDefinition.enters_as_choice`
+  (`Vec<EntersChoiceMode>`) is an as-enters replacement (CR 614) applied in
+  `apply_enters_as_choice` before the first SBA sweep, so a printed `*/*` body
+  never dies as a 0/0. The controller picks via a `ChooseMode` decision.
+  Corrupted Shapeshifter (MH3) shipped.
+- 🟡 **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`). Shipped this
+  run: Corrupted Shapeshifter (`enters_as_choice`), Ghostfire Slice
+  (`self_cost_reduction_if_control` with `Multicolored.and(ControlledByOpponent)`),
+  Corrupted Conscience (control-aura + granted infect), Aether Spike
+  (`Effect::PayAnyEnergy` + `Value::EnergyPaidThisEffect`). Still open:
+  mana-Escalate spells (Collective Resistance — `Effect::Escalate.cost` only
+  models a resolution-time cost, not per-mode mana at cast), kicker-changes-
+  target (Expel the Unworthy), kicker "choose one; if kicked choose both"
+  (Depth Defiler), sacrifice-a-modified-creature additional cost with an "if a
+  modified creature was sacrificed" rider (Lethal Throwdown), Jolted Awake
+  (needs a dynamic-amount `PayEnergy` = target's MV + a `Value::TargetManaValue`),
+  an Exalted counter type (Emissary of Soulfire — a counter that grants a
+  scaling triggered ability), and a "your life total can't change until end of
   turn" effect (Flare of Fortitude — shipped with only the hexproof +
   indestructible half).
 - ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
