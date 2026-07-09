@@ -7239,3 +7239,68 @@ fn cr_712_modal_dfc_back_is_the_played_face() {
     }).expect("taps for {B}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "back face taps for B");
 }
+
+// ── CR 117.7c / 601.2f — cost reductions touch only the generic component ─────
+
+/// CR 117.7c — a "costs {N} less" reduction removes only generic mana; the
+/// colored requirement survives. Deem Inferior ({3}{U}) after four draws
+/// reduces its {3} to nothing and is castable for a single {U}.
+#[test]
+fn cr_117_7c_cost_reduction_is_generic_only() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.players[0].cards_drawn_this_turn = 4; // reduces {3} fully (clamped at 3)
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1); // only the {U}
+    let deem = g.add_card_to_hand(0, catalog::deem_inferior());
+    g.perform_action(GameAction::CastSpell {
+        card_id: deem, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for just {U} — the generic {3} is fully reduced");
+}
+
+// ── CR 702.90 — Exalted stacks once per instance ─────────────────────────────
+
+/// CR 702.90b — each Exalted instance triggers separately when a creature
+/// attacks alone. Two Exalted sources pump the lone attacker +2/+2.
+#[test]
+fn cr_702_90_exalted_stacks_per_instance() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::ignoble_hierarch());
+    g.add_card_to_battlefield(0, catalog::ignoble_hierarch());
+    g.clear_sickness(a);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+    ])).expect("attack alone");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(a).unwrap();
+    assert_eq!((p.power, p.toughness), (2, 3), "0/1 + two exalted instances = 2/3");
+}
+
+// ── CR 401.7 — Nth-from-top falls back to the bottom of a short library ───────
+
+/// CR 401.7 — putting a card "second from the top" of a library with fewer
+/// than two cards puts it on the bottom instead. Deem Inferior into an empty
+/// owner library leaves the tucked permanent as the sole (bottom) card.
+#[test]
+fn cr_401_7_second_from_top_falls_to_bottom_when_library_short() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.players[1].library.clear();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // "second from top"
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let deem = g.add_card_to_hand(0, catalog::deem_inferior());
+    g.perform_action(GameAction::CastSpell {
+        card_id: deem, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), 1, "the tucked permanent is the only card");
+    assert_eq!(g.players[1].library[0].id, victim, "it went to the bottom");
+}
