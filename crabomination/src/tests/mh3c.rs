@@ -440,3 +440,37 @@ fn kudo_sets_base_pt_and_bear_type() {
     // Kudo itself keeps its printed 2/2 and is unaffected by "other".
     assert_eq!(g.computed_permanent(kudo).unwrap().power, 2);
 }
+
+/// Drowner of Truth makes two Eldrazi Spawn only when {C} was spent to cast it.
+#[test]
+fn drowner_of_truth_colorless_spent_makes_spawn() {
+    // Paid with a colorless {C} for one generic pip → spawn trigger fires.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 6);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1); // the {C} that matters
+    let id = g.add_card_to_hand(0, catalog::drowner_of_truth());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with {C}");
+    drain_stack(&mut g);
+    let spawns = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawns, 2, "{{C}} spent → two Eldrazi Spawn");
+}
+
+#[test]
+fn drowner_of_truth_no_colorless_no_spawn() {
+    // Paid entirely with colored mana → no {C}, no spawn.
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 7);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    let id = g.add_card_to_hand(0, catalog::drowner_of_truth());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast without {C}");
+    drain_stack(&mut g);
+    let spawns = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
+}

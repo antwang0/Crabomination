@@ -1247,6 +1247,22 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellColorlessManaSpent { spent } => {
+                // Colorless {C} spent = total mana spent − the colored breakdown
+                // (whatever's left was paid with {C}, incl. for generic pips).
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                let c_spent = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
+                        let colored: u32 =
+                            card.cast_mana_spent_by_color.iter().map(|(_, n)| *n).sum();
+                        Some(mana_spent.saturating_sub(colored) > 0)
+                    }
+                    _ => None,
+                });
+                c_spent.unwrap_or(false) == *spent
+            }
             Predicate::CastSpellManaSpentAtLeast(min) => {
                 // First try the most precise read: the just-cast spell's
                 // `StackItem::Spell.mana_spent`. Falls back to

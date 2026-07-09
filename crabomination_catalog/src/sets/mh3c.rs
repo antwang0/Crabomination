@@ -599,3 +599,29 @@ pub fn kudo_king_among_bears() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Colorless-spent payoff ({C} matters) ─────────────────────────────────────
+
+/// Drowner of Truth — {5}{G/U}{G/U} 7/6 devoid Eldrazi. When you cast this
+/// spell, if {C} was spent to cast it, create two Eldrazi Spawn.
+pub fn drowner_of_truth() -> CardDefinition {
+    CardDefinition {
+        name: "Drowner of Truth",
+        cost: cost(&[generic(5), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![on_cast(Effect::If {
+            cond: Predicate::CastSpellColorlessManaSpent { spent: true },
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}

@@ -1062,6 +1062,12 @@ pub enum Predicate {
     /// (`ctx.trigger_source`) — Void Mirror's counter gate. Free casts
     /// (suspend, cascade) spend no mana, so they match.
     CastSpellNoColoredManaSpent,
+    /// Gate on whether colorless `{C}` mana was spent casting the just-cast
+    /// spell (`ctx.trigger_source`). `spent: true` = "if {C} was spent" (Drowner
+    /// of Truth), `false` = "if {C} wasn't spent" (Wumpus Aberration). Computed
+    /// from the stack spell's total mana spent minus its colored breakdown, so
+    /// {C} paid for a generic pip counts. Free casts spend nothing → not spent.
+    CastSpellColorlessManaSpent { spent: bool },
     /// True if the just-cast spell's *owner* is not `ctx.controller`. A
     /// spell's owner is the player who owns the physical card (CR
     /// 108.3) — typically the same as its controller, but they diverge
