@@ -525,6 +525,47 @@ fn corrupted_conscience_steals_and_grants_infect() {
     assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
 }
 
+/// Sage of the Unknowable taps for {C} usable on colorless spells or abilities
+/// but not on a colored spell.
+#[test]
+fn sage_of_the_unknowable_colorless_mana() {
+    use crate::mana::{SpellKind, SpendRestriction};
+    // The restriction funds a colorless spell and any ability, not a colored spell.
+    let r = SpendRestriction::ColorlessSpellsOrAbilities;
+    assert!(r.allows(&SpellKind { colorless: true, ..Default::default() }), "colorless spell ok");
+    assert!(r.allows(&SpellKind { activating_ability: true, ..Default::default() }), "ability ok");
+    assert!(!r.allows(&SpellKind { colorless: false, ..Default::default() }), "colored spell blocked");
+    // The card actually produces a mana when tapped.
+    let mut g = two_player_game();
+    let sage = g.add_card_to_battlefield(0, catalog::sage_of_the_unknowable());
+    g.clear_sickness(sage);
+    let before = g.players[0].mana_pool.restricted_total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sage, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), before + 1, "produced one restricted mana");
+    assert!(g.battlefield_find(sage).unwrap().tapped, "tapped for the ability");
+}
+
+/// Riddle Gate Gargoyle, on attack, pays {E}{E} to give a creature lifelink.
+#[test]
+fn riddle_gate_gargoyle_attack_energy_lifelink() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let gargoyle = g.add_card_to_battlefield(0, catalog::riddle_gate_gargoyle());
+    g.players[0].energy = 2;
+    g.clear_sickness(gargoyle);
+    g.active_player_idx = 0;
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.declare_attackers(vec![Attack { attacker: gargoyle, target: AttackTarget::Player(1) }])
+        .expect("declare attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "paid {{E}}{{E}} on attack");
+    assert!(g.computed_permanent(gargoyle).unwrap().keywords.contains(&Keyword::Lifelink),
+        "the attacking gargoyle got lifelink");
+}
+
 /// Thraben Charm mode 0 deals twice your creature count to a target creature.
 #[test]
 fn thraben_charm_scaling_damage() {

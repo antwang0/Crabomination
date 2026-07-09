@@ -163,6 +163,65 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Sage of the Unknowable — {1}{U} 0/4 Human Wizard. {T}: Add {C}, spendable
+/// only on a colorless spell or to activate an ability.
+pub fn sage_of_the_unknowable() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Sage of the Unknowable",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::ONE)),
+                    crate::mana::SpendRestriction::ColorlessSpellsOrAbilities,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Riddle Gate Gargoyle — {W}{U} 2/2 Artifact Gargoyle. Flying. ETB: get
+/// {E}{E}{E}. Whenever you attack, you may pay {E}{E}; if you do, target
+/// creature you control gains lifelink until end of turn.
+pub fn riddle_gate_gargoyle() -> CardDefinition {
+    CardDefinition {
+        name: "Riddle Gate Gargoyle",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(3))),
+            crate::effect::shortcut::on_you_attack(Effect::MayDo {
+                description: "Pay {E}{E}?".into(),
+                body: Box::new(Effect::PayEnergy {
+                    amount: 2,
+                    then: Box::new(Effect::GrantKeyword {
+                        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    }),
+                }),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Thraben Charm — {1}{W} Instant. Choose one — deal damage equal to twice the
 /// creatures you control to target creature; destroy target enchantment; or
 /// exile graveyards. (The graveyard mode wipes all graveyards.)

@@ -3108,6 +3108,7 @@ impl CardDefinition {
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             equipment: self.is_equipment(),
+            colorless: self.printed_colors().is_empty(),
         }
     }
 

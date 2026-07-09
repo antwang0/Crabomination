@@ -429,6 +429,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast an Equipment spell or activate an equip
     /// ability." (Freya Crescent.) Approximated as any ability of an Equipment.
     EquipmentOnly,
+    /// "Spend this mana only to cast a colorless spell or to activate an
+    /// ability." (Sage of the Unknowable.)
+    ColorlessSpellsOrAbilities,
 }
 
 impl SpendRestriction {
@@ -452,6 +455,9 @@ impl SpendRestriction {
             // Not a restriction — a rider that stamps I/S casts uncounterable.
             SpendRestriction::InstantSorceryUncounterable => true,
             SpendRestriction::EquipmentOnly => kind.equipment,
+            SpendRestriction::ColorlessSpellsOrAbilities => {
+                kind.colorless || kind.activating_ability
+            }
         }
     }
 }
@@ -487,6 +493,9 @@ pub struct SpellKind {
     /// Casting an Equipment spell, or activating an ability of an Equipment
     /// (Freya Crescent's "cast an Equipment spell or activate an equip ability").
     pub equipment: bool,
+    /// Casting a colorless spell (Sage of the Unknowable's "spend this mana
+    /// only to cast a colorless spell or to activate an ability").
+    pub colorless: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.
