@@ -626,6 +626,59 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Idol of False Gods — {2} Kindred Artifact — Eldrazi. {1}{C}, {T}: make an
+/// Eldrazi Spawn. Another Eldrazi you control dying grows it; with eight or
+/// more +1/+1 counters it's a 0/0 creature with annihilator 2.
+pub fn idol_of_false_gods() -> CardDefinition {
+    CardDefinition {
+        name: "Idol of False Gods",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Kindred, CardType::Artifact],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), colorless(1)]),
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Eldrazi),
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "With eight or more +1/+1 counters, it's a 0/0 creature.",
+                effect: StaticEffect::SelfIsCreatureWhileCountersAtLeast {
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    n: 8,
+                },
+            },
+            StaticAbility {
+                description: "With eight or more +1/+1 counters, it has annihilator 2.",
+                effect: StaticEffect::SelfHasKeywordWhileCountersAtLeast {
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    n: 8,
+                    keyword: Keyword::Annihilator(2),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Aether Revolt — {2}{R}{R} Enchantment. Revolt: while a permanent left the
 /// battlefield under your control this turn, your noncombat damage to opponents
 /// (and their permanents) is dealt +2. Whenever you get one or more {E}, deal

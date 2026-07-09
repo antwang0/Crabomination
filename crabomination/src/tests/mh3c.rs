@@ -475,6 +475,30 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Idol of False Gods grows when your Eldrazi die and, at eight +1/+1 counters,
+/// becomes a 0/0 creature with annihilator 2.
+#[test]
+fn idol_of_false_gods_animates_at_eight_counters() {
+    let mut g = two_player_game();
+    let idol = g.add_card_to_battlefield(0, catalog::idol_of_false_gods());
+    // An Eldrazi dying grows the idol by one counter.
+    let elder = g.add_card_to_battlefield(0, catalog::drowner_of_truth()); // Eldrazi 7/6
+    g.battlefield_find_mut(elder).unwrap().damage = 6;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(idol).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Eldrazi death grows the idol");
+    // Not a creature yet at 1 counter.
+    assert!(!g.computed_permanent(idol).unwrap().card_types.contains(&crate::card::CardType::Creature));
+    // Jump to eight → 0/0 creature with annihilator 2.
+    g.battlefield_find_mut(idol).unwrap().add_counters(CounterType::PlusOnePlusOne, 7);
+    let cp = g.computed_permanent(idol).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+    assert!(cp.keywords.contains(&Keyword::Annihilator(2)), "has annihilator 2");
+    assert_eq!((cp.power, cp.toughness), (8, 8), "0/0 base + eight counters");
+}
+
 /// Aether Revolt adds +2 to your noncombat damage to opponents — but only
 /// while revolt is active (a permanent left the battlefield under your control).
 #[test]

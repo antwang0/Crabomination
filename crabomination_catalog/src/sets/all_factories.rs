@@ -6627,6 +6627,7 @@ static MH3C: &[Factory] = &[
     super::mh3c::bespoke_battlewagon,
     super::mh3c::monstrous_vortex,
     super::mh3c::aether_revolt,
+    super::mh3c::idol_of_false_gods,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

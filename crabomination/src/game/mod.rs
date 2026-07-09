@@ -5452,6 +5452,28 @@ impl GameState {
                 }
             }
         }
+        // Idol of False Gods — "as long as this has N+ [kind] counters, it has
+        // [keyword]." Layer-6 keyword grant while the count holds.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfHasKeywordWhileCountersAtLeast { kind, n, keyword } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                if card.counter_count(*kind) >= *n {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
+            }
+        }
         // CR 702.183 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
@@ -12870,6 +12892,7 @@ fn static_effect_to_effects(
             // SelfIsCreatureWhileCountersAtLeast — live counter check; resolved
             // in `gather_continuous_effects`.
             | StaticEffect::SelfIsCreatureWhileCountersAtLeast { .. }
+            | StaticEffect::SelfHasKeywordWhileCountersAtLeast { .. }
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }

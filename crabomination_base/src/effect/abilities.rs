@@ -203,6 +203,16 @@ pub enum StaticEffect {
     /// `AddCardType(Creature)` self-effect while the count holds; the printed
     /// P/T already carry the creature stats.
     SelfIsCreatureWhileCountersAtLeast { kind: crate::card::CounterType, n: u32 },
+    /// "As long as this has `n` or more `kind` counters on it, it has
+    /// `keyword`." The keyword-granting sibling of
+    /// `SelfIsCreatureWhileCountersAtLeast` (Idol of False Gods — annihilator 2
+    /// once it has eight +1/+1 counters). Emits a layer-6 keyword-grant
+    /// self-effect while the count holds.
+    SelfHasKeywordWhileCountersAtLeast {
+        kind: crate::card::CounterType,
+        n: u32,
+        keyword: crate::card::Keyword,
+    },
     /// "[permanents] are [card type] in addition to their other types" — a
     /// layer-4 additive `AddCardType` over everything `applies_to` resolves to
     /// (Toph, the First Metalbender: "nontoken artifacts you control are lands").
