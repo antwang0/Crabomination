@@ -626,6 +626,27 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Aether Revolt — {2}{R}{R} Enchantment. Revolt: while a permanent left the
+/// battlefield under your control this turn, your noncombat damage to opponents
+/// (and their permanents) is dealt +2. Whenever you get one or more {E}, deal
+/// that much damage to any target.
+pub fn aether_revolt() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Revolt",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Revolt — your noncombat damage to opponents is dealt plus 2.",
+            effect: StaticEffect::NoncombatDamageToOpponentsBonus { amount: 2, while_revolt: true },
+        }],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EnergyGained, EventScope::YourControl),
+            effect: Effect::DealDamage { to: target_any(), amount: Value::TriggerEventAmount },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Monstrous Vortex — {3}{G} Enchantment. Whenever you cast a creature spell
 /// with power 5 or greater, discover X, where X is that spell's mana value.
 pub fn monstrous_vortex() -> CardDefinition {

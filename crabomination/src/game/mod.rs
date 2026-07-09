@@ -3534,6 +3534,60 @@ impl GameState {
             .sum()
     }
 
+    /// Additive noncombat-damage bonus (Aether Revolt): sum of
+    /// `NoncombatDamageToOpponentsBonus.amount` over battlefield permanents
+    /// whose controller controls `source` and where `ent` is an opponent /
+    /// their permanent. `while_revolt` statics only count while that
+    /// controller has revolt (CR 702.139). Mirrors the doubler's scoping.
+    pub fn noncombat_damage_bonus_for(
+        &self,
+        source: Option<CardId>,
+        ent: crate::game::effects::EntityRef,
+    ) -> u32 {
+        use crate::effect::StaticEffect;
+        use crate::game::effects::EntityRef;
+        let Some(src_ctrl) = source.and_then(|s| {
+            self.computed_permanent(s).map(|cp| cp.controller).or_else(|| {
+                match &self.resolving_source {
+                    Some((id, caster, _)) if *id == s => Some(*caster),
+                    _ => None,
+                }
+            })
+        }) else {
+            return 0;
+        };
+        let affected = match ent {
+            EntityRef::Player(p) => Some(p),
+            EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
+            EntityRef::Card(_) => None,
+        };
+        let Some(target_player) = affected else { return 0 };
+        self.battlefield
+            .iter()
+            .map(|c| {
+                if c.controller != src_ctrl || self.same_team(src_ctrl, target_player) {
+                    return 0;
+                }
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter_map(|sa| match sa.effect {
+                        StaticEffect::NoncombatDamageToOpponentsBonus { amount, while_revolt } => {
+                            if while_revolt
+                                && !self.players[src_ctrl].permanent_left_battlefield_this_turn
+                            {
+                                None
+                            } else {
+                                Some(amount)
+                            }
+                        }
+                        _ => None,
+                    })
+                    .sum::<u32>()
+            })
+            .sum()
+    }
+
     /// CR 614.5 — number of `StaticEffect::HalveDamageDealt` permanents on
     /// the battlefield (Ghosts of the Innocent). Each halves the dealt
     /// amount, rounded down; applied after any doublers.
@@ -12661,6 +12715,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleNoncombatDamageToOpponents
+            | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }

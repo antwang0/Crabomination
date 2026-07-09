@@ -733,6 +733,13 @@ pub enum StaticEffect {
     /// it's applied in the `deal_damage_to_from` funnel rather than
     /// `scale_damage_to`.
     DoubleNoncombatDamageToOpponents,
+    /// "If a source you control would deal noncombat damage to an opponent or a
+    /// permanent an opponent controls, it deals that much damage plus `amount`
+    /// instead." The additive sibling of `DoubleNoncombatDamageToOpponents`,
+    /// applied in the same `deal_damage_to_from` funnel. When `while_revolt`,
+    /// gated on CR 702.139 revolt (a permanent left the battlefield under the
+    /// static controller's control this turn). Aether Revolt.
+    NoncombatDamageToOpponentsBonus { amount: u32, while_revolt: bool },
     /// CR 614.5/615 — "If a source would deal damage to you or a permanent
     /// you control, prevent half that damage, rounded up." (Gisela.) The
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped

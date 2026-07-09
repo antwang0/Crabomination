@@ -395,6 +395,14 @@ impl GameState {
             let n = self.noncombat_damage_doublers_for(source, ent);
             amount.saturating_mul(1 << n.min(16))
         };
+        // "…deals that much damage plus N instead" (Aether Revolt) — additive,
+        // opponent-scoped, applied after the doublers. Only when damage is
+        // actually being dealt (amount > 0), so a 0 stays 0.
+        let amount = if amount > 0 {
+            amount.saturating_add(self.noncombat_damage_bonus_for(source, ent))
+        } else {
+            amount
+        };
         // CR 615.1 — prevention shields. Before applying the damage, let
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the

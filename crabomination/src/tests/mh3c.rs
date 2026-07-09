@@ -475,6 +475,29 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Aether Revolt adds +2 to your noncombat damage to opponents — but only
+/// while revolt is active (a permanent left the battlefield under your control).
+#[test]
+fn aether_revolt_boosts_noncombat_damage_only_under_revolt() {
+    use crate::game::types::Target;
+    // No revolt → plain 3 from the bolt.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aether_revolt());
+    let opp = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)), vec![]);
+    assert_eq!(g.players[1].life, opp - 3, "no revolt → no bonus");
+
+    // Revolt active → 3 + 2.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aether_revolt());
+    g.players[0].permanent_left_battlefield_this_turn = true;
+    let opp = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)), vec![]);
+    assert_eq!(g.players[1].life, opp - 5, "revolt → 3 + 2 bonus");
+}
+
 /// Monstrous Vortex discovers X when you cast a power-5+ creature spell — the
 /// discovered card leaves the library (cast free or taken to hand).
 #[test]
@@ -669,4 +692,20 @@ fn wumpus_aberration_colorless_spent_no_drop() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.definition.name != "Grizzly Bears"),
         "{{C}} spent → opponent gets no free drop");
+}
+
+/// Aether Revolt: gaining energy deals that much damage to any target (bots
+/// auto-aim the opponent).
+#[test]
+fn aether_revolt_energy_gain_deals_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aether_revolt());
+    let wagon = g.add_card_to_battlefield(0, catalog::bespoke_battlewagon());
+    g.clear_sickness(wagon);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wagon, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for {E}{E}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "gained 2 energy → 2 damage to opponent");
 }
