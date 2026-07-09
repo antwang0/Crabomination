@@ -5,7 +5,10 @@
 //! auras, and other layer effects) differs from its *printed* base, we
 //! float a small `P/T` text badge at the card's bottom-right corner —
 //! the same spot the printed P/T box sits — so the player can read the
-//! real fighting stats at a glance. Unmodified creatures show nothing
+//! real fighting stats at a glance. The badge is coloured green when the
+//! creature is bigger than its printed base and red when it's smaller, so a
+//! pump reads apart from a debuff without doing the subtraction. Unmodified
+//! creatures show nothing
 //! (their printed P/T is already on the card art). Planeswalkers always
 //! carry a `◆N` badge in the same corner: their live loyalty total is
 //! otherwise only readable by counting 3-D counter coins.
@@ -49,11 +52,11 @@ pub fn sync_pt_labels(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    mut labels: Query<(Entity, &PtLabel, &mut Node, &mut Text)>,
+    mut labels: Query<(Entity, &PtLabel, &mut Node, &mut Text, &mut TextColor)>,
 ) {
     // No view (e.g. between matches): clear every badge and bail.
     let Some(cv) = &view.0 else {
-        for (e, _, _, _) in &mut labels {
+        for (e, ..) in &mut labels {
             commands.entity(e).despawn();
         }
         return;
@@ -70,17 +73,31 @@ pub fn sync_pt_labels(
         card_corner.insert(gid.0, gtf.transform_point(bottom_right_local));
     }
 
+    // Badge colours: a buffed creature reads green, a shrunk one red, so the
+    // player can tell a pump from a debuff at a glance without doing the
+    // subtraction. Net-neutral swaps (e.g. +1/-1) and planeswalker loyalty
+    // stay neutral black.
+    const BUFF: Color = Color::srgb(0.10, 0.55, 0.12);
+    const DEBUFF: Color = Color::srgb(0.72, 0.10, 0.10);
+    const NEUTRAL: Color = Color::BLACK;
+
     // Desired badges: creatures whose computed P/T differs from base
     // (showing "P/T"), plus every planeswalker (showing "◆loyalty"). A
     // creature-planeswalker (Grist) prefers the combat-relevant P/T.
-    let mut desired: HashMap<CardId, String> = HashMap::new();
+    let mut desired: HashMap<CardId, (String, Color)> = HashMap::new();
     for p in &cv.battlefield {
         if !card_corner.contains_key(&p.id) {
             continue;
         }
         if p.is_creature() {
             if p.power != p.base_power || p.toughness != p.base_toughness {
-                desired.insert(p.id, format!("{}/{}", p.power, p.toughness));
+                let delta = (p.power + p.toughness) - (p.base_power + p.base_toughness);
+                let color = match delta.cmp(&0) {
+                    std::cmp::Ordering::Greater => BUFF,
+                    std::cmp::Ordering::Less => DEBUFF,
+                    std::cmp::Ordering::Equal => NEUTRAL,
+                };
+                desired.insert(p.id, (format!("{}/{}", p.power, p.toughness), color));
             }
             continue;
         }
@@ -91,7 +108,7 @@ pub fn sync_pt_labels(
                 .find(|(k, _)| *k == crabomination::card::CounterType::Loyalty)
                 .map(|(_, n)| *n)
                 .unwrap_or(0);
-            desired.insert(p.id, format!("\u{25c6}{loyalty}"));
+            desired.insert(p.id, (format!("\u{25c6}{loyalty}"), NEUTRAL));
         }
     }
 
@@ -108,9 +125,9 @@ pub fn sync_pt_labels(
     // Update existing badges; despawn any whose creature is no longer
     // modified (or has left the battlefield).
     let mut seen: HashSet<CardId> = HashSet::new();
-    for (e, label, mut node, mut text) in &mut labels {
+    for (e, label, mut node, mut text, mut color) in &mut labels {
         match desired.get(&label.0) {
-            Some(body) => {
+            Some((body, badge_color)) => {
                 seen.insert(label.0);
                 if let Some(world) = card_corner.get(&label.0).copied()
                     && let Some((x, y)) = anchor(camera, cam_xform, world)
@@ -122,6 +139,7 @@ pub fn sync_pt_labels(
                     node.display = Display::None;
                 }
                 *text = Text::new(body.clone());
+                color.0 = *badge_color;
             }
             None => {
                 commands.entity(e).despawn();
@@ -130,7 +148,7 @@ pub fn sync_pt_labels(
     }
 
     // Spawn badges for newly-modified creatures / new planeswalkers.
-    for (id, body) in desired {
+    for (id, (body, badge_color)) in desired {
         if seen.contains(&id) {
             continue;
         }
@@ -143,9 +161,9 @@ pub fn sync_pt_labels(
             PtLabel(id),
             Text::new(body),
             ui_fonts.tf(18.0),
-            // Black text on a white background — mirrors the printed
-            // P/T box.
-            TextColor(Color::BLACK),
+            // Green when buffed, red when shrunk, black when net-neutral /
+            // loyalty — on a white background that mirrors the printed P/T box.
+            TextColor(badge_color),
             BackgroundColor(Color::WHITE),
             Node {
                 position_type: PositionType::Absolute,

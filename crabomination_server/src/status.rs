@@ -1,7 +1,8 @@
 //! Optional HTTP status endpoint: set `CRAB_STATUS_BIND` (e.g. `0.0.0.0:7778`)
-//! to serve `GET /healthz` → `ok` (load-balancer probe) and any other path →
-//! a plaintext operator snapshot (uptime, rolling match stats, slot
-//! accounting). Unset = disabled. One thread, HTTP/1.0, connection-per-request.
+//! to serve `GET /healthz` → `ok` (load-balancer probe), `/status.json` → a
+//! machine-readable metric object (for scrapers), and any other path → a
+//! plaintext operator snapshot (uptime, rolling match stats, slot accounting).
+//! Unset = disabled. One thread, HTTP/1.0, connection-per-request.
 
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -24,6 +25,37 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
         sl.accepted,
         sl.refused_global + sl.refused_per_ip,
         sl.refusal_rate_pct(),
+    )
+}
+
+/// Render a machine-readable JSON snapshot for metric scrapers. Flat object of
+/// the same numbers the plaintext page carries, so Prometheus/textfile or a
+/// simple `jq` probe can read them without parsing the human summary. Split
+/// from the serving loop for testing.
+fn render_status_json(started: Instant, slots: &SlotManager) -> String {
+    let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
+    let sl = slots.snapshot();
+    let refused = sl.refused_global + sl.refused_per_ip;
+    format!(
+        "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
+         \"avg_turns\":{},\"connections_current\":{},\"connections_peak\":{},\
+         \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
+         \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{}}}\n",
+        started.elapsed().as_secs(),
+        st.total_matches(),
+        st.bot_matches,
+        st.pair_matches,
+        st.avg_turns(),
+        sl.current,
+        sl.peak,
+        sl.accepted,
+        refused,
+        sl.refused_global,
+        sl.refused_per_ip,
+        sl.refusal_rate_pct(),
+        sl.distinct_ips,
+        sl.max_per_ip,
+        sl.peak_per_ip,
     )
 }
 
@@ -52,15 +84,16 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
                 .lines()
                 .next()
                 .unwrap_or("");
-            let healthz = request_line.split_whitespace().nth(1) == Some("/healthz");
-            let body = if healthz {
-                "ok\n".to_string()
-            } else {
-                render_status(started, &slots)
+            let path = request_line.split_whitespace().nth(1).unwrap_or("");
+            let (body, content_type) = match path {
+                "/healthz" => ("ok\n".to_string(), "text/plain"),
+                "/status.json" => (render_status_json(started, &slots), "application/json"),
+                _ => (render_status(started, &slots), "text/plain"),
             };
             let _ = write!(
                 stream,
-                "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
+                "HTTP/1.0 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n{}",
+                content_type,
                 body.len(),
                 body
             );
@@ -79,5 +112,16 @@ mod tests {
         assert!(body.starts_with("crabomination_server\nuptime: "));
         assert!(body.contains("served "), "match stats line present");
         assert!(body.contains("connections: 0 current, 0 peak"), "slot line present");
+    }
+
+    #[test]
+    fn render_status_json_is_well_formed() {
+        let slots = SlotManager::new(10, 5);
+        let body = render_status_json(Instant::now(), &slots);
+        assert!(body.starts_with('{') && body.trim_end().ends_with('}'), "JSON object");
+        // Key fields present with numeric values (no fresh-server nulls).
+        for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0"] {
+            assert!(body.contains(key), "missing {key} in {body}");
+        }
     }
 }

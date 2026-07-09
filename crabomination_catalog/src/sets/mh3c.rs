@@ -46,26 +46,6 @@ pub fn reckless_pyrosurfer() -> CardDefinition {
 
 // ── Eldrazi Spawn ─────────────────────────────────────────────────────────────
 
-/// 0/1 colorless Eldrazi Spawn with "Sacrifice this token: Add {C}."
-fn eldrazi_spawn() -> TokenDefinition {
-    TokenDefinition {
-        name: "Eldrazi Spawn".into(),
-        power: 0,
-        toughness: 1,
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
-        activated_abilities: vec![ActivatedAbility {
-            sac_cost: true,
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: crate::effect::ManaPayload::Colorless(Value::ONE),
-            },
-            ..Default::default()
-        }],
-        ..Default::default()
-    }
-}
-
 /// Spawn-Gang Commander — {3}{R}{R} 2/2 devoid Eldrazi Goblin. When you cast it,
 /// create three Eldrazi Spawn. {1}{C}, Sacrifice an Eldrazi: 2 damage to any
 /// target.
@@ -84,7 +64,7 @@ pub fn spawn_gang_commander() -> CardDefinition {
         triggered_abilities: vec![on_cast(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: eldrazi_spawn(),
+            definition: crabomination_base::tokens::eldrazi_spawn_token(),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), colorless(1)]),

@@ -100,9 +100,7 @@ fn wurmcoil_larva_dies_into_two_wurms() {
 #[test]
 fn spawn_gang_commander_spawns_and_pings() {
     let mut g = two_player_game();
-    for c in [crate::mana::Color::Red] {
-        g.players[0].mana_pool.add(c, 5);
-    }
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 5);
     g.players[0].mana_pool.add_colorless(2);
     let id = g.add_card_to_hand(0, catalog::spawn_gang_commander());
     g.perform_action(GameAction::CastSpell {
@@ -178,7 +176,7 @@ fn signature_slam_modified_creatures_deal_damage() {
     let mut g = two_player_game();
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
     let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
-    for c in [crate::mana::Color::Green] { g.players[0].mana_pool.add(c, 3); }
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 3);
     let id = g.add_card_to_hand(0, catalog::signature_slam());
     g.perform_action(GameAction::CastSpell {
         card_id: id,
