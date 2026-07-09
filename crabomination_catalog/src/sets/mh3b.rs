@@ -163,6 +163,57 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Thraben Charm — {1}{W} Instant. Choose one — deal damage equal to twice the
+/// creatures you control to target creature; destroy target enchantment; or
+/// exile graveyards. (The graveyard mode wipes all graveyards.)
+pub fn thraben_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Thraben Charm",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::CreatureCountControlledBy(PlayerRef::You)),
+                ),
+            },
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+            Effect::ExileAllGraveyards { filter: None, opponents_only: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Voidpouncer — {1}{R} 3/1 Devoid Eldrazi. Kicker {2}{C}. If kicked, it enters
+/// with two +1/+1 counters, a trample counter, and haste.
+pub fn voidpouncer() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Voidpouncer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Devoid, Keyword::Kicker(cost(&[generic(2), colorless(1)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                    Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Trample, amount: Value::ONE },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Scurry of Gremlins — {2}{R}{W} Enchantment. ETB: make two 1/1 red Gremlins,
 /// then get {E} equal to the number of creatures you control. Pay {E}{E}{E}{E}:
 /// creatures you control get +1/+0 and gain haste until end of turn.

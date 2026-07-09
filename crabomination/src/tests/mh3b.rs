@@ -525,6 +525,54 @@ fn corrupted_conscience_steals_and_grants_infect() {
     assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
 }
 
+/// Thraben Charm mode 0 deals twice your creature count to a target creature.
+#[test]
+fn thraben_charm_scaling_damage() {
+    let mut g = two_player_game();
+    // Two creatures you control → 4 damage.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::thraben_charm());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Thraben Charm mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "2/2 took 4 damage and died");
+}
+
+/// Voidpouncer kicked enters as a 5/3 with a trample counter and haste.
+#[test]
+fn voidpouncer_kicked_enters_pumped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::voidpouncer());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "3/1 + two +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Trample), "trample counter granted trample");
+    assert!(cp.keywords.contains(&Keyword::Haste), "entered with haste");
+}
+
+/// Voidpouncer cast unkicked is a plain 3/1.
+#[test]
+fn voidpouncer_unkicked_is_vanilla() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::voidpouncer());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast unkicked");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 1), "no counters unkicked");
+    assert!(!cp.keywords.contains(&Keyword::Trample));
+}
+
 /// Scurry of Gremlins makes two Gremlins and banks energy = your creatures,
 /// then spends {E}{E}{E}{E} to pump the team.
 #[test]
