@@ -26,9 +26,30 @@ fn loss_reason_label(r: &LossReason) -> &'static str {
     }
 }
 
-/// Render one match result as a JSON line. All fields are numeric or from
-/// fixed label sets, so no string escaping is needed.
+/// Escape a string for embedding inside a JSON double-quoted value (RFC 8259
+/// §7). `format_label` is a fixed label set today, but escaping keeps the log
+/// valid JSON should a custom/deck-derived label ever carry a quote, backslash,
+/// or control character.
+fn json_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Render one match result as a JSON line. Numeric fields and fixed label sets
+/// are inlined directly; the free-form `format_label` is JSON-escaped.
 fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -> String {
+    let format_label = json_escape(format_label);
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -109,6 +130,16 @@ mod tests {
         assert!(line.contains("\"life\":[-3,14]"), "{line}");
         assert!(line.contains("\"loss_reasons\":[\"life\",null]"), "{line}");
         assert!(line.contains("\"libraries\":[20,31]"), "{line}");
+    }
+
+    #[test]
+    fn render_line_escapes_format_label() {
+        let outcome = MatchOutcome::default();
+        let line = render_line("weird\"label\\\twith\nctl", Duration::ZERO, &outcome);
+        assert!(
+            line.contains("\"format\":\"weird\\\"label\\\\\\twith\\nctl\""),
+            "special chars escaped: {line}"
+        );
     }
 
     #[test]

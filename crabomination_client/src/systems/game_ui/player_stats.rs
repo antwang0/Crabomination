@@ -90,6 +90,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
         // blue so total prevention reads as a hard shield, not a partial one.
         StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
+        // Player-level hexproof (CR 702.11 — Aegis, Leyline of Sanctity) — a
+        // teal ward, distinct from the damage-immunity shield.
+        StatChipKind::PlayerHexproof => (Color::srgba(0.10, 0.28, 0.28, 1.0), theme::TEXT_PRIMARY),
         // Ability-word conditions (Threshold / Metalcraft / Ferocious /
         // Hellbent / Formidable) — a shared slate-teal so these "condition
         // online" badges read consistently.
@@ -134,6 +137,7 @@ pub(super) enum StatChipKind {
     Descend,
     SkipCombat,
     Shield,
+    PlayerHexproof,
     AbilityWord,
     /// CR 603.7e — a pending "your next creature spell enters with +1/+1 /
     /// haste" rider (the FIN "Summon" saga chapters).
@@ -817,6 +821,10 @@ pub fn update_player_stats_chips(
         if p.damage_fully_prevented {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
         }
+        // CR 702.11 — player-level hexproof (Aegis, Leyline of Sanctity).
+        if p.has_hexproof {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
+        }
     });
 }
 
@@ -1091,6 +1099,10 @@ pub fn update_opponent_stats_rows(
                 // CR 615 — an opponent with blanket damage immunity (Glacial Chasm).
                 if p.damage_fully_prevented {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());
+                }
+                // CR 702.11 — an opponent with player-level hexproof.
+                if p.has_hexproof {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
                 }
             });
         }

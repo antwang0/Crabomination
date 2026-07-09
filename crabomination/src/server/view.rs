@@ -66,7 +66,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), known_library_top(state, i, viewer_seat))
+                project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), state.player_has_static_hexproof(i), known_library_top(state, i, viewer_seat))
             })
             .collect(),
         battlefield: {
@@ -478,6 +478,7 @@ fn project_player(
     commander_damage_taken: Vec<crate::net::CommanderDamageEntry>,
     team: usize,
     cannot_gain_life: bool,
+    has_hexproof: bool,
     known_top: Vec<crate::net::KnownCard>,
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
@@ -633,6 +634,7 @@ fn project_player(
         is_monarch,
         has_city_blessing: player.city_blessing,
         cannot_gain_life,
+        has_hexproof,
         commander_damage_taken,
         team,
         dungeon: state.players[player_seat].dungeon.as_ref().and_then(|(name, room)| {
@@ -2138,6 +2140,16 @@ mod tests {
         let v = project(&state, 0);
         assert!(v.players[0].cannot_gain_life, "controller's lifegain is locked");
         assert!(v.players[1].cannot_gain_life, "opponent's lifegain is locked too");
+    }
+
+    #[test]
+    fn player_hexproof_surfaces_in_the_view() {
+        let mut state = two_player_game();
+        // Aegis of the Gods grants its controller hexproof (CR 702.11).
+        state.add_card_to_battlefield(0, catalog::aegis_of_the_gods());
+        let v = project(&state, 0);
+        assert!(v.players[0].has_hexproof, "controller's hexproof is surfaced");
+        assert!(!v.players[1].has_hexproof, "the opponent has no hexproof");
     }
 
     #[test]

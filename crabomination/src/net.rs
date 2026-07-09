@@ -704,6 +704,12 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub cannot_gain_life: bool,
+    /// CR 702.11 — true when this player has hexproof from a static effect
+    /// (Aegis of the Gods, Leyline of Sanctity, Solitary Confinement's shroud).
+    /// Surfaced so UIs can flag that opponents can't target the player.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub has_hexproof: bool,
     /// CR 903.10a — combat damage this player has been dealt by each
     /// individual commander, one entry per source commander that has hit
     /// them. 21 from a *single* commander is a loss, so each entry is
