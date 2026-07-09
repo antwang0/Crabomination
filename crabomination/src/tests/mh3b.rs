@@ -451,3 +451,65 @@ fn permanent_view_surfaces_modified_flag() {
         .battlefield.iter().find(|p| p.id == bear).cloned().unwrap();
     assert!(pv2.modified, "a counter makes it modified");
 }
+
+// ── Batch 3 ──────────────────────────────────────────────────────────────────
+
+/// Cyclops Superconductor gets three energy on entry.
+#[test]
+fn cyclops_superconductor_etb_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cyclops_superconductor());
+    cast(&mut g, id, None);
+    assert_eq!(g.players[0].energy, 3, "ETB gave three energy");
+}
+
+/// Electrozoa gets two energy on entry (flash flier).
+#[test]
+fn electrozoa_etb_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::electrozoa());
+    cast(&mut g, id, None);
+    assert_eq!(g.players[0].energy, 2);
+    let cp = g.computed_permanent(id).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Dreamtide Whale proliferates when a player casts their second spell.
+#[test]
+fn dreamtide_whale_second_spell_proliferates() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dreamtide_whale());
+    // A creature with a counter to grow.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    // First spell — no proliferate.
+    let s1 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, s1, None);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // Second spell — proliferate.
+    let s2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, s2, None);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "second spell proliferated");
+}
+
+/// Etherium Pteramander can block only fliers.
+#[test]
+fn etherium_pteramander_blocks_only_fliers() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::etherium_pteramander());
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::CanBlockOnlyFlying));
+}
+
+/// Not Forgotten leaves a graveyard card on the library and mints a Spirit.
+#[test]
+fn not_forgotten_recycles_and_makes_spirit() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::not_forgotten());
+    // OwnerChoice asks "put on top?" — answer true (top).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, id, Some(Target::Permanent(dead)));
+    assert!(g.players[0].library.iter().any(|c| c.id == dead), "card left the graveyard for the library");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "made a Spirit");
+}

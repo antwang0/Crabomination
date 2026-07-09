@@ -825,3 +825,133 @@ pub fn etched_slith() -> CardDefinition {
         ..Default::default()
     }
 }
+
+
+// ── Batch 3 ──────────────────────────────────────────────────────────────────
+
+use crate::effect::shortcut::target_any;
+
+/// Cyclops Superconductor — {1}{U}{R} 2/2 Cyclops Wizard. Prowess. ETB: get
+/// {E}{E}{E}. Dies: you may pay {E}{E}{E}; if you do, it deals damage equal to
+/// its power to any target.
+pub fn cyclops_superconductor() -> CardDefinition {
+    CardDefinition {
+        name: "Cyclops Superconductor",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cyclops, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(3))),
+            crate::effect::shortcut::on_dies(Effect::MayDo {
+                description: "Pay {E}{E}{E} to deal damage equal to its power?".into(),
+                body: Box::new(Effect::PayEnergy {
+                    amount: 3,
+                    then: Box::new(Effect::DealDamageEqualToPower {
+                        source: Selector::This,
+                        target: target_any(),
+                    }),
+                }),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Electrozoa — {2}{U} 3/1 Jellyfish. Flash, Flying. ETB: get {E}{E}. At the
+/// beginning of your first main phase, tap it unless you pay {E}.
+pub fn electrozoa() -> CardDefinition {
+    CardDefinition {
+        name: "Electrozoa",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Jellyfish], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::SelfSource)
+                    .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+                effect: Effect::PayEnergyOrElse {
+                    amount: 1,
+                    otherwise: Box::new(Effect::Tap { what: Selector::This }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dreamtide Whale — {2}{U} 7/5 Whale. Vanishing 2. Whenever a player casts
+/// their second spell each turn, proliferate.
+pub fn dreamtide_whale() -> CardDefinition {
+    CardDefinition {
+        name: "Dreamtide Whale",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        power: 7,
+        toughness: 5,
+        keywords: vec![Keyword::Vanishing(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::Triggerer, count: Value::Const(2) },
+            ),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Etherium Pteramander — {B} 1/1 Artifact Salamander Drake. Flying; can block
+/// only fliers. {6}{B}: Adapt 4, {1} cheaper per other artifact you control.
+pub fn etherium_pteramander() -> CardDefinition {
+    CardDefinition {
+        name: "Etherium Pteramander",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Salamander, CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), b()]),
+            cost_reduction_per: Some(R::Artifact.and(R::OtherThanSource)),
+            effect: adapt(4),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Not Forgotten — {1}{W} Sorcery. Put target card from a graveyard on its
+/// owner's choice of the top or bottom of their library. Create a 1/1 white
+/// flying Spirit.
+pub fn not_forgotten() -> CardDefinition {
+    CardDefinition {
+        name: "Not Forgotten",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::InGraveyard),
+                to: crate::effect::ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: crate::effect::LibraryPosition::OwnerChoice,
+                },
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: spirit_flyer() },
+        ]),
+        ..Default::default()
+    }
+}

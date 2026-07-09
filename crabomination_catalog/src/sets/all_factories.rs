@@ -6561,6 +6561,11 @@ static MH3B: &[Factory] = &[
     super::mh3b::mindless_conscription,
     super::mh3b::essence_reliquary,
     super::mh3b::etched_slith,
+    super::mh3b::cyclops_superconductor,
+    super::mh3b::electrozoa,
+    super::mh3b::dreamtide_whale,
+    super::mh3b::etherium_pteramander,
+    super::mh3b::not_forgotten,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
