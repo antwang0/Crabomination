@@ -163,6 +163,73 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Scurry of Gremlins — {2}{R}{W} Enchantment. ETB: make two 1/1 red Gremlins,
+/// then get {E} equal to the number of creatures you control. Pay {E}{E}{E}{E}:
+/// creatures you control get +1/+0 and gain haste until end of turn.
+pub fn scurry_of_gremlins() -> CardDefinition {
+    let gremlin = TokenDefinition {
+        name: "Gremlin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gremlin], ..Default::default() },
+        ..Default::default()
+    };
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Scurry of Gremlins",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: gremlin },
+            Effect::AddEnergy(Value::CreatureCountControlledBy(PlayerRef::You)),
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[]),
+            effect: Effect::PayEnergy {
+                amount: 4,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT { what: yours(), power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: yours(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ])),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warped Tusker — {7} 6/8 Eldrazi Boar Beast. Reach. When you cast or cycle
+/// this, create a 0/1 Eldrazi Spawn. Cycling {2}{G}.
+pub fn warped_tusker() -> CardDefinition {
+    let spawn = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: crate::game::effects::eldrazi_spawn_token(),
+    };
+    CardDefinition {
+        name: "Warped Tusker",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Boar, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 8,
+        keywords: vec![Keyword::Reach, Keyword::Cycling(cost(&[generic(2), g()]))],
+        triggered_abilities: vec![
+            on_cast(spawn()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+                effect: spawn(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Voltstorm Angel — {3}{W}{W} 4/4 Angel. Flying. ETB: get {E}{E}{E}. At combat
 /// on your turn, you may pay {E}{E}. When you do, choose one — this gains
 /// vigilance and lifelink EOT; or other creatures you control get +1/+1 EOT.

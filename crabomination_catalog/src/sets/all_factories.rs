@@ -6536,6 +6536,8 @@ static MH3B: &[Factory] = &[
     super::mh3b::drownyard_lurker,
     super::mh3b::emrakuls_messenger,
     super::mh3b::petrifying_meddler,
+    super::mh3b::scurry_of_gremlins,
+    super::mh3b::warped_tusker,
     super::mh3b::voltstorm_angel,
     super::mh3b::triton_wavebreaker,
     super::mh3b::strix_serenade,

@@ -525,6 +525,47 @@ fn corrupted_conscience_steals_and_grants_infect() {
     assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
 }
 
+/// Scurry of Gremlins makes two Gremlins and banks energy = your creatures,
+/// then spends {E}{E}{E}{E} to pump the team.
+#[test]
+fn scurry_of_gremlins_tokens_energy_and_pump() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::scurry_of_gremlins());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Scurry");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Gremlin").count(), 2, "two Gremlins");
+    // Bear + 2 Gremlins = 3 creatures → 3 energy.
+    assert_eq!(g.players[0].energy, 3, "banked {{E}} per creature");
+    // Activate the pump (needs {E}{E}{E}{E}; top up to 4).
+    g.players[0].energy = 4;
+    let ench = g.battlefield.iter().find(|c| c.definition.name == "Scurry of Gremlins").unwrap().id;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ench, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate pump");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "spent {{E}}{{E}}{{E}}{{E}}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Warped Tusker mints an Eldrazi Spawn when cast.
+#[test]
+fn warped_tusker_cast_makes_spawn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::warped_tusker());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Warped Tusker");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Eldrazi Spawn"), "cast trigger minted a Spawn");
+}
+
 /// Triton Wavebreaker bestowed grants +1/+1 and prowess.
 #[test]
 fn triton_wavebreaker_bestow_grants_prowess() {
