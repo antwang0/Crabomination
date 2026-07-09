@@ -513,3 +513,42 @@ fn not_forgotten_recycles_and_makes_spirit() {
     assert!(g.players[0].library.iter().any(|c| c.id == dead), "card left the graveyard for the library");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "made a Spirit");
 }
+
+// ── Batch 4 (Flare cycle) ────────────────────────────────────────────────────
+
+/// Flare of Cultivation ramps a basic to the battlefield and one to hand.
+#[test]
+fn flare_of_cultivation_ramps() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_library(0, catalog::forest());
+    let l2 = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::flare_of_cultivation());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(l1)),
+        DecisionAnswer::Search(Some(l2)),
+    ]));
+    cast(&mut g, id, None);
+    assert!(g.battlefield_find(l1).is_some(), "one basic to battlefield");
+    assert!(g.battlefield_find(l1).unwrap().tapped, "entered tapped");
+    assert!(g.players[0].hand.iter().any(|c| c.id == l2), "one basic to hand");
+}
+
+/// Flare of Fortitude can be cast by sacrificing a nontoken white creature and
+/// grants your permanents hexproof + indestructible.
+#[test]
+fn flare_of_fortitude_alt_cost_and_protection() {
+    let mut g = two_player_game();
+    // A white creature to pitch (Metastatic Evangel is a white Phyrexian).
+    let fodder = g.add_card_to_battlefield(0, catalog::metastatic_evangel());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::flare_of_fortitude());
+    // Cast via the alt (sacrifice) cost — no mana.
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("alt-cast by sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the white creature as the cost");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Hexproof) && cp.keywords.contains(&Keyword::Indestructible),
+        "your creatures gained hexproof + indestructible");
+}

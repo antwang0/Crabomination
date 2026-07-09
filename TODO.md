@@ -33,9 +33,14 @@ factory doc comment:
 - ⏳ **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`): mana-Escalate
   spells (Collective Resistance — `Effect::Escalate.cost` only models a
   resolution-time cost, not per-mode mana at cast), kicker-changes-target
-  (Expel the Unworthy), sacrifice-a-modified-creature additional cost with an
-  "if a modified creature was sacrificed" rider (Lethal Throwdown), and the
-  energy "pay any amount of {E}" spells (Aether Spike, Jolted Awake).
+  (Expel the Unworthy), kicker "choose one; if kicked choose both" (Depth
+  Defiler), sacrifice-a-modified-creature additional cost with an "if a
+  modified creature was sacrificed" rider (Lethal Throwdown), the energy "pay
+  any amount of {E}" spells (Aether Spike, Jolted Awake), cost-reduction-if-
+  opponent-controls-multicolored (Ghostfire Slice), an Exalted counter type
+  (Emissary of Soulfire), and a "your life total can't change until end of
+  turn" effect (Flare of Fortitude — shipped with only the hexproof +
+  indestructible half).
 - ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
   `suspend_only`; serde alias kept) rejects the pay-the-cost cast path per
   CR 601.3e; Ancestral Vision / Lotus Bloom / Crashing Footfalls / Living End

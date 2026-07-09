@@ -6566,6 +6566,8 @@ static MH3B: &[Factory] = &[
     super::mh3b::dreamtide_whale,
     super::mh3b::etherium_pteramander,
     super::mh3b::not_forgotten,
+    super::mh3b::flare_of_cultivation,
+    super::mh3b::flare_of_fortitude,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

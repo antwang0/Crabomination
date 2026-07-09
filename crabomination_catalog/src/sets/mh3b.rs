@@ -955,3 +955,57 @@ pub fn not_forgotten() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 4 (MH3 Flare cycle) ────────────────────────────────────────────────
+
+/// The Flare alt-cost — "you may sacrifice a nontoken [color] creature rather
+/// than pay this spell's mana cost."
+fn flare_cost(color: Color) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost: cost(&[]),
+        sacrifice_permanents: Some((R::Creature.and(R::NotToken).and(R::HasColor(color)), 1)),
+        ..Default::default()
+    }
+}
+
+/// Flare of Cultivation — {1}{G}{G} Sorcery (or sac a nontoken green creature).
+/// Search for up to two basics: one to the battlefield tapped, one to hand.
+pub fn flare_of_cultivation() -> CardDefinition {
+    CardDefinition {
+        name: "Flare of Cultivation",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            Effect::Search { who: PlayerRef::You, filter: R::IsBasicLand, to: ZoneDest::Hand(PlayerRef::You) },
+        ]),
+        alternative_cost: Some(flare_cost(Color::Green)),
+        ..Default::default()
+    }
+}
+
+/// Flare of Fortitude — {2}{W}{W} Instant (or sac a nontoken white creature).
+/// Until end of turn, permanents you control gain hexproof and indestructible.
+/// (The "your life total can't change" rider is approximated away.)
+pub fn flare_of_fortitude() -> CardDefinition {
+    let yours = || Selector::EachPermanent(R::ControlledByYou);
+    CardDefinition {
+        name: "Flare of Fortitude",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword { what: yours(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword {
+                what: yours(),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        alternative_cost: Some(flare_cost(Color::White)),
+        ..Default::default()
+    }
+}

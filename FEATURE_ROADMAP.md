@@ -343,7 +343,7 @@ exercising each) was elided in a compaction pass; recover it from
   staple sweep (Changeling Outcast, King of the Pride, Vesperlark, Mother
   Bear, Goblin War Party entwine, Orcish Hellraiser, Excavating Anurid
   threshold, Headless Specter hellbent, …).
-- **MH3 batch 2 (modern_decks, `sets::mh3b` — 35 cards):** rides existing
+- **MH3 batch 2 (modern_decks, `sets::mh3b` — 37 cards):** rides existing
   Eldrazi/colorless, adapt/modified, living-weapon, proliferate/modular/amass,
   energy, prowess, vanishing, and modal/overload primitives; one new filter
   `R::ManaValueAtMostDevotion(Color)` (MV ≤ your devotion — Grim Servant) and
