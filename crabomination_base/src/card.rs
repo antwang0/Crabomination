@@ -2093,6 +2093,11 @@ pub struct CardDefinition {
     /// activate approximation). Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
+    /// Additional {E} (energy) cost paid to equip, on top of `Keyword::Equip`'s
+    /// mana. "Equip—Pay {E}{E}" (Inventor's Axe). Paid from the activator's
+    /// energy pool during `equip`. Defaults to 0 via `#[serde(default)]`.
+    #[serde(default)]
+    pub equip_energy_cost: u32,
     /// CR 702.95 — Soulbond bonus. When `Some`, this card carries the Soulbond
     /// keyword and, while paired (`CardInstance.soulbond_partner`), confers
     /// this bonus on BOTH itself and its partner. Defaults to `None`.

@@ -626,6 +626,28 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Inventor's Axe — {R} Equipment with flash. ETB: get {E}{E} and attach to a
+/// creature you control. Equipped creature gets +2/+0. Equip—Pay {E}{E}.
+pub fn inventors_axe() -> CardDefinition {
+    CardDefinition {
+        name: "Inventor's Axe",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[]))],
+        equip_energy_cost: 2,
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, ..Default::default() }),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::AddEnergy(Value::Const(2))),
+            crate::effect::shortcut::etb(Effect::Attach {
+                what: Selector::This,
+                to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Monumental Henge — a Land that enters tapped unless you control a Plains.
 /// {T}: Add {W}. {2}{W}{W}, {T}: look at the top five, put a historic card into
 /// your hand, the rest on the bottom.

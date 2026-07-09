@@ -6630,6 +6630,7 @@ static MH3C: &[Factory] = &[
     super::mh3c::idol_of_false_gods,
     super::mh3c::spymasters_vault,
     super::mh3c::monumental_henge,
+    super::mh3c::inventors_axe,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

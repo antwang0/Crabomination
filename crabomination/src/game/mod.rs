@@ -8533,11 +8533,18 @@ impl GameState {
         if self.is_protected_from(equipment, target) {
             return Err(GameError::TargetHasProtection(target));
         }
+        // "Equip—Pay {E}" (Inventor's Axe): an energy surcharge on top of the
+        // mana cost. Gate before spending any mana so a failed pay is atomic.
+        let energy_cost = self.battlefield[equip_pos].definition.equip_energy_cost;
+        if energy_cost > 0 && self.players[p].energy < energy_cost {
+            return Err(GameError::InsufficientEnergy);
+        }
         // Pay the equip cost from the floated mana pool.
         self.players[p]
             .mana_pool
             .pay(&equip_cost)
             .map_err(GameError::Mana)?;
+        self.players[p].energy -= energy_cost;
         // Attach.
         self.battlefield[equip_pos].attached_to = Some(target);
         Ok(vec![GameEvent::AttachmentMoved {

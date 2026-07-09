@@ -475,6 +475,26 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Inventor's Axe enters, grants {E}{E}, attaches to your creature (+2/+0), and
+/// re-equips for an {E}{E} energy cost.
+#[test]
+fn inventors_axe_etb_energy_attach_and_energy_equip() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let axe = g.add_card_to_hand(0, catalog::inventors_axe());
+    cast(&mut g, axe, None, vec![]); // ETB: +{E}{E}, attach to the bear
+    assert_eq!(g.players[0].energy, 2, "ETB granted two energy");
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(bear), "attached on ETB");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "equipped creature +2/+0");
+    // Re-equip to a second creature for {E}{E}.
+    let ox = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ox);
+    g.perform_action(GameAction::Equip { equipment: axe, target: ox })
+        .expect("equip paying {E}{E}");
+    assert_eq!(g.players[0].energy, 0, "spent two energy to re-equip");
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(ox), "moved to the ox");
+}
+
 /// Monumental Henge's {2}{W}{W}, {T} digs five deep and puts a historic card
 /// (here a legendary) into hand; non-historic cards go to the bottom.
 #[test]
