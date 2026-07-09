@@ -480,3 +480,108 @@ fn flickering_ward_returns_to_hand() {
         "the Aura returned to hand"
     );
 }
+
+// ── Batch 4 ──────────────────────────────────────────────────────────────────
+
+/// Doomwake Giant shrinks the opponents' creatures on constellation.
+#[test]
+fn doomwake_giant_shrinks_opponents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::doomwake_giant());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // A second enchantment entering triggers constellation.
+    let ench = g.add_card_to_hand(0, catalog::nevermore());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, ench);
+    assert_eq!(g.computed_permanent(foe).unwrap().toughness, 1, "opponent's 2/2 becomes 1/1");
+}
+
+/// Auramancer / Monk Idealist recur an enchantment card from the graveyard.
+#[test]
+fn monk_idealist_recurs_enchantment() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::enchantresss_presence());
+    g.move_card_to_battlefield_for_test(0, catalog::monk_idealist());
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Enchantress's Presence"),
+        "the enchantment returned to hand"
+    );
+}
+
+/// Commune with the Gods digs five deep and bins the rest.
+#[test]
+fn commune_with_the_gods_digs_and_bins() {
+    let mut g = two_player_game();
+    // First-pushed card is on top, so the creature sits within the top five.
+    g.add_card_to_library(0, catalog::grizzly_bears()); // a creature to grab
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::commune_with_the_gods());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(
+            g.players[0].library.iter().find(|c| c.definition.name == "Grizzly Bears").unwrap().id,
+        )),
+    ]));
+    cast(&mut g, spell);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "grabbed the creature");
+    assert!(g.players[0].graveyard.len() >= 4, "the other revealed cards were binned");
+}
+
+/// Wildwood Rebirth returns a creature card from the graveyard.
+#[test]
+fn wildwood_rebirth_returns_creature() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::wildwood_rebirth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, spell, Target::Permanent(dead));
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "creature returned to hand");
+}
+
+/// Font of Fertility sacrifices for a basic land onto the battlefield tapped.
+#[test]
+fn font_of_fertility_fetches_a_basic() {
+    let mut g = two_player_game();
+    let font = g.add_card_to_battlefield(0, catalog::font_of_fertility());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // AutoDecider declines searches; script the fetch.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: font, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate Font of Fertility");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(font).is_none(), "the Font was sacrificed");
+    let forest = g.battlefield.iter().find(|c| c.definition.name == "Forest");
+    assert!(forest.map(|c| c.tapped).unwrap_or(false), "fetched a basic tapped");
+}
+
+/// Nylea's Presence draws on ETB and makes the enchanted land every basic type.
+#[test]
+fn nyleas_presence_draws_and_grants_types() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_hand(0, catalog::nyleas_presence());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, aura, Target::Permanent(land));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew on ETB");
+    let types = &g.computed_permanent(land).unwrap().subtypes.land_types;
+    assert!(
+        types.contains(&LandType::Island) && types.contains(&LandType::Mountain),
+        "enchanted land gained all basic land types: {types:?}"
+    );
+}

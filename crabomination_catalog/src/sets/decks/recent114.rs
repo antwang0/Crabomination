@@ -10,9 +10,9 @@ use crate::card::{
     SelectionRequirement, StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{cost, g, generic, hybrid, w, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, hybrid, w, Color, ManaCost};
 
 /// "Whenever you cast an enchantment spell, `body`." (Argothian Enchantress /
 /// Enchantress's Presence shape.)
@@ -762,6 +762,172 @@ pub fn flickering_ward() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Batch 4: constellation payoffs, enchantment recursion, ramp ──────────────
+
+/// Doomwake Giant — {4}{B} 4/6 Giant. Constellation — whenever this or another
+/// enchantment you control enters, creatures your opponents control get -1/-1
+/// until end of turn.
+pub fn doomwake_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Doomwake Giant",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        triggered_abilities: vec![constellation(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Auramancer — {2}{W} 2/2 Human Wizard. ETB: you may return an enchantment
+/// card from your graveyard to your hand.
+pub fn auramancer() -> CardDefinition {
+    CardDefinition {
+        name: "Auramancer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Return an enchantment card from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Monk Idealist — {2}{W} 2/2 Human Monk Cleric. ETB: return an enchantment
+/// card from your graveyard to your hand.
+pub fn monk_idealist() -> CardDefinition {
+    CardDefinition {
+        name: "Monk Idealist",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Enchantment),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Commune with the Gods — {1}{G} Sorcery. Reveal the top five cards; put a
+/// creature or enchantment card among them into your hand, the rest into your
+/// graveyard.
+pub fn commune_with_the_gods() -> CardDefinition {
+    CardDefinition {
+        name: "Commune with the Gods",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: true,
+            pick_filter: Some(
+                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            ),
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Wildwood Rebirth — {1}{G} Instant. Return target creature card from your
+/// graveyard to your hand.
+pub fn wildwood_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Wildwood Rebirth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Nylea's Presence — {1}{G} Aura. Enchant land. ETB draw a card. Enchanted
+/// land is every basic land type in addition to its other types.
+pub fn nyleas_presence() -> CardDefinition {
+    CardDefinition {
+        name: "Nylea's Presence",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Land },
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land is every basic land type.",
+            effect: StaticEffect::GrantAllBasicLandTypes {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Font of Fertility — {G} Enchantment. {1}{G}, Sacrifice this: Search your
+/// library for a basic land card and put it onto the battlefield tapped, then
+/// shuffle.
+pub fn font_of_fertility() -> CardDefinition {
+    CardDefinition {
+        name: "Font of Fertility",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
             ..Default::default()
         }],
         ..Default::default()
