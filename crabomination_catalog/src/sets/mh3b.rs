@@ -163,6 +163,84 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Kithkin Billyrider — {2}{W} 1/3 Kithkin Knight. Double strike.
+pub fn kithkin_billyrider() -> CardDefinition {
+    CardDefinition {
+        name: "Kithkin Billyrider",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::DoubleStrike],
+        ..Default::default()
+    }
+}
+
+/// Nyxborn Unicorn — {1}{W} 2/2 Enchantment Creature. Bestow {3}{W}. Mentor.
+/// As an Aura it grants +2/+2 and mentor.
+pub fn nyxborn_unicorn() -> CardDefinition {
+    CardDefinition {
+        name: "Nyxborn Unicorn",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::mentor()],
+        bestow: Some(cost(&[generic(3), w()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![crate::effect::shortcut::mentor()],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Eviscerator's Insight — {1}{B} Instant. Additional cost: sacrifice an
+/// artifact or creature. Draw two cards. Flashback {4}{B}.
+pub fn eviscerators_insight() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Eviscerator's Insight",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), b()]))],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Artifact.or(R::Creature),
+            count: 1,
+        }],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Copycrook — {2}{U}{U} 0/0 Shapeshifter Rogue. May enter as a copy of any
+/// creature, except it also has "Whenever this attacks, it connives."
+pub fn copycrook() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Copycrook",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter, CreatureType::Rogue],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature,
+            extra_triggered: vec![on_attack(crate::effect::shortcut::connive(1))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Aether Spike — {1}{U} Instant. Choose target spell. You get {E}{E}, then
 /// pay any amount of {E}. Counter it unless its controller pays {1} for each
 /// {E} paid this way.

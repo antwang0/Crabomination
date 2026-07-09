@@ -1,6 +1,6 @@
 //! Functionality tests for the MH3 batch-2 cards in `catalog::sets::mh3b`.
 
-use crate::card::{CounterType, Keyword};
+use crate::card::{CounterType, EventKind, Keyword};
 use crate::game::types::{Attack, AttackTarget, Target};
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
@@ -523,6 +523,72 @@ fn corrupted_conscience_steals_and_grants_infect() {
     cast(&mut g, aura, Some(Target::Permanent(victim)));
     assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "gained control of the enchanted creature");
     assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
+}
+
+/// Kithkin Billyrider is a 1/3 double striker.
+#[test]
+fn kithkin_billyrider_double_strikes() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::kithkin_billyrider());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 3));
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Nyxborn Unicorn bestowed grants the host +2/+2 and mentor.
+#[test]
+fn nyxborn_unicorn_bestow_grants_bonus() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::nyxborn_unicorn());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastBestow {
+        card_id: aura, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bestow onto the bear");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "host got +2/+2");
+    // The bestowed Unicorn is not itself a creature while attached.
+    assert!(!g.computed_permanent(aura).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "bestowed aura isn't a creature");
+}
+
+/// Eviscerator's Insight sacrifices a permanent as an additional cost, then
+/// draws two.
+#[test]
+fn eviscerators_insight_sacs_and_draws() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::eviscerators_insight());
+    fill_mana(&mut g);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast, sacrificing the bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature as the additional cost");
+    // -1 for the spell leaving hand, +2 drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew two cards");
+}
+
+/// Copycrook enters as a copy of a creature and gains the connive-on-attack rider.
+#[test]
+fn copycrook_enters_as_copy_with_connive() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::copycrook());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Copycrook");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).expect("copy survived (not a 0/0)");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "copied the 2/2 Grizzly Bears");
+    // The copy keeps the connive-on-attack rider (Attacks trigger present).
+    let inst = g.battlefield_find(id).unwrap();
+    assert!(inst.definition.triggered_abilities.iter().any(|t| t.event.kind == EventKind::Attacks),
+        "gained the connive-on-attack trigger");
 }
 
 /// Aether Spike gives {E}{E}, pays it all, and counters the target spell
