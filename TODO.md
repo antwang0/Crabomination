@@ -31,21 +31,21 @@ factory doc comment:
   `apply_enters_as_choice` before the first SBA sweep, so a printed `*/*` body
   never dies as a 0/0. The controller picks via a `ChooseMode` decision.
   Corrupted Shapeshifter (MH3) shipped.
-- 🟡 **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`). Shipped this
-  run: Corrupted Shapeshifter (`enters_as_choice`), Ghostfire Slice
-  (`self_cost_reduction_if_control` with `Multicolored.and(ControlledByOpponent)`),
-  Corrupted Conscience (control-aura + granted infect), Aether Spike
-  (`Effect::PayAnyEnergy` + `Value::EnergyPaidThisEffect`). Still open:
-  mana-Escalate spells (Collective Resistance — `Effect::Escalate.cost` only
-  models a resolution-time cost, not per-mode mana at cast), kicker-changes-
-  target (Expel the Unworthy), kicker "choose one; if kicked choose both"
-  (Depth Defiler), sacrifice-a-modified-creature additional cost with an "if a
-  modified creature was sacrificed" rider (Lethal Throwdown), Jolted Awake
-  (needs a dynamic-amount `PayEnergy` = target's MV + a `Value::TargetManaValue`),
-  and an Exalted counter type (Emissary of Soulfire — a counter that grants a
-  scaling triggered ability). (`Effect::LifeLockThisTurn` +
-  `Player.life_locked_this_turn` shipped — Flare of Fortitude is now the full
-  printed card.)
+- 🟡 **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`). The `mh3c`
+  module covers the landfall-battle-cry / Eldrazi-Spawn / modified-matters /
+  saga / "spell // land" modal-DFC clusters. Still open, each needing one
+  primitive: `{C}-was/wasn't-spent` cast predicate (Drowner of Truth, Wumpus
+  Aberration — `cast_mana_spent_by_color` tracks colors only, not colorless
+  spend on generic); kicker "choose one; if kicked choose both" (Depth Defiler);
+  kicker-changes-target (Expel the Unworthy); mana-Escalate at cast (Collective
+  Resistance — `Effect::Escalate.cost` is resolution-time only); sacrifice-a-
+  modified-creature additional cost + "if a modified creature was sacrificed"
+  rider (Lethal Throwdown); Jolted Awake (dynamic `PayEnergy` = target's MV);
+  Exalted counter type (Emissary of Soulfire); an Emerge card
+  (`CardDefinition.emerge` exists but unused — Twisted Riddlekeeper, Herigast);
+  a "counter-doubling once each turn" static (Cursed Wombat); the untap-at-most-
+  one-nonbasic static (Winter Moon); and optional Exert (CR 702.83a — combat.rs
+  auto-exerts; the "you may" is collapsed).
 - ⏳ **Nested modal after a payment defaults to mode 0** — `Effect::ChooseMode`
   reads `ctx.mode` (picked at trigger-push), so a modal buried inside
   `MayDo`/`PayEnergy` can't get its own resolution-time pick; bots always take

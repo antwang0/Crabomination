@@ -1229,6 +1229,7 @@ mod tests {
             saddled: false,
             station_charges: None,
             station_next_threshold: None,
+            modified: false,
         }
     }
 
