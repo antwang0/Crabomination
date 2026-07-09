@@ -1499,6 +1499,14 @@ pub struct PermanentView {
     /// card. `#[serde(default)]` for older clients.
     #[serde(default)]
     pub colors: Vec<crate::mana::Color>,
+    /// CR 700.9 — "modified": this permanent has one or more counters, is
+    /// equipped, or is enchanted by an Aura its controller controls. Distinct
+    /// from `pt_modified` (which only tracks a P/T change). Surfaced so the
+    /// client can badge modified creatures — the "modified-matters" payoffs
+    /// (Guardian of the Forgotten, Envoy of the Ancestors, Obstinate Gargoyle,
+    /// Expanding Ooze) read this. Populated by `project_permanent`.
+    #[serde(default)]
+    pub modified: bool,
 }
 
 impl PermanentView {

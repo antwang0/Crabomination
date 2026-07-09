@@ -44,8 +44,10 @@ mod slots;
 mod stats;
 mod status;
 
-use config::{deck_overrides, pairing_timeout_from_env, usize_from_env_min, Format};
-use config::{DEFAULT_MAX_CONNS, DEFAULT_MAX_CONNS_PER_IP};
+use config::{deck_overrides, pairing_timeout_from_env, usize_from_env_clamped, Format};
+#[cfg(test)]
+use config::usize_from_env_min;
+use config::{DEFAULT_MAX_CONNS, DEFAULT_MAX_CONNS_PER_IP, MAX_CONNS_CAP};
 use slots::{SlotGuard, SlotManager};
 use stats::{format_duration, format_match_stats, match_stats};
 
@@ -66,8 +68,9 @@ fn main() {
     // Connection caps must be at least 1 — a `0` (typo or empty-string-ish
     // misconfig) would otherwise silently refuse every client, so treat
     // sub-1 values as a misconfig and fall back to the default.
-    let global_conns = usize_from_env_min("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS, 1);
-    let per_ip_conns = usize_from_env_min("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP, 1);
+    let global_conns = usize_from_env_clamped("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS, 1, MAX_CONNS_CAP);
+    let per_ip_conns =
+        usize_from_env_clamped("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP, 1, MAX_CONNS_CAP);
     if per_ip_conns > global_conns {
         eprintln!(
             "warning: CRAB_MAX_CONNS_PER_IP={per_ip_conns} exceeds CRAB_MAX_CONNS={global_conns}; \

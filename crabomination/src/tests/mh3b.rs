@@ -436,3 +436,18 @@ fn etched_slith_grows_on_combat_damage() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(slith).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// The view surfaces CR 700.9 "modified" so the client can badge modified
+/// creatures (the modified-matters payoffs read this).
+#[test]
+fn permanent_view_surfaces_modified_flag() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pv = crate::server::view::project(&g, 0)
+        .battlefield.iter().find(|p| p.id == bear).cloned().expect("bear in view");
+    assert!(!pv.modified, "unmodified creature");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let pv2 = crate::server::view::project(&g, 0)
+        .battlefield.iter().find(|p| p.id == bear).cloned().unwrap();
+    assert!(pv2.modified, "a counter makes it modified");
+}

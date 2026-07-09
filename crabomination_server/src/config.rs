@@ -186,6 +186,13 @@ pub(crate) const DEFAULT_MAX_CONNS: usize = 100;
 /// Default concurrent connection slots from any one remote IP.
 pub(crate) const DEFAULT_MAX_CONNS_PER_IP: usize = 5;
 
+/// Sane upper bound on connection-slot counts. A larger configured
+/// `CRAB_MAX_CONNS` / `CRAB_MAX_CONNS_PER_IP` is clamped down to this
+/// (mirroring [`MAX_PAIRING_TIMEOUT`]) so a typo like an extra zero can't try to
+/// reserve an absurd slot budget / file-descriptor count. 100k is far above any
+/// real deployment yet keeps the `Semaphore` permit count well-bounded.
+pub(crate) const MAX_CONNS_CAP: usize = 100_000;
+
 /// Parse a non-negative integer env var (e.g. connection caps). Falls back
 /// to `default` for missing, empty, or non-numeric values. `0` is preserved
 /// (callers treat 0 as "unlimited"). Surrounding whitespace is trimmed, matching
@@ -210,9 +217,11 @@ pub(crate) fn parse_usize_or(raw: Option<&str>, key: &str, default: usize) -> us
 
 /// Read `key` as a `usize`, enforcing a minimum: values below `min` (most
 /// importantly `0`) are treated as a misconfig and fall back to `default`.
-/// Pass `min == 0` for "any non-negative value is fine". Used for the connection
-/// caps, where a `0` would otherwise refuse every client — mirroring the
-/// zero-guard in [`pairing_timeout_from_env`].
+/// Pass `min == 0` for "any non-negative value is fine". The floor-only reader
+/// behind the clamped connection-cap path — retained for the env-round-trip
+/// tests that exercise the floor without the ceiling (`usize_from_env_clamped`
+/// is the production entry point).
+#[cfg(test)]
 pub(crate) fn usize_from_env_min(key: &str, default: usize, min: usize) -> usize {
     parse_usize_min(env::var(key).ok().as_deref(), key, default, min)
 }
@@ -226,6 +235,32 @@ pub(crate) fn parse_usize_min(raw: Option<&str>, key: &str, default: usize, min:
     } else {
         v
     }
+}
+
+/// Read `key` as a `usize`, enforcing both a floor (`min`) and a ceiling
+/// (`max`). Below-floor values fall back to `default`; above-ceiling values are
+/// clamped down to `max` (with a warning) rather than reset — a too-large cap is
+/// still a usable cap, unlike a zero one. Pure core of
+/// [`usize_from_env_clamped`].
+pub(crate) fn parse_usize_clamped(
+    raw: Option<&str>,
+    key: &str,
+    default: usize,
+    min: usize,
+    max: usize,
+) -> usize {
+    let v = parse_usize_min(raw, key, default, min);
+    if v > max {
+        eprintln!("warning: {key}={v} exceeds the maximum {max} — clamping to {max}");
+        max
+    } else {
+        v
+    }
+}
+
+/// Env wrapper for [`parse_usize_clamped`].
+pub(crate) fn usize_from_env_clamped(key: &str, default: usize, min: usize, max: usize) -> usize {
+    parse_usize_clamped(env::var(key).ok().as_deref(), key, default, min, max)
 }
 
 /// Read `CRAB_PAIRING_TIMEOUT_SECS` from the environment. Falls back to
@@ -267,8 +302,8 @@ pub(crate) fn parse_pairing_timeout(raw: Option<&str>) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_pairing_timeout, parse_usize_min, parse_usize_or, Format, DEFAULT_PAIRING_TIMEOUT,
-        MAX_PAIRING_TIMEOUT,
+        parse_pairing_timeout, parse_usize_clamped, parse_usize_min, parse_usize_or, Format,
+        DEFAULT_PAIRING_TIMEOUT, MAX_PAIRING_TIMEOUT,
     };
 
     #[test]
@@ -301,6 +336,19 @@ mod tests {
         assert_eq!(parse_usize_or(Some("   "), "K", 9), 9, "blank → default");
         assert_eq!(parse_usize_or(Some("-3"), "K", 9), 9, "negative → default");
         assert_eq!(parse_usize_or(Some("ten"), "K", 9), 9, "non-numeric → default");
+    }
+
+    #[test]
+    fn parse_usize_clamped_bounds_both_ends() {
+        // Below floor → default; above ceiling → clamped to max; in-range passes.
+        assert_eq!(parse_usize_clamped(Some("0"), "K", 100, 1, 100_000), 100, "below floor → default");
+        assert_eq!(parse_usize_clamped(Some("50"), "K", 100, 1, 100_000), 50, "in range preserved");
+        assert_eq!(
+            parse_usize_clamped(Some("999999999"), "K", 100, 1, 100_000),
+            100_000,
+            "above ceiling clamped to max, not reset to default",
+        );
+        assert_eq!(parse_usize_clamped(None, "K", 100, 1, 100_000), 100, "unset → default");
     }
 
     #[test]
