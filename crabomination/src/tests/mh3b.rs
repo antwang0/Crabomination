@@ -745,6 +745,40 @@ fn temperamental_oozewagg_grants_modified_trample() {
         "modified creature gained trample");
 }
 
+/// Utter Insignificance shrinks the enchanted creature to a vanilla 1/1.
+#[test]
+fn utter_insignificance_shrinks_and_strips() {
+    let mut g = two_player_game();
+    // Grizzly Bears (2/2) — but use a creature with an ability to prove strip.
+    let victim = g.add_card_to_battlefield(1, catalog::voltstorm_angel()); // 4/4 flyer
+    let aura = g.add_card_to_hand(0, catalog::utter_insignificance());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(victim).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "base P/T set to 1/1");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "lost all abilities (flying gone)");
+}
+
+/// Trickster's Elk bestowed turns the host into a green 3/3 Elk with no abilities.
+#[test]
+fn tricksters_elk_bestow_rewrites_host() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::voltstorm_angel()); // 4/4 flyer
+    let aura = g.add_card_to_hand(0, catalog::tricksters_elk());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastBestow {
+        card_id: aura, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bestow");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "base 3/3");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "lost abilities");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Elk), "is an Elk");
+}
+
 /// Siege Smash mode 1 pumps a creature +3/+2 and grants it trample (same slot).
 #[test]
 fn siege_smash_mode1_pump_and_trample() {

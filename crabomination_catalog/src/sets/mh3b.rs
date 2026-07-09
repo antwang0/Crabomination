@@ -515,6 +515,57 @@ pub fn kithkin_billyrider() -> CardDefinition {
     }
 }
 
+/// Utter Insignificance — {1}{U} Aura. Flash. Enchant creature. Enchanted
+/// creature loses all abilities and has base P/T 1/1. {2}{C}: Exile it.
+pub fn utter_insignificance() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Utter Insignificance",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), colorless(1)]),
+            effect: Effect::Move {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Trickster's Elk — {2}{G} 3/3 Enchantment Creature — Elk. Bestow {1}{G}. As
+/// an Aura the enchanted creature loses all abilities and is a green 3/3 Elk.
+pub fn tricksters_elk() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Trickster's Elk",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        bestow: Some(cost(&[generic(1), g()])),
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((3, 3)),
+            remove_abilities: true,
+            set_colors: Some(vec![Color::Green]),
+            set_creature_types: Some(vec![CreatureType::Elk]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Siege Smash — {1}{R} Instant. Split second. Choose one — destroy target
 /// artifact; or target creature gets +3/+2 and gains trample until end of turn.
 pub fn siege_smash() -> CardDefinition {
