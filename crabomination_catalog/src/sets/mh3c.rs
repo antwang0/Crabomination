@@ -438,3 +438,153 @@ pub fn lion_umbra() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 5: more "spell // land" and "creature // land" modal DFCs + Auras ────
+
+/// Witch Enchanter // Witch-Blessed Meadow — {3}{W} 2/2 Human Warlock. ETB:
+/// destroy target artifact or enchantment an opponent controls.
+pub fn witch_enchanter() -> CardDefinition {
+    CardDefinition {
+        name: "Witch Enchanter",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Destroy {
+            what: target_filtered((R::Artifact.or(R::Enchantment)).and(R::ControlledByOpponent)),
+        })],
+        back_face: Some(Box::new(mdfc_pain_land("Witch-Blessed Meadow", Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Pinnacle Monk // Mystic Peak — {3}{R}{R} 2/2 Djinn Monk with prowess. ETB:
+/// return target instant or sorcery card from your graveyard to your hand.
+pub fn pinnacle_monk() -> CardDefinition {
+    CardDefinition {
+        name: "Pinnacle Monk",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        back_face: Some(Box::new(mdfc_pain_land("Mystic Peak", Color::Red))),
+        ..Default::default()
+    }
+}
+
+/// Bridgeworks Battle // Tanglespan Bridgeworks — {2}{G} Sorcery. Target creature
+/// you control gets +2/+2, then fights up to one target creature you don't
+/// control.
+pub fn bridgeworks_battle() -> CardDefinition {
+    CardDefinition {
+        name: "Bridgeworks Battle",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            },
+        ]),
+        back_face: Some(Box::new(mdfc_pain_land("Tanglespan Bridgeworks", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Disciple of Freyalise // Garden of Freyalise — {3}{G}{G}{G} 3/3 Elf Druid.
+/// ETB: you may sacrifice another creature; if you do, gain X life and draw X
+/// cards, where X is that creature's power.
+pub fn disciple_of_freyalise() -> CardDefinition {
+    CardDefinition {
+        name: "Disciple of Freyalise",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::MaySacrifice {
+            description: "Sacrifice another creature: gain and draw = its power".into(),
+            filter: R::Creature.and(R::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(Effect::Seq(vec![
+                Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::SacrificedPower },
+                Effect::Draw { who: Selector::You, amount: Value::SacrificedPower },
+            ])),
+            else_: None,
+        })],
+        back_face: Some(Box::new(mdfc_pain_land("Garden of Freyalise", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Glasswing Grace // Age-Graced Chapel — {3}{W/B}{W/B} Aura. Enchanted creature
+/// gets +2/+2 and has flying and lifelink.
+pub fn glasswing_grace() -> CardDefinition {
+    CardDefinition {
+        name: "Glasswing Grace",
+        cost: cost(&[generic(3), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Flying, Keyword::Lifelink],
+            ..Default::default()
+        }),
+        back_face: Some(Box::new(mdfc_dual_tapland("Age-Graced Chapel", Color::White, Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Strength of the Harvest // Haven of the Harvest — {2}{G/W} Aura. Enchanted
+/// creature gets +1/+1 for each creature and/or enchantment you control.
+pub fn strength_of_the_harvest() -> CardDefinition {
+    use crate::card::EquipScale;
+    CardDefinition {
+        name: "Strength of the Harvest",
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::Creature.or(R::Enchantment),
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: None,
+                count_graveyard: None,
+                count_all_graveyards: None,
+            }),
+            ..Default::default()
+        }),
+        back_face: Some(Box::new(mdfc_dual_tapland("Haven of the Harvest", Color::Green, Color::White))),
+        ..Default::default()
+    }
+}

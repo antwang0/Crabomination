@@ -336,3 +336,90 @@ fn lion_umbra_buffs_modified_creature() {
     assert_eq!((cp.power, cp.toughness), (6, 6), "+3/+3 on top of the counter");
     assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach));
 }
+
+// ── Batch 5 tests ─────────────────────────────────────────────────────────────
+
+/// Witch Enchanter's ETB destroys an opponent's artifact or enchantment.
+#[test]
+fn witch_enchanter_etb_destroys_permanent() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::wurmcoil_larva()); // an artifact
+    let id = g.add_card_to_hand(0, catalog::witch_enchanter());
+    cast(&mut g, id, Some(Target::Permanent(art)), vec![]);
+    g.check_state_based_actions();
+    // Wurmcoil Larva dies → replaced by tokens, so the original is gone.
+    assert!(g.battlefield_find(art).is_none(), "opponent's artifact destroyed");
+}
+
+/// Pinnacle Monk returns an instant/sorcery from your graveyard on entry.
+#[test]
+fn pinnacle_monk_returns_spell_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::pinnacle_monk());
+    // Only one instant/sorcery in the graveyard — AutoDecider picks it.
+    cast(&mut g, id, None, vec![]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "spell returned to hand");
+}
+
+/// Bridgeworks Battle pumps your creature +2/+2 and fights an enemy.
+#[test]
+fn bridgeworks_battle_pump_and_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 4/4
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::bridgeworks_battle());
+    cast(&mut g, id, Some(Target::Permanent(mine)), vec![Target::Permanent(enemy)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(enemy).is_none(), "4-power fighter killed the 2/2");
+    // Ours took 2 back but is 4/4 → survives.
+    assert!(g.battlefield_find(mine).is_some(), "our pumped creature survives the fight");
+}
+
+/// Disciple of Freyalise can sac a creature to gain and draw its power.
+#[test]
+fn disciple_of_freyalise_sac_draws_power() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::disciple_of_freyalise());
+    let hand = g.players[0].hand.len(); // includes the Disciple
+    // Yes to the may-sacrifice; only the angel is a legal sac, so it's auto-picked.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    // hand loses the Disciple on cast (-1), then draws 4.
+    cast(&mut g, id, None, vec![]);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the angel");
+    assert_eq!(g.players[0].life, life + 4, "gained X = 4 life");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 4, "drew X = 4 cards");
+}
+
+/// Glasswing Grace grants +2/+2, flying, and lifelink.
+#[test]
+fn glasswing_grace_buffs_creature() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::glasswing_grace());
+    cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Strength of the Harvest scales with your creatures and enchantments.
+#[test]
+fn strength_of_the_harvest_scales() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // another creature
+    let id = g.add_card_to_hand(0, catalog::strength_of_the_harvest());
+    cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
+    // After attaching, you control 2 creatures + the aura enchantment = 3.
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "2/2 + 3 (2 creatures + 1 enchantment)");
+}

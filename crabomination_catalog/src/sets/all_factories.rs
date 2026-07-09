@@ -6610,6 +6610,12 @@ static MH3C: &[Factory] = &[
     super::mh3c::stump_stomp,
     super::mh3c::waterlogged_teachings,
     super::mh3c::lion_umbra,
+    super::mh3c::witch_enchanter,
+    super::mh3c::pinnacle_monk,
+    super::mh3c::bridgeworks_battle,
+    super::mh3c::disciple_of_freyalise,
+    super::mh3c::glasswing_grace,
+    super::mh3c::strength_of_the_harvest,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
