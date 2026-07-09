@@ -41,7 +41,10 @@
 //! information for a source sacrificed as a cost (CR 608.2h — Blazing Bomb),
 //! Landcycling fetching a basic of the named type (CR 702.28e), and layer-7
 //! P/T ordering where a dynamic anthem stacks with +1/+1 counters and
-//! re-scales live to the board (CR 613.7 — Warrior of Light).
+//! re-scales live to the board (CR 613.7 — Warrior of Light), Aura-granted
+//! indestructible surviving lethal damage (CR 704.5g — Shielded by Faith), an
+//! Opalescence-animated enchantment dying to lethal (CR 613), and a
+//! protection-from-creatures attacker being unblockable (CR 702.16e).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -6956,4 +6959,88 @@ fn cr_707_2e_token_copy_ignores_source_counters() {
         .expect("token copy exists");
     let tp = g.computed_permanent(token.id).unwrap();
     assert_eq!((tp.power, tp.toughness), (2, 2), "the copy uses printed P/T, ignoring the source's counter");
+}
+
+// ── CR 704.5g — Aura-granted indestructible survives lethal damage ───────────
+
+/// A creature made indestructible by an Aura (layer-6 grant — Shielded by
+/// Faith) is not destroyed by lethal marked damage (CR 704.5g). Regression for
+/// the SBA reading *computed* indestructible, not just the printed keyword.
+#[test]
+fn cr_704_5g_aura_granted_indestructible_survives_lethal() {
+    use crate::game::types::Target;
+    use crate::game::{drain_stack, GameAction};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::shielded_by_faith());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Shielded by Faith");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(bear).unwrap().damage = 10; // way past lethal
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_some(), "indestructible creature survives lethal damage");
+}
+
+// ── CR 613 — Opalescence-animated enchantment dies to lethal damage ──────────
+
+/// Opalescence makes Nevermore ({1}{W}{W}, MV 3) a 3/3 creature; three marked
+/// damage is then lethal and the SBA destroys it (layer-7 P/T feeds 704.5g).
+#[test]
+fn cr_613_opalescence_animated_enchantment_dies_to_lethal() {
+    use crate::card::CardType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::opalescence());
+    let nm = g.add_card_to_battlefield(0, catalog::nevermore());
+    let cp = g.computed_permanent(nm).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature) && cp.toughness == 3);
+    g.battlefield_find_mut(nm).unwrap().damage = 3; // lethal for the 3/3
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(nm).is_none(), "the 3/3 animated enchantment dies");
+}
+
+// ── CR 702.16e — protection from creatures blocks a creature blocker ─────────
+
+/// A creature with protection from creatures (Unquestioned Authority) can't be
+/// blocked by a creature (CR 509.1b / 702.16e).
+#[test]
+fn cr_702_16e_protection_from_creatures_cant_be_blocked() {
+    use crate::game::types::{Attack, AttackTarget, Target, TurnStep};
+    use crate::game::{drain_stack, GameAction};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::unquestioned_authority());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::forest());
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Unquestioned Authority");
+    drain_stack(&mut g);
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut guard = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        guard += 1;
+        assert!(guard < 60);
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_err(),
+        "a creature can't block a creature with protection from creatures"
+    );
 }
