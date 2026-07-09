@@ -6536,6 +6536,8 @@ static MH3B: &[Factory] = &[
     super::mh3b::drownyard_lurker,
     super::mh3b::emrakuls_messenger,
     super::mh3b::petrifying_meddler,
+    super::mh3b::indebted_spirit,
+    super::mh3b::temperamental_oozewagg,
     super::mh3b::kithkin_billyrider,
     super::mh3b::nyxborn_unicorn,
     super::mh3b::eviscerators_insight,

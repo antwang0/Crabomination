@@ -525,6 +525,40 @@ fn corrupted_conscience_steals_and_grants_infect() {
     assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
 }
 
+/// Indebted Spirit bestowed grants +1/+1 and afterlife (host dies → Spirit).
+#[test]
+fn indebted_spirit_bestow_and_afterlife() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::indebted_spirit());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastBestow {
+        card_id: aura, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bestow");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "host got +1/+1");
+    // Host dies → afterlife makes a Spirit token.
+    let _ = g.remove_to_graveyard_with_triggers(host);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit" && c.controller == 0),
+        "afterlife minted a Spirit");
+}
+
+/// Temperamental Oozewagg gives modified creatures you control trample.
+#[test]
+fn temperamental_oozewagg_grants_modified_trample() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::temperamental_oozewagg());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Unmodified bear: no trample.
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    // A +1/+1 counter modifies it → gains trample.
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        "modified creature gained trample");
+}
+
 /// Kithkin Billyrider is a 1/3 double striker.
 #[test]
 fn kithkin_billyrider_double_strikes() {

@@ -163,6 +163,60 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Indebted Spirit — {W} 1/1 Enchantment Creature. Bestow {2}{W}. Afterlife 1.
+/// As an Aura it grants +1/+1 and afterlife 1.
+pub fn indebted_spirit() -> CardDefinition {
+    use crate::effect::shortcut::afterlife;
+    CardDefinition {
+        name: "Indebted Spirit",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![afterlife(1)],
+        bestow: Some(cost(&[generic(2), w()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![afterlife(1)],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Temperamental Oozewagg — {3}{G} 4/4 Ooze Brushwagg. {2}{G}: Adapt 2.
+/// Modified creatures you control have trample.
+pub fn temperamental_oozewagg() -> CardDefinition {
+    CardDefinition {
+        name: "Temperamental Oozewagg",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze, CreatureType::Brushwagg],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Modified creatures you control have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::IsModified),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Kithkin Billyrider — {2}{W} 1/3 Kithkin Knight. Double strike.
 pub fn kithkin_billyrider() -> CardDefinition {
     CardDefinition {
