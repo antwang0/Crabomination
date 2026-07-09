@@ -704,6 +704,11 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub cannot_gain_life: bool,
+    /// True when this player's life total can't change this turn (Flare of
+    /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
+    /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub life_locked: bool,
     /// CR 702.11 — true when this player has hexproof from a static effect
     /// (Aegis of the Gods, Leyline of Sanctity, Solitary Confinement's shroud).
     /// Surfaced so UIs can flag that opponents can't target the player.

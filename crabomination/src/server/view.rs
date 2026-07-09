@@ -634,6 +634,7 @@ fn project_player(
         is_monarch,
         has_city_blessing: player.city_blessing,
         cannot_gain_life,
+        life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,
         team,
@@ -2148,6 +2149,16 @@ mod tests {
         let v = project(&state, 0);
         assert!(v.players[0].cannot_gain_life, "controller's lifegain is locked");
         assert!(v.players[1].cannot_gain_life, "opponent's lifegain is locked too");
+    }
+
+    #[test]
+    fn life_lock_surfaces_in_the_view() {
+        let mut state = two_player_game();
+        assert!(!project(&state, 0).players[0].life_locked, "not locked by default");
+        state.players[0].life_locked_this_turn = true;
+        let v = project(&state, 0);
+        assert!(v.players[0].life_locked, "controller's frozen life total surfaces");
+        assert!(!v.players[1].life_locked, "opponent's life total is not frozen");
     }
 
     #[test]

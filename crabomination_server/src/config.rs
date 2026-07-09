@@ -285,7 +285,16 @@ pub(crate) fn parse_pairing_timeout(raw: Option<&str>) -> Duration {
                 );
                 DEFAULT_PAIRING_TIMEOUT
             }
-            Ok(n) => Duration::from_secs(n).min(MAX_PAIRING_TIMEOUT),
+            Ok(n) if n > MAX_PAIRING_TIMEOUT.as_secs() => {
+                eprintln!(
+                    "warning: CRAB_PAIRING_TIMEOUT_SECS={n} exceeds the maximum {}s — \
+                     clamping to {}s",
+                    MAX_PAIRING_TIMEOUT.as_secs(),
+                    MAX_PAIRING_TIMEOUT.as_secs(),
+                );
+                MAX_PAIRING_TIMEOUT
+            }
+            Ok(n) => Duration::from_secs(n),
             Err(_) => {
                 eprintln!(
                     "warning: CRAB_PAIRING_TIMEOUT_SECS={s:?} not a non-negative integer — \
@@ -314,6 +323,10 @@ mod tests {
         assert_eq!(parse_pairing_timeout(Some("0")), DEFAULT_PAIRING_TIMEOUT, "zero → default");
         assert_eq!(parse_pairing_timeout(Some("nope")), DEFAULT_PAIRING_TIMEOUT, "garbage → default");
         assert_eq!(parse_pairing_timeout(Some("999999999")), MAX_PAIRING_TIMEOUT, "clamped to cap");
+        // A value exactly at (and just under) the cap passes through unclamped.
+        assert_eq!(parse_pairing_timeout(Some(&MAX_PAIRING_TIMEOUT.as_secs().to_string())), MAX_PAIRING_TIMEOUT, "at cap → cap");
+        let under = MAX_PAIRING_TIMEOUT.as_secs() - 1;
+        assert_eq!(parse_pairing_timeout(Some(&under.to_string())).as_secs(), under, "just under cap unclamped");
     }
 
     #[test]
