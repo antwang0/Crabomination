@@ -503,6 +503,31 @@ impl GameState {
                 };
                 triggers.push((id, sac_effect, p, None));
             }
+            // Battle cry N — CR 702.92a: "Whenever this creature attacks, each
+            // other attacking creature gets +N/+0 until end of turn." Translate
+            // the keyword to a SelfSource Attacks trigger pumping the rest of
+            // the attacking batch.
+            let battle_cry_n = computed_kw(id).iter().find_map(|kw| {
+                if let Keyword::BattleCry(n) = kw {
+                    Some(*n)
+                } else {
+                    None
+                }
+            });
+            if let Some(n) = battle_cry_n
+                && n > 0
+            {
+                let pump = Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        crate::card::SelectionRequirement::IsAttacking
+                            .and(crate::card::SelectionRequirement::OtherThanSource),
+                    ),
+                    power: Value::Const(n as i32),
+                    toughness: Value::Const(0),
+                    duration: crate::effect::Duration::EndOfTurn,
+                };
+                triggers.push((id, pump, p, None));
+            }
             // Firebending N — CR 702.189a: a triggered mana ability (resolves
             // without the stack, CR 605.3b). Add N {R} now; the mana survives
             // step/phase emptying until end of combat (`firebending_kept_red`).

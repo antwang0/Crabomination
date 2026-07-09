@@ -105,6 +105,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::StartYourEngines => "Start your engines!",
         Keyword::Devoid => "Devoid",
         Keyword::Annihilator(_) => "Annihilator",
+        Keyword::BattleCry(_) => "Battle cry",
         Keyword::Firebending(_)
         | Keyword::FirebendingPower
         | Keyword::FirebendingCreaturesYouControl => "Firebending",

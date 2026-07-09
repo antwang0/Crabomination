@@ -6595,6 +6595,18 @@ static MH3B: &[Factory] = &[
     super::mh3b::flare_of_cultivation,
     super::mh3b::flare_of_fortitude,
 ];
+static MH3C: &[Factory] = &[
+    super::mh3c::goblin_wardriver,
+    super::mh3c::accorder_paladin,
+    super::mh3c::signal_pest,
+    super::mh3c::reckless_pyrosurfer,
+    super::mh3c::spawn_gang_commander,
+    super::mh3c::vaultborn_tyrant,
+    super::mh3c::hydra_trainer,
+    super::mh3c::signature_slam,
+    super::mh3c::wurmcoil_larva,
+    super::mh3c::ajani_fells_the_godsire,
+];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
     super::mkm::reasonable_doubt,
@@ -12430,6 +12442,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("m11", M11),
     ("mh3", MH3),
     ("mh3b", MH3B),
+    ("mh3c", MH3C),
     ("mkm", MKM),
     ("mod_set", MOD_SET),
     ("ogw", OGW),

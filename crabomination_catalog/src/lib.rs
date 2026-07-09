@@ -64,6 +64,7 @@ pub use sets::lea::*;
 pub use sets::m11::*;
 pub use sets::mh3::*;
 pub use sets::mh3b::*;
+pub use sets::mh3c::*;
 pub use sets::mkm::*;
 pub use sets::ogw::*;
 pub use sets::one::*;

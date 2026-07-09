@@ -297,6 +297,7 @@ pub mod lea;
 pub mod m11;
 pub mod mh3;
 pub mod mh3b;
+pub mod mh3c;
 pub mod mkm;
 pub mod ogw;
 pub mod one;

@@ -131,6 +131,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Undying => "Und",
         // Eldrazi annihilator — a combat threat worth surfacing on the board.
         Annihilator(_) => "Ann",
+        // Battle cry — pumps the rest of the attacking team, a real combat read.
+        BattleCry(_) => "BCry",
         // Absorb N (CR 702.64) — prevents N damage from each source per event,
         // so an opponent should weigh whether an attacker punches through.
         Absorb(_) => "Abs",
@@ -206,7 +208,7 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     use Keyword::*;
     let n = match kw {
         Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
-        | Poisonous(n) | CantBeBlockedExceptByN(n) => *n,
+        | Poisonous(n) | CantBeBlockedExceptByN(n) | BattleCry(n) => *n,
         _ => return None,
     };
     Some(n.to_string())

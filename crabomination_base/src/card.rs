@@ -777,6 +777,10 @@ pub enum Keyword {
     Phasing,
     Dredge(u32),
     Annihilator(u32),
+    /// CR 702.92 — Battle cry N. "Whenever this creature attacks, each other
+    /// attacking creature gets +N/+0 until end of turn." Auto-fired as an
+    /// Attacks trigger in `declare_attackers` (like Annihilator).
+    BattleCry(u32),
     /// "This doesn't untap during your untap step if it has a [kind] counter
     /// on it" (Steel Dromedary). Checked in `do_untap`.
     DoesntUntapWhileCounter(CounterType),
