@@ -515,6 +515,35 @@ pub fn kithkin_billyrider() -> CardDefinition {
     }
 }
 
+/// Siege Smash — {1}{R} Instant. Split second. Choose one — destroy target
+/// artifact; or target creature gets +3/+2 and gains trample until end of turn.
+pub fn siege_smash() -> CardDefinition {
+    CardDefinition {
+        name: "Siege Smash",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::SplitSecond],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+            // The chosen mode owns slot 0; pump and trample grant share it.
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(3),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Nyxborn Hydra — {X}{G} 0/1 Enchantment Creature. Reach, trample. Enters with
 /// X +1/+1 counters. Bestow {X}{G}{G}; as an Aura it grants +1/+1 per +1/+1
 /// counter on it, plus reach and trample.

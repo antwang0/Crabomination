@@ -745,6 +745,36 @@ fn temperamental_oozewagg_grants_modified_trample() {
         "modified creature gained trample");
 }
 
+/// Siege Smash mode 1 pumps a creature +3/+2 and grants it trample (same slot).
+#[test]
+fn siege_smash_mode1_pump_and_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::siege_smash());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Siege Smash mode 1");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4), "+3/+2");
+    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample on the same target");
+}
+
+/// Siege Smash mode 0 destroys a target artifact.
+#[test]
+fn siege_smash_mode0_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::siege_smash());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(art)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Siege Smash mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
 /// Nyxborn Hydra enters with X +1/+1 counters as a creature.
 #[test]
 fn nyxborn_hydra_enters_with_x_counters() {

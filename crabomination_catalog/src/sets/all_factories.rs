@@ -6536,6 +6536,7 @@ static MH3B: &[Factory] = &[
     super::mh3b::drownyard_lurker,
     super::mh3b::emrakuls_messenger,
     super::mh3b::petrifying_meddler,
+    super::mh3b::siege_smash,
     super::mh3b::nyxborn_hydra,
     super::mh3b::glyph_elemental,
     super::mh3b::skoa_embermage,
