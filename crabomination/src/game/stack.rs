@@ -2008,6 +2008,7 @@ impl GameState {
         // was targeted, not to the active player.
         for q in 0..self.players.len() {
             self.players[q].cannot_gain_life_this_turn = false;
+            self.players[q].life_locked_this_turn = false;
             // CR 104.3d — Angel's Grace's protections end with the turn.
             self.players[q].cant_lose_this_turn = false;
             self.players[q].damage_floor_this_turn = false;

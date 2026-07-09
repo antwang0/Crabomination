@@ -4237,6 +4237,9 @@ impl GameState {
     /// targeting `seat` on the floor.
     pub fn player_cannot_gain_life_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
+        if self.players[seat].life_locked_this_turn {
+            return true;
+        }
         if self.players[seat].cannot_gain_life || self.players[seat].cannot_gain_life_this_turn {
             return true;
         }
@@ -4289,6 +4292,9 @@ impl GameState {
     /// by the lose-life paths (`Effect::LoseLife`, drain-target gates).
     pub fn player_cannot_lose_life_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
+        if self.players[seat].life_locked_this_turn {
+            return true;
+        }
         self.battlefield.iter().any(|src| {
             src.definition.static_abilities.iter().any(|sa| {
                 if let StaticEffect::PlayerCannotLoseLife { target } = &sa.effect {

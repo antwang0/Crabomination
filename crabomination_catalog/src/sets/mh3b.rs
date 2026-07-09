@@ -1074,8 +1074,8 @@ pub fn flare_of_cultivation() -> CardDefinition {
 }
 
 /// Flare of Fortitude — {2}{W}{W} Instant (or sac a nontoken white creature).
-/// Until end of turn, permanents you control gain hexproof and indestructible.
-/// (The "your life total can't change" rider is approximated away.)
+/// Until end of turn, your life total can't change and permanents you control
+/// gain hexproof and indestructible.
 pub fn flare_of_fortitude() -> CardDefinition {
     let yours = || Selector::EachPermanent(R::ControlledByYou);
     CardDefinition {
@@ -1083,6 +1083,7 @@ pub fn flare_of_fortitude() -> CardDefinition {
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
+            Effect::LifeLockThisTurn { who: Selector::Player(PlayerRef::You) },
             Effect::GrantKeyword { what: yours(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
             Effect::GrantKeyword {
                 what: yours(),

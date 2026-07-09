@@ -751,7 +751,7 @@ impl Effect {
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 value_has_target(power) || value_has_target(toughness)
             }
-            Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
+            Effect::LifeGainLockThisTurn { who } | Effect::LifeLockThisTurn { who } => sel_has_target(who),
             Effect::LifeGainLockGame { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
@@ -1955,6 +1955,7 @@ impl Effect {
                 Effect::Endure { target, .. } => sel_find(target, slot),
                 Effect::Airbend { what } => sel_find(what, slot),
                 Effect::LifeGainLockThisTurn { who }
+                | Effect::LifeLockThisTurn { who }
                 | Effect::GrantSpellsUncounterableThisTurn { who }
                 | Effect::GrantHexproofFromColorThisTurn { who, .. }
                 | Effect::CantCastNoncreatureThisTurn { who } => sel_find(who, slot),

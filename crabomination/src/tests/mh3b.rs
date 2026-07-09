@@ -631,4 +631,9 @@ fn flare_of_fortitude_alt_cost_and_protection() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Hexproof) && cp.keywords.contains(&Keyword::Indestructible),
         "your creatures gained hexproof + indestructible");
+    // Life total can't change this turn — neither gain nor loss lands.
+    let life = g.players[0].life;
+    g.adjust_life(0, 5);
+    g.adjust_life(0, -3);
+    assert_eq!(g.players[0].life, life, "life total locked until end of turn");
 }

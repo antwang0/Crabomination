@@ -3084,6 +3084,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LifeLockThisTurn { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].life_locked_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChannelLifeForMana => {
                 self.players[ctx.controller].channel_life_for_mana = true;
                 Ok(())

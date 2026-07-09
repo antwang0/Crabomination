@@ -2317,6 +2317,10 @@ pub enum Effect {
     /// to (Skullcrack, Sulfurous Blast's flashback rider, future
     /// one-turn lifegain locks).
     LifeGainLockThisTurn { who: Selector },
+    /// One-turn "[selected players]' life total can't change this turn" lock —
+    /// both gain and loss are dropped. Sets `Player.life_locked_this_turn`,
+    /// cleared by `do_untap` at the turn boundary. Flare of Fortitude.
+    LifeLockThisTurn { who: Selector },
     /// CR 104.3d — Angel's Grace: until end of turn the controller can't
     /// lose the game and their opponents can't win it. With `damage_floor`,
     /// damage that would drop their life below 1 drops it to 1 instead.

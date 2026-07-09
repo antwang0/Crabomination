@@ -42,10 +42,10 @@ factory doc comment:
   (Depth Defiler), sacrifice-a-modified-creature additional cost with an "if a
   modified creature was sacrificed" rider (Lethal Throwdown), Jolted Awake
   (needs a dynamic-amount `PayEnergy` = target's MV + a `Value::TargetManaValue`),
-  an Exalted counter type (Emissary of Soulfire — a counter that grants a
-  scaling triggered ability), and a "your life total can't change until end of
-  turn" effect (Flare of Fortitude — shipped with only the hexproof +
-  indestructible half).
+  and an Exalted counter type (Emissary of Soulfire — a counter that grants a
+  scaling triggered ability). (`Effect::LifeLockThisTurn` +
+  `Player.life_locked_this_turn` shipped — Flare of Fortitude is now the full
+  printed card.)
 - ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
   `suspend_only`; serde alias kept) rejects the pay-the-cost cast path per
   CR 601.3e; Ancestral Vision / Lotus Bloom / Crashing Footfalls / Living End
