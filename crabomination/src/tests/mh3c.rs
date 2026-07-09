@@ -12,6 +12,20 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     }
 }
 
+/// Fill P0's pool with plenty of every color + colorless, then cast `id`.
+fn cast(g: &mut GameState, id: crate::card::CardId, target: Option<crate::game::types::Target>,
+        extra: Vec<crate::game::types::Target>) {
+    for c in [crate::mana::Color::White, crate::mana::Color::Blue, crate::mana::Color::Black,
+              crate::mana::Color::Red, crate::mana::Color::Green] {
+        g.players[0].mana_pool.add(c, 8);
+    }
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target, additional_targets: extra, mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(g);
+}
+
 /// Goblin Wardriver's battle cry pumps each *other* attacker +1/+0, not itself.
 #[test]
 fn goblin_wardriver_battle_cry_pumps_team() {
@@ -57,8 +71,6 @@ fn reckless_pyrosurfer_landfall_grants_battle_cry() {
     let land = g.add_card_to_hand(0, catalog::mountain());
     g.perform_action(GameAction::PlayLand(land)).expect("play land");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(surfer).unwrap().keywords.contains(&Keyword::BattleCry(1)),
-        "landfall granted battle cry");
     advance_to(&mut g, TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![
         Attack { attacker: surfer, target: AttackTarget::Player(1) },
@@ -202,4 +214,125 @@ fn ajani_fells_the_godsire_chapters() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::DoubleStrike),
         "chapter III granted double strike");
+}
+
+// ── Batch 4: modal DFCs + Aura ────────────────────────────────────────────────
+
+use crate::game::types::Target;
+
+/// Boggart Trawler's ETB exiles an opponent's graveyard; its back is a land.
+#[test]
+fn boggart_trawler_etb_exiles_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::boggart_trawler());
+    cast(&mut g, id, None, vec![]);
+    assert!(g.players[1].graveyard.is_empty(), "opponent's graveyard exiled");
+    assert_eq!(catalog::boggart_trawler().back_face.unwrap().name, "Boggart Bog");
+}
+
+/// Boggart Bog (the pain-land back) can be played tapped without paying life.
+#[test]
+fn boggart_bog_back_enters_via_play_land_back() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::boggart_trawler());
+    g.perform_action(GameAction::PlayLandBack(id)).expect("play the back");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(id).expect("land on battlefield");
+    assert_eq!(land.definition.name, "Boggart Bog");
+}
+
+/// Fell the Profane destroys a creature.
+#[test]
+fn fell_the_profane_destroys() {
+    let mut g = two_player_game();
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fell_the_profane());
+    cast(&mut g, id, Some(Target::Permanent(enemy)), vec![]);
+    assert!(g.battlefield_find(enemy).is_none(), "creature destroyed");
+}
+
+/// Razorgrass Ambush deals 3 to an attacking creature.
+#[test]
+fn razorgrass_ambush_hits_attacker() {
+    let mut g = two_player_game();
+    // P0 attacks with a 4/4; while it's declared as an attacker, P0 casts the
+    // Ambush at it (any attacking creature is a legal target).
+    let atk = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(1) }]).expect("attack");
+    let id = g.add_card_to_hand(0, catalog::razorgrass_ambush());
+    cast(&mut g, id, Some(Target::Permanent(atk)), vec![]);
+    g.check_state_based_actions();
+    // 4/4 took 3 → survives but marked; verify it took damage.
+    assert_eq!(g.battlefield_find(atk).unwrap().damage, 3, "3 damage to the attacker");
+}
+
+/// Legion Leadership doubles a creature's power and grants first strike.
+#[test]
+fn legion_leadership_doubles_power() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::legion_leadership());
+    cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!(cp.power, 8, "power doubled 4 → 8");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "gains first strike");
+}
+
+/// Revitalizing Repast adds a counter and grants indestructible.
+#[test]
+fn revitalizing_repast_counter_and_indestructible() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::revitalizing_repast());
+    cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!(cp.power, 3, "got a +1/+1 counter");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "gains indestructible");
+}
+
+/// Stump Stomp makes your creature deal its power to an enemy creature.
+#[test]
+fn stump_stomp_one_sided_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::stump_stomp());
+    cast(&mut g, id, Some(Target::Permanent(mine)), vec![Target::Permanent(enemy)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(enemy).is_none(), "enemy took 4, died");
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "one-sided — no back-swing");
+}
+
+/// Waterlogged Teachings tutors an instant to hand.
+#[test]
+fn waterlogged_teachings_tutors_instant() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::waterlogged_teachings());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(bolt)),
+    ]));
+    cast(&mut g, id, None, vec![]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "instant tutored to hand");
+}
+
+/// Lion Umbra can only enchant a modified creature and grants +3/+3, vigilance,
+/// reach.
+#[test]
+fn lion_umbra_buffs_modified_creature() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    // Make it "modified" with a +1/+1 counter so it's a legal enchant target.
+    g.battlefield_find_mut(c).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let id = g.add_card_to_hand(0, catalog::lion_umbra());
+    cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
+    let cp = g.computed_permanent(c).unwrap();
+    // 2/2 base + 1/1 counter + 3/3 aura = 6/6.
+    assert_eq!((cp.power, cp.toughness), (6, 6), "+3/+3 on top of the counter");
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach));
 }

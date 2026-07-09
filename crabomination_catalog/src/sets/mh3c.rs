@@ -1,75 +1,24 @@
-//! Modern Horizons 3 (MH3), batch 3 — battle-cry team pumps, Eldrazi Spawn
-//! payoffs, modified-matters, and a saga. Introduces the Battle cry keyword
-//! (CR 702.92). Tests in `tests/mh3c.rs`.
+//! Modern Horizons 3 (MH3), batch 3 — landfall-granted battle cry, Eldrazi
+//! Spawn payoffs, modified-matters, a saga, and the "spell // land" modal DFC
+//! cycle. Tests in `tests/mh3c.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Subtypes, TokenDefinition,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
+    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
+    Subtypes, TokenDefinition, Zone,
 };
-use crate::effect::shortcut::{adapt, on_attack, on_cast, on_dies, target_any, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
-use crate::mana::{b, colorless, cost, g, generic, r, w, Color};
+use crate::effect::shortcut::{
+    adapt, battle_cry, on_attack, on_cast, on_dies, target_any, target_filtered,
+};
+use crate::effect::{
+    Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
+};
+use crate::mana::{b, colorless, cost, g, generic, hybrid, r, w, Color};
 
-// ── Battle cry (CR 702.92) ────────────────────────────────────────────────────
-
-/// Goblin Wardriver — {1}{R} 2/2 Goblin Warrior with battle cry.
-pub fn goblin_wardriver() -> CardDefinition {
-    CardDefinition {
-        name: "Goblin Wardriver",
-        cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::BattleCry(1)],
-        ..Default::default()
-    }
-}
-
-/// Accorder Paladin — {1}{W} 3/1 Human Soldier with battle cry.
-pub fn accorder_paladin() -> CardDefinition {
-    CardDefinition {
-        name: "Accorder Paladin",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 1,
-        keywords: vec![Keyword::BattleCry(1)],
-        ..Default::default()
-    }
-}
-
-/// Signal Pest — {1} 0/0 Artifact Creature — Pest with two +1/+1 anthems worth,
-/// battle cry, and blocker-quality evasion. Printed as a 0/0 that enters as a
-/// 2/1 by way of its printed body; modeled directly as 2/1 with battle cry and
-/// "can't be blocked except by artifact and/or red creatures."
-pub fn signal_pest() -> CardDefinition {
-    CardDefinition {
-        name: "Signal Pest",
-        cost: cost(&[generic(1)]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pest], ..Default::default() },
-        power: 2,
-        toughness: 1,
-        keywords: vec![
-            Keyword::BattleCry(1),
-            Keyword::CantBeBlockedExceptBy(Box::new(
-                R::Artifact.or(R::HasColor(Color::Red)),
-            )),
-        ],
-        ..Default::default()
-    }
-}
+// ── Landfall-granted battle cry ──────────────────────────────────────────────
 
 /// Reckless Pyrosurfer — {1}{R} 2/2 Human Scout with haste. Landfall: it gains
-/// battle cry until end of turn.
+/// battle cry until end of turn (grants the `battle_cry` Attacks trigger EOT).
 pub fn reckless_pyrosurfer() -> CardDefinition {
     CardDefinition {
         name: "Reckless Pyrosurfer",
@@ -85,9 +34,9 @@ pub fn reckless_pyrosurfer() -> CardDefinition {
         triggered_abilities: vec![crate::card::TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
-            effect: Effect::GrantKeyword {
+            effect: Effect::GrantTriggeredAbility {
                 what: Selector::This,
-                keyword: Keyword::BattleCry(1),
+                trigger: Box::new(battle_cry(1)),
                 duration: Duration::EndOfTurn,
             },
         }],
@@ -143,54 +92,6 @@ pub fn spawn_gang_commander() -> CardDefinition {
             effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
             ..Default::default()
         }],
-        ..Default::default()
-    }
-}
-
-// ── Eldrazi / big bodies ──────────────────────────────────────────────────────
-
-/// Vaultborn Tyrant — {5}{G}{G} 6/6 Dinosaur with trample. Whenever this or
-/// another creature you control with power 4+ enters, gain 3 life and draw.
-/// When it dies (if nontoken), create a token copy that's also an artifact.
-pub fn vaultborn_tyrant() -> CardDefinition {
-    CardDefinition {
-        name: "Vaultborn Tyrant",
-        cost: cost(&[generic(5), g(), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
-        power: 6,
-        toughness: 6,
-        keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![
-            crate::card::TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::Creature.and(R::PowerAtLeast(4)),
-                    }),
-                effect: Effect::Seq(vec![
-                    Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
-                ]),
-            },
-            on_dies(Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::This, filter: R::NotToken },
-                then: Box::new(Effect::CreateTokenCopyOf {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    source: Selector::This,
-                    extra_creature_types: vec![],
-                    extra_card_types: vec![CardType::Artifact],
-                    override_pt: None,
-                    override_colors: None,
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: false,
-                    extra_keywords: vec![],
-                }),
-                else_: Box::new(Effect::Noop),
-            }),
-        ],
         ..Default::default()
     }
 }
@@ -350,6 +251,190 @@ pub fn ajani_fells_the_godsire() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
         ],
+        ..Default::default()
+    }
+}
+
+// ── Modal DFC land backs (MH3 "spell // land") ───────────────────────────────
+
+/// Back for the MH3 mono-color modal DFCs: "As this land enters, you may pay 3
+/// life. If you don't, it enters tapped. {T}: Add {color}."
+fn mdfc_pain_land(name: &'static str, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
+        activated_abilities: vec![crate::catalog::sets::tap_add(color)],
+        ..Default::default()
+    }
+}
+
+/// Back for the MH3 dual-color modal DFCs: "This land enters tapped. {T}: Add
+/// {a} or {b}."
+fn mdfc_dual_tapland(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![a, b], Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Boggart Trawler // Boggart Bog — {2}{B} 3/1 Goblin. ETB: exile a graveyard.
+pub fn boggart_trawler() -> CardDefinition {
+    CardDefinition {
+        name: "Boggart Trawler",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
+            what: Selector::CardsInZone { who: PlayerRef::EachOpponent, zone: Zone::Graveyard, filter: R::Any },
+            to: ZoneDest::Exile,
+        })],
+        back_face: Some(Box::new(mdfc_pain_land("Boggart Bog", Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Fell the Profane // Fell Mire — {2}{B}{B} Instant. Destroy target creature or
+/// planeswalker.
+pub fn fell_the_profane() -> CardDefinition {
+    CardDefinition {
+        name: "Fell the Profane",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+        back_face: Some(Box::new(mdfc_pain_land("Fell Mire", Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Razorgrass Ambush // Razorgrass Field — {1}{W} Instant. 3 damage to target
+/// attacking or blocking creature.
+pub fn razorgrass_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Razorgrass Ambush",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            amount: Value::Const(3),
+        },
+        back_face: Some(Box::new(mdfc_pain_land("Razorgrass Field", Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Legion Leadership // Legion Stronghold — {1}{R/W} Instant. Double target
+/// creature's power and it gains first strike until end of turn.
+pub fn legion_leadership() -> CardDefinition {
+    CardDefinition {
+        name: "Legion Leadership",
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::White)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DoublePower { what: Selector::Target(0), times: Value::ONE, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+        ]),
+        back_face: Some(Box::new(mdfc_dual_tapland("Legion Stronghold", Color::Red, Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Revitalizing Repast // Old-Growth Grove — {B/G} Instant. Put a +1/+1 counter
+/// on target creature; it gains indestructible until end of turn.
+pub fn revitalizing_repast() -> CardDefinition {
+    CardDefinition {
+        name: "Revitalizing Repast",
+        cost: cost(&[hybrid(Color::Black, Color::Green)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+        ]),
+        back_face: Some(Box::new(mdfc_dual_tapland("Old-Growth Grove", Color::Black, Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Stump Stomp // Burnwillow Clearing — {1}{R/G} Sorcery. Target creature you
+/// control deals damage equal to its power to target creature or planeswalker
+/// you don't control.
+pub fn stump_stomp() -> CardDefinition {
+    CardDefinition {
+        name: "Stump Stomp",
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageEqualToPower {
+            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            target: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent),
+            },
+        },
+        back_face: Some(Box::new(mdfc_dual_tapland("Burnwillow Clearing", Color::Red, Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Waterlogged Teachings // Inundated Archive — {3}{U/B} Instant. Search your
+/// library for an instant card or a card with flash, put it into your hand.
+pub fn waterlogged_teachings() -> CardDefinition {
+    CardDefinition {
+        name: "Waterlogged Teachings",
+        cost: cost(&[generic(3), hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: R::HasCardType(CardType::Instant).or(R::HasKeyword(Keyword::Flash)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        back_face: Some(Box::new(mdfc_dual_tapland("Inundated Archive", Color::Blue, Color::Black))),
+        ..Default::default()
+    }
+}
+
+// ── Aura ──────────────────────────────────────────────────────────────────────
+
+/// Lion Umbra — {G}{G} Aura. Enchant modified creature. Enchanted creature gets
+/// +3/+3 and has vigilance and reach. Umbra armor.
+pub fn lion_umbra() -> CardDefinition {
+    CardDefinition {
+        name: "Lion Umbra",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::UmbraArmor],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::IsModified) },
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::Vigilance, Keyword::Reach],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
