@@ -625,3 +625,34 @@ pub fn drowner_of_truth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wumpus Aberration — {3}{G} 6/6 devoid Eldrazi Beast with trample. When you
+/// cast this spell, if {C} wasn't spent to cast it, target opponent may put a
+/// creature card from their hand onto the battlefield.
+pub fn wumpus_aberration() -> CardDefinition {
+    CardDefinition {
+        name: "Wumpus Aberration",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Devoid, Keyword::Trample],
+        triggered_abilities: vec![on_cast(Effect::If {
+            cond: Predicate::CastSpellColorlessManaSpent { spent: false },
+            then: Box::new(Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::EachOpponent,
+                filter: R::Creature,
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}

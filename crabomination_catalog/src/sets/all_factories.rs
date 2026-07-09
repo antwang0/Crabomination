@@ -6618,6 +6618,7 @@ static MH3C: &[Factory] = &[
     super::mh3c::strength_of_the_harvest,
     super::mh3c::kudo_king_among_bears,
     super::mh3c::drowner_of_truth,
+    super::mh3c::wumpus_aberration,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

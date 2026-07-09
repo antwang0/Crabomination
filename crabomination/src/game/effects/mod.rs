@@ -9086,7 +9086,10 @@ impl GameState {
                     max,
                 });
                 let chosen: Vec<CardId> = match answer { DecisionAnswer::Cards(v) => v, _ => vec![] };
-                let dest = ZoneDest::Battlefield { controller: PlayerRef::You, tapped: *tapped };
+                // Card enters under the resolved player's control (their hand →
+                // their battlefield), so a "target opponent may put …" (Wumpus
+                // Aberration) doesn't hand it to the effect's controller.
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped };
                 for cid in chosen {
                     // Only move cards that are still in the hand and match.
                     if !self.players[p].hand.iter().any(|c| c.id == cid) { continue; }

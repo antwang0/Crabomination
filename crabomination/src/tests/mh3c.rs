@@ -474,3 +474,38 @@ fn drowner_of_truth_no_colorless_no_spawn() {
         .filter(|c| c.controller == 0 && c.definition.name == "Eldrazi Spawn").count();
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
+
+/// Wumpus Aberration: cast with no {C} → the opponent may drop a creature from
+/// hand onto the battlefield, and it enters under *their* control.
+#[test]
+fn wumpus_aberration_no_colorless_opponent_free_drops() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 4); // all colored, no {C}
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let id = g.add_card_to_hand(0, catalog::wumpus_aberration());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast without {C}");
+    drain_stack(&mut g);
+    let dropped = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
+    assert!(dropped.is_some(), "opponent put their creature onto the battlefield");
+    assert_eq!(dropped.unwrap().controller, 1, "it enters under the opponent's control");
+}
+
+/// With {C} spent, Wumpus Aberration's cast trigger does nothing.
+#[test]
+fn wumpus_aberration_colorless_spent_no_drop() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3); // pays generic with {C}
+    let _bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wumpus_aberration());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with {C}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "{{C}} spent → opponent gets no free drop");
+}
