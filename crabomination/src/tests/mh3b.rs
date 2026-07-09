@@ -525,6 +525,62 @@ fn corrupted_conscience_steals_and_grants_infect() {
     assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
 }
 
+/// Triton Wavebreaker bestowed grants +1/+1 and prowess.
+#[test]
+fn triton_wavebreaker_bestow_grants_prowess() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::triton_wavebreaker());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastBestow {
+        card_id: aura, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bestow");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "host got +1/+1");
+    assert!(cp.keywords.contains(&Keyword::Prowess), "host gained prowess");
+}
+
+/// Voltstorm Angel, at combat, pays {E}{E} for its modal payoff (bots take the
+/// first mode: it gains vigilance and lifelink until end of turn).
+#[test]
+fn voltstorm_angel_combat_energy_mode() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::voltstorm_angel());
+    g.players[0].energy = 3;
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(crate::game::TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 1, "paid {{E}}{{E}}");
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Lifelink),
+        "mode 0 granted vigilance + lifelink");
+}
+
+/// Strix Serenade counters a creature spell and gives its controller a Bird.
+#[test]
+fn strix_serenade_counters_and_gifts_bird() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    let id = g.add_card_to_hand(0, catalog::strix_serenade());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Strix Serenade");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_none(), "creature spell countered");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bird" && c.controller == 1),
+        "the countered spell's controller got a Bird");
+}
+
 /// Indebted Spirit bestowed grants +1/+1 and afterlife (host dies → Spirit).
 #[test]
 fn indebted_spirit_bestow_and_afterlife() {

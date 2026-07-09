@@ -163,6 +163,110 @@ pub fn petrifying_meddler() -> CardDefinition {
     }
 }
 
+/// Voltstorm Angel — {3}{W}{W} 4/4 Angel. Flying. ETB: get {E}{E}{E}. At combat
+/// on your turn, you may pay {E}{E}. When you do, choose one — this gains
+/// vigilance and lifelink EOT; or other creatures you control get +1/+1 EOT.
+pub fn voltstorm_angel() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Voltstorm Angel",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(3))),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+                effect: Effect::MayDo {
+                    description: "Pay {E}{E}?".into(),
+                    body: Box::new(Effect::PayEnergy {
+                        amount: 2,
+                        then: Box::new(Effect::ChooseMode(vec![
+                            Effect::Seq(vec![
+                                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+                            ]),
+                            Effect::PumpPT {
+                                what: Selector::EachPermanent(
+                                    R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                                ),
+                                power: Value::ONE,
+                                toughness: Value::ONE,
+                                duration: Duration::EndOfTurn,
+                            },
+                        ])),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Triton Wavebreaker — {U} 1/1 Enchantment Creature. Bestow {1}{U}. Prowess.
+/// As an Aura it grants +1/+1 and prowess.
+pub fn triton_wavebreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Triton Wavebreaker",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Prowess],
+        bestow: Some(cost(&[generic(1), u()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Prowess],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Strix Serenade — {U} Instant. Counter target artifact, creature, or
+/// planeswalker spell. Its controller creates a 2/2 blue Bird with flying.
+pub fn strix_serenade() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Bird".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Strix Serenade",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // Mint the Bird for the countered spell's controller before the
+            // spell leaves the stack, so `ControllerOf(Target(0))` resolves.
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::ONE,
+                definition: bird,
+            },
+            Effect::CounterSpell {
+                what: target_filtered(
+                    R::IsSpellOnStack
+                        .and(R::Artifact.or(R::Creature).or(R::Planeswalker)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Indebted Spirit — {W} 1/1 Enchantment Creature. Bestow {2}{W}. Afterlife 1.
 /// As an Aura it grants +1/+1 and afterlife 1.
 pub fn indebted_spirit() -> CardDefinition {
