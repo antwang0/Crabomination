@@ -515,24 +515,33 @@ pub fn kithkin_billyrider() -> CardDefinition {
     }
 }
 
-/// Nyxborn Unicorn — {1}{W} 2/2 Enchantment Creature. Bestow {3}{W}. Mentor.
-/// As an Aura it grants +2/+2 and mentor.
-pub fn nyxborn_unicorn() -> CardDefinition {
+/// Skoa, Embermage — {4}{R}{R} 4/4 Legendary Goblin Wizard. ETB: deal 4 to any
+/// target. Grandeur (discard another Skoa, sacrifice two Mountains): deal 4 to
+/// any target.
+pub fn skoa_embermage() -> CardDefinition {
+    use crate::card::{LandType, Supertype};
+    let bolt = || Effect::DealDamage {
+        to: crate::effect::shortcut::target_any(),
+        amount: Value::Const(4),
+    };
     CardDefinition {
-        name: "Nyxborn Unicorn",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
-        power: 2,
-        toughness: 2,
-        triggered_abilities: vec![crate::effect::shortcut::mentor()],
-        bestow: Some(cost(&[generic(3), w()])),
-        equipped_bonus: Some(EquipBonus {
-            power: 2,
-            toughness: 2,
-            triggered_abilities: vec![crate::effect::shortcut::mentor()],
+        name: "Skoa, Embermage",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
             ..Default::default()
-        }),
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(bolt())],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::HasName("Skoa, Embermage".to_string()), 1)),
+            sac_other_filter: Some((R::HasLandType(LandType::Mountain), 2)),
+            effect: bolt(),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

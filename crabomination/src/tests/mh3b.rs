@@ -745,6 +745,18 @@ fn temperamental_oozewagg_grants_modified_trample() {
         "modified creature gained trample");
 }
 
+/// Skoa, Embermage deals 4 damage to any target when it enters.
+#[test]
+fn skoa_embermage_etb_bolt() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::skoa_embermage());
+    fill_mana(&mut g);
+    let before = g.players[1].life;
+    // ETB auto-targets; steer it at the opponent.
+    cast(&mut g, id, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, before - 4, "ETB dealt 4 to the opponent");
+}
+
 /// Kithkin Billyrider is a 1/3 double striker.
 #[test]
 fn kithkin_billyrider_double_strikes() {
@@ -753,24 +765,6 @@ fn kithkin_billyrider_double_strikes() {
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 3));
     assert!(cp.keywords.contains(&Keyword::DoubleStrike));
-}
-
-/// Nyxborn Unicorn bestowed grants the host +2/+2 and mentor.
-#[test]
-fn nyxborn_unicorn_bestow_grants_bonus() {
-    let mut g = two_player_game();
-    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let aura = g.add_card_to_hand(0, catalog::nyxborn_unicorn());
-    fill_mana(&mut g);
-    g.perform_action(GameAction::CastBestow {
-        card_id: aura, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("bestow onto the bear");
-    drain_stack(&mut g);
-    let cp = g.computed_permanent(host).unwrap();
-    assert_eq!((cp.power, cp.toughness), (4, 4), "host got +2/+2");
-    // The bestowed Unicorn is not itself a creature while attached.
-    assert!(!g.computed_permanent(aura).unwrap().card_types.contains(&crate::card::CardType::Creature),
-        "bestowed aura isn't a creature");
 }
 
 /// Eviscerator's Insight sacrifices a permanent as an additional cost, then
