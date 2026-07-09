@@ -515,6 +515,34 @@ pub fn kithkin_billyrider() -> CardDefinition {
     }
 }
 
+/// Quest for the Necropolis — {B} Enchantment. Landfall: put a quest counter on
+/// it. {5}{B}, Sacrifice this (sorcery speed): reanimate a creature from a
+/// graveyard; costs {1} less per quest counter.
+pub fn quest_for_the_necropolis() -> CardDefinition {
+    CardDefinition {
+        name: "Quest for the Necropolis",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Quest, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            self_counter_cost_reduction: Some(CounterType::Quest),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Utter Insignificance — {1}{U} Aura. Flash. Enchant creature. Enchanted
 /// creature loses all abilities and has base P/T 1/1. {2}{C}: Exile it.
 pub fn utter_insignificance() -> CardDefinition {

@@ -745,6 +745,30 @@ fn temperamental_oozewagg_grants_modified_trample() {
         "modified creature gained trample");
 }
 
+/// Quest for the Necropolis banks landfall counters and reanimates a creature.
+#[test]
+fn quest_for_the_necropolis_landfall_and_reanimate() {
+    let mut g = two_player_game();
+    let quest = g.add_card_to_battlefield(0, catalog::quest_for_the_necropolis());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = crate::game::TurnStep::PreCombatMain;
+    // A landfall adds a quest counter (one land per turn); top up to two.
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(quest).unwrap().counter_count(CounterType::Quest), 1, "landfall counter");
+    g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 1);
+    // Activate the reanimation (sac + {5}{B} reduced by 2 → {3}{B}).
+    fill_mana(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: quest, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+    }).expect("reanimate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "creature reanimated to the battlefield");
+    assert!(g.battlefield_find(quest).is_none(), "Quest sacrificed as a cost");
+}
+
 /// Utter Insignificance shrinks the enchanted creature to a vanilla 1/1.
 #[test]
 fn utter_insignificance_shrinks_and_strips() {
