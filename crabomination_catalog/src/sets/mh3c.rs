@@ -626,6 +626,29 @@ pub fn drowner_of_truth() -> CardDefinition {
     }
 }
 
+/// Monstrous Vortex — {3}{G} Enchantment. Whenever you cast a creature spell
+/// with power 5 or greater, discover X, where X is that spell's mana value.
+pub fn monstrous_vortex() -> CardDefinition {
+    CardDefinition {
+        name: "Monstrous Vortex",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::PowerAtLeast(5)),
+                },
+            ),
+            effect: Effect::Discover {
+                n: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                filter: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bespoke Battlewagon — {3}{U} 5/6 Vehicle, Crew 4. Energy engine: tap for
 /// {E}{E}; spend energy to tap a creature, draw, or self-animate for a turn.
 pub fn bespoke_battlewagon() -> CardDefinition {

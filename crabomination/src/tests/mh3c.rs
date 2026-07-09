@@ -475,6 +475,22 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Monstrous Vortex discovers X when you cast a power-5+ creature spell — the
+/// discovered card leaves the library (cast free or taken to hand).
+#[test]
+fn monstrous_vortex_discovers_on_big_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::monstrous_vortex());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2, the only card → discovered
+    let big = g.add_card_to_hand(0, catalog::drowner_of_truth()); // 7/6, MV 7
+    cast(&mut g, big, None, vec![]);
+    assert!(g.players[0].library.is_empty(), "the discovered card left the library");
+    let bear_seen = g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears")
+        || g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears");
+    assert!(bear_seen, "discovered Grizzly Bears was cast or put into hand");
+}
+
 /// Bespoke Battlewagon taps for {E}{E}, spends {E}{E} to tap a creature, and
 /// spends {E}{E}{E}{E} to become a creature until end of turn.
 #[test]
