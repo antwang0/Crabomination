@@ -7099,3 +7099,72 @@ fn cr_702_137_adapt_noop_when_already_has_counter() {
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "second adapt added nothing — already had a counter");
 }
+
+// ── CR 107.14 — the energy symbol {E} ────────────────────────────────────────
+
+/// CR 107.14 — to pay {E} a player removes one energy counter. Aether Spike's
+/// `PayAnyEnergy` (bot: pay all) removes exactly the counters it spends, and
+/// scales the counter-tax by that count. Starting 3 + the spell's {E}{E} = 5.
+#[test]
+fn cr_107_14_pay_any_energy_removes_exactly_paid_counters() {
+    let mut g = two_player_game();
+    g.players[0].energy = 3;
+    // P1 casts a creature spending all mana (can't afford the {5} tax).
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    let id = g.add_card_to_hand(0, catalog::aether_spike());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aether Spike");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "removed all 5 energy counters to pay {{E}} five times");
+    assert!(g.battlefield_find(spell).is_none(), "spell countered — {{5}} tax unpaid");
+}
+
+// ── CR 614 — as-enters (replacement) applies before the first SBA ────────────
+
+/// CR 614 — Corrupted Shapeshifter's "as it enters, it becomes your choice"
+/// is a replacement, not an ETB trigger: the chosen P/T is in place before the
+/// first state-based-action check, so a printed */* (0/0) never dies as a 0/0.
+#[test]
+fn cr_614_enters_as_choice_precedes_sba() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::corrupted_shapeshifter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Corrupted Shapeshifter");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).expect("survived the ETB SBA — not a dead 0/0");
+    assert!(cp.toughness > 0, "entered with a chosen positive toughness");
+}
+
+// ── CR 118/119/120 — "life total can't change" vs. combat damage ─────────────
+
+/// CR 119.3/120.3 — combat damage to a player causes life loss, but a player
+/// whose life total can't change this turn (Flare of Fortitude) loses none:
+/// the damage is dealt, the reduction is dropped at the life chokepoint.
+#[test]
+fn cr_119_life_lock_prevents_combat_damage_loss() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.players[0].life_locked_this_turn = true;
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 1;
+    let before = g.players[0].life;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before, "locked life total unchanged by the 2 combat damage");
+}

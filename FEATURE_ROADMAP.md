@@ -372,8 +372,10 @@ Each unblocks a large swath of cards.
    damage prevention as shields (`prevention_shields`), per-source combat shields
    (Maze of Ith), damage redirection (Palisade Giant), draw doubling (Thought
    Reflection), damage halving (Ghosts of the Innocent), creature-ETB control
-   steal (Gather Specimens), skip-step and skip-turn. Still to generalize: as-a-copy
-   ETB, draw replacement breadth.
+   steal (Gather Specimens), as-enters choice-of-P/T-and-keyword
+   (`enters_as_choice`, CR 614 — Corrupted Shapeshifter, applied before the
+   first SBA so a printed `*/*` never dies as a 0/0), skip-step and skip-turn.
+   Still to generalize: as-a-copy ETB, draw replacement breadth.
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
    pick-from-revealed via `Effect::LookPickToHand` (Impulse, Strategic Planning).
 3. ✅ **Player-chosen combat damage assignment order.**
