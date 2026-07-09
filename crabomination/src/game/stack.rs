@@ -1775,6 +1775,17 @@ impl GameState {
             self.battlefield.iter().filter_map(|c| c.untap_locked_by).collect();
         let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
             self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
+        // CR 502.3 — Winter Moon: "Players can't untap more than one nonbasic
+        // land during their untap steps." Cap each untapping player's nonbasic
+        // land untaps at one; the rest stay tapped.
+        let cap_nonbasic_untap = self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::MaxOneNonbasicLandUntap))
+        });
+        let mut nonbasic_untapped: std::collections::HashMap<usize, u32> =
+            std::collections::HashMap::new();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -1833,6 +1844,22 @@ impl GameState {
                         continue;
                     }
                     card.untap_locked_by = None;
+                }
+                // CR 502.3 — Winter Moon nonbasic-land cap. A tapped nonbasic
+                // land beyond the first this player untaps stays tapped.
+                if cap_nonbasic_untap
+                    && card.tapped
+                    && card.definition.is_land()
+                    && !card.definition.is_basic()
+                {
+                    let n = nonbasic_untapped.entry(card.controller).or_insert(0);
+                    if *n >= 1 {
+                        if active {
+                            card.summoning_sick = false;
+                        }
+                        continue;
+                    }
+                    *n += 1;
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
@@ -2167,6 +2194,7 @@ impl GameState {
         // tracker (used by Fractal Tender's end-step trigger). Resetting
         // at cleanup is the canonical "until end of turn" scope.
         self.permanents_gained_counter_this_turn.clear();
+        self.permanents_amplified_counter_this_turn.clear();
         // CR 603-style "Nth time this turn" escalation counters reset.
         self.ability_resolutions_this_turn.clear();
         // Clear transient granted triggers (Rabid Attack, Root

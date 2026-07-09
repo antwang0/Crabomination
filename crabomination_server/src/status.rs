@@ -59,6 +59,33 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     )
 }
 
+/// Render a Prometheus text-exposition (`/metrics`) snapshot — the same numbers
+/// as `/status.json`, one `# HELP`/`# TYPE`/sample triple per metric, so a
+/// Prometheus scraper ingests the server directly (the conventional `/metrics`
+/// path expects this text format, not JSON).
+fn render_metrics(started: Instant, slots: &SlotManager) -> String {
+    let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
+    let sl = slots.snapshot();
+    let refused = sl.refused_global + sl.refused_per_ip;
+    let mut out = String::new();
+    let mut m = |name: &str, kind: &str, help: &str, value: String| {
+        out.push_str(&format!(
+            "# HELP crab_{name} {help}\n# TYPE crab_{name} {kind}\ncrab_{name} {value}\n"
+        ));
+    };
+    m("uptime_seconds", "counter", "Server uptime in seconds.", started.elapsed().as_secs().to_string());
+    m("matches_total", "counter", "Matches served.", st.total_matches().to_string());
+    m("bot_matches_total", "counter", "Matches against a bot.", st.bot_matches.to_string());
+    m("pair_matches_total", "counter", "Human-vs-human matches.", st.pair_matches.to_string());
+    m("avg_turns", "gauge", "Average turns per match.", st.avg_turns().to_string());
+    m("connections_current", "gauge", "Active connections.", sl.current.to_string());
+    m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
+    m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
+    m("connections_refused_total", "counter", "Connections refused.", refused.to_string());
+    m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
+    out
+}
+
 /// Route one request to `(status_line, content_type, body)`. Only GET/HEAD are
 /// served; unknown paths 404 and other methods 405 so scrapers and probes read
 /// correct semantics instead of a 200 status page for everything.
@@ -69,6 +96,7 @@ fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'
     match path {
         "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
         "/status.json" | "/metrics.json" => ("200 OK", "application/json", render_status_json(started, slots)),
+        "/metrics" => ("200 OK", "text/plain; version=0.0.4", render_metrics(started, slots)),
         "/status" | "/" => ("200 OK", "text/plain", render_status(started, slots)),
         _ => ("404 Not Found", "text/plain", "not found\n".to_string()),
     }
@@ -151,5 +179,17 @@ mod tests {
         assert_eq!(route("GET", "/bogus", now, &slots).0, "404 Not Found");
         assert_eq!(route("POST", "/status", now, &slots).0, "405 Method Not Allowed");
         assert_eq!(route("HEAD", "/healthz", now, &slots).0, "200 OK");
+    }
+
+    #[test]
+    fn render_metrics_is_prometheus_text() {
+        let slots = SlotManager::new(10, 5);
+        let body = render_metrics(Instant::now(), &slots);
+        assert!(body.contains("# TYPE crab_matches_total counter"));
+        assert!(body.contains("crab_connections_current 0"));
+        assert!(body.contains("# HELP crab_uptime_seconds"));
+        // Routed as Prometheus text exposition.
+        let now = Instant::now();
+        assert_eq!(route("GET", "/metrics", now, &slots).1, "text/plain; version=0.0.4");
     }
 }

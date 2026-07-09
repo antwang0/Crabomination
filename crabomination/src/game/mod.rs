@@ -1440,6 +1440,12 @@ pub struct GameState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub(crate) permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
+    /// Permanents whose `StaticEffect::CounterAmplifierOncePerTurn` extra
+    /// +1/+1 counter has already been added this turn (Cursed Wombat). The
+    /// granted ability "triggers only once each turn" per permanent; cleared at
+    /// cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) permanents_amplified_counter_this_turn: std::collections::HashSet<CardId>,
     /// How many times each source's escalating ability has resolved this turn
     /// (CR 603.3-style "if this is the first/second/third time …" — Vito,
     /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
@@ -1713,6 +1719,7 @@ impl Clone for GameState {
             resolving_lki_source: self.resolving_lki_source,
             resolving_lki_subject: self.resolving_lki_subject,
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
+            permanents_amplified_counter_this_turn: self.permanents_amplified_counter_this_turn.clone(),
             ability_resolutions_this_turn: self.ability_resolutions_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
@@ -1869,6 +1876,7 @@ impl GameState {
             resolving_lki_source: None,
             resolving_lki_subject: None,
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
+            permanents_amplified_counter_this_turn: std::collections::HashSet::new(),
             ability_resolutions_this_turn: std::collections::HashMap::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
@@ -2696,6 +2704,47 @@ impl GameState {
                     .count() as u32
             })
             .sum()
+    }
+
+    /// Cursed Wombat — if `cid`'s controller has a
+    /// `StaticEffect::CounterAmplifierOncePerTurn` and this permanent hasn't
+    /// been amplified yet this turn, add one extra +1/+1 counter (subject to the
+    /// controller's counter doublers) and mark it. The extra placement does not
+    /// re-trigger the amplifier ("only once each turn").
+    pub(crate) fn amplify_counter_once_per_turn(
+        &mut self,
+        cid: crate::card::CardId,
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::card::CounterType;
+        use crate::effect::StaticEffect;
+        if self.permanents_amplified_counter_this_turn.contains(&cid) {
+            return;
+        }
+        let Some(ctrl) = self.battlefield_find(cid).map(|c| c.controller) else { return };
+        let has = self.battlefield.iter().any(|c| {
+            c.controller == ctrl
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::CounterAmplifierOncePerTurn))
+        });
+        if !has {
+            return;
+        }
+        self.permanents_amplified_counter_this_turn.insert(cid);
+        let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, 1, true);
+        if n == 0 {
+            return;
+        }
+        if let Some(c) = self.battlefield_find_mut(cid) {
+            c.add_counters(CounterType::PlusOnePlusOne, n);
+            events.push(GameEvent::CounterAdded {
+                card_id: cid,
+                counter_type: CounterType::PlusOnePlusOne,
+                count: n,
+            });
+        }
     }
 
     /// Number of `StaticEffect::ExtraPlusOneCounters` permanents `seat`
@@ -13010,6 +13059,12 @@ fn static_effect_to_effects(
             // UntapSelfEachUntapStep (Thousand Moons Infantry) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapSelfEachUntapStep
+            // MaxOneNonbasicLandUntap (Winter Moon) — consulted by `do_untap`;
+            // no layer effect.
+            | StaticEffect::MaxOneNonbasicLandUntap
+            // CounterAmplifierOncePerTurn (Cursed Wombat) — consulted in the
+            // `Effect::AddCounter` +1/+1 path; no layer effect.
+            | StaticEffect::CounterAmplifierOncePerTurn
             // ExileDyingOpponentCreatures (Valentin) — consulted in
             // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::ExileDyingOpponentCreatures { .. }

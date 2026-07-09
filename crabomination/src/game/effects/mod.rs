@@ -7058,6 +7058,12 @@ impl GameState {
                             // future "if you put a counter on this creature
                             // this turn" payoff.
                             self.permanents_gained_counter_this_turn.insert(cid);
+                            // Cursed Wombat — the controller's once-per-turn
+                            // +1/+1 amplifier adds one extra the first time
+                            // counters land on each of their permanents.
+                            if *kind == CounterType::PlusOnePlusOne {
+                                self.amplify_counter_once_per_turn(cid, events);
+                            }
                         }
                         EntityRef::Player(p) if *kind == CounterType::Poison => {
                             self.add_poison(p, base, events);

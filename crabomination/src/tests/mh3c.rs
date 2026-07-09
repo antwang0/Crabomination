@@ -825,3 +825,73 @@ fn aether_revolt_energy_gain_deals_damage() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "gained 2 energy → 2 damage to opponent");
 }
+
+/// Winter Moon: a player untaps at most one nonbasic land per untap step;
+/// basics untap freely.
+#[test]
+fn winter_moon_caps_nonbasic_land_untap() {
+    let mut g = two_player_game();
+    let _moon = g.add_card_to_battlefield(0, catalog::winter_moon());
+    let nb1 = g.add_card_to_battlefield(0, catalog::blooming_marsh());
+    let nb2 = g.add_card_to_battlefield(0, catalog::blackcleave_cliffs());
+    let basic = g.add_card_to_battlefield(0, catalog::island());
+    for id in [nb1, nb2, basic] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    let nb_tapped = [nb1, nb2].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count();
+    assert_eq!(nb_tapped, 1, "exactly one nonbasic land stays tapped");
+    assert!(!g.battlefield_find(basic).unwrap().tapped, "basic land untaps freely");
+}
+
+/// Cursed Wombat: the first +1/+1 counter placement on each of your permanents
+/// each turn gets one extra counter; a second placement the same turn doesn't.
+#[test]
+fn cursed_wombat_amplifies_first_counter_each_turn() {
+    let mut g = two_player_game();
+    let _wombat = g.add_card_to_battlefield(0, catalog::cursed_wombat());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_spell(
+        0, Some(crate::game::types::Target::Permanent(bear)), 0, 0);
+    let add = crate::effect::Effect::AddCounter {
+        what: crate::effect::Selector::Target(0),
+        kind: crate::card::CounterType::PlusOnePlusOne,
+        amount: crate::effect::Value::Const(1),
+    };
+    g.resolve_effect(&add, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2,
+        "first placement amplified: 1 placed + 1 extra");
+    g.resolve_effect(&add, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 3,
+        "second placement this turn is not amplified");
+}
+
+/// Rush of Inspiration draws two, then discards at random when energy isn't paid.
+#[test]
+fn rush_of_inspiration_draws_then_discards_without_energy() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::rush_of_inspiration());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 3);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 (Rush left hand) +2 drawn -1 discarded (no energy) = net -1 vs before.
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2 - 1);
+}
+
+/// Rosecot Knight's ETB digs six deep and puts a revealed enchantment into hand.
+#[test]
+fn rosecot_knight_digs_for_enchantment() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ench = g.add_card_to_library(0, catalog::path_of_annihilation());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(ench))]));
+    let id = g.add_card_to_hand(0, catalog::rosecot_knight());
+    cast(&mut g, id, None, vec![]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ench), "enchantment dug into hand");
+}

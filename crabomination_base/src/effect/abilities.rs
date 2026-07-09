@@ -1434,6 +1434,18 @@ pub enum StaticEffect {
     /// (i.e. whenever the active player is someone else). Thousand Moons
     /// Infantry. Consulted by `do_untap` in a follow-up pass.
     UntapSelfEachUntapStep,
+    /// CR 502.3 — "Players can't untap more than one nonbasic land during their
+    /// untap steps." Winter Moon / Mana Web-style lock. Consulted by `do_untap`:
+    /// each untapping player untaps at most one nonbasic land (the rest stay
+    /// tapped). Global — applies to every player, not just the controller.
+    MaxOneNonbasicLandUntap,
+    /// "Permanents you control have: whenever one or more +1/+1 counters are put
+    /// on this permanent, put an additional +1/+1 counter on it. This ability
+    /// triggers only once each turn." Cursed Wombat. Consulted in the
+    /// `Effect::AddCounter` +1/+1 path: after counters land on a permanent whose
+    /// controller has this static, one extra is added the first time each turn
+    /// (guarded by `permanents_amplified_counter_this_turn`).
+    CounterAmplifierOncePerTurn,
     /// CR 614 — "If a nontoken creature an opponent controls would die, exile
     /// it instead." Consulted in `remove_from_battlefield_to_graveyard`: an
     /// opponent's nontoken creature bound for a graveyard from the battlefield

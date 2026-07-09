@@ -195,6 +195,8 @@ pub enum CreatureType {
     Villain,
     // Duskmourn "Toy" artifact-creature subtype (Splitskin Doll, Patched Plaything).
     Toy,
+    // Modern Horizons 3 (Cursed Wombat).
+    Wombat,
 }
 
 /// Land subtypes (basic land types + others).

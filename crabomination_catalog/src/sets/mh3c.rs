@@ -3,12 +3,13 @@
 //! cycle. Tests in `tests/mh3c.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
-    StaticAbility, Subtypes, TokenDefinition, Zone,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, Zone,
 };
 use crate::effect::shortcut::{
-    adapt, battle_cry, evolve, exalted, on_attack, on_cast, on_dies, target_any, target_filtered,
+    adapt, battle_cry, etb, evolve, exalted, on_attack, on_cast, on_dies, target_any,
+    target_filtered,
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
@@ -1060,6 +1061,102 @@ pub fn wumpus_aberration() -> CardDefinition {
                 sacrifice_eot: false,
             }),
             else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+// ── Untap-lock artifact ──────────────────────────────────────────────────────
+
+/// Winter Moon — {2} artifact. Players can't untap more than one nonbasic land
+/// during their untap steps.
+pub fn winter_moon() -> CardDefinition {
+    CardDefinition {
+        name: "Winter Moon",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Players can't untap more than one nonbasic land during their untap steps.",
+            effect: StaticEffect::MaxOneNonbasicLandUntap,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cursed Wombat — {B}{G} 2/3 Nightmare Wombat. {2}{B}{G}: Adapt 2. Permanents
+/// you control have "Whenever one or more +1/+1 counters are put on this
+/// permanent, put an additional +1/+1 counter on it. Only once each turn."
+pub fn cursed_wombat() -> CardDefinition {
+    CardDefinition {
+        name: "Cursed Wombat",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Wombat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b(), g()]),
+            effect: adapt(2),
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Permanents you control have \"Whenever one or more +1/+1 counters are put on this permanent, put an additional +1/+1 counter on it. This triggers only once each turn.\"",
+            effect: StaticEffect::CounterAmplifierOncePerTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rush of Inspiration // Crackling Falls — {1}{U/R}{U/R} instant. Draw two,
+/// then discard a card at random unless you pay {E}{E}. Back: U/R tapland.
+pub fn rush_of_inspiration() -> CardDefinition {
+    CardDefinition {
+        name: "Rush of Inspiration",
+        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::PayEnergyOrElse {
+                amount: 2,
+                otherwise: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: true,
+                }),
+            },
+        ]),
+        back_face: Some(Box::new(mdfc_dual_tapland("Crackling Falls", Color::Blue, Color::Red))),
+        ..Default::default()
+    }
+}
+
+/// Rosecot Knight — {4}{W} 3/4 Human Knight with vigilance. ETB: look at the top
+/// six, put an artifact or enchantment from among them into hand, rest on the
+/// bottom. (The "+1/+1 counter if you didn't take one" consolation is dropped.)
+pub fn rosecot_knight() -> CardDefinition {
+    CardDefinition {
+        name: "Rosecot Knight",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(6),
+            rest_to_graveyard: false,
+            pick_filter: Some(R::Artifact.or(R::Enchantment)),
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
         })],
         ..Default::default()
     }
