@@ -7044,3 +7044,58 @@ fn cr_702_16e_protection_from_creatures_cant_be_blocked() {
         "a creature can't block a creature with protection from creatures"
     );
 }
+
+// ── CR 701.47c — Amass loads counters onto an existing Army ───────────────────
+
+/// CR 701.47c — amass puts counters on an Army you already control instead of
+/// minting a second one. Two Mindless Conscription ETBs (amass Zombies 3 each)
+/// leave a single 6/6 Army.
+#[test]
+fn cr_701_47c_amass_grows_existing_army() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let id = g.add_card_to_hand(0, catalog::mindless_conscription());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(&mut g);
+    }
+    let armies: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Army").collect();
+    assert_eq!(armies.len(), 1, "only one Army — the second amass grew the first");
+    assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 6, "3 + 3 counters");
+}
+
+// ── CR 702.114 — Devoid ──────────────────────────────────────────────────────
+
+/// CR 702.114 — a Devoid card is colorless even though its cost has colored
+/// pips. Hope-Ender Coatl is {2}{U} with devoid.
+#[test]
+fn cr_702_114_devoid_is_colorless() {
+    assert!(catalog::hope_ender_coatl().printed_colors().is_empty(), "devoid printed colors empty");
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hope_ender_coatl());
+    assert!(g.computed_permanent(id).unwrap().colors.is_empty(), "colorless on the battlefield");
+}
+
+// ── CR 702.137 — Adapt ───────────────────────────────────────────────────────
+
+/// CR 702.137b — Adapt N does nothing if the creature already has a +1/+1
+/// counter. A second activation of Dreamdrinker Vampire's adapt is a no-op.
+#[test]
+fn cr_702_137_adapt_noop_when_already_has_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dreamdrinker_vampire());
+    g.clear_sickness(id);
+    for _ in 0..2 {
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        }).expect("adapt");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "second adapt added nothing — already had a counter");
+}

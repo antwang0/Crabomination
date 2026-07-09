@@ -456,12 +456,12 @@ Each unblocks a large swath of cards.
   combat damage to a planeswalker removes loyalty ✅ (CR 306.9, test
   `cr_306_9_combat_damage_to_planeswalker_removes_loyalty`). Remaining: "any
   time" activation riders.
-- 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
+- ✅ **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
   legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
   (704.5n — host fails the printed enchant filter). Dungeons ✅ (CR 309/701.49
   — `base::dungeons`, `Effect::Venture`, `decks::afr`; rooms resolve inline).
-  Remaining: Battle/Dungeon
-  SBAs.
+  Battle-defeat SBA ✅ (CR 704.5x — a Siege with no defense counters is defeated,
+  `stack.rs`). No remaining SBA gap of note.
 
 ## Tier 3 — Object model & zones
 
