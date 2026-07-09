@@ -6307,18 +6307,27 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GrantTriggeredAbility { what, trigger, duration: _ } => {
-                // Currently only EOT-duration grants are honored; the
-                // entry is cleared in `do_cleanup`. Permanent-duration
-                // grants would need a separate map keyed off the
-                // granting permanent (so the grant retires when the
-                // granter leaves) — tracked as future engine work.
+            Effect::GrantTriggeredAbility { what, trigger, duration } => {
+                // EOT grants ride `granted_triggers_eot` (cleared at Cleanup).
+                // Permanent grants are baked onto the card's own trigger list
+                // via `Arc::make_mut` — a leak-free no-op once the card leaves
+                // the battlefield (mirrors `GrantKeyword`'s permanent path).
+                // Emissary of Soulfire models each exalted counter as a
+                // permanently-granted `exalted()` instance.
+                use crate::effect::Duration as EffectDur;
+                let is_eot = matches!(duration, EffectDur::EndOfTurn | EffectDur::EndOfCombat);
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
-                        self.granted_triggers_eot
-                            .entry(cid)
-                            .or_default()
-                            .push((**trigger).clone());
+                        if is_eot {
+                            self.granted_triggers_eot
+                                .entry(cid)
+                                .or_default()
+                                .push((**trigger).clone());
+                        } else if let Some(c) = self.battlefield_find_mut(cid) {
+                            std::sync::Arc::make_mut(&mut c.definition)
+                                .triggered_abilities
+                                .push((**trigger).clone());
+                        }
                     }
                 }
                 Ok(())

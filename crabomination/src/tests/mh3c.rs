@@ -475,6 +475,33 @@ fn drowner_of_truth_no_colorless_no_spawn() {
     assert_eq!(spawns, 0, "no {{C}} spent → no spawn");
 }
 
+/// Emissary of Soulfire grants {E}{E}{E} on ETB and, per {E}{E}, an exalted
+/// counter on a creature; two counters make it +2/+2 when it attacks alone.
+#[test]
+fn emissary_of_soulfire_exalted_counters_stack() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let em = g.add_card_to_hand(0, catalog::emissary_of_soulfire());
+    cast(&mut g, em, None, vec![]);
+    assert_eq!(g.players[0].energy, 3, "ETB grants three energy");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.players[0].energy = 4;
+    for _ in 0..2 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: em, ability_index: 0, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], x_value: None,
+        }).expect("{E}{E}: exalted counter");
+        drain_stack(&mut g);
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack alone");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "2/2 + two exalted instances = 4/4");
+}
+
 /// Inventor's Axe enters, grants {E}{E}, attaches to your creature (+2/+0), and
 /// re-equips for an {E}{E} energy cost.
 #[test]

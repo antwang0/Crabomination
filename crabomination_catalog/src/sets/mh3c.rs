@@ -8,7 +8,7 @@ use crate::card::{
     StaticAbility, Subtypes, TokenDefinition, Zone,
 };
 use crate::effect::shortcut::{
-    adapt, battle_cry, evolve, on_attack, on_cast, on_dies, target_any, target_filtered,
+    adapt, battle_cry, evolve, exalted, on_attack, on_cast, on_dies, target_any, target_filtered,
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
@@ -622,6 +622,35 @@ pub fn drowner_of_truth() -> CardDefinition {
             }),
             else_: Box::new(Effect::Noop),
         })],
+        ..Default::default()
+    }
+}
+
+/// Emissary of Soulfire — {1}{W}{U} 1/4 Djinn Monk. ETB: get {E}{E}{E}. {E}{E}:
+/// put an exalted counter on target creature you control (sorcery speed). Each
+/// exalted counter is modeled as a permanently-granted `exalted()` instance.
+pub fn emissary_of_soulfire() -> CardDefinition {
+    CardDefinition {
+        name: "Emissary of Soulfire",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddEnergy(Value::Const(3)))],
+        activated_abilities: vec![ActivatedAbility {
+            energy_cost: 2,
+            sorcery_speed: true,
+            effect: Effect::GrantTriggeredAbility {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                trigger: Box::new(exalted()),
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -38,13 +38,16 @@ factory doc comment:
   Vortex (`Effect::Discover`), Aether Revolt
   (`StaticEffect::NoncombatDamageToOpponentsBonus`), Idol of False Gods
   (`StaticEffect::SelfHasKeywordWhileCountersAtLeast`), Spymaster's Vault
-  (targeted connive-X), Monumental Henge (dig-for-historic). Still open, each
+  (targeted connive-X), Monumental Henge (dig-for-historic), Inventor's Axe
+  (`CardDefinition.equip_energy_cost`), Emissary of Soulfire (exalted counters
+  modeled as permanently-granted `exalted()` via `Effect::GrantTriggeredAbility`
+  now honoring `Duration::Permanent`). Still open, each
   needing one primitive: kicker "choose one; if kicked choose both" (Depth
   Defiler); kicker-changes-target (Expel the Unworthy); mana-Escalate at cast
   (Collective Resistance — `Effect::Escalate.cost` is resolution-time only);
   sacrifice-a-modified-creature additional cost + "if a modified creature was
   sacrificed" rider (Lethal Throwdown); Jolted Awake (dynamic `PayEnergy` =
-  target's MV); Exalted counter type (Emissary of Soulfire); an Emerge card
+  target's MV); an Emerge card
   (`CardDefinition.emerge` exists but unused — Twisted Riddlekeeper, Herigast);
   a "counter-doubling once each turn" static (Cursed Wombat); the untap-at-most-
   one-nonbasic static (Winter Moon); optional Exert (CR 702.83a); an
