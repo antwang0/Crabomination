@@ -121,6 +121,11 @@ pub enum Modification {
 
     // ── Layer 7 ──────────────────────────────────────────────────────────────
     SetPowerToughness(i32, i32),   // 7b
+    /// 7b — set base power and toughness each equal to the affected
+    /// permanent's own mana value (Opalescence / Starfield of Nyx turning
+    /// non-Aura enchantments into `MV/MV` creatures). Read per-permanent from
+    /// its printed mana cost.
+    SetPowerToughnessToManaValue,  // 7b
     /// Set base power only (layer 7b), leaving base toughness intact — "this
     /// creature's base power becomes N" (Belligerent Yearling). Ordered with
     /// `SetPowerToughness` by timestamp; later wins.
@@ -516,6 +521,11 @@ fn compute_permanent_pass(
             // Layer 7 (modifications arrive in timestamp order; later wins)
             Modification::SetPowerToughness(p, t) => {
                 set_pt = Some((*p, *t));
+                set_power_only = None;
+            }
+            Modification::SetPowerToughnessToManaValue => {
+                let mv = card.definition.cost.cmc() as i32;
+                set_pt = Some((mv, mv));
                 set_power_only = None;
             }
             Modification::SetPower(p) => set_power_only = Some(*p),

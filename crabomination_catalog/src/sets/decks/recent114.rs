@@ -1,0 +1,380 @@
+//! Enchantress / enchantment-matters package (Legacy & Modern staples). New
+//! engine work: `StaticEffect::NonAuraEnchantmentsAreCreatures` (Opalescence /
+//! Starfield of Nyx animate non-Aura enchantments to `MV/MV` creatures via a
+//! layer-4 add-creature-type + layer-7 `SetPowerToughnessToManaValue`) and
+//! `ExtraManaKind::AnyColor` (Fertile Ground / Market Festival land-tap ramp).
+//! Tests in `tests/recent114.rs`.
+
+use crate::card::{
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
+    ExileReturnZone, Keyword, Predicate, SelectionRequirement, StaticAbility, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility,
+};
+use crate::effect::shortcut::target_filtered;
+use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
+use crate::game::TurnStep;
+use crate::mana::{cost, g, generic, hybrid, w, Color};
+
+/// "Whenever you cast an enchantment spell, `body`." (Argothian Enchantress /
+/// Enchantress's Presence shape.)
+fn on_cast_enchantment(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCardType(CardType::Enchantment),
+            },
+        ),
+        effect: body,
+    }
+}
+
+/// "Whenever another enchantment you control enters, `body`." (Constellation.)
+fn constellation(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Enchantment,
+            },
+        ),
+        effect: body,
+    }
+}
+
+/// Selector for "other permanents you control" (or a filtered subset).
+fn yours_other(extra: Option<SelectionRequirement>) -> Selector {
+    let mut req = SelectionRequirement::ControlledByYou.and(SelectionRequirement::OtherThanSource);
+    if let Some(e) = extra {
+        req = req.and(e);
+    }
+    Selector::EachPermanent(req)
+}
+
+// ── Enchantress payoffs ──────────────────────────────────────────────────────
+
+/// Enchantress's Presence — {2}{G} Enchantment. Whenever you cast an
+/// enchantment spell, draw a card.
+pub fn enchantresss_presence() -> CardDefinition {
+    CardDefinition {
+        name: "Enchantress's Presence",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![on_cast_enchantment(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Herald of the Pantheon — {1}{G} 2/2 Centaur Shaman. Enchantment spells you
+/// cast cost {1} less; whenever you cast an enchantment spell, gain 1 life.
+pub fn herald_of_the_pantheon() -> CardDefinition {
+    CardDefinition {
+        name: "Herald of the Pantheon",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Enchantment spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Enchantment,
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![on_cast_enchantment(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sigil of the Empty Throne — {3}{W}{W} Enchantment. Whenever you cast an
+/// enchantment spell, create a 4/4 white Angel creature token with flying.
+pub fn sigil_of_the_empty_throne() -> CardDefinition {
+    CardDefinition {
+        name: "Sigil of the Empty Throne",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![on_cast_enchantment(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Angel".into(),
+                power: 4,
+                toughness: 4,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Angel],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ajani's Chosen — {2}{W}{W} 3/3 Cat Soldier. Whenever an enchantment you
+/// control enters, create a 2/2 white Cat creature token. (The Aura-attach
+/// rider is dropped — the token still enters.)
+pub fn ajanis_chosen() -> CardDefinition {
+    CardDefinition {
+        name: "Ajani's Chosen",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![constellation(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Cat".into(),
+                power: 2,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Cat],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+// ── Animate-enchantment statics ──────────────────────────────────────────────
+
+/// Opalescence — {2}{W}{W} Enchantment. Each other non-Aura enchantment is a
+/// creature with base power and toughness each equal to its mana value.
+pub fn opalescence() -> CardDefinition {
+    CardDefinition {
+        name: "Opalescence",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each other non-Aura enchantment is a creature with power and toughness each equal to its mana value.",
+            effect: StaticEffect::NonAuraEnchantmentsAreCreatures {
+                yours_only: false,
+                requires_five: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Starfield of Nyx — {4}{W} Enchantment. At your upkeep you may return an
+/// enchantment card from your graveyard. While you control 5+ enchantments,
+/// each other non-Aura enchantment you control is an `MV/MV` creature.
+pub fn starfield_of_nyx() -> CardDefinition {
+    CardDefinition {
+        name: "Starfield of Nyx",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::MayDo {
+                description: "Return an enchantment card from your graveyard to the battlefield?"
+                    .into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control five or more enchantments, each other non-Aura enchantment you control is an MV/MV creature.",
+            effect: StaticEffect::NonAuraEnchantmentsAreCreatures {
+                yours_only: true,
+                requires_five: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Pillowfort / protection statics ──────────────────────────────────────────
+
+/// Privileged Position — {2}{G/W}{G/W}{G/W} Enchantment. Other permanents you
+/// control have hexproof.
+pub fn privileged_position() -> CardDefinition {
+    CardDefinition {
+        name: "Privileged Position",
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Other permanents you control have hexproof.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: yours_other(None),
+                keyword: Keyword::Hexproof,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Greater Auramancy — {1}{W} Enchantment. Other enchantments you control have
+/// shroud. (The "enchanted creatures you control have shroud" clause is
+/// approximated to the enchantment-only grant.)
+pub fn greater_auramancy() -> CardDefinition {
+    CardDefinition {
+        name: "Greater Auramancy",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Other enchantments you control have shroud.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: yours_other(Some(SelectionRequirement::Enchantment)),
+                keyword: Keyword::Shroud,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nevermore — {1}{W}{W} Enchantment. As this enters, name a nonland card.
+/// Spells with the chosen name can't be cast.
+pub fn nevermore() -> CardDefinition {
+    CardDefinition {
+        name: "Nevermore",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCard { what: Selector::This },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Spells with the chosen name can't be cast.",
+            effect: StaticEffect::NamedSpellCantBeCast,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grasp of Fate — {1}{W}{W} Enchantment. ETB: exile a nonland permanent an
+/// opponent controls until this leaves. (Printed "for each opponent, up to
+/// one" — modeled as a single exile, faithful in 1v1.)
+pub fn grasp_of_fate() -> CardDefinition {
+    CardDefinition {
+        name: "Grasp of Fate",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Constellation utility ────────────────────────────────────────────────────
+
+/// Season of Growth — {1}{G} Enchantment. Whenever a creature you control
+/// enters, scry 1. Whenever you cast a spell that targets a creature you
+/// control, draw a card.
+pub fn season_of_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Season of Growth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::CastSpellTargetsMatch(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Death-watching enchantments ──────────────────────────────────────────────
+
+/// Sigil of the New Dawn — {3}{W} Enchantment. Whenever a creature you control
+/// is put into your graveyard from the battlefield, you may pay {1}{W}; if you
+/// do, return that card to your hand.
+pub fn sigil_of_the_new_dawn() -> CardDefinition {
+    CardDefinition {
+        name: "Sigil of the New Dawn",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Return the dead creature to your hand?".into(),
+                mana_cost: cost(&[generic(1), w()]),
+                body: Box::new(Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Calix, Guided by Fate — {1}{G}{W} 2/2 legendary Human Druid. Constellation:
+/// put a +1/+1 counter on target creature. (The combat-copy ability is dropped
+/// — the constellation payoff is modeled.)
+pub fn calix_guided_by_fate() -> CardDefinition {
+    CardDefinition {
+        name: "Calix, Guided by Fate",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Enchantment,
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}

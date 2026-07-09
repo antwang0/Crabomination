@@ -223,6 +223,18 @@ pub enum StaticEffect {
         applies_to: Selector,
         card_type: crate::card::CardType,
     },
+    /// CR 613 — each other non-Aura enchantment becomes a creature (layer 4)
+    /// with base power and toughness each equal to its mana value (layer 7b).
+    /// Opalescence (`yours_only: false`, always on) and Starfield of Nyx
+    /// (`yours_only: true`, `requires_five: true` — active only while its
+    /// controller has five or more enchantments). Materialized state-aware in
+    /// `gather_continuous_effects_inner` since the gate reads the board.
+    NonAuraEnchantmentsAreCreatures {
+        #[serde(default)]
+        yours_only: bool,
+        #[serde(default)]
+        requires_five: bool,
+    },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

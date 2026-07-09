@@ -391,6 +391,9 @@ mod tests_recent112;
 #[path = "../tests/recent113.rs"]
 mod tests_recent113;
 #[cfg(test)]
+#[path = "../tests/recent114.rs"]
+mod tests_recent114;
+#[cfg(test)]
 #[path = "../tests/mh2b.rs"]
 mod tests_mh2b;
 #[cfg(test)]
@@ -5200,6 +5203,64 @@ impl GameState {
                         modification: Modification::RemoveCardType(CardType::Creature),
                     });
                 }
+            }
+        }
+        // CR 613 — Opalescence / Starfield of Nyx: each other non-Aura
+        // enchantment becomes an `MV/MV` creature. Starfield gates on the
+        // controller holding five or more enchantments, so the set is gathered
+        // state-aware rather than through `static_ability_to_effects`.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::NonAuraEnchantmentsAreCreatures {
+                    yours_only,
+                    requires_five,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                if *requires_five
+                    && self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == card.controller
+                                && c.definition.card_types.contains(&CardType::Enchantment)
+                        })
+                        .count()
+                        < 5
+                {
+                    continue;
+                }
+                use crate::card::{EnchantmentSubtype, SelectionRequirement as R};
+                let mut req = R::Enchantment
+                    .and(R::Not(Box::new(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))))
+                    .and(R::OtherThanSource);
+                if *yours_only {
+                    req = req.and(R::ControlledByYou);
+                }
+                let affected = AffectedPermanents::CardMatch {
+                    source_controller: card.controller,
+                    requirement: Box::new(req),
+                };
+                let ts = card.object_timestamp();
+                all_effects.push(ContinuousEffect {
+                    timestamp: ts,
+                    source: card.id,
+                    affected: affected.clone(),
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddCardType(CardType::Creature),
+                });
+                all_effects.push(ContinuousEffect {
+                    timestamp: ts,
+                    source: card.id,
+                    affected,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::SetValue),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughnessToManaValue,
+                });
             }
         }
         // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
@@ -12710,6 +12771,9 @@ fn static_effect_to_effects(
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }
+            // NonAuraEnchantmentsAreCreatures — Starfield's gate reads the live
+            // enchantment count; resolved in `gather_continuous_effects`.
+            | StaticEffect::NonAuraEnchantmentsAreCreatures { .. }
             // DevotionBonus — read directly by `devotion_to`, no continuous effect.
             | StaticEffect::DevotionBonus
             // PreventCombatDamageToSelfAndGrow — consulted at the combat damage
