@@ -54,7 +54,7 @@ pub enum CreatureType {
     Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
-    Sheep,
+    Sheep, Trilobite,
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold,
@@ -1420,6 +1420,9 @@ pub enum SelectionRequirement {
     /// LCI fathomless descent — MV at most the number of permanent cards in the
     /// evaluating player's graveyard (Squirming Emergence's reanimation cap).
     ManaValueAtMostPermanentsInYourGraveyard,
+    /// MV at most the evaluating player's devotion to a color (Grim Servant —
+    /// "search for a card with mana value ≤ your devotion to black").
+    ManaValueAtMostDevotion(crate::mana::Color),
     /// Mana value ≤ the mana spent to cast the source permanent's spell
     /// (`CardInstance.cast_mana_spent`). Read source-relative at filter time —
     /// Astelli Reclaimer's "with mana value X or less, where X is the amount of

@@ -2015,6 +2015,9 @@ impl GameState {
                         StackItem::Trigger { source, .. } if *source == card.id
                     )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    R::ManaValueAtMostDevotion(color) => {
+                        card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
+                    }
                     R::ManaValueAtMostYourCount(inner) => {
                         let n = self
                             .battlefield
@@ -2288,6 +2291,9 @@ impl GameState {
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            R::ManaValueAtMostDevotion(color) => {
+                card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
+            }
             R::ManaValueAtMostYourCount(inner) => {
                 let n = self
                     .battlefield

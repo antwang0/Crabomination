@@ -343,6 +343,15 @@ exercising each) was elided in a compaction pass; recover it from
   staple sweep (Changeling Outcast, King of the Pride, Vesperlark, Mother
   Bear, Goblin War Party entwine, Orcish Hellraiser, Excavating Anurid
   threshold, Headless Specter hellbent, …).
+- **MH3 batch 2 (modern_decks, `sets::mh3b` — 22 cards):** rides existing
+  Eldrazi/colorless, adapt/modified, living-weapon, and modal/overload
+  primitives; one new filter `R::ManaValueAtMostDevotion(Color)` (MV ≤ your
+  devotion — Grim Servant) and the `Trilobite` creature type. Cards exercise
+  Annihilator + graveyard-recur (Eldrazi Ravager), cast-or-cycle spawn
+  (Drownyard Lurker), second-draw payoff (Emrakul's Messenger), modified-dies
+  manifest reading LKI (Guardian of the Forgotten), `DoubleCountersOnEach` +
+  Overload (Fangs of Kalonia), and living-weapon equipment
+  (Colossal Dreadmask, Drossclaw).
 
 ## Tier 1 — High-leverage engine primitives
 

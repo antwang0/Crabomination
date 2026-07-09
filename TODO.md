@@ -26,6 +26,16 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- ⏳ **Enters-as-a-choice-of-stats** — a "*/* creature that, as it enters,
+  becomes your choice of P/T + keyword" needs an as-enters replacement (not an
+  ETB trigger, which lets a printed 0/0 die to SBA first). Corrupted
+  Shapeshifter (MH3) deferred pending this; the rest of `sets::mh3b` shipped.
+- ⏳ **MH3 gaps still open** (`python3 scripts/set_gaps.py mh3`): mana-Escalate
+  spells (Collective Resistance — `Effect::Escalate.cost` only models a
+  resolution-time cost, not per-mode mana at cast), kicker-changes-target
+  (Expel the Unworthy), sacrifice-a-modified-creature additional cost with an
+  "if a modified creature was sacrificed" rider (Lethal Throwdown), and the
+  energy "pay any amount of {E}" spells (Aether Spike, Jolted Awake).
 - ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
   `suspend_only`; serde alias kept) rejects the pay-the-cost cast path per
   CR 601.3e; Ancestral Vision / Lotus Bloom / Crashing Footfalls / Living End
