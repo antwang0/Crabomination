@@ -5679,6 +5679,13 @@ static DECKS: &[Factory] = &[
     super::decks::diminisher_witch,
     super::decks::ego_drain,
     super::decks::charging_hooligan,
+    // recent129 — WOE wave 2: Celebration, Roles, Adventure, evasion
+    super::decks::moonshaker_cavalry,
+    super::decks::water_wings,
+    super::decks::werefox_bodyguard,
+    super::decks::grand_ball_guest,
+    super::decks::ratcatcher_trainee,
+    super::decks::twisted_fealty,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
