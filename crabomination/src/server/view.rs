@@ -1523,6 +1523,12 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
         Predicate::CastSpellManaSpentAtLeast(n) => format!("if ≥{n} mana spent"),
         Predicate::IncrementSatisfied => "Increment (mana > P or T)".into(),
+        Predicate::CommittedCrimeThisTurn { .. } => "if you committed a crime".into(),
+        Predicate::ControlsOutlaw { .. } => "if you control an outlaw".into(),
+        Predicate::SacrificedWasOutlaw => "if an outlaw was sacrificed".into(),
+        Predicate::SacrificedWasArtifact => "if an artifact was sacrificed".into(),
+        Predicate::SourceSaddled => "while saddled".into(),
+        Predicate::OpponentControlsMoreLandsThanYou => "if behind on lands".into(),
         // Catch-all: no human-readable form yet.
         _ => "conditional".into(),
     }

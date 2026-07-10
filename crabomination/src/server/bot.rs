@@ -2926,6 +2926,12 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
 /// a Mount that can attack this turn and isn't already saddled, and never spends
 /// more board power than the Mount itself is worth.
 fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
+    // Saddled is "until end of turn" (CR 702.171e), so only pay the tap cost
+    // when a combat phase still follows — i.e. precombat main. Saddling in
+    // postcombat main just wastes the saddlers before the buff can matter.
+    if state.step != TurnStep::PreCombatMain {
+        return None;
+    }
     for mount in &state.battlefield {
         if mount.controller != seat || mount.saddled || mount.tapped {
             continue;
@@ -4544,6 +4550,20 @@ mod tests {
         // A summoning-sick Mount can't attack → don't waste a saddler on it.
         g.battlefield_find_mut(ghoda).unwrap().summoning_sick = true;
         assert!(pick_saddle(&g, 0).is_none(), "won't saddle a Mount that can't attack");
+    }
+
+    /// The bot only saddles in precombat main — in postcombat main the "until
+    /// end of turn" buff would wear off before any attack could use it.
+    #[test]
+    fn bot_does_not_saddle_in_postcombat_main() {
+        let mut g = two_player_game();
+        let ghoda = g.add_card_to_battlefield(0, catalog::gilded_ghoda()); // Saddle 1
+        g.clear_sickness(ghoda);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        assert!(pick_saddle(&g, 0).is_some(), "saddles in precombat main");
+        g.step = TurnStep::PostCombatMain;
+        assert!(pick_saddle(&g, 0).is_none(), "no saddle after combat is over");
     }
 
     /// Saddle 3 on a 2-power Mount (Caustic Bronco) still gets saddled when the

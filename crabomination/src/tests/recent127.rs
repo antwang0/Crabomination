@@ -340,6 +340,41 @@ fn colossal_rattlewurm_desert_fetch() {
     );
 }
 
+/// Colossal Rattlewurm can be cast at instant speed only while you control a
+/// Desert.
+#[test]
+fn colossal_rattlewurm_conditional_flash() {
+    // No Desert → sorcery speed only; casting on the opponent's turn is rejected.
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let worm = g.add_card_to_hand(0, catalog::colossal_rattlewurm());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: worm,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "no Desert → can't cast at instant speed",
+    );
+    // With a Desert in play → flash lets it cast on the opponent's turn.
+    g.add_card_to_battlefield(0, catalog::bristling_backwoods());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: worm,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Desert in play → flash");
+}
+
 /// Cactusfolk Sureshot grants trample+haste to your big creatures at combat.
 #[test]
 fn cactusfolk_sureshot_combat_buff() {

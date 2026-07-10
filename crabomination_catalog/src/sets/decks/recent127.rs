@@ -338,10 +338,9 @@ pub fn frontier_seeker() -> CardDefinition {
     }
 }
 
-/// Colossal Rattlewurm — {2}{G}{G} 6/5 Wurm with trample. {1}{G}, Exile this
-/// card from your graveyard: search your library for a Desert card, put it onto
-/// the battlefield tapped, then shuffle. (Flash-while-you-control-a-Desert is
-/// not yet wired — tracked in TODO.md.)
+/// Colossal Rattlewurm — {2}{G}{G} 6/5 Wurm with trample and flash while you
+/// control a Desert. {1}{G}, Exile this card from your graveyard: search your
+/// library for a Desert card, put it onto the battlefield tapped, then shuffle.
 pub fn colossal_rattlewurm() -> CardDefinition {
     CardDefinition {
         name: "Colossal Rattlewurm",
@@ -351,6 +350,18 @@ pub fn colossal_rattlewurm() -> CardDefinition {
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Colossal Rattlewurm has flash as long as you control a Desert.",
+            effect: StaticEffect::SelfFlashIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::HasLandType(LandType::Desert),
+                    },
+                    n: Value::ONE,
+                },
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             from_graveyard: true,
