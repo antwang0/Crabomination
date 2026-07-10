@@ -1899,6 +1899,7 @@ impl Effect {
                 Effect::RevealUntilLandDamage { to, .. }
                 | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
+                Effect::CreateTokenAttachedTo { target, .. } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }

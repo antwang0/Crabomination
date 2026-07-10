@@ -5668,6 +5668,17 @@ static DECKS: &[Factory] = &[
     super::decks::bandits_haul,
     super::decks::claim_jumper,
     super::decks::binding_negotiation,
+    // recent128 — WOE: Celebration, Bargain, Role tokens
+    super::decks::armory_mice,
+    super::decks::belligerent_of_the_ball,
+    super::decks::archive_dragon,
+    super::decks::barrow_naughty,
+    super::decks::agathas_champion,
+    super::decks::cut_in,
+    super::decks::become_brutes,
+    super::decks::diminisher_witch,
+    super::decks::ego_drain,
+    super::decks::charging_hooligan,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

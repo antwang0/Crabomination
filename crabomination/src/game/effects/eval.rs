@@ -1624,6 +1624,9 @@ impl GameState {
             Predicate::CreatureEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| !self.players[p].creatures_entered_this_turn.is_empty()),
+            Predicate::CelebrationActive { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].nonland_permanents_entered_this_turn >= 2),
             Predicate::ThresholdActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].graveyard.len() >= 7),

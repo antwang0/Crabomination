@@ -550,6 +550,9 @@ mod tests_recent126;
 #[path = "../tests/recent127.rs"]
 mod tests_recent127;
 #[cfg(test)]
+#[path = "../tests/recent128.rs"]
+mod tests_recent128;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]
@@ -4204,6 +4207,9 @@ impl GameState {
         }
         if inst.definition.is_artifact() {
             self.players[ctrl].artifacts_entered_this_turn += 1;
+        }
+        if !inst.definition.is_land() {
+            self.players[ctrl].nonland_permanents_entered_this_turn += 1;
         }
         self.battlefield.push(inst);
         // CR 707.2 — a token minted from a clone-y definition (Vizier of

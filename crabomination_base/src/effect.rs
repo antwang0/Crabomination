@@ -1282,6 +1282,11 @@ pub enum Predicate {
     /// (Zhalfirin Decoy's activation gate, Bellowing Elk's static). Reads
     /// `Player.creatures_entered_this_turn`.
     CreatureEnteredThisTurn { who: PlayerRef },
+    /// **Celebration** (WOE) — two or more nonland permanents entered under
+    /// `who`'s control this turn. Reads
+    /// `Player.nonland_permanents_entered_this_turn` (Armory Mice, Belligerent
+    /// of the Ball).
+    CelebrationActive { who: PlayerRef },
     /// **Threshold** (Odyssey ability word) — `who` has seven or more cards in
     /// their graveyard. Gates "as long as / if" threshold riders (Nimble
     /// Mongoose, Werebear, Mystic Enforcer).

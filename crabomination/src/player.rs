@@ -192,6 +192,12 @@ pub struct Player {
     /// active player's turn boundary.
     #[serde(default)]
     pub artifacts_entered_this_turn: u32,
+    /// CR 702.176-era **Celebration** (WOE) — count of nonland permanents that
+    /// entered under this player's control this turn. Gates "if two or more
+    /// nonland permanents entered … this turn" (`Predicate::CelebrationActive`
+    /// — Armory Mice, Belligerent of the Ball). Reset at cleanup.
+    #[serde(default)]
+    pub nonland_permanents_entered_this_turn: u32,
     /// Multicolored spells this player has cast this turn (Zenith
     /// Chronicler's "first multicolored spell each turn"). Reset at cleanup.
     #[serde(default)]
@@ -683,6 +689,7 @@ impl Player {
             creatures_entered_this_turn: Vec::new(),
             creatures_entered_last_turn: Vec::new(),
             artifacts_entered_this_turn: 0,
+            nonland_permanents_entered_this_turn: 0,
             multicolored_spells_cast_this_turn: 0,
             oil_activity_this_turn: false,
             channel_life_for_mana: false,
