@@ -5595,6 +5595,11 @@ static DECKS: &[Factory] = &[
     super::decks::brambleguard_veteran,
     super::decks::attack_in_the_box,
     super::decks::arbiter_of_woe,
+    // recent119 — simple BLB creatures
+    super::decks::ravine_raider,
+    super::decks::lightshell_duo,
+    super::decks::nightwhorl_hermit,
+    super::decks::finch_formation,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
