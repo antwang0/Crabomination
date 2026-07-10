@@ -11,6 +11,47 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, generic, r, u, w};
 
+/// Unstable Amulet — {1}{R} artifact. ETB: get {E}{E}. Whenever you cast a
+/// spell from anywhere other than your hand, deal 1 damage to each opponent.
+/// {T}, Pay {E}{E}: exile the top card of your library; you may play it this
+/// turn. (The "until you exile another card with this" window is approximated
+/// as end-of-turn.)
+pub fn unstable_amulet() -> CardDefinition {
+    CardDefinition {
+        name: "Unstable Amulet",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::SpellNotCastFromHand,
+                    },
+                ),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            energy_cost: 2,
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                duration: MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Planar Genesis — {G}{U} instant. Look at the top four cards; you may put a
 /// land onto the battlefield tapped, otherwise put a card into your hand; put
 /// the rest on the bottom in a random order.

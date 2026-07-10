@@ -328,3 +328,46 @@ fn glimpse_the_impossible_exiles_then_spawns() {
         "uncast cards go to graveyard");
 }
 
+/// Unstable Amulet enters with two energy and pings on a graveyard cast.
+#[test]
+fn unstable_amulet_etb_energy_and_ping() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let amulet = g.add_card_to_hand(0, catalog::unstable_amulet());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: amulet, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Unstable Amulet");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 2, "ETB grants two energy");
+    // Flashback a spell from the graveyard → the amulet pings the opponent.
+    let opp_life = g.players[1].life;
+    let looting = g.add_card_to_library(0, catalog::faithless_looting());
+    let pos = g.players[0].library.iter().position(|c| c.id == looting).unwrap();
+    let card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(card);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFlashback { card_id: looting, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("flashback from graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 1, "graveyard cast pings the opponent for 1");
+}
+
+/// The {T}, Pay {E}{E} ability exiles the top card and lets you play it.
+#[test]
+fn unstable_amulet_impulse_ability() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let amulet = g.add_card_to_battlefield(0, catalog::unstable_amulet());
+    g.clear_sickness(amulet);
+    g.players[0].energy = 2;
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: amulet, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate impulse for {T} + {E}{E}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "paid two energy");
+    assert!(g.exile.iter().any(|c| c.id == top), "top card exiled and playable");
+}
