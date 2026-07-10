@@ -5580,6 +5580,14 @@ static DECKS: &[Factory] = &[
     // recent116 — kicker ETB counters + mana-spent token minting
     super::decks::untamed_kavu,
     super::decks::manaform_hellkite,
+    // recent117 — BLB/DSK/FDN commons & uncommons
+    super::decks::bigfin_bouncer,
+    super::decks::alanias_pathmaker,
+    super::decks::apothecary_stomper,
+    super::decks::armasaur_guide,
+    super::decks::battlesong_berserker,
+    super::decks::billowing_shriekmass,
+    super::decks::bulk_up,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
