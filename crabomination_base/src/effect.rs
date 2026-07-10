@@ -4095,6 +4095,10 @@ pub enum Effect {
     /// Lightning) where `Effect::Move { This → Graveyard }` would skip the
     /// `CreatureDied` event.
     SacrificeSource,
+    /// Exile this effect's source permanent (no death trigger). Used by
+    /// temporary tokens exiled at the next end step (Manaform Hellkite's
+    /// Dragon Illusion, Kari Zev's Ragavan-style temps).
+    ExileSource,
     /// Sacrifice the specific permanent(s) named by `what` (CR 701.16), firing
     /// proper sacrifice + death triggers. Unlike `Effect::Sacrifice` (which
     /// makes a player choose `count` matching permanents) this sacrifices an

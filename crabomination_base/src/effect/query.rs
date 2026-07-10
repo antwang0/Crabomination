@@ -273,6 +273,7 @@ impl Effect {
                 branches.iter().any(|e| e.requires_target())
             }
             Effect::SacrificeSource => false,
+            Effect::ExileSource => false,
             Effect::SacrificeSourceUnlessSacrifice { .. } => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
@@ -1354,6 +1355,7 @@ impl Effect {
             },
             Effect::Sacrifice { .. } => "sacrifice".into(),
             Effect::SacrificeSource => "sacrifice this".into(),
+            Effect::ExileSource => "exile this".into(),
             Effect::Explore { .. } => "explore".into(),
             Effect::Goad { .. } => "goad target creature".into(),
             Effect::Suspect { .. } => "suspect target creature".into(),

@@ -8879,6 +8879,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileSource => {
+                if let Some(id) = ctx.source
+                    && self.battlefield.iter().any(|c| c.id == id)
+                {
+                    self.remove_from_battlefield_to_exile(id);
+                    if ctx.controller < self.players.len() {
+                        self.players[ctx.controller].cards_exiled_this_turn =
+                            self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
+                    }
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                }
+                Ok(())
+            }
+
             Effect::SacrificePermanent { what } => {
                 let ids: Vec<CardId> = self
                     .resolve_selector(what, ctx)

@@ -514,6 +514,9 @@ mod tests_mh3e;
 #[path = "../tests/recent115.rs"]
 mod tests_recent115;
 #[cfg(test)]
+#[path = "../tests/recent116.rs"]
+mod tests_recent116;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]

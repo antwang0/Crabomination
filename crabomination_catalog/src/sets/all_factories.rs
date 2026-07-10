@@ -5577,6 +5577,9 @@ static DECKS: &[Factory] = &[
     // recent115 — mana-persistence staples
     super::decks::upwelling,
     super::decks::omnath_locus_of_mana,
+    // recent116 — kicker ETB counters + mana-spent token minting
+    super::decks::untamed_kavu,
+    super::decks::manaform_hellkite,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
