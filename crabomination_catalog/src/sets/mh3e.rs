@@ -90,13 +90,13 @@ pub fn planar_genesis() -> CardDefinition {
 }
 
 /// Reiterating Bolt — {1}{R} sorcery. Deals 3 damage to target creature or
-/// planeswalker. (Replicate—Pay {E}{E}{E} is dropped: the engine models
-/// Replicate as a mana cost only, not an energy cost.)
+/// planeswalker. Replicate—Pay {E}{E}{E} (`Keyword::ReplicateEnergy(3)`).
 pub fn reiterating_bolt() -> CardDefinition {
     CardDefinition {
         name: "Reiterating Bolt",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::ReplicateEnergy(3)],
         effect: Effect::DealDamage {
             to: target_filtered(R::Creature.or(R::Planeswalker)),
             amount: Value::Const(3),
@@ -136,7 +136,7 @@ pub fn vega_the_watcher() -> CardDefinition {
 /// Volatile Stormdrake — {1}{U} 3/2 Drake with flying. ETB: exchange control of
 /// it and target creature an opponent controls; if you do, get {E}{E}{E}{E},
 /// then sacrifice that creature unless you pay {E} equal to its mana value.
-/// (The "hexproof from activated and triggered abilities" rider is dropped.)
+/// Also has hexproof from activated and triggered abilities.
 pub fn volatile_stormdrake() -> CardDefinition {
     CardDefinition {
         name: "Volatile Stormdrake",
@@ -145,7 +145,7 @@ pub fn volatile_stormdrake() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::HexproofFromAbilities],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExchangeControl {
                 a: Selector::This,

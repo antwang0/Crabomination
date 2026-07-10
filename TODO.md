@@ -65,13 +65,14 @@ factory doc comment:
   Reiterating Bolt (base bolt), Unstable Amulet (energy ETB + `SpellNotCastFromHand`
   ping + impulse), Izzet Generatorium (`StaticEffect::EnergyGainBonus` +
   `Player.energy_spent_this_turn`/`GameState::spend_energy` +
-  `Predicate::EnergyPaidThisTurnAtLeast`). Still open, each needing one primitive:
+  `Predicate::EnergyPaidThisTurnAtLeast`). **Since:** Volatile Stormdrake now has
+  `Keyword::HexproofFromAbilities` (CR 702.11d — opponents' abilities can't target
+  it) and Reiterating Bolt has `Keyword::ReplicateEnergy(3)` (energy-paid Replicate,
+  copy-per-payment). Still open, each needing one primitive:
   optional Exert + haste-if-spent-on-creature mana (Arena of Glory);
   alt-cost-by-energy permission (Primal Prayers); a "may reveal + else +1/+1
   counter" look-top rider (Rosecot Knight);
-  energy-Replicate (Reiterating Bolt's dropped `Replicate—Pay {E}{E}{E}`);
-  two-independent-kickers (Wastescape Battlemage); `Keyword::HexproofFromAbilities`
-  (Volatile Stormdrake's dropped rider); the real Sundering Eruption //
+  two-independent-kickers (Wastescape Battlemage); the real Sundering Eruption //
   Volcanic Fissure (name collides with an existing fabricated `sundering_eruption`
   in `decks::modern` — replacing it means rewriting that card's two tests);
   sacrifice-count-driven search (The Hunger Tide Rises IV). Card-level

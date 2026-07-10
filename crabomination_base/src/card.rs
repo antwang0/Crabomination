@@ -659,6 +659,10 @@ pub enum Keyword {
     /// includes *none* of the listed colors. `HexproofExceptColors(vec![Green])`
     /// = hexproof from nongreen opponents.
     HexproofExceptColors(Vec<Color>),
+    /// CR 702.11d — "hexproof from [quality]" specialized to abilities: can't
+    /// be the target of activated or triggered abilities opponents control
+    /// (still targetable by spells). Volatile Stormdrake.
+    HexproofFromAbilities,
     Shroud,
     CantBeCountered,
     /// CR 117.x — "If X is N or more, this spell can't be countered."
@@ -1014,6 +1018,10 @@ pub enum Keyword {
     /// copied once per payment (copies may choose new targets). Cast via
     /// `GameAction::CastSpellReplicate`.
     Replicate(crate::mana::ManaCost),
+    /// Replicate whose additional cost is paid in energy rather than mana:
+    /// "Replicate—Pay {E}×N" (Reiterating Bolt). Same copy-per-payment rule as
+    /// `Replicate`; the cast path charges `N` energy per replication.
+    ReplicateEnergy(u32),
     /// CR 702.78 — Conspire. An optional additional cast cost on an
     /// instant/sorcery: as you cast it, you may tap two untapped creatures you
     /// control that each share a color with the spell. Doing so copies the
@@ -3316,6 +3324,12 @@ impl CardDefinition {
     pub fn replicate_cost(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Replicate(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// Energy paid per replication for a `Keyword::ReplicateEnergy` card.
+    pub fn replicate_energy_cost(&self) -> Option<u32> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::ReplicateEnergy(n) = kw { Some(*n) } else { None }
         })
     }
     /// CR 702.35 — the Madness cost if this card has `Keyword::Madness`.

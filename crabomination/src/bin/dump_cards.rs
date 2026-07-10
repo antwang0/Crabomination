@@ -61,6 +61,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::HexproofFromColor(_) => "Hexproof from",
         Keyword::HexproofFromMonocolored => "Hexproof from",
         Keyword::HexproofExceptColors(_) => "Hexproof except",
+        Keyword::HexproofFromAbilities => "Hexproof from abilities",
         Keyword::Shroud => "Shroud",
         Keyword::Flash => "Flash",
         Keyword::Defender => "Defender",
@@ -148,6 +149,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Offspring(_) => "Offspring",
         Keyword::Squad(_) => "Squad",
         Keyword::Replicate(_) => "Replicate",
+        Keyword::ReplicateEnergy(_) => "Replicate",
         Keyword::Conspire => "Conspire",
         Keyword::Fortify(_) => "Fortify",
         Keyword::Protection(_)

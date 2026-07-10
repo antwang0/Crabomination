@@ -10,6 +10,60 @@ use crate::mana::Color;
 
 
 
+/// Reiterating Bolt's Replicate—Pay {E}{E}{E} copies the spell once per payment.
+#[test]
+fn reiterating_bolt_energy_replicate_copies() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let spell = g.add_card_to_hand(0, catalog::reiterating_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].energy = 6;
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: spell, times: 2,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with Replicate x2");
+    assert_eq!(g.players[0].energy, 0, "3 energy per replication x2 = 6 spent");
+    assert_eq!(g.stack.len(), 3, "original spell plus two copies");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != victim), "the 3/3 takes lethal");
+}
+
+/// Reiterating Bolt's Replicate is rejected without enough energy.
+#[test]
+fn reiterating_bolt_replicate_needs_energy() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::reiterating_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].energy = 3; // needs 6 for x2
+    assert!(g.perform_action(GameAction::CastSpellReplicate {
+        card_id: spell, times: 2,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "replicate x2 needs six energy");
+}
+
+/// Volatile Stormdrake can't be the target of an opponent's ability.
+#[test]
+fn volatile_stormdrake_hexproof_from_abilities() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::volatile_stormdrake());
+    let opp_pinger = g.add_card_to_battlefield(1, catalog::rootwater_hunter());
+    let own_pinger = g.add_card_to_battlefield(0, catalog::rootwater_hunter());
+    assert!(g.ability_target_has_protection(&Target::Permanent(drake), opp_pinger),
+        "an opponent's ability can't target it");
+    assert!(!g.ability_target_has_protection(&Target::Permanent(drake), own_pinger),
+        "your own ability still can");
+}
+
 /// Reiterating Bolt deals 3 damage to a creature.
 #[test]
 fn reiterating_bolt_deals_three() {

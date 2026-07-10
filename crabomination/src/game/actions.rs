@@ -2602,21 +2602,33 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let replicate = self
+        let def = self
             .players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .and_then(|c| c.definition.replicate_cost().cloned())
+            .map(|c| &c.definition)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        let mana_replicate = def.replicate_cost().cloned();
+        let energy_per = def.replicate_energy_cost();
+        // Energy-paid replicate (Reiterating Bolt) must have the energy up front.
+        if let Some(n) = energy_per
+            && self.players[p].energy < n.saturating_mul(times)
+        {
+            return Err(GameError::InsufficientEnergy);
+        }
         // Base cost first (pip-aware), then the replicate cost `times` times.
         let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
         if times > 0 {
-            let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
-            for _ in 0..times {
-                combined.symbols.extend(replicate.symbols.iter().cloned());
+            if let Some(n) = energy_per {
+                self.spend_energy(p, n.saturating_mul(times));
+            } else if let Some(replicate) = mana_replicate {
+                let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
+                for _ in 0..times {
+                    combined.symbols.extend(replicate.symbols.iter().cloned());
+                }
+                self.try_pay_with_auto_tap(p, &combined)?;
             }
-            self.try_pay_with_auto_tap(p, &combined)?;
             // CR 702.107a — copy the spell once per replicate payment; copies
             // may choose new targets.
             self.copy_stack_spell(card_id, times as usize, true, &mut events);
@@ -7492,6 +7504,13 @@ impl GameState {
         let src_is_opponent = self
             .battlefield_find(source)
             .is_some_and(|c| c.controller != tgt_controller);
+        // CR 702.11d — "hexproof from activated and triggered abilities":
+        // an opponent's ability simply can't target it (Volatile Stormdrake).
+        if src_is_opponent
+            && tgt.keywords.iter().any(|kw| matches!(kw, Keyword::HexproofFromAbilities))
+        {
+            return true;
+        }
         let printed_hexproof_color = tgt.keywords.iter().any(|kw| {
             matches!(
                 kw,

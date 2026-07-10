@@ -596,7 +596,10 @@ impl GameState {
         let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
-            .filter(|c| c.definition.replicate_cost().is_some())
+            .filter(|c| {
+                c.definition.replicate_cost().is_some()
+                    || c.definition.replicate_energy_cost().is_some()
+            })
             .map(|c| {
                 let needs_target = c.definition.effect.requires_target();
                 (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
