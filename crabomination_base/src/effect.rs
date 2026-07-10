@@ -1282,6 +1282,12 @@ pub enum Predicate {
     /// (Zhalfirin Decoy's activation gate, Bellowing Elk's static). Reads
     /// `Player.creatures_entered_this_turn`.
     CreatureEnteredThisTurn { who: PlayerRef },
+    /// "If another creature entered the battlefield under `who`'s control this
+    /// turn" — self-excluding sibling of `CreatureEnteredThisTurn`. The source's
+    /// own arrival doesn't satisfy it (Bellowing Elk: "As long as you had
+    /// *another* creature enter … this turn"). Compares the entered-ids list
+    /// against `ctx.source`.
+    AnotherCreatureEnteredThisTurn { who: PlayerRef },
     /// **Celebration** (WOE) — two or more nonland permanents entered under
     /// `who`'s control this turn. Reads
     /// `Player.nonland_permanents_entered_this_turn` (Armory Mice, Belligerent

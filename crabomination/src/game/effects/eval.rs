@@ -1624,6 +1624,14 @@ impl GameState {
             Predicate::CreatureEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| !self.players[p].creatures_entered_this_turn.is_empty()),
+            Predicate::AnotherCreatureEnteredThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| {
+                    self.players[p]
+                        .creatures_entered_this_turn
+                        .iter()
+                        .any(|id| Some(*id) != ctx.source)
+                }),
             Predicate::CelebrationActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].nonland_permanents_entered_this_turn >= 2),

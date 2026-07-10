@@ -114,7 +114,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Power-gated evasion — "can't be blocked by creatures with power
         // less than this" (Formation Breaker) / "power N or less" (Questing
         // Beast).
-        CantBeBlockedByPowerLess | CantBeBlockedByPowerAtMost(_) => "Eva",
+        CantBeBlockedByPowerLess | CantBeBlockedByPowerAtMost(_) | CantBeBlockedByPowerAtLeast(_) => {
+            "Eva"
+        }
         // "Can block only creatures with flying" (Wanderlight Spirit).
         CanBlockOnlyFlying => "FlyBlk",
         MustBeBlocked => "Lure",

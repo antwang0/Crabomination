@@ -558,6 +558,18 @@ mod tests_recent129;
 #[cfg(test)]
 #[path = "../tests/recent130.rs"]
 mod tests_recent130;
+
+#[cfg(test)]
+#[path = "../tests/recent131.rs"]
+mod tests_recent131;
+
+#[cfg(test)]
+#[path = "../tests/recent132.rs"]
+mod tests_recent132;
+
+#[cfg(test)]
+#[path = "../tests/recent133.rs"]
+mod tests_recent133;
 #[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
@@ -6463,6 +6475,12 @@ impl GameState {
                         .filter(|c| c.definition.is_enchantment())
                         .count() as i32;
                     (base_p + n, base_t + n)
+                }
+                crate::card::DynamicPt::NonlandPermanentsControlled { base } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && !c.definition.is_land()
+                    }).count() as i32;
+                    (base + n, base + n)
                 }
                 crate::card::DynamicPt::ForestsInPlay { base_p } => {
                     let n = self.battlefield.iter()
@@ -13674,6 +13692,13 @@ pub(crate) fn can_block_attacker_computed(
     // or less — a fixed threshold, not relative to the attacker's power.
     if attacker_kws.iter().any(|k| {
         matches!(k, Keyword::CantBeBlockedByPowerAtMost(n) if blocker_computed.power <= *n as i32)
+    }) {
+        return false;
+    }
+    // Squeak By (CR 509.1b): can't be blocked by creatures with power N or
+    // greater — the fixed-threshold mirror of `CantBeBlockedByPowerAtMost`.
+    if attacker_kws.iter().any(|k| {
+        matches!(k, Keyword::CantBeBlockedByPowerAtLeast(n) if blocker_computed.power >= *n as i32)
     }) {
         return false;
     }

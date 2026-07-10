@@ -7585,3 +7585,66 @@ fn cr_604_3_cda_power_tracks_cards_drawn_live() {
     g.draw_one(0, &mut events);
     assert_eq!(g.computed_permanent(duelist).unwrap().power, 3, "recomputes to 3 after two more");
 }
+
+/// CR 604.3 — a `*/*` characteristic-defining P/T recomputes live as nonland
+/// permanents enter and leave (Regal Bunnicorn).
+#[test]
+fn cr_604_3_nonland_permanent_cda_recomputes() {
+    let mut g = two_player_game();
+    let bunny = g.add_card_to_battlefield(0, catalog::regal_bunnicorn());
+    assert_eq!(g.computed_permanent(bunny).unwrap().power, 1, "alone → 1");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::forest()); // land doesn't count
+    assert_eq!(g.computed_permanent(bunny).unwrap().power, 2, "2 nonland permanents");
+    g.remove_from_battlefield_to_graveyard_raw(bear);
+    assert_eq!(g.computed_permanent(bunny).unwrap().power, 1, "recomputes when one leaves");
+}
+
+/// CR 509.1b — the fixed-threshold "can't be blocked by creatures with power N
+/// or greater" restriction (Squeak By's granted keyword) is the mirror of
+/// Questing Beast's "power N or less".
+#[test]
+fn cr_509_1b_power_at_least_block_restriction() {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    let mut g = two_player_game();
+    let evader = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Test Evader",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::CantBeBlockedByPowerAtLeast(3)],
+        ..Default::default()
+    });
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    assert!(g.blocker_can_block_attacker(small, evader), "power-2 can block");
+    assert!(!g.blocker_can_block_attacker(big, evader), "power-4 can't block");
+}
+
+/// CR 613.7d — switching power and toughness is applied last (layer 7d), after
+/// +1/+1 counters (layer 7c): a base 2/4 with a +1/+1 counter (3/5) switched
+/// becomes 5/3, not 4/3.
+#[test]
+fn cr_613_7d_switch_pt_applies_after_counters() {
+    use crate::card::{CardDefinition, CardType, CounterType};
+    use crate::effect::{Duration, Effect, Selector};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Test Body",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 4,
+        ..Default::default()
+    });
+    g.battlefield_find_mut(c).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!((g.computed_permanent(c).unwrap().power, g.computed_permanent(c).unwrap().toughness), (3, 5));
+    let ctx = crate::game::effects::EffectContext::for_ability(c, 0, Some(Target::Permanent(c)));
+    g.resolve_effect(
+        &Effect::SwitchPT { what: Selector::Target(0), duration: Duration::EndOfTurn },
+        &ctx,
+    )
+    .unwrap();
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "switch happens after the counter");
+}

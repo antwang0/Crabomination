@@ -3477,6 +3477,11 @@ impl GameState {
                     .filter(|t| match t.event.kind {
                         EventKind::PermanentLeavesBattlefield => true,
                         EventKind::CreatureDied => is_creature && !dies_suppressed,
+                        // CR 700.4 — "when this is put into a graveyard from the
+                        // battlefield" for a non-creature (Wicked Role token's
+                        // death-drain). Suppressed under a graveyard→exile
+                        // replacement just like CreatureDied.
+                        EventKind::PermanentDied => !dies_suppressed,
                         _ => false,
                     })
                     .map(|t| (c.id, t.effect.clone(), c.controller))

@@ -889,8 +889,8 @@ pub fn trustworthy_scout() -> CardDefinition {
     }
 }
 
-/// Windcaller Aven — {4}{U}{U} 4/3 Bird Wizard. Flying; cycling {U}. (The "when
-/// you cycle this, target creature gains flying" rider is approximated away.)
+/// Windcaller Aven — {4}{U}{U} 4/3 Bird Wizard. Flying; cycling {U}. When you
+/// cycle this, target creature gains flying until end of turn.
 pub fn windcaller_aven() -> CardDefinition {
     CardDefinition {
         name: "Windcaller Aven",
@@ -903,6 +903,74 @@ pub fn windcaller_aven() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Cycling(cost(&[u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Twisted Reflection — {1}{U} Instant. Choose one — target creature gets -6/-0
+/// until end of turn; or switch target creature's power and toughness until end
+/// of turn. Entwine {B} (choose both if you pay the entwine cost).
+pub fn twisted_reflection() -> CardDefinition {
+    CardDefinition {
+        name: "Twisted Reflection",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Entwine(cost(&[b()]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-6),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::SwitchPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bellowing Elk — {3}{G} 4/2 Elk. Has trample and indestructible as long as
+/// another creature entered the battlefield under your control this turn.
+pub fn bellowing_elk() -> CardDefinition {
+    let gate = || StaticEffect::SelfHasKeywordWhilePredicate {
+        keyword: Keyword::Trample,
+        condition: Predicate::AnotherCreatureEnteredThisTurn { who: PlayerRef::You },
+    };
+    CardDefinition {
+        name: "Bellowing Elk",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Bellowing Elk has trample as long as another creature entered under your control this turn.",
+                effect: gate(),
+            },
+            StaticAbility {
+                description: "Bellowing Elk has indestructible as long as another creature entered under your control this turn.",
+                effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                    keyword: Keyword::Indestructible,
+                    condition: Predicate::AnotherCreatureEnteredThisTurn { who: PlayerRef::You },
+                },
+            },
+        ],
         ..Default::default()
     }
 }

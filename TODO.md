@@ -3457,6 +3457,25 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Cactarantula / Consuming Ashes / Aloe Alchemist** (OTJ) still need a
     control-a-Desert cost reduction, a target-mana-value reflexive predicate, and
     a "becomes plotted" trigger event, respectively.
+- ⏳ **recent131-133 (WOE waves 4-6) follow-ups / noticed:**
+  - New primitives this run: `DynamicPt::NonlandPermanentsControlled` (Regal
+    Bunnicorn `*/*`), `Keyword::CantBeBlockedByPowerAtLeast(N)` (Squeak By —
+    the fixed-threshold mirror of `CantBeBlockedByPowerAtMost`), and the
+    enchantment-matters idiom (`PermanentDied`/`EntersBattlefield` +
+    `EntityMatches { TriggerSource, Enchantment/Aura }` — Wicked Visitor,
+    Savior of the Sleeping, Ashiok's Reaper, Rimefur Reindeer, Tanglespan
+    Lookout). Role tokens (Sorcerer/Cursed/Royal/Wicked) reused via
+    `CreateTokenAttachedTo`; the Wicked Role's death-drain needed the engine to
+    collect **`PermanentDied`/`SelfSource`** leave-triggers for non-creatures
+    (previously only `CreatureDied`/`PermanentLeavesBattlefield` were gathered —
+    fixed in `stack.rs`). Also new: `Value`-free `MayPay` reflexives on ETBs
+    (Unassuming Sage, Snaremaster Sprite).
+  - **Dream Spoilers** deferred — wants a "cast a spell during an opponent's
+    turn" trigger filter (no whose-turn predicate on `EventSpec` yet).
+  - **Discerning Financier**'s donate ability (give a Treasure to another
+    player, draw) deferred — no control-donation-of-a-token primitive.
+  - **Chancellor of Tales** (copy your Adventure spells) deferred — needs a
+    "cast an Adventure spell" cast filter.
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the
@@ -3470,12 +3489,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     mana value, so an `{X}` spell counts as MV 0 (even) regardless of the
     chosen X. Faithful for fixed-cost spells; thread the announced X to be
     exact.
-  - **Bellowing Elk** — wants "another creature entered this turn" (exclude
-    self); `Predicate::CreatureEnteredThisTurn` currently counts the source's
-    own arrival, so the Elk is skipped for now. Add a self-excluding variant.
-  - **Windcaller Aven** cycle-trigger ("when you cycle this, target creature
-    gains flying") and **Twisted Reflection**'s switch-power/toughness mode
-    (no `SwitchPowerToughness` effect) are both dropped.
+  - ✅ ~~**Bellowing Elk**~~ — shipped via `Predicate::AnotherCreatureEnteredThisTurn`
+    (self-excluding sibling of `CreatureEnteredThisTurn`); gated trample +
+    indestructible statics. `decks::recent113`, test in `tests/recent131.rs`.
+  - ✅ ~~**Windcaller Aven**~~ — cycle-trigger grants a target creature flying
+    (`CardCycled`/`SelfSource` + `ApplyToTargets`). ✅ ~~**Twisted Reflection**~~ —
+    modal Entwine using the existing `Effect::SwitchPT` (613.7d) + `PumpPT` -6/-0.
+    Both in `decks::recent113`, tests in `tests/recent131.rs`.
 - ⏳ **Deferred (noticed, not tackled):**
   - ✅ ~~Angel's Grace~~ — shipped (`Player.{cant_lose_this_turn,
     damage_floor_this_turn}` + `player_cant_{lose,win}_game` at every loss/win

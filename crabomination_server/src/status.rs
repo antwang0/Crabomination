@@ -25,9 +25,10 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
     let stats_snapshot = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
     let sl = slots.snapshot();
     format!(
-        "crabomination_server\nuptime: {}\n{}\nconnections: {} current, {} peak, \
+        "crabomination_server\nuptime: {}\ncatalog: {} cards\n{}\nconnections: {} current, {} peak, \
          {} accepted, {} refused ({}% refusal rate)\n",
         format_duration(started.elapsed()),
+        catalog_card_count(),
         format_match_stats(&stats_snapshot),
         sl.current,
         sl.peak,
@@ -226,6 +227,7 @@ mod tests {
         let slots = SlotManager::new(10, 5);
         let body = render_status(Instant::now(), &slots);
         assert!(body.starts_with("crabomination_server\nuptime: "));
+        assert!(body.contains("\ncatalog: ") && body.contains(" cards\n"), "catalog line present");
         assert!(body.contains("served "), "match stats line present");
         assert!(body.contains("connections: 0 current, 0 peak"), "slot line present");
     }

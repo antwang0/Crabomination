@@ -1120,6 +1120,11 @@ pub enum Keyword {
     /// blocker's computed power being `<= N`. Enforced in
     /// `can_block_attacker_computed`.
     CantBeBlockedByPowerAtMost(u32),
+    /// "Can't be blocked by creatures with power N or greater" (Squeak By —
+    /// N=3). Fixed-threshold mirror of `CantBeBlockedByPowerAtMost`; gates on
+    /// the blocker's computed power being `>= N`. Enforced in
+    /// `can_block_attacker_computed`.
+    CantBeBlockedByPowerAtLeast(u32),
     /// "This creature can't be blocked if you've cast N or more spells this
     /// turn" (Illvoi Infiltrator — N=2). Game-state-dependent, so it's enforced
     /// in the stateful block-declaration path (`declare_blockers`) rather than
@@ -2837,6 +2842,9 @@ pub enum DynamicPt {
     /// toughness = `base_t` + that count. Yavimaya Enchantress (2/2 + one per
     /// enchantment in play, any controller; CR 604.3 CDA).
     EnchantmentsInPlay { base_p: i32, base_t: i32 },
+    /// Power = toughness = `base` + the number of nonland permanents the
+    /// controller controls. Regal Bunnicorn (`*/*`, CR 604.3 CDA).
+    NonlandPermanentsControlled { base: i32 },
     /// Power = `base_p`; toughness = number of Forests on the battlefield (any
     /// controller). Traproot Kami (0/*, CR 604.3 CDA).
     ForestsInPlay { base_p: i32 },
