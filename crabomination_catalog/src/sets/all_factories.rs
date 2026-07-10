@@ -6650,6 +6650,8 @@ static MH3D: &[Factory] = &[
     super::mh3d::herigast_erupting_nullkite,
     super::mh3d::ondu_knotmaster,
     super::mh3d::hydroelectric_specimen,
+    super::mh3d::eladamri_korvecdal,
+    super::mh3d::party_thrasher,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

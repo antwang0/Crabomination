@@ -289,3 +289,43 @@ fn hydroelectric_specimen_stats_and_back_face() {
     let back = d.back_face.expect("has a land back");
     assert!(back.card_types.contains(&crate::card::CardType::Land), "back is a land");
 }
+
+/// Eladamri lets you cast a creature spell off the top of your library.
+#[test]
+fn eladamri_casts_creature_from_top_of_library() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::eladamri_korvecdal());
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    // Grizzly Bears is now the top card; Eladamri lets it be cast from there.
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast creature off the top of library");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some(), "the top creature resolved onto the battlefield");
+}
+
+/// Party Thrasher's first-main trigger digs two after a discard.
+#[test]
+fn party_thrasher_digs_two_after_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::party_thrasher());
+    let pitch = g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::serra_angel());
+    }
+    // Advance to (re-enter) the precombat main so the trigger fires; accept the
+    // "may" and discard the pitch card.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Discard(vec![pitch]),
+    ]));
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded the pitch card");
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Serra Angel").count(), 2, "exiled top two");
+}

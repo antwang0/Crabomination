@@ -394,3 +394,73 @@ pub fn hydroelectric_specimen() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Eladamri, Korvecdal — {1}{G}{G} 3/3 Elf Warrior. Play with the top card of
+/// your library revealed and cast creature spells from the top of your library.
+/// (The {G},{T},tap-two: reveal-and-drop-a-creature activated ability is
+/// omitted for want of a tap-two-creatures cost.)
+pub fn eladamri_korvecdal() -> CardDefinition {
+    CardDefinition {
+        name: "Eladamri, Korvecdal",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast creature spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Party Thrasher — {1}{R} 1/4 Lizard Wizard. At the beginning of your first
+/// main phase, you may discard a card; if you do, exile the top two cards of
+/// your library and you may play them this turn (printed "one of them"; the
+/// "noncreature spells cast from exile have convoke" static is omitted).
+pub fn party_thrasher() -> CardDefinition {
+    CardDefinition {
+        name: "Party Thrasher",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayPay {
+                description: "Discard a card to dig two?".into(),
+                mana_cost: cost(&[]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: true,
+                        uncast_penalty: None,
+                    },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
