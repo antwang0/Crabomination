@@ -5725,9 +5725,15 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            // CR 115.1c — maximize an "up to N target" self-cast trigger
+            // (Twisted Riddlekeeper's "tap up to two target permanents") by
+            // filling slots 1.. with distinct picks, mirroring the ETB path.
+            let additional =
+                self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
             self.stack.push(
                 TriggerPush::new(source, controller, effect)
                     .target(auto_target)
+                    .additional_targets(additional)
                     // Self-cast trigger: carry the cast card's id so
                     // Effect::CopySpell can find it on the stack.
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(source)))

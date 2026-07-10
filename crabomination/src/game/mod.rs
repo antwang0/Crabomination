@@ -505,6 +505,9 @@ mod tests_mh3b;
 #[path = "../tests/mh3c.rs"]
 mod tests_mh3c;
 #[cfg(test)]
+#[path = "../tests/mh3d.rs"]
+mod tests_mh3d;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]

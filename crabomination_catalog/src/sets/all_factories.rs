@@ -6637,6 +6637,15 @@ static MH3C: &[Factory] = &[
     super::mh3c::rush_of_inspiration,
     super::mh3c::rosecot_knight,
 ];
+static MH3D: &[Factory] = &[
+    super::mh3d::ugins_binding,
+    super::mh3d::abstruse_appropriation,
+    super::mh3d::expel_the_unworthy,
+    super::mh3d::twisted_riddlekeeper,
+    super::mh3d::depth_defiler,
+    super::mh3d::dog_umbra,
+    super::mh3d::thief_of_existence,
+];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
     super::mkm::reasonable_doubt,
@@ -12473,6 +12482,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("mh3", MH3),
     ("mh3b", MH3B),
     ("mh3c", MH3C),
+    ("mh3d", MH3D),
     ("mkm", MKM),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
