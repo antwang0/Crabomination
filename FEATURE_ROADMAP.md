@@ -264,6 +264,19 @@ exercising each) was elided in a compaction pass; recover it from
   Tests in `tests/mh3d.rs`; server `/metrics` + `/status.json` now expose the
   CR 104.3 win-kind split; client counter tooltip gains Lore/Level/Fade/Age/
   Defense/Oil reminders.
+- **MH3 batch-5 primitives (modern_decks — `sets::mh3e`, 20 cards):**
+  `ActivatedAbility.energy_x_cost` (pay X {E} where X is the activation's
+  `x_value`, threaded into resolution so `ManaValueExactlyXFromCost` gates the
+  target — Chthonian Nightmare); `Effect::PayEnergyValue` /
+  `Effect::PayEnergyOrElseValue` (Value-amount energy pay/upkeep — Jolted Awake,
+  Volatile Stormdrake); `Predicate::AttackedWithCountAtLeast` + `AnyPlayer`
+  attack observers in `declare_attackers` so "whenever two or more creatures
+  attack" fires for a non-attacking controller (CR 508 — Argent Dais);
+  `Effect::LookTopDeployLandOrHand` (ramp-preferring dig — Planar Genesis); and a
+  fix to `ExchangeControl.primary_target_filter` (falls back to the `b` slot
+  when `a` is the source) so ETB control-exchanges auto-target. Server `/metrics`
+  + `/status.json` now expose `crab_catalog_cards`. Tests in `tests/mh3e.rs`;
+  CR conformance in `tests/cr_rules.rs` (107.16, 508, 122.1).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
