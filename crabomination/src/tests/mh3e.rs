@@ -115,6 +115,47 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
 }
 
+/// Volatile Stormdrake steals a small creature (energy covers its mana value).
+#[test]
+fn volatile_stormdrake_steals_when_energy_pays() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // Opponent's MV-2 Grizzly Bears; four energy easily covers the 2 upkeep.
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let drake_h = g.add_card_to_hand(0, catalog::volatile_stormdrake());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: drake_h,
+        target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Volatile Stormdrake");
+    drain_stack(&mut g);
+    // Exchange: you now control the prey; opponent controls the Drake.
+    assert_eq!(g.battlefield_find(prey).map(|c| c.controller), Some(0), "gained control of the prey");
+    assert_eq!(g.battlefield_find(drake_h).map(|c| c.controller), Some(1), "opponent got the Drake");
+    assert_eq!(g.players[0].energy, 2, "gained 4 energy, paid 2 for the MV-2 upkeep");
+}
+
+/// With no energy banked, a high-mana-value stolen creature is sacrificed.
+#[test]
+fn volatile_stormdrake_sacrifices_when_short_on_energy() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // Opponent's MV-8 creature (Twisted Riddlekeeper): four energy can't cover the upkeep → sacrifice.
+    let prey = g.add_card_to_battlefield(1, catalog::twisted_riddlekeeper());
+    let drake_h = g.add_card_to_hand(0, catalog::volatile_stormdrake());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: drake_h,
+        target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Volatile Stormdrake");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != prey), "couldn't pay the upkeep → prey sacrificed");
+}
+
 /// Jolted Awake grants two energy and reanimates a MV-2 card by paying it.
 #[test]
 fn jolted_awake_energy_reanimates() {

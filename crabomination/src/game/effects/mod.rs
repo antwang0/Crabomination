@@ -3357,6 +3357,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayEnergyOrElseValue { amount, otherwise } => {
+                let p = ctx.controller;
+                let cost = self.evaluate_value(amount, ctx).max(0) as u32;
+                if self.players[p].energy >= cost {
+                    self.players[p].energy -= cost;
+                } else {
+                    self.run_effect(otherwise, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::PayManaOrElse { mana_cost, otherwise } => {
                 // Mana sibling of PayEnergyOrElse — pay from the floating
                 // pool when able (AutoDecider keeps the permanent),

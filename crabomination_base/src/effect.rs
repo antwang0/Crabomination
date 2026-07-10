@@ -2431,6 +2431,11 @@ pub enum Effect {
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when
     /// able. Lathnu Hellion, Greenbelt Rampager.
     PayEnergyOrElse { amount: u32, otherwise: Box<Effect> },
+    /// `Value`-amount sibling of `PayEnergyOrElse`: pay {E} equal to `amount`
+    /// (evaluated at resolution — usually the gained creature's mana value) or
+    /// resolve `otherwise`. Volatile Stormdrake's "sacrifice that creature
+    /// unless you pay {E} equal to its mana value".
+    PayEnergyOrElseValue { amount: Value, otherwise: Box<Effect> },
     /// "Sacrifice this unless you pay `mana_cost`" (CR 608-style ETB
     /// tax). Pays `mana_cost` from the controller's floating pool if
     /// affordable; otherwise resolves `otherwise` (typically

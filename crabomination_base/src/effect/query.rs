@@ -763,7 +763,8 @@ impl Effect {
             Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.requires_target(),
             Effect::PayAnyEnergyDealDamage { to } => sel_has_target(to),
             Effect::TimeTravel { who } => player_has_target(who),
-            Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
+            Effect::PayEnergyOrElse { otherwise, .. }
+            | Effect::PayEnergyOrElseValue { otherwise, .. } => otherwise.requires_target(),
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
@@ -818,7 +819,9 @@ impl Effect {
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
-            Effect::ExchangeControl { a, .. } => sel_filter(a),
+            // The targeted side may be `b` when `a` is the source itself
+            // (Volatile Stormdrake exchanges `This` with a targeted creature).
+            Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
@@ -1975,6 +1978,7 @@ impl Effect {
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
                 Effect::PayEnergyOrElse { otherwise, .. }
+                | Effect::PayEnergyOrElseValue { otherwise, .. }
                 | Effect::PayManaOrElse { otherwise, .. } => {
                     eff_find(otherwise, slot, mode, kicked)
                 }

@@ -102,6 +102,34 @@ pub fn vega_the_watcher() -> CardDefinition {
     }
 }
 
+/// Volatile Stormdrake — {1}{U} 3/2 Drake with flying. ETB: exchange control of
+/// it and target creature an opponent controls; if you do, get {E}{E}{E}{E},
+/// then sacrifice that creature unless you pay {E} equal to its mana value.
+/// (The "hexproof from activated and triggered abilities" rider is dropped.)
+pub fn volatile_stormdrake() -> CardDefinition {
+    CardDefinition {
+        name: "Volatile Stormdrake",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExchangeControl {
+                a: Selector::This,
+                b: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+            },
+            Effect::AddEnergy(Value::Const(4)),
+            Effect::PayEnergyOrElseValue {
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                otherwise: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Jolted Awake — {W} sorcery. Target artifact or creature card in your
 /// graveyard; get {E}{E}, then you may pay {E} equal to its mana value to
 /// return it to the battlefield. Cycling {2}. (Printed "up to one" target

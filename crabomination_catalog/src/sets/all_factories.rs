@@ -6677,6 +6677,7 @@ static MH3E: &[Factory] = &[
     super::mh3e::pyretic_rebirth,
     super::mh3e::lethal_throwdown,
     super::mh3e::jolted_awake,
+    super::mh3e::volatile_stormdrake,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
