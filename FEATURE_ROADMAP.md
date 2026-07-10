@@ -97,6 +97,16 @@ exercising each) was elided in a compaction pass; recover it from
   `decks::recent120-126` (FDN/BLB/DSK/OTJ — threshold, landfall, first-lifegain,
   Delirium, Mounts/Saddle, outlaw/crime/plot); tests in
   `tests/recent120-126.rs`, `cr_rules.rs`.
+- **Celebration / CDA / crime primitives (modern_decks — OTJ/WOE):**
+  `DynamicPt::CardsDrawnThisTurnPower` (Duelist of the Mind, `*`/3);
+  `Predicate::SacrificedWasOutlaw` (activated `sac_other_filter` path stamps the
+  scratch — Boneyard Desecrator); `Predicate::CelebrationActive` +
+  `Player.nonland_permanents_entered_this_turn` (WOE Celebration — Armory Mice,
+  Belligerent of the Ball); `StaticEffect::SelfFlashIf` gated on controlling a
+  land type (Colossal Rattlewurm); `CreateTokenAttachedTo` target slots are now
+  surfaced at cast time (`query.rs` — Cut In's up-to-one Role). Bot `pick_saddle`
+  now fires only in precombat main. ~30 cards across `decks::recent127-128`;
+  tests in `tests/recent127-128.rs`, `cr_rules.rs`.
 - **Scry/Surveil-matters + graveyard CDA (modern_decks — FIN):**
   `EventKind::ScriedOrSurveiled` (CR 701.22/701.42 — "whenever you scry or
   surveil"; emitted from the scry/surveil resolution alongside
