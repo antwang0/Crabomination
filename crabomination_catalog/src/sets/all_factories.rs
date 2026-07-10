@@ -6659,6 +6659,19 @@ static MH3D: &[Factory] = &[
     super::mh3d::genku_future_shaper,
     super::mh3d::charitable_levy,
 ];
+static MH3E: &[Factory] = &[
+    super::mh3e::bountiful_landscape,
+    super::mh3e::contaminated_landscape,
+    super::mh3e::deceptive_landscape,
+    super::mh3e::foreboding_landscape,
+    super::mh3e::perilous_landscape,
+    super::mh3e::seething_landscape,
+    super::mh3e::shattered_landscape,
+    super::mh3e::sheltering_landscape,
+    super::mh3e::tranquil_landscape,
+    super::mh3e::twisted_landscape,
+    super::mh3e::vega_the_watcher,
+];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
     super::mkm::reasonable_doubt,
@@ -12496,6 +12509,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("mh3b", MH3B),
     ("mh3c", MH3C),
     ("mh3d", MH3D),
+    ("mh3e", MH3E),
     ("mkm", MKM),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
