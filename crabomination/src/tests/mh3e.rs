@@ -113,6 +113,29 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
 }
 
+/// Glimpse the Impossible exiles three, and uncast cards become Spawn at end.
+#[test]
+fn glimpse_the_impossible_exiles_then_spawns() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::glimpse_the_impossible());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Glimpse the Impossible");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3, "three cards exiled");
+    // Fire the next-end-step penalty for the uncast cards.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count(), 3,
+        "each uncast card makes an Eldrazi Spawn");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3,
+        "uncast cards go to graveyard");
+}
+
 /// Cycling the land for its three colors draws a card.
 #[test]
 fn contaminated_landscape_cycles() {

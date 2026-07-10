@@ -4,7 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
+    Keyword, LandType, MayPlayDuration, Predicate, SelectionRequirement as R, Subtypes,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
@@ -97,6 +98,32 @@ pub fn vega_the_watcher() -> CardDefinition {
             ),
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
         }],
+        ..Default::default()
+    }
+}
+
+/// Glimpse the Impossible — {2}{R} sorcery. Exile the top three cards; you may
+/// play them this turn. At the next end step, each still-exiled card is put
+/// into your graveyard and makes a 0/1 Eldrazi Spawn.
+pub fn glimpse_the_impossible() -> CardDefinition {
+    CardDefinition {
+        name: "Glimpse the Impossible",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            duration: MayPlayDuration::EndOfThisTurn,
+            pay_any_color: false,
+            uncast_penalty: Some(Box::new(Effect::Seq(vec![
+                Effect::Move { what: Selector::Target(0), to: ZoneDest::Graveyard },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: crabomination_base::tokens::eldrazi_spawn_token(),
+                },
+            ]))),
+        },
         ..Default::default()
     }
 }
