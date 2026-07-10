@@ -460,3 +460,31 @@ fn genku_makes_a_token_on_permanent_leaving() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Fox" && c.controller == 0),
         "created a Fox token");
 }
+
+/// Charitable Levy taxes noncreature spells and, after three, sacrifices itself
+/// to draw a card and fetch a Plains.
+#[test]
+fn charitable_levy_sacrifices_at_three_collection_counters() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let levy = g.add_card_to_battlefield(0, catalog::charitable_levy());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // draw fodder
+    let plains = g.add_card_to_library(0, catalog::plains()); // fetch target
+    g.add_card_to_library(0, catalog::plains());
+    // The tutor is a real search — script which Plains to fetch.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(plains))]));
+    // Fire the cast trigger three times by hand (simulating three noncreature casts).
+    for _ in 0..3 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1); // the +{1} tax
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bolt");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(levy).is_none(), "sacrificed at three counters");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Plains" && c.controller == 0),
+        "fetched a Plains onto the battlefield");
+}

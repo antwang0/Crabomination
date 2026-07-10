@@ -1289,6 +1289,11 @@ impl GameState {
                     .map(|cid| self.permanents_gained_counter_this_turn.contains(&cid))
                     .unwrap_or(false)
             }
+            Predicate::SourceHasCountersAtLeast { counter, n } => ctx
+                .source
+                .and_then(|cid| self.battlefield_find(cid))
+                .map(|c| c.counter_count(*counter) >= *n)
+                .unwrap_or(false),
             Predicate::CastSpellFromExile => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;

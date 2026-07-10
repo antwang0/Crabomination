@@ -1092,6 +1092,11 @@ pub enum Predicate {
     /// ("if you put a counter on this creature this turn, …"). Cleared
     /// at cleanup along with the other "this turn" tallies.
     SourceGainedCounterThisTurn,
+    /// True when `ctx.source` (the ability's source permanent) currently has at
+    /// least `n` counters of `counter` on it. Powers "if there are N or more
+    /// [kind] counters on it, …" intervening-`if` riders (Charitable Levy's
+    /// three-collection-counter sacrifice threshold).
+    SourceHasCountersAtLeast { counter: crate::card::CounterType, n: u32 },
     /// True if the just-cast spell's total mana spent is **strictly
     /// greater than** the source permanent's power or toughness. Used
     /// by SOS's Increment keyword payoff: "Whenever you cast a spell,

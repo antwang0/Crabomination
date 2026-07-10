@@ -6657,6 +6657,7 @@ static MH3D: &[Factory] = &[
     super::mh3d::collective_resistance,
     super::mh3d::ripples_of_undeath,
     super::mh3d::genku_future_shaper,
+    super::mh3d::charitable_levy,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

@@ -662,3 +662,48 @@ pub fn genku_future_shaper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Charitable Levy — {1}{W} enchantment. Noncreature spells cost {1} more.
+/// Whenever a player casts a noncreature spell, put a collection counter on it
+/// (modeled with a growth counter); with three or more, sacrifice it to draw a
+/// card and search for a Plains onto the battlefield tapped.
+pub fn charitable_levy() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Charitable Levy",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Noncreature spells cost {1} more to cast.",
+            effect: StaticEffect::AdditionalCostAfterFirstSpell { filter: R::Noncreature, amount: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Noncreature },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Growth,
+                    amount: Value::ONE,
+                },
+                Effect::If {
+                    cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Growth, n: 3 },
+                    // Draw + fetch before the sacrifice so the source leaving
+                    // play doesn't cut the rest of the sequence short.
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::HasLandType(LandType::Plains),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        },
+                        Effect::SacrificeSource,
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
