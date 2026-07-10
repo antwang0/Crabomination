@@ -5640,6 +5640,13 @@ static DECKS: &[Factory] = &[
     super::decks::bridled_bighorn,
     super::decks::drover_grizzly,
     super::decks::sun_blessed_healer,
+    // recent126 — OTJ outlaw/crime/plot payoffs + removal
+    super::decks::mine_raider,
+    super::decks::scorching_shot,
+    super::decks::peerless_ropemaster,
+    super::decks::spring_splasher,
+    super::decks::raven_of_fell_omens,
+    super::decks::stagecoach_security,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
