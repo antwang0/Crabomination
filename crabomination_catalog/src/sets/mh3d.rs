@@ -5,7 +5,7 @@
 use crate::card::{
     ActivatedAbility, Adventure, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration,
-    Predicate, Prototype, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{emerge, etb, on_cast, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest, ZoneRef};
@@ -239,27 +239,34 @@ pub fn thief_of_existence() -> CardDefinition {
     }
 }
 
-/// Depth Charge Colossus — {9} 9/9 Dreadnought artifact creature, Prototype
-/// {4}{U}{U} — 6/6. Doesn't untap during your untap step; {3}: untap it.
-pub fn depth_charge_colossus() -> CardDefinition {
+/// Emperor of Bones — {1}{B} 2/2 Skeleton Noble. At the beginning of combat on
+/// your turn, exile up to one target card from a graveyard. {1}{B}: Adapt 2.
+/// (The counter-triggered reanimation of a card exiled with it is omitted.)
+pub fn emperor_of_bones() -> CardDefinition {
     CardDefinition {
-        name: "Depth Charge Colossus",
-        cost: cost(&[generic(9)]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        name: "Emperor of Bones",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dreadnought],
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Noble],
             ..Default::default()
         },
-        power: 9,
-        toughness: 9,
-        prototype: Some(Box::new(Prototype { cost: cost(&[generic(4), u(), u()]), power: 6, toughness: 6 })),
-        static_abilities: vec![StaticAbility {
-            description: "This creature doesn't untap during your untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: R::InGraveyard,
+                effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3)]),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            mana_cost: cost(&[generic(1), b()]),
+            effect: crate::effect::shortcut::adapt(2),
             ..Default::default()
         }],
         ..Default::default()

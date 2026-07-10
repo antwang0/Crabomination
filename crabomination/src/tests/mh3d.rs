@@ -189,23 +189,33 @@ fn thief_of_existence_exiles_and_grants_ltb_draw() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "LTB trigger drew a card");
 }
 
-/// Depth Charge Colossus enters 9/9 and, once tapped, stays tapped through the
-/// untap step but untaps for its {3} ability.
+/// Emperor of Bones' {1}{B}: Adapt 2 puts two +1/+1 counters on it.
 #[test]
-fn depth_charge_colossus_doesnt_untap_but_pays_to_untap() {
+fn emperor_of_bones_adapts() {
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::depth_charge_colossus());
-    let cp = g.computed_permanent(id).unwrap();
-    assert_eq!((cp.power, cp.toughness), (9, 9), "printed 9/9");
-    g.battlefield_find_mut(id).unwrap().tapped = true;
-    g.do_untap();
-    assert!(g.battlefield_find(id).unwrap().tapped, "stays tapped through untap step");
-    g.players[0].mana_pool.add_colorless(3);
+    let emp = g.add_card_to_battlefield(0, catalog::emperor_of_bones());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
-    }).expect("untap ability");
+        card_id: emp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("adapt");
     drain_stack(&mut g);
-    assert!(!g.battlefield_find(id).unwrap().tapped, "paid untap ability untapped it");
+    assert_eq!(g.computed_permanent(emp).unwrap().power, 4, "adapt 2 → 4/4");
+}
+
+/// Emperor of Bones' begin-combat trigger exiles a card from a graveyard.
+#[test]
+fn emperor_of_bones_exiles_graveyard_card_at_combat() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::emperor_of_bones());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(dead))]));
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dead), "graveyard card exiled at combat");
 }
 
 /// Amphibian Downpour turns the enchanted creature into a 1/1 blue Frog with no
