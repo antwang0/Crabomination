@@ -5390,6 +5390,30 @@ impl GameState {
                 });
             }
         }
+        // Predicate-gated sibling of the loop above — the condition reads live
+        // board state relative to the source (e.g. "you control another Faerie").
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(card.id, 0, None);
+                if !self.evaluate_predicate(condition, &ctx) {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(keyword.clone()),
+                });
+            }
+        }
         // CR 700.5 / Theros gods — "isn't a creature unless your devotion
         // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
         // self-effect while the gate is unmet; reading devotion needs the
@@ -13038,6 +13062,7 @@ fn static_effect_to_effects(
             | StaticEffect::EquipCostReduction { .. }
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }
+            | StaticEffect::SelfHasKeywordWhilePredicate { .. }
             | StaticEffect::GraveyardLibraryLockdown
             | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown

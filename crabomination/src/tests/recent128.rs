@@ -176,6 +176,22 @@ fn charging_hooligan_scales_with_attackers() {
     assert_eq!(g.computed_permanent(hooligan).unwrap().power, 5, "+1/+0 per attacker");
 }
 
+/// Barrow Naughty has lifelink only while you control another Faerie.
+#[test]
+fn barrow_naughty_conditional_lifelink() {
+    let mut g = two_player_game();
+    let naughty = g.add_card_to_battlefield(0, catalog::barrow_naughty());
+    assert!(
+        !g.computed_permanent(naughty).unwrap().keywords.contains(&Keyword::Lifelink),
+        "no other Faerie → no lifelink",
+    );
+    g.add_card_to_battlefield(0, catalog::barrow_naughty()); // another Faerie
+    assert!(
+        g.computed_permanent(naughty).unwrap().keywords.contains(&Keyword::Lifelink),
+        "another Faerie → lifelink",
+    );
+}
+
 /// Ego Drain strips a nonland card from an opponent's hand.
 #[test]
 fn ego_drain_discards_nonland() {

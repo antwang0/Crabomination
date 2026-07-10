@@ -147,9 +147,8 @@ pub fn archive_dragon() -> CardDefinition {
     }
 }
 
-/// Barrow Naughty — {1}{B} 1/3 Faerie with flying. {2}{B}: +1/+0 until end of
-/// turn. (The "has lifelink while you control another Faerie" static is dropped
-/// — no control-another-of-type filter primitive yet.)
+/// Barrow Naughty — {1}{B} 1/3 Faerie with flying; lifelink while you control
+/// another Faerie. {2}{B}: +1/+0 until end of turn.
 pub fn barrow_naughty() -> CardDefinition {
     CardDefinition {
         name: "Barrow Naughty",
@@ -159,6 +158,19 @@ pub fn barrow_naughty() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Barrow Naughty has lifelink as long as you control another Faerie.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Lifelink,
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::HasCreatureType(CreatureType::Faerie).and(R::OtherThanSource),
+                    },
+                    n: Value::ONE,
+                },
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
             effect: Effect::PumpPT {

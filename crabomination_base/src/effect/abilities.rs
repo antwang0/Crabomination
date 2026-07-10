@@ -139,6 +139,12 @@ pub enum StaticEffect {
     /// `evaluate_requirement_static`, so board-state conditions (IsEquipped,
     /// IsEnchanted, IsModified) track correctly.
     SelfHasKeywordWhile { keyword: Keyword, condition: SelectionRequirement },
+    /// "This creature has <keyword> as long as <condition>", where the
+    /// condition is a live board [`Predicate`] evaluated with the source as
+    /// context (not a source-matching filter like `SelfHasKeywordWhile`). Powers
+    /// "has lifelink as long as you control another Faerie" (Barrow Naughty) and
+    /// similar board-state-gated self keywords.
+    SelfHasKeywordWhilePredicate { keyword: Keyword, condition: Predicate },
     /// "All [filter] have protection from the chosen color" — the color is
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.

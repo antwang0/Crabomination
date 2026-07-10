@@ -3446,10 +3446,6 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 ## Suggested next-up tasks
 
 - ⏳ **recent127-128 (OTJ/WOE) follow-ups / deferred:**
-  - **Control-another-of-type filter** — needed for Barrow Naughty's "lifelink
-    while you control another Faerie" (dropped; `SelfHasKeywordWhile.condition`
-    is a source-filter, not a board predicate). Add a keyword-while-predicate
-    static variant or a `ControlsAnotherOfType` requirement.
   - **Young Hero Role toughness gate** — the granted attack trigger fires
     unconditionally; the printed "if its toughness is 3 or less" wants a
     trigger-source toughness predicate.
