@@ -53,7 +53,7 @@ factory doc comment:
   Amphibian Downpour, Ondu Knotmaster // Throw a Line, Hydroelectric Specimen,
   Eladamri, Party Thrasher, Suppression Ray, Bloodsoaked Insight, Genku,
   Charitable Levy (`Predicate::SourceHasCountersAtLeast`), Emperor of Bones,
-  Ripples of Undeath. **mh3e batch (10 cards, `sets::mh3e`, tests `tests/mh3e.rs`)
+  Ripples of Undeath. **mh3e batch (12 cards, `sets::mh3e`, tests `tests/mh3e.rs`)
   shipped:** Vega (`SpellNotCastFromHand` trigger), Chthonian
   Nightmare (`ActivatedAbility.energy_x_cost` — pay X {E}, reanimate MV-X),
   Glimpse the Impossible (impulse-3 + per-card end-step Spawn), Argent Dais
@@ -62,11 +62,13 @@ factory doc comment:
   (`Effect::PayEnergyValue`), Volatile Stormdrake (`Effect::PayEnergyOrElseValue`
   + ExchangeControl auto-target fix), Planar Genesis
   (`Effect::LookTopDeployLandOrHand`), Pyretic Rebirth (gy-return + MV burn),
-  Reiterating Bolt (base bolt). Still open, each needing one primitive: optional
-  Exert + haste-if-spent-on-creature mana (Arena of Glory); energy-gain
-  replacement (Izzet Generatorium); alt-cost-by-energy permission (Primal
-  Prayers); cast-from-not-hand *trigger* + impulse-until-replaced (Unstable
-  Amulet); a "may reveal + else +1/+1 counter" look-top rider (Rosecot Knight);
+  Reiterating Bolt (base bolt), Unstable Amulet (energy ETB + `SpellNotCastFromHand`
+  ping + impulse), Izzet Generatorium (`StaticEffect::EnergyGainBonus` +
+  `Player.energy_spent_this_turn`/`GameState::spend_energy` +
+  `Predicate::EnergyPaidThisTurnAtLeast`). Still open, each needing one primitive:
+  optional Exert + haste-if-spent-on-creature mana (Arena of Glory);
+  alt-cost-by-energy permission (Primal Prayers); a "may reveal + else +1/+1
+  counter" look-top rider (Rosecot Knight);
   energy-Replicate (Reiterating Bolt's dropped `Replicate—Pay {E}{E}{E}`);
   two-independent-kickers (Wastescape Battlemage); `Keyword::HexproofFromAbilities`
   (Volatile Stormdrake's dropped rider); the real Sundering Eruption //
