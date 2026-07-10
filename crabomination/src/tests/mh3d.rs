@@ -370,3 +370,37 @@ fn bloodsoaked_insight_exiles_opponent_top_three() {
     assert!(g.exile.iter().filter(|c| c.owner == 1).all(|c| c.may_play_until.is_some()),
         "you may play them");
 }
+
+/// Collective Resistance's base mode destroys a target artifact.
+#[test]
+fn collective_resistance_destroys_artifact() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let art = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::collective_resistance());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(art)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast destroy-artifact mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Collective Resistance's protection mode grants hexproof and indestructible.
+#[test]
+fn collective_resistance_grants_protection() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::collective_resistance());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("cast protection mode");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Hexproof) && cp.keywords.contains(&Keyword::Indestructible),
+        "gained hexproof + indestructible");
+}

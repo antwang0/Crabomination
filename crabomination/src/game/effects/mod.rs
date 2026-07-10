@@ -2040,7 +2040,9 @@ impl GameState {
                     }
                     _ => usize::MAX,
                 };
-                run.truncate(1 + affordable_extra);
+                // `saturating_add` — a non-discard escalate cost leaves
+                // `affordable_extra` at `usize::MAX`, so a plain `1 +` overflows.
+                run.truncate(1usize.saturating_add(affordable_extra));
                 // Pay the escalate cost once per mode beyond the first.
                 for _ in 1..run.len() {
                     self.run_effect(cost, ctx, events)?;
