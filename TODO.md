@@ -3457,7 +3457,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Cactarantula / Consuming Ashes / Aloe Alchemist** (OTJ) still need a
     control-a-Desert cost reduction, a target-mana-value reflexive predicate, and
     a "becomes plotted" trigger event, respectively.
-- ⏳ **recent131-133 (WOE waves 4-6) follow-ups / noticed:**
+- ⏳ **recent131-134 (WOE waves 4-7) follow-ups / noticed:**
   - New primitives this run: `DynamicPt::NonlandPermanentsControlled` (Regal
     Bunnicorn `*/*`), `Keyword::CantBeBlockedByPowerAtLeast(N)` (Squeak By —
     the fixed-threshold mirror of `CantBeBlockedByPowerAtMost`), and the

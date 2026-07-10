@@ -5735,6 +5735,17 @@ static DECKS: &[Factory] = &[
     super::decks::dutiful_griffin,
     super::decks::tuinvale_guide,
     super::decks::candy_trail,
+    // recent134 — WOE wave 7: Adventures, stun/tap control, Roles, gy value
+    super::decks::belunas_gatekeeper,
+    super::decks::freeze_in_place,
+    super::decks::succumb_to_the_cold,
+    super::decks::bellowing_bruiser,
+    super::decks::gallant_pie_wielder,
+    super::decks::woodland_acolyte,
+    super::decks::stroke_of_midnight,
+    super::decks::return_triumphant,
+    super::decks::conceited_witch,
+    super::decks::sugar_rush,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

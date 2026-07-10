@@ -7648,3 +7648,37 @@ fn cr_613_7d_switch_pt_applies_after_counters() {
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 3), "switch happens after the counter");
 }
+
+/// CR 700.4 — "dies" means put into a graveyard from the battlefield. A
+/// non-creature permanent's own `PermanentDied`/SelfSource trigger (a Wicked
+/// Role token's death-drain) fires when it is sacrificed, not only creatures'.
+#[test]
+fn cr_700_4_noncreature_self_death_trigger_fires() {
+    use crate::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    let glyph = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Wicked Glyph",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    });
+    g.players[1].life = 20;
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        glyph, 0, Some(crate::game::types::Target::Permanent(glyph)),
+    );
+    g.resolve_effect(
+        &Effect::SacrificePermanent { what: Selector::Target(0) },
+        &ctx,
+    )
+    .unwrap();
+    g.dispatch_triggers_for_events(&[]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "the enchantment's own death trigger drained the opponent");
+}
