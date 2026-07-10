@@ -52,7 +52,7 @@ pub enum CreatureType {
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith, Lamia, Nightstalker,
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal, Hyena,
-    Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile,
+    Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile, Homarid,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
     Sheep, Trilobite,
     Basilisk, Cockatrice,
@@ -2895,6 +2895,9 @@ pub enum DynamicPt {
         #[serde(default = "one_i32")]
         per_t: i32,
     },
+    /// Power = the number of cards the controller has drawn this turn;
+    /// toughness = the fixed `base_t`. Duelist of the Mind (`*`/3, CR 604.3).
+    CardsDrawnThisTurnPower { base_t: i32 },
 }
 
 fn one_i32() -> i32 { 1 }

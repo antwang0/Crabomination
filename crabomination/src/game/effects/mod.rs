@@ -19,6 +19,7 @@ pub use crabomination_base::tokens::{
     token_to_card_definition, treasure_token,
 };
 pub(crate) use delayed::delayed_kind_from_effect;
+pub(crate) use eval::card_is_outlaw;
 pub(crate) use events::{emblem_event_matches, event_matches_spec, event_subject};
 
 use super::*;

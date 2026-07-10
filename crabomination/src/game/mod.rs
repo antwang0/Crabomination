@@ -547,6 +547,9 @@ mod tests_recent125;
 #[path = "../tests/recent126.rs"]
 mod tests_recent126;
 #[cfg(test)]
+#[path = "../tests/recent127.rs"]
+mod tests_recent127;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]
@@ -932,6 +935,12 @@ pub struct GameState {
     /// cast-cost sacrifice path; reset between resolutions.
     #[serde(default)]
     pub(crate) sacrificed_was_artifact: Option<bool>,
+    /// Transient: whether the most-recently-sacrificed cost permanent was an
+    /// outlaw (Assassin/Mercenary/Pirate/Rogue/Warlock) — Boneyard Desecrator's
+    /// `Predicate::SacrificedWasOutlaw`. Set on the sacrifice-cost paths; reset
+    /// between resolutions.
+    #[serde(default)]
+    pub(crate) sacrificed_was_outlaw: Option<bool>,
     /// Transient: card-type count of the most recently discarded card
     /// (`Value::LastDiscardedCardTypes` — Mount Velus Manticore). Stamped in
     /// `discard_card`.
@@ -1679,6 +1688,7 @@ impl Clone for GameState {
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
             sacrificed_was_artifact: self.sacrificed_was_artifact,
+            sacrificed_was_outlaw: self.sacrificed_was_outlaw,
             last_discarded_card_types: self.last_discarded_card_types,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
@@ -1846,6 +1856,7 @@ impl GameState {
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
             sacrificed_was_artifact: None,
+            sacrificed_was_outlaw: None,
             last_discarded_card_types: 0,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
@@ -6437,6 +6448,9 @@ impl GameState {
                         .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
                         .count() as i32;
                     (n, base_t)
+                }
+                crate::card::DynamicPt::CardsDrawnThisTurnPower { base_t } => {
+                    (self.players[card.controller].cards_drawn_this_turn as i32, base_t)
                 }
                 crate::card::DynamicPt::NoncreatureNonlandCardsInControllerGraveyard { base_t } => {
                     let n = self.players[card.controller].graveyard.iter()

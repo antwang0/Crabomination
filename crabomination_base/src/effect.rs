@@ -1158,6 +1158,10 @@ pub enum Predicate {
     /// "If the sacrificed permanent was an artifact" — reads the
     /// additional-cast-cost sacrifice scratch (Foundry Helix).
     SacrificedWasArtifact,
+    /// "If an outlaw was sacrificed this way" — reads the sacrifice-cost
+    /// scratch stamped by the activated `sac_other_filter` path (Boneyard
+    /// Desecrator).
+    SacrificedWasOutlaw,
     /// The entering permanent bound to `ctx.trigger_source` arrived from a
     /// graveyard this turn, or was cast from one (escape / unearth — read
     /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).

@@ -10191,6 +10191,9 @@ impl GameState {
                 self.sacrificed_power = Some(p_val);
                 self.sacrificed_toughness = Some(t_val);
                 self.sacrificed_mana_value = Some(mv);
+                self.sacrificed_was_artifact = Some(snap.definition.is_artifact());
+                self.sacrificed_was_outlaw =
+                    Some(crate::game::effects::card_is_outlaw(&snap));
                 cost_sac_pt = Some((p_val, t_val));
                 cost_sac_mv = mv;
                 self.died_card_snapshots.insert(other_cid, snap);
