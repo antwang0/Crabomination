@@ -5600,6 +5600,34 @@ static DECKS: &[Factory] = &[
     super::decks::lightshell_duo,
     super::decks::nightwhorl_hermit,
     super::decks::finch_formation,
+    // recent120 — FDN commons (threshold, landfall, first-lifegain, kicker)
+    super::decks::crypt_feaster,
+    super::decks::elfsworn_giant,
+    super::decks::elvish_regrower,
+    super::decks::courageous_goblin,
+    super::decks::eager_trufflesnout,
+    super::decks::cat_collector,
+    super::decks::dawnwing_marshal,
+    super::decks::clinquant_skymage,
+    super::decks::elementalist_adept,
+    super::decks::divine_resilience,
+    // recent121 — BLB/DSK (gy-tuck, gy-recursion, ramp, delirium, Aura)
+    super::decks::barkform_harvester,
+    super::decks::bonebind_orator,
+    super::decks::clifftop_lookout,
+    super::decks::brambleguard_captain,
+    super::decks::downwind_ambusher,
+    super::decks::cracked_skull,
+    super::decks::beastie_beatdown,
+    super::decks::balustrade_wurm,
+    super::decks::drag_to_the_roots,
+    // recent122 — FDN/BLB (vanilla, surveil, tuck, Fact-or-Fiction)
+    super::decks::gigantosaurus,
+    super::decks::cephalid_inkmage,
+    super::decks::dire_downdraft,
+    super::decks::curator_of_destinies,
+    // recent123 — forage-matters
+    super::decks::corpseberry_cultivator,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

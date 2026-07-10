@@ -1,5 +1,5 @@
 //! A mixed FDN/BLB batch: a vanilla beater, surveil + threshold evasion, a
-//! conditional-discount tuck, a removal spell, and a Fact-or-Fiction sphinx.
+//! conditional-discount tuck, and a Fact-or-Fiction sphinx.
 //! Tests in `tests/recent122.rs`.
 
 use crate::card::{
