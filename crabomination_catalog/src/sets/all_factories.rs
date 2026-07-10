@@ -5686,6 +5686,12 @@ static DECKS: &[Factory] = &[
     super::decks::grand_ball_guest,
     super::decks::ratcatcher_trainee,
     super::decks::twisted_fealty,
+    // recent130 — WOE wave 3: Adventure, charms, Food/Prowess
+    super::decks::scream_puff,
+    super::decks::beanstalk_wurm,
+    super::decks::return_from_the_wilds,
+    super::decks::stockpiling_celebrant,
+    super::decks::elusive_otter,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
