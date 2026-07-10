@@ -1,7 +1,9 @@
 //! Functionality tests for the MH3 batch-5 cards in `catalog::sets::mh3e`.
 
+use crate::card::CounterType;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
+use crate::game::types::{Attack, AttackTarget};
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
@@ -111,6 +113,60 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     assert!(g.battlefield.iter().any(|c| c.id == dead), "MV-2 creature reanimated");
     assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder creature sacrificed");
     assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
+}
+
+/// Argent Dais gains an oil counter only when two or more creatures attack.
+#[test]
+fn argent_dais_oil_on_multi_attack() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let dais_h = g.add_card_to_hand(0, catalog::argent_dais());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: dais_h, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Argent Dais");
+    drain_stack(&mut g);
+    let dais = dais_h;
+    assert_eq!(g.battlefield_find(dais).unwrap().counter_count(CounterType::Oil), 2, "enters with two oil");
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]).expect("declare two attackers");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dais).unwrap().counter_count(CounterType::Oil), 3, "oil added on 2+ attack");
+}
+
+/// The activated ability exiles another nonland permanent; its controller draws.
+#[test]
+fn argent_dais_exiles_and_draws() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let dais_h = g.add_card_to_hand(0, catalog::argent_dais());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: dais_h, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Argent Dais");
+    drain_stack(&mut g);
+    let dais = dais_h;
+    g.clear_sickness(dais);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dais, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    }).expect("activate exile ability");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "victim exiled");
+    assert_eq!(g.players[1].hand.len(), opp_hand + 2, "controller of the victim draws two");
+    assert_eq!(g.battlefield_find(dais).unwrap().counter_count(CounterType::Oil), 0, "spent two oil");
 }
 
 /// Glimpse the Impossible exiles three, and uncast cards become Spawn at end.

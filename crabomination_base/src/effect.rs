@@ -1236,6 +1236,11 @@ pub enum Predicate {
     /// attackers. Battle Cry Goblin's "if you attacked with creatures with
     /// total power 6 or greater this combat".
     AttackedWithTotalPowerAtLeast { who: PlayerRef, at_least: u32 },
+    /// `who` declared at least `at_least` attackers this combat. Counts every
+    /// attacking creature controlled by `who` (`GameState.attacking`); `false`
+    /// outside a combat with declared attackers. Argent Dais's "whenever two
+    /// or more creatures attack" (with `who: ActivePlayer`).
+    AttackedWithCountAtLeast { who: PlayerRef, at_least: u32 },
     /// `who` declared one or more attackers this combat matching `filter`.
     /// Reads `GameState.attacking`; `false` outside a combat with declared
     /// attackers. Gates "Whenever you attack with one or more creatures with

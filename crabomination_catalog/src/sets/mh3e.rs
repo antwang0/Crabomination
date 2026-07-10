@@ -3,8 +3,8 @@
 //! plus a handful of energy/replicate/aura payoffs. Tests in `tests/mh3e.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, LandType, MayPlayDuration, Predicate, SelectionRequirement as R, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, LandType, MayPlayDuration, Predicate, SelectionRequirement as R, Subtypes,
     TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, target_filtered};
@@ -97,6 +97,38 @@ pub fn vega_the_watcher() -> CardDefinition {
                 },
             ),
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Argent Dais — {1}{W} artifact. Enters with two oil counters. Whenever two
+/// or more creatures attack, put an oil counter on it. {2}, {T}, remove two
+/// oil: exile another target nonland permanent; its controller draws two.
+pub fn argent_dais() -> CardDefinition {
+    CardDefinition {
+        name: "Argent Dais",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
+                Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 2 },
+            ),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Oil, 2)),
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(R::Permanent.and(R::Nonland).and(R::OtherThanSource)) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(2),
+                },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }

@@ -1558,6 +1558,15 @@ impl GameState {
                     .sum();
                 total as u32 >= *at_least
             }
+            Predicate::AttackedWithCountAtLeast { who, at_least } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let count = self
+                    .attacking
+                    .iter()
+                    .filter(|a| self.battlefield_find(a.attacker).is_some_and(|c| c.controller == p))
+                    .count();
+                count as u32 >= *at_least
+            }
             Predicate::AttackedWithCreatureMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.attacking.iter().any(|a| {

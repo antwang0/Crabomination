@@ -610,27 +610,33 @@ impl GameState {
         }
 
         // CR 508 — "Whenever you attack" fires once for the attacking player
-        // when one or more attackers are declared. Walk every permanent the
-        // active player controls for a `YouAttack` trigger (SelfSource or
-        // YourControl scope are equivalent here — the event is player-wide).
+        // when one or more attackers are declared. Active-player permanents fire
+        // for the SelfSource/YourControl scopes (the event is player-wide);
+        // `AnyPlayer`-scoped triggers are observers ("whenever [a player]
+        // attacks", Argent Dais) and fire from every controller, once per
+        // combat, with the ability's controller as the fired-for player.
         if any_attackers {
             let ap = self.active_player_idx;
-            let you_attack: Vec<(CardId, Effect)> = self
+            let you_attack: Vec<(CardId, usize, Effect)> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == ap)
                 .flat_map(|c| {
+                    let ctrl = c.controller;
                     c.definition
                         .triggered_abilities
                         .iter()
-                        .filter(|t| t.event.kind == EventKind::YouAttack)
-                        .map(move |t| (c.id, t.effect.clone()))
+                        .filter(move |t| {
+                            t.event.kind == EventKind::YouAttack
+                                && (ctrl == ap
+                                    || t.event.scope == crate::effect::EventScope::AnyPlayer)
+                        })
+                        .map(move |t| (c.id, ctrl, t.effect.clone()))
                 })
                 .collect();
-            for (src, effect) in you_attack {
-                let auto_target = self.auto_target_for_effect_avoiding(&effect, ap, Some(src));
+            for (src, ctrl, effect) in you_attack {
+                let auto_target = self.auto_target_for_effect_avoiding(&effect, ctrl, Some(src));
                 self.stack.push(
-                    TriggerPush::new(src, ap, effect).target(auto_target).build(),
+                    TriggerPush::new(src, ctrl, effect).target(auto_target).build(),
                 );
             }
         }
