@@ -61,6 +61,15 @@ exercising each) was elided in a compaction pass; recover it from
   `OneNonartifactSpellPerTurn` — Rule of Law / Deafening Silence / Ethersworn
   Canonist, surfaced via `PlayerView.spell_cast_lock`); off-turn spell tax
   (`SpellsCostMoreExceptOnControllerTurn` — Defense Grid).
+- **MH3-energy / mana-persistence / token primitives (modern_decks, this run):**
+  `Keyword::HexproofFromAbilities` (CR 702.11d — opponents' abilities can't target;
+  Volatile Stormdrake), `Keyword::ReplicateEnergy(n)` (energy-paid Replicate,
+  copy-per-payment; Reiterating Bolt), `StaticEffect::ManaPoolsNeverEmpty` (CR 500.4
+  — Upwelling), `StaticEffect::UnspentColorManaPersists(color)` +
+  `DynamicPt::BasePlusUnspentColorMana` (CR 106.4 — Omnath, Locus of Mana),
+  `Effect::ExileSource` (temp tokens exiled at end step — Manaform Hellkite's Dragon
+  Illusion via `Value::CastSpellManaSpent` + `TokenDefinition.dynamic_pt`), and
+  kicker ETB counters (Untamed Kavu).
 - **Trigger / damage-event primitives (recent90):**
   `StaticEffect::DoubleControllerTriggersOfType` (Harmonic Prodigy —
   "a triggered ability of a Shaman or another Wizard triggers an additional

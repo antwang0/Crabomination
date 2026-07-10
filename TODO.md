@@ -75,7 +75,13 @@ factory doc comment:
   two-independent-kickers (Wastescape Battlemage); the real Sundering Eruption //
   Volcanic Fissure (name collides with an existing fabricated `sundering_eruption`
   in `decks::modern` — replacing it means rewriting that card's two tests);
-  sacrifice-count-driven search (The Hunger Tide Rises IV). Card-level
+  sacrifice-count-driven search (The Hunger Tide Rises IV).
+  **Other MH3 gaps worth doing next (existing-primitive-friendly):** Nissa's
+  Pilgrimage (search-2-basics-split-to-bf+hand + spell-mastery-to-3 — needs a
+  split-destination search), Powerbalance (opponent-cast → reveal-top free-cast
+  if same MV), Baru, Wurmspeaker (Wurm anthem + cost-reduction-by-greatest-power),
+  Shilgengar (Blood-sac engine + mass finality reanimate), Echoes of Eternity
+  (colorless-trigger doubler + copy-colorless-spell-on-cast). Card-level
   approximations are noted on each mh3d/mh3e factory doc comment (Party Thrasher
   plays both exiled cards; Ripples has no {1}+3-life gate; Dog Umbra drops the
   opponent-control rider; Emperor drops the counter reanimation; Herigast drops
