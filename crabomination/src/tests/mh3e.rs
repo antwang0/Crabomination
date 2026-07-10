@@ -50,6 +50,59 @@ fn bountiful_landscape_wont_fetch_off_color_basic() {
     assert!(g.battlefield.iter().all(|c| c.id != swamp), "off-color Swamp not fetched");
 }
 
+/// Reiterating Bolt deals 3 damage to a creature.
+#[test]
+fn reiterating_bolt_deals_three() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let spell = g.add_card_to_hand(0, catalog::reiterating_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(crate::game::types::Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reiterating Bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != victim), "3 damage kills the 3/3");
+}
+
+/// Planar Genesis deploys a revealed land tapped when one is on top.
+#[test]
+fn planar_genesis_deploys_a_land() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // Top of library: a land plus three nonlands.
+    let land = g.add_card_to_library(0, catalog::forest());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::planar_genesis());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Planar Genesis");
+    drain_stack(&mut g);
+    let deployed = g.battlefield.iter().find(|c| c.id == land).expect("land deployed");
+    assert!(deployed.tapped, "the land enters tapped");
+}
+
+/// With no land revealed, Planar Genesis puts a card into hand instead.
+#[test]
+fn planar_genesis_takes_a_card_when_no_land() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::planar_genesis());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Planar Genesis");
+    drain_stack(&mut g);
+    // Spell leaves hand (-1), one revealed card goes to hand (+1) = net unchanged.
+    assert_eq!(g.players[0].hand.len(), before, "a card was put into hand");
+}
+
 /// Vega draws when you cast a spell from your graveyard (not from hand).
 #[test]
 fn vega_draws_on_graveyard_cast() {

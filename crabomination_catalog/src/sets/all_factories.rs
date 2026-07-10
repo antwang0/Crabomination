@@ -6670,6 +6670,8 @@ static MH3E: &[Factory] = &[
     super::mh3e::sheltering_landscape,
     super::mh3e::tranquil_landscape,
     super::mh3e::twisted_landscape,
+    super::mh3e::planar_genesis,
+    super::mh3e::reiterating_bolt,
     super::mh3e::vega_the_watcher,
     super::mh3e::chthonian_nightmare,
     super::mh3e::glimpse_the_impossible,

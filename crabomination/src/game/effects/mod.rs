@@ -10532,6 +10532,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookTopDeployLandOrHand { count } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let looked: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if looked.is_empty() {
+                    return Ok(());
+                }
+                // Prefer ramp: deploy the highest-MV land tapped if one is
+                // revealed; otherwise take the highest-MV card to hand.
+                let land = looked
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .is_some_and(|c| c.definition.is_land())
+                    })
+                    .max_by_key(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc()).unwrap_or(0)
+                    });
+                let chosen = if let Some(land_id) = land {
+                    let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true };
+                    self.move_card_to(land_id, &dest, ctx, events);
+                    land_id
+                } else {
+                    let hand_id = *looked.iter().max_by_key(|id| {
+                        self.players[p].library.iter().find(|c| c.id == **id)
+                            .map(|c| c.definition.cost.cmc()).unwrap_or(0)
+                    }).unwrap();
+                    self.move_card_to(hand_id, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                    hand_id
+                };
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    looked.into_iter().filter(|id| *id != chosen).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LookTopPutMatchingOntoBattlefield { count, filter, then, max, tapped } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

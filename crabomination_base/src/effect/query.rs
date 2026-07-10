@@ -210,6 +210,7 @@ impl Effect {
             Effect::DestroyEachNonlandWithManaValue { .. } => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
+            Effect::LookTopDeployLandOrHand { .. } => false,
             // Targets are chosen at resolution (Decision::ChooseCards), so no
             // cast-time target slot is demanded.
             Effect::TapUpToValue { .. } => false,

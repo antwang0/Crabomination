@@ -74,6 +74,35 @@ pub fn twisted_landscape() -> CardDefinition {
     landscape("Twisted Landscape", [S, M, F], &[b(), r(), g()])
 }
 
+/// Reiterating Bolt — {1}{R} sorcery. Deals 3 damage to target creature or
+/// planeswalker. (Replicate—Pay {E}{E}{E} is dropped: the engine models
+/// Replicate as a mana cost only, not an energy cost.)
+pub fn reiterating_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Reiterating Bolt",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Creature.or(R::Planeswalker)),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Planar Genesis — {G}{U} instant. Look at the top four cards; you may put a
+/// land onto the battlefield tapped, otherwise put a card into your hand; put
+/// the rest on the bottom in a random order.
+pub fn planar_genesis() -> CardDefinition {
+    CardDefinition {
+        name: "Planar Genesis",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::LookTopDeployLandOrHand { count: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
 /// Vega, the Watcher — {1}{W}{U} 2/2 Bird Spirit with flying. Whenever you cast
 /// a spell from anywhere other than your hand, draw a card.
 pub fn vega_the_watcher() -> CardDefinition {

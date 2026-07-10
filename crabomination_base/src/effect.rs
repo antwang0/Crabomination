@@ -2780,6 +2780,12 @@ pub enum Effect {
     /// a while-exiled cast permission for you, and bottom the rest randomly.
     /// (The any-color spend clause is dropped.)
     LookTopExileOneMayPlay { count: Value },
+    /// "Look at the top `count` cards. You may put a land card from among them
+    /// onto the battlefield tapped. If you don't, put a card from among them
+    /// into your hand. Put the rest on the bottom in a random order." Planar
+    /// Genesis. Resolution prefers ramp: deploys a land if one is revealed,
+    /// otherwise takes the highest-mana-value card to hand.
+    LookTopDeployLandOrHand { count: Value },
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,
