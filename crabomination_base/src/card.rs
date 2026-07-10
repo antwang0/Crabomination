@@ -112,7 +112,7 @@ pub enum CreatureType {
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
-    Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum,
+    Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum, Skunk,
     // The Last Airbender (2026).
     Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).
@@ -2089,6 +2089,11 @@ pub struct CardDefinition {
     /// snapshot back-compat.
     #[serde(default)]
     pub self_cost_reduction_if_night: Option<u32>,
+    /// "This spell costs `{amount}` less to cast as long as there are four or
+    /// more card types among cards in your graveyard" (Delirium — Drag to the
+    /// Roots). Generic-only, clamped by the caller. `None` by default.
+    #[serde(default)]
+    pub self_cost_reduction_if_delirium: Option<u32>,
     /// "This spell costs {1} less to cast for each card you've drawn this
     /// turn" (Deem Inferior). Generic-only, clamped by the caller. Reads
     /// `Player.cards_drawn_this_turn`. Defaults to `false`.

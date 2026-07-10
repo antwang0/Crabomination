@@ -517,6 +517,13 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(amount);
     }
+    // Card-intrinsic Delirium reduction — "{amount} less while four or more
+    // card types are in your graveyard" (Drag to the Roots).
+    if let Some(amount) = card.definition.self_cost_reduction_if_delirium
+        && state.delirium_active(caster)
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {1} less for each card you've drawn this turn"
     // (Deem Inferior). Generic-only, clamped by the caller.
     if card.definition.self_cost_reduction_per_cards_drawn {

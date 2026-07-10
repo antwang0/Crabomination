@@ -365,14 +365,21 @@ pub(crate) fn event_matches_spec(
         // listeners get the attacker's controller bound into the target
         // slot), so the unified dispatcher must not also fire it.
         EventScope::ControllerAttackedByOpponent => false,
-        // "When enchanted creature dies" — the dying creature must have
-        // carried this source Aura (recorded in `auras_at_death`).
-        EventScope::EnchantedBySource => matches!(
-            event,
-            GameEvent::CreatureDied { card_id }
-                if state.auras_at_death.get(card_id)
-                    .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id))
-        ),
+        // "When enchanted creature dies / is dealt damage" — the subject must
+        // be enchanted by this source Aura. Deaths read the death-time snapshot
+        // (`auras_at_death`, since the host has already left); other events read
+        // the Aura's live `attached_to` host on the battlefield.
+        EventScope::EnchantedBySource => match event {
+            GameEvent::CreatureDied { card_id } => state
+                .auras_at_death
+                .get(card_id)
+                .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),
+            GameEvent::DamageDealt { to_card: Some(cid), .. } => state
+                .battlefield_find(source.id)
+                .and_then(|a| a.attached_to)
+                .is_some_and(|host| host == *cid),
+            _ => false,
+        },
     };
 
     if !scope_ok {
