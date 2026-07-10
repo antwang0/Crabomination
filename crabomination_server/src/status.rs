@@ -52,6 +52,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
+         \"avg_duration_secs\":{},\"min_duration_secs\":{},\"max_duration_secs\":{},\
+         \"duration_buckets\":[{},{},{},{},{},{}],\
          \"catalog_cards\":{}}}\n",
         started.elapsed().as_secs(),
         st.total_matches(),
@@ -74,6 +76,15 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         sl.distinct_ips,
         sl.max_per_ip,
         sl.peak_per_ip,
+        st.avg_duration().as_secs(),
+        st.min_duration.map(|d| d.as_secs()).unwrap_or(0),
+        st.max_duration.map(|d| d.as_secs()).unwrap_or(0),
+        st.duration_buckets[0],
+        st.duration_buckets[1],
+        st.duration_buckets[2],
+        st.duration_buckets[3],
+        st.duration_buckets[4],
+        st.duration_buckets[5],
         catalog_card_count(),
     )
 }
@@ -97,6 +108,9 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("bot_matches_total", "counter", "Matches against a bot.", st.bot_matches.to_string());
     m("pair_matches_total", "counter", "Human-vs-human matches.", st.pair_matches.to_string());
     m("avg_turns", "gauge", "Average turns per match.", st.avg_turns().to_string());
+    m("avg_duration_seconds", "gauge", "Average match duration in seconds.", st.avg_duration().as_secs().to_string());
+    m("min_duration_seconds", "gauge", "Shortest match duration in seconds.", st.min_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
+    m("max_duration_seconds", "gauge", "Longest match duration in seconds.", st.max_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
     m("connections_current", "gauge", "Active connections.", sl.current.to_string());
     m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
@@ -117,6 +131,21 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
         ("other", st.other_wins),
     ] {
         out.push_str(&format!("crab_wins_total{{kind=\"{kind}\"}} {value}\n"));
+    }
+    // Match-duration histogram (see `MatchStats.duration_buckets`) as a labelled
+    // series so operators can watch the distribution shift (e.g. a spike in the
+    // "<30s" bucket flags bots conceding turn 1).
+    out.push_str("# HELP crab_match_duration_bucket Completed matches by duration band.\n");
+    out.push_str("# TYPE crab_match_duration_bucket gauge\n");
+    for (band, count) in [
+        ("<30s", st.duration_buckets[0]),
+        ("30s-1m", st.duration_buckets[1]),
+        ("1-2m", st.duration_buckets[2]),
+        ("2-5m", st.duration_buckets[3]),
+        ("5-10m", st.duration_buckets[4]),
+        ("10m+", st.duration_buckets[5]),
+    ] {
+        out.push_str(&format!("crab_match_duration_bucket{{band=\"{band}\"}} {count}\n"));
     }
     out
 }
@@ -200,7 +229,9 @@ mod tests {
         assert!(body.starts_with('{') && body.trim_end().ends_with('}'), "JSON object");
         // Key fields present with numeric values (no fresh-server nulls).
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
-                    "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0"] {
+                    "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
+                    "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
+                    "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
         }
     }
@@ -228,6 +259,9 @@ mod tests {
         assert!(body.contains("crab_wins_total{kind=\"poison\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"commander_damage\"} 0"));
         assert!(body.contains("# TYPE crab_draws_total counter"));
+        // Duration gauges + histogram bands.
+        assert!(body.contains("crab_avg_duration_seconds 0"));
+        assert!(body.contains("crab_match_duration_bucket{band=\"<30s\"} 0"));
         // Routed as Prometheus text exposition.
         let now = Instant::now();
         assert_eq!(route("GET", "/metrics", now, &slots).1, "text/plain; version=0.0.4");
