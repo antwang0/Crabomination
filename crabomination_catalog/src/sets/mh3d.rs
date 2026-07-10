@@ -566,3 +566,26 @@ pub fn collective_resistance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ripples of Undeath — {1}{B} enchantment. At the beginning of your first main
+/// phase, mill three cards; you may put one of them into your hand. (The
+/// printed "pay {1} and 3 life" cost on the return is omitted.)
+pub fn ripples_of_undeath() -> CardDefinition {
+    CardDefinition {
+        name: "Ripples of Undeath",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MillThenToHandN {
+                amount: Value::Const(3),
+                filter: R::Any,
+                take: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

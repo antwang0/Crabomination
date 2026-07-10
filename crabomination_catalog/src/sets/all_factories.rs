@@ -6655,6 +6655,7 @@ static MH3D: &[Factory] = &[
     super::mh3d::suppression_ray,
     super::mh3d::bloodsoaked_insight,
     super::mh3d::collective_resistance,
+    super::mh3d::ripples_of_undeath,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

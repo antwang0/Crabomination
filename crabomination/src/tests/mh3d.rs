@@ -404,3 +404,24 @@ fn collective_resistance_grants_protection() {
     assert!(cp.keywords.contains(&Keyword::Hexproof) && cp.keywords.contains(&Keyword::Indestructible),
         "gained hexproof + indestructible");
 }
+
+/// Ripples of Undeath mills three at your first main and lets you take one back.
+#[test]
+fn ripples_of_undeath_mills_and_returns_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ripples_of_undeath());
+    let mut milled = vec![];
+    for _ in 0..3 {
+        milled.push(g.add_card_to_library(0, catalog::grizzly_bears()));
+    }
+    let hand_before = g.players[0].hand.len();
+    // Take one of the three milled cards back to hand.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![milled[0]])]));
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 2, "milled three, took one back");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one milled card in hand");
+}
