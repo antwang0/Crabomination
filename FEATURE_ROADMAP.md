@@ -83,15 +83,20 @@ exercising each) was elided in a compaction pass; recover it from
   `SpendRestriction::AbilitiesOnly` (Omen Hawker — abilities-only mana, surfaced
   as a mana ability in the view), `Predicate::ValueIsPrime` (Zimone's prime-land
   end-step check).
-- **Delirium / Aura-damage / metrics primitives (modern_decks — FDN/BLB/DSK):**
+- **Delirium / Aura-damage / forage / metrics primitives (modern_decks — FDN/BLB/DSK/OTJ):**
   `CardDefinition.self_cost_reduction_if_delirium` (generic-only "costs {N} less
   while four+ card types are in your graveyard" — Drag to the Roots);
   `EventScope::EnchantedBySource` now matches `DamageDealt` as well as
   `CreatureDied`, so "when enchanted creature is dealt damage" Auras fire off the
-  live `attached_to` host (Cracked Skull). Client `keyword_reminder` covers six
-  previously-blank keywords; server `/metrics` gains `crab_peak_per_ip` +
-  `crab_connections_refused_by_reason_total{global,per_ip}`. Cards in
-  `decks::recent120-122`; tests in `tests/recent120-122.rs` + `cr_rules.rs`.
+  live `attached_to` host (Cracked Skull); `EventKind::Foraged` /
+  `GameEvent::Foraged` (CR 701.61 — "whenever you forage", emitted from the Forage
+  resolver with a `GameEventWire` mirror + "N forages" log phrase — Corpseberry
+  Cultivator). Client `keyword_reminder` covers six previously-blank keywords;
+  server `/metrics` gains `crab_peak_per_ip` +
+  `crab_connections_refused_by_reason_total{global,per_ip}`. ~40 cards across
+  `decks::recent120-126` (FDN/BLB/DSK/OTJ — threshold, landfall, first-lifegain,
+  Delirium, Mounts/Saddle, outlaw/crime/plot); tests in
+  `tests/recent120-126.rs`, `cr_rules.rs`.
 - **Scry/Surveil-matters + graveyard CDA (modern_decks — FIN):**
   `EventKind::ScriedOrSurveiled` (CR 701.22/701.42 — "whenever you scry or
   surveil"; emitted from the scry/surveil resolution alongside

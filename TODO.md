@@ -18,9 +18,15 @@ pump, modal flash, punisher Aura, delirium fight/reanimate, delirium-discount
 removal, surveil, Fact-or-Fiction). Still open, each needing one new primitive:
 Come Back Wrong (steal-reanimate + sac-at-end-step), Cathartic Parting
 (shuffle-target-into-owner's-library), Darkstar Augur (Dark-Confidant reveal-top-
-lose-life), Feed the Cycle (forage-or-pay additional cost), Corpseberry Cultivator
-(a `Foraged` event for "whenever you forage" payoffs). Harder MH3 marquees are
-under the mh3e section below.
+lose-life), Feed the Cycle (forage-or-pay additional cost). Corpseberry Cultivator
+shipped via the new `EventKind::Foraged`.
+
+**OTJ (`decks::recent124-126`)** is a rich remaining source — 176 gaps. Shipped
+this run: ward/toughness pump, flash -2/-2, mill, ping, off-turn discount,
+conditional Defender, Mounts (Saddle), outlaw Treasure, commit-crime drain, Plot.
+Next-up primitives to unblock more OTJ: `Value::OtherSpellsCastThisTurn` (Thunder
+Salvo), a "committed a crime this turn" gate on activated abilities (Blood
+Hustler), and Spree-on-instant modal costs (Metamorphic Blast, Getaway Glamer).
 
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
