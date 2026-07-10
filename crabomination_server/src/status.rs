@@ -11,6 +11,15 @@ use std::time::Instant;
 use crate::slots::SlotManager;
 use crate::stats::{format_duration, format_match_stats, match_stats};
 
+/// Distinct card count of the deployed catalog, computed once. Lets operators
+/// confirm which content build is live (`crab_catalog_cards`) without shelling
+/// into the container. Building the registry is non-trivial, so it's memoized.
+fn catalog_card_count() -> usize {
+    use std::sync::OnceLock;
+    static COUNT: OnceLock<usize> = OnceLock::new();
+    *COUNT.get_or_init(|| crabomination::catalog::all_known_factories().len())
+}
+
 /// Render the full status body. Split from the serving loop for testing.
 fn render_status(started: Instant, slots: &SlotManager) -> String {
     let stats_snapshot = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
@@ -42,7 +51,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
-         \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{}}}\n",
+         \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
+         \"catalog_cards\":{}}}\n",
         started.elapsed().as_secs(),
         st.total_matches(),
         st.bot_matches,
@@ -64,6 +74,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         sl.distinct_ips,
         sl.max_per_ip,
         sl.peak_per_ip,
+        catalog_card_count(),
     )
 }
 
@@ -91,6 +102,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
     m("connections_refused_total", "counter", "Connections refused.", refused.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
+    m("catalog_cards", "gauge", "Distinct cards in the deployed catalog.", catalog_card_count().to_string());
     // Win-kind breakdown (CR 104.3) — how decided games ended, as a labelled
     // `crab_wins_total{kind="…"}` series so operators can watch the
     // damage/poison/deck-out/commander mix shift without parsing the page.

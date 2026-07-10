@@ -1147,7 +1147,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Fade => "Fading — remove one each upkeep; sacrifice this when none are left.",
         CounterType::Age => "Cumulative upkeep tally — one added each upkeep; pay the cost per age counter.",
         CounterType::Defense => "The battle's defense — combat and effects remove them; it's defeated at zero.",
-        CounterType::Oil => "Oil tally — powers this card's 'per oil counter' payoffs.",
+        CounterType::Oil => "Oil tally — fuels this card's 'per oil counter' payoffs, or is removed to pay its abilities.",
         _ => return None,
     })
 }

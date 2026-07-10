@@ -7363,3 +7363,72 @@ fn cr_702_114_devoid_creature_is_colorless() {
     let id = g.add_card_to_battlefield(0, catalog::thief_of_existence());
     assert!(g.computed_permanent(id).unwrap().colors.is_empty(), "Devoid → colorless");
 }
+
+// ── CR 107.16 — {E} (energy) as a variable activation cost ───────────────────
+
+/// CR 107.16 — an ability whose cost includes "Pay X {E}" spends exactly the
+/// chosen X, and the same X gates the target (Chthonian Nightmare reanimates a
+/// creature card whose mana value equals the energy paid).
+#[test]
+fn cr_107_16_variable_energy_cost_pays_chosen_x() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let nightmare = g.add_card_to_battlefield(0, catalog::chthonian_nightmare());
+    g.players[0].energy = 6;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nightmare, ability_index: 0,
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], x_value: Some(2),
+    }).expect("pay 2 {E} for a MV-2 reanimation");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 4, "spent exactly the chosen X = 2 energy");
+    assert!(g.battlefield.iter().any(|c| c.id == dead), "MV-2 target reanimated");
+}
+
+// ── CR 508 — observer "whenever [a player] attacks" triggers ─────────────────
+
+/// CR 508.1 — an `AnyPlayer`-scoped "whenever two or more creatures attack"
+/// trigger (Argent Dais) fires for its controller even when the *opponent* is
+/// the one declaring the attackers.
+#[test]
+fn cr_508_observer_attack_trigger_sees_opponents_attack() {
+    let mut g = two_player_game();
+    // Dais controlled by P0; the opponent (P1) attacks with two creatures.
+    let dais = g.add_card_to_battlefield(0, catalog::argent_dais());
+    let before = g.battlefield_find(dais).unwrap().counter_count(CounterType::Oil);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ]).expect("opponent declares two attackers");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dais).unwrap().counter_count(CounterType::Oil), before + 1,
+        "P0's Dais gains oil from P1's multi-creature attack");
+}
+
+// ── CR 122.1 — "enters with N counters" ──────────────────────────────────────
+
+/// CR 122.1 — a permanent printed to enter with counters (Argent Dais, two oil)
+/// arrives already bearing them.
+#[test]
+fn cr_122_1_permanent_enters_with_printed_counters() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let id = g.add_card_to_hand(0, catalog::argent_dais());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Argent Dais");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Oil), 2,
+        "enters with two oil counters");
+}
