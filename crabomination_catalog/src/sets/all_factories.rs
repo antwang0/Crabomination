@@ -5628,6 +5628,14 @@ static DECKS: &[Factory] = &[
     super::decks::curator_of_destinies,
     // recent123 — forage-matters
     super::decks::corpseberry_cultivator,
+    // recent124 — OTJ commons (ward pump, flash -2/-2, mill, ping, off-turn)
+    super::decks::armored_armadillo,
+    super::decks::ambush_gigapede,
+    super::decks::desperate_bloodseeker,
+    super::decks::deadeye_duelist,
+    super::decks::eriettes_lullaby,
+    super::decks::geyser_drake,
+    super::decks::bristlepack_sentry,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
