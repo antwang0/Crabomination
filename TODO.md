@@ -10,14 +10,17 @@ state-corrupting in ordinary play.
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 
-`scripts/set_gaps.py {blb,dsk,fdn}` still lists many simple commons/uncommons.
-`decks::recent117-119` shipped a first pass (ETB bounce/impulse/modal, attack &
-expend triggers, threshold, prowess/surveil, offspring, firebreathing, modal
-burn, additional-sac drain). Next-up easy ones: Barkform Harvester (changeling +
-gy-to-bottom), Cat Collector (needs a first-lifegain-per-turn trigger), Come Back
-Wrong (steal-reanimate + sac-at-end-step), Cathartic Parting (shuffle-into-library),
-Bonebind Orator (graveyard-activated ability). Harder marquees still open in MH3
-are listed under the mh3e section below.
+`scripts/set_gaps.py {blb,dsk,fdn}` still lists simple commons/uncommons, but
+many are already implemented elsewhere in the catalog — **grep before adding**.
+`decks::recent117-122` shipped several passes (threshold, landfall, first-lifegain,
+kicker, changeling gy-tuck, gy-recursion, reveal-until-land ramp, begin-combat
+pump, modal flash, punisher Aura, delirium fight/reanimate, delirium-discount
+removal, surveil, Fact-or-Fiction). Still open, each needing one new primitive:
+Come Back Wrong (steal-reanimate + sac-at-end-step), Cathartic Parting
+(shuffle-target-into-owner's-library), Darkstar Augur (Dark-Confidant reveal-top-
+lose-life), Feed the Cycle (forage-or-pay additional cost), Corpseberry Cultivator
+(a `Foraged` event for "whenever you forage" payoffs). Harder MH3 marquees are
+under the mh3e section below.
 
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
