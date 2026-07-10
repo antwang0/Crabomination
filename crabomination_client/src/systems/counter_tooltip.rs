@@ -769,6 +769,12 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Frenzy(_) => "Whenever this attacks and isn't blocked, it gets +N/+0 until end of turn.",
         K::CantBlockPowerAtLeast(_) => "Can't block creatures with power that high or greater.",
         K::CantAttackOrBlockUnlessCreatureDiedThisTurn => "Can't attack or block unless a creature died this turn.",
+        K::TrampleOverPlaneswalkers => "Excess combat damage dealt to a planeswalker it's attacking tramples over to that planeswalker's controller.",
+        K::Compleated => "If a Phyrexian pip was paid with life as it was cast, it enters with that many fewer loyalty counters.",
+        K::ProtectionFromCardType(_) => "Can't be blocked, targeted, dealt damage, enchanted, or equipped by sources of the named card type.",
+        K::HexproofFromMonocolored => "Can't be the target of monocolored spells or abilities opponents control.",
+        K::EchoDiscard => "At your next upkeep after it enters, discard a card or sacrifice it.",
+        K::DoesntUntapWhileCounter(_) => "Doesn't untap during your untap step while it has a counter of the named kind.",
         _ => return None,
     })
 }
@@ -1305,6 +1311,22 @@ mod tests {
             K::Impending(3),
             K::Casualty(2),
             K::Saddle(3),
+        ] {
+            assert!(keyword_reminder(&kw).is_some(), "missing reminder for {kw:?}");
+        }
+    }
+
+    #[test]
+    fn newly_covered_keywords_have_reminder_text() {
+        use crabomination::card::{CardType, CounterType, Keyword as K};
+        // Previously these fell through to `None` (no tooltip line).
+        for kw in [
+            K::TrampleOverPlaneswalkers,
+            K::Compleated,
+            K::ProtectionFromCardType(CardType::Artifact),
+            K::HexproofFromMonocolored,
+            K::EchoDiscard,
+            K::DoesntUntapWhileCounter(CounterType::Stun),
         ] {
             assert!(keyword_reminder(&kw).is_some(), "missing reminder for {kw:?}");
         }

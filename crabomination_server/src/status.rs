@@ -116,6 +116,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
     m("connections_refused_total", "counter", "Connections refused.", refused.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
+    m("peak_per_ip", "gauge", "Highest simultaneous connection count from a single IP.", sl.peak_per_ip.to_string());
     m("catalog_cards", "gauge", "Distinct cards in the deployed catalog.", catalog_card_count().to_string());
     // Win-kind breakdown (CR 104.3) — how decided games ended, as a labelled
     // `crab_wins_total{kind="…"}` series so operators can watch the
@@ -146,6 +147,13 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
         ("10m+", st.duration_buckets[5]),
     ] {
         out.push_str(&format!("crab_match_duration_bucket{{band=\"{band}\"}} {count}\n"));
+    }
+    // Refusal breakdown so operators can tell a capacity-limit refusal (server
+    // full) from an abuse refusal (one IP over its per-IP cap).
+    out.push_str("# HELP crab_connections_refused_by_reason_total Refused connections by reason.\n");
+    out.push_str("# TYPE crab_connections_refused_by_reason_total counter\n");
+    for (reason, value) in [("global", sl.refused_global), ("per_ip", sl.refused_per_ip)] {
+        out.push_str(&format!("crab_connections_refused_by_reason_total{{reason=\"{reason}\"}} {value}\n"));
     }
     out
 }
@@ -262,6 +270,10 @@ mod tests {
         // Duration gauges + histogram bands.
         assert!(body.contains("crab_avg_duration_seconds 0"));
         assert!(body.contains("crab_match_duration_bucket{band=\"<30s\"} 0"));
+        // Refusal breakdown by reason + peak-per-ip gauge.
+        assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
+        assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
+        assert!(body.contains("crab_peak_per_ip 0"));
         // Routed as Prometheus text exposition.
         let now = Instant::now();
         assert_eq!(route("GET", "/metrics", now, &slots).1, "text/plain; version=0.0.4");
