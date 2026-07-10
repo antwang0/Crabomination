@@ -7506,3 +7506,82 @@ fn cr_701_20_owner_choice_tuck_defaults_bottom() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear), "tucked to the bottom");
 }
+
+// ── CR 702.171 — Saddle N (the special "tap other creatures" ability) ────────
+
+/// CR 702.171 — Saddle N requires tapping other untapped creatures with total
+/// power N or more; the Mount is saddled only until end of turn (702.171e).
+#[test]
+fn cr_702_171_saddle_requires_power_and_clears_at_end_of_turn() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let gryff = g.add_card_to_battlefield(0, catalog::congregation_gryff()); // Saddle 3
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // One 2/2 (power 2 < 3) can't pay the saddle cost.
+    let rejected = g.perform_action(GameAction::Saddle { mount: gryff, creatures: vec![bear] });
+    assert!(matches!(rejected, Err(GameError::SelectionRequirementViolated)), "power 2 < Saddle 3");
+    assert!(!g.battlefield_find(gryff).unwrap().saddled, "not saddled after a rejected attempt");
+    // Two 2/2s (total power 4 ≥ 3) can.
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear2);
+    g.perform_action(GameAction::Saddle { mount: gryff, creatures: vec![bear, bear2] })
+        .expect("saddle with total power 4");
+    assert!(g.battlefield_find(gryff).unwrap().saddled, "Mount saddled");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "rider tapped as the cost");
+    // Walk into the next turn; cleanup clears the "until end of turn" saddle.
+    let start = g.turn_number;
+    while g.turn_number == start {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(!g.battlefield_find(gryff).unwrap().saddled, "saddled cleared at end of turn (702.171e)");
+}
+
+// ── CR 700.13 — committing a crime (targeting an opponent's stuff) ───────────
+
+/// CR 700.13 — a spell that targets a permanent an opponent controls commits a
+/// crime, which fires "whenever you commit a crime" payoffs (Blood Hustler).
+#[test]
+fn cr_700_13_targeting_opponent_permanent_is_a_crime() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let hustler = g.add_card_to_battlefield(0, catalog::blood_hustler());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Lightning Bolt at the opponent's creature");
+    drain_stack(&mut g);
+    assert!(g.players[0].committed_crime_this_turn, "targeting an opponent's permanent is a crime");
+    assert_eq!(g.computed_permanent(hustler).unwrap().power, 2, "Blood Hustler grew from the crime");
+}
+
+// ── CR 604.3 — characteristic-defining ability P/T recomputes continuously ───
+
+/// CR 604.3 — Duelist of the Mind's `*` power is a CDA equal to cards drawn this
+/// turn; it recomputes the instant another card is drawn, in every zone check.
+#[test]
+fn cr_604_3_cda_power_tracks_cards_drawn_live() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let duelist = g.add_card_to_battlefield(0, catalog::duelist_of_the_mind());
+    let mut events = vec![];
+    assert_eq!(g.computed_permanent(duelist).unwrap().power, 0, "0 drawn → 0 power");
+    g.draw_one(0, &mut events);
+    assert_eq!(g.computed_permanent(duelist).unwrap().power, 1, "recomputes to 1 after a draw");
+    g.draw_one(0, &mut events);
+    g.draw_one(0, &mut events);
+    assert_eq!(g.computed_permanent(duelist).unwrap().power, 3, "recomputes to 3 after two more");
+}
