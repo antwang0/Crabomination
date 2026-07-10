@@ -264,7 +264,7 @@ exercising each) was elided in a compaction pass; recover it from
   Tests in `tests/mh3d.rs`; server `/metrics` + `/status.json` now expose the
   CR 104.3 win-kind split; client counter tooltip gains Lore/Level/Fade/Age/
   Defense/Oil reminders.
-- **MH3 batch-5 primitives (modern_decks — `sets::mh3e`, 20 cards):**
+- **MH3 batch-5 primitives (modern_decks — `sets::mh3e`, 10 cards):**
   `ActivatedAbility.energy_x_cost` (pay X {E} where X is the activation's
   `x_value`, threaded into resolution so `ManaValueExactlyXFromCost` gates the
   target — Chthonian Nightmare); `Effect::PayEnergyValue` /

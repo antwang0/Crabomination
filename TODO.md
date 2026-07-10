@@ -53,9 +53,8 @@ factory doc comment:
   Amphibian Downpour, Ondu Knotmaster // Throw a Line, Hydroelectric Specimen,
   Eladamri, Party Thrasher, Suppression Ray, Bloodsoaked Insight, Genku,
   Charitable Levy (`Predicate::SourceHasCountersAtLeast`), Emperor of Bones,
-  Ripples of Undeath. **mh3e batch (20 cards, `sets::mh3e`, tests `tests/mh3e.rs`)
-  shipped:** the ten-card Landscape land cycle (tap-{C} + sac-fetch three basics
-  tapped + tricolor cycling), Vega (`SpellNotCastFromHand` trigger), Chthonian
+  Ripples of Undeath. **mh3e batch (10 cards, `sets::mh3e`, tests `tests/mh3e.rs`)
+  shipped:** Vega (`SpellNotCastFromHand` trigger), Chthonian
   Nightmare (`ActivatedAbility.energy_x_cost` — pay X {E}, reanimate MV-X),
   Glimpse the Impossible (impulse-3 + per-card end-step Spawn), Argent Dais
   (`Predicate::AttackedWithCountAtLeast` + AnyPlayer attack observers), Lethal

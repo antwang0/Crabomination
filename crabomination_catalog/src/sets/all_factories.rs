@@ -6660,16 +6660,6 @@ static MH3D: &[Factory] = &[
     super::mh3d::charitable_levy,
 ];
 static MH3E: &[Factory] = &[
-    super::mh3e::bountiful_landscape,
-    super::mh3e::contaminated_landscape,
-    super::mh3e::deceptive_landscape,
-    super::mh3e::foreboding_landscape,
-    super::mh3e::perilous_landscape,
-    super::mh3e::seething_landscape,
-    super::mh3e::shattered_landscape,
-    super::mh3e::sheltering_landscape,
-    super::mh3e::tranquil_landscape,
-    super::mh3e::twisted_landscape,
     super::mh3e::planar_genesis,
     super::mh3e::reiterating_bolt,
     super::mh3e::vega_the_watcher,
