@@ -7432,3 +7432,77 @@ fn cr_122_1_permanent_enters_with_printed_counters() {
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Oil), 2,
         "enters with two oil counters");
 }
+
+// ── CR 603.2 — Aura "when enchanted creature is dealt damage" trigger ─────────
+
+/// CR 603.2 / 303.4 — an Aura whose triggered ability watches its enchanted
+/// creature fires on a *damage* event, not just death (Cracked Skull destroys
+/// the creature it enchants the moment that creature is dealt damage).
+#[test]
+fn cr_603_2_enchanted_creature_dealt_damage_trigger() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let skull = g.add_card_to_hand(0, catalog::cracked_skull());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: skull, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant the bear");
+    drain_stack(&mut g);
+    let mut ev = vec![];
+    g.deal_damage_to_from(crate::game::effects::EntityRef::Permanent(bear), 1, None, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "damage triggers the destroy");
+}
+
+// ── CR 601.2f — Delirium cost reduction is generic-only ──────────────────────
+
+/// CR 601.2f — a card-intrinsic "{2} less" Delirium discount reduces only the
+/// generic part of the cost; the colored pips still have to be paid. Drag to
+/// the Roots ({2}{B}{G}) casts for {B}{G} under Delirium but not for less.
+#[test]
+fn cr_601_2f_delirium_reduction_is_generic_only() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // Four card types in the graveyard → Delirium.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::divination());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::drag_to_the_roots());
+    // Only the two colored pips are available — the {2} generic is fully discounted.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("casts for just {B}{G} under Delirium");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "the discounted spell resolved");
+}
+
+// ── CR 701.20 — "put on the top or bottom of library" (owner's choice) ────────
+
+/// CR 701.20 — a "puts it on top or bottom, owner's choice" tuck defaults to the
+/// bottom under the AutoDecider (Dire Downdraft), and the reduction only applies
+/// against a tapped/attacking target.
+#[test]
+fn cr_701_20_owner_choice_tuck_defaults_bottom() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::dire_downdraft());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dire Downdraft");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear), "tucked to the bottom");
+}
