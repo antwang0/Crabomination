@@ -5588,6 +5588,13 @@ static DECKS: &[Factory] = &[
     super::decks::battlesong_berserker,
     super::decks::billowing_shriekmass,
     super::decks::bulk_up,
+    // recent118 — cost reduction, modal burn, Expend 4, additional-sac drain
+    super::decks::arcane_epiphany,
+    super::decks::agate_assault,
+    super::decks::bark_knuckle_boxer,
+    super::decks::brambleguard_veteran,
+    super::decks::attack_in_the_box,
+    super::decks::arbiter_of_woe,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
