@@ -102,6 +102,33 @@ pub fn vega_the_watcher() -> CardDefinition {
     }
 }
 
+/// Lethal Throwdown — {B} sorcery. Additional cost: sacrifice a creature (or a
+/// modified creature). Destroy target creature or planeswalker; if the modified
+/// creature was sacrificed, draw a card. (The two additional-cost options are
+/// folded into a cast-time `ChooseMode`.)
+pub fn lethal_throwdown() -> CardDefinition {
+    CardDefinition {
+        name: "Lethal Throwdown",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ChooseMode(vec![
+                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
+                Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::Creature.and(R::IsModified),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ]),
+            ]),
+            Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Pyretic Rebirth — {2}{B}{R} instant. Return target artifact or creature card
 /// from your graveyard to hand; deal damage equal to its mana value to a
 /// creature or planeswalker. (Printed as "up to one" damage target; modeled as

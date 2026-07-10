@@ -6675,6 +6675,7 @@ static MH3E: &[Factory] = &[
     super::mh3e::glimpse_the_impossible,
     super::mh3e::argent_dais,
     super::mh3e::pyretic_rebirth,
+    super::mh3e::lethal_throwdown,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

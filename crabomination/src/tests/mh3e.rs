@@ -115,6 +115,31 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
 }
 
+/// Lethal Throwdown's modified-sacrifice mode destroys a target and draws.
+#[test]
+fn lethal_throwdown_modified_mode_draws() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // A modified fodder creature (a +1/+1 counter counts as a modification).
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(fodder).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::lethal_throwdown());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(crate::game::types::Target::Permanent(victim)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast in modified-sacrifice mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != fodder), "modified creature sacrificed");
+    assert!(g.battlefield.iter().all(|c| c.id != victim), "target destroyed");
+    // -1 for the spell leaving hand, +1 for the draw = net 0 change.
+    assert_eq!(g.players[0].hand.len(), before - 1 + 1, "drew a card for sacrificing a modified creature");
+}
+
 /// Pyretic Rebirth returns a graveyard card and burns for its mana value.
 #[test]
 fn pyretic_rebirth_returns_and_burns() {
