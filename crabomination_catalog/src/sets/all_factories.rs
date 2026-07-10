@@ -6648,6 +6648,8 @@ static MH3D: &[Factory] = &[
     super::mh3d::depth_charge_colossus,
     super::mh3d::amphibian_downpour,
     super::mh3d::herigast_erupting_nullkite,
+    super::mh3d::ondu_knotmaster,
+    super::mh3d::hydroelectric_specimen,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

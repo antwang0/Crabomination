@@ -3,13 +3,31 @@
 //! lifegain rider, and an umbra-armor Aura. Tests in `tests/mh3d.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration, Predicate, Prototype,
-    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    ActivatedAbility, Adventure, CardDefinition, CardType, CounterType, CreatureType,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration,
+    Predicate, Prototype, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{emerge, etb, on_cast, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest, ZoneRef};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w, Color};
+
+/// Back for the MH3 mono-U modal DFC: "As this land enters, you may pay 3 life.
+/// If you don't, it enters tapped. {T}: Add {U}."
+fn u_pain_land(name: &'static str) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
+        activated_abilities: vec![super::tap_add(Color::Blue)],
+        ..Default::default()
+    }
+}
 
 /// Ugin's Binding — {2}{U} Devoid instant. Bounce a nonland permanent you don't
 /// control. From the graveyard, casting a colorless spell of mana value 7+ lets
@@ -304,6 +322,75 @@ pub fn herigast_erupting_nullkite() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::Const(3) },
             ])),
         })],
+        ..Default::default()
+    }
+}
+
+/// Ondu Knotmaster // Throw a Line — {2}{W}{B} 2/2 Kor Rogue with lifelink.
+/// Whenever another modified creature you control dies, put two +1/+1 counters
+/// on it. Adventure: Throw a Line {W}{B} — distribute two +1/+1 counters among
+/// one or two target creatures.
+pub fn ondu_knotmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Ondu Knotmaster",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::IsModified,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        }],
+        adventure: Some(Box::new(Adventure {
+            name: "Throw a Line",
+            cost: cost(&[w(), b()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::DistributeCounters {
+                total: Value::Const(2),
+                counter: CounterType::PlusOnePlusOne,
+                filter: R::Creature,
+                max_targets: 2,
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Hydroelectric Specimen // Hydroelectric Laboratory — {2}{U} 1/4 Weird with
+/// flash. ETB: you may change the target of a single-target instant or sorcery
+/// to this creature. Back is a mono-U pain land.
+pub fn hydroelectric_specimen() -> CardDefinition {
+    CardDefinition {
+        name: "Hydroelectric Specimen",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Change the target of an instant or sorcery to Hydroelectric Specimen?"
+                .into(),
+            body: Box::new(Effect::RedirectSpellTargetToSelf {
+                what: target_filtered(R::IsSpellOnStack.and(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                )),
+            }),
+        })],
+        back_face: Some(Box::new(u_pain_land("Hydroelectric Laboratory"))),
         ..Default::default()
     }
 }

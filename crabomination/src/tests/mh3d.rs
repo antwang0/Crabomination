@@ -245,3 +245,47 @@ fn herigast_wheels_hand_on_cast() {
     assert_eq!(g.players[0].hand.len(), 3, "wheeled to three fresh cards");
     assert!(g.players[0].hand.iter().all(|c| c.definition.name == "Serra Angel"), "drew from library");
 }
+
+/// Ondu Knotmaster grows when another modified creature you control dies.
+#[test]
+fn ondu_knotmaster_grows_on_modified_death() {
+    let mut g = two_player_game();
+    let knot = g.add_card_to_battlefield(0, catalog::ondu_knotmaster());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Modify the ally with a +1/+1 counter, then kill it.
+    g.battlefield_find_mut(ally).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(ally).unwrap().damage = 3;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(knot).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 + two +1/+1 counters");
+}
+
+/// Throw a Line (Ondu Knotmaster's adventure) distributes two +1/+1 counters.
+#[test]
+fn throw_a_line_distributes_two_counters() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let knot = g.add_card_to_hand(0, catalog::ondu_knotmaster());
+    fill_mana(&mut g);
+    // Cast the adventure half (mode = Some(1) selects the adventure).
+    g.perform_action(GameAction::CastAdventure {
+        card_id: knot, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Throw a Line");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 + two counters on one target");
+}
+
+/// Hydroelectric Specimen is a 1/4 flash Weird with a mono-U land back.
+#[test]
+fn hydroelectric_specimen_stats_and_back_face() {
+    let d = catalog::hydroelectric_specimen();
+    assert_eq!((d.power, d.toughness), (1, 4));
+    assert!(d.keywords.contains(&Keyword::Flash));
+    let back = d.back_face.expect("has a land back");
+    assert!(back.card_types.contains(&crate::card::CardType::Land), "back is a land");
+}
