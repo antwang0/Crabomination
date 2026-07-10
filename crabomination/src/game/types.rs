@@ -1460,6 +1460,9 @@ pub enum GameEvent {
     /// CR 701.34 — `player` proliferated (once per proliferate instance;
     /// a doubled proliferate emits two events).
     Proliferated { player: usize },
+    /// CR 701.61 — `player` foraged (exiled three graveyard cards or sacrificed
+    /// a Food). Powers "whenever you forage" payoffs.
+    Foraged { player: usize },
     /// CR 700.14 — `player` paid a spell cost, bringing their running
     /// total of mana spent to cast spells this turn to `total`. "Whenever
     /// you expend N" triggers (`EventKind::Expend` + `Predicate::

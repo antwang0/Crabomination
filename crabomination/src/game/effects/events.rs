@@ -58,6 +58,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
+        (EventKind::Foraged, GameEvent::Foraged { .. }) => true,
         (EventKind::PoisonAdded, GameEvent::PoisonAdded { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
@@ -443,6 +444,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
         | GameEvent::Proliferated { player }
+        | GameEvent::Foraged { player }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
         | GameEvent::ManaAdded { player, .. }

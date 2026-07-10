@@ -14357,6 +14357,8 @@ impl GameState {
                     let mut die = self.remove_to_graveyard_with_triggers(fid);
                     events.append(&mut die);
                 }
+                // CR 701.61 — the forage is complete; fire "whenever you forage".
+                events.push(GameEvent::Foraged { player: p });
                 let (slot0, additional) =
                     self.auto_targets_for_effect_all_slots(then, p, None);
                 let mut then_ctx = ctx.clone();

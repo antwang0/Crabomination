@@ -1590,6 +1590,10 @@ pub enum EventKind {
     /// the proliferating player is the event actor. "Whenever you
     /// proliferate" (Scheming Aspirant, Ezuri, Voidwing Hybrid).
     Proliferated,
+    /// A player foraged (CR 701.61 — exiled three graveyard cards or sacrificed
+    /// a Food; `GameEvent::Foraged`). The foraging player is the event actor.
+    /// "Whenever you forage" (Corpseberry Cultivator).
+    Foraged,
     /// A player got one or more poison counters (`GameEvent::PoisonAdded`) —
     /// the player half of All Will Be One's "counters on a permanent or
     /// player". Event amount = counters added.
