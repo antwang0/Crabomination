@@ -115,6 +115,31 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
 }
 
+/// Pyretic Rebirth returns a graveyard card and burns for its mana value.
+#[test]
+fn pyretic_rebirth_returns_and_burns() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    // A MV-3 artifact/creature card in the graveyard (Ornithopter is {0}; use
+    // a bear-ish 3-drop: Grizzly Bears is MV 2). Use a 3/3 for a clean number.
+    let dead = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let mv = catalog::hill_giant().cost.cmc();
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::pyretic_rebirth());
+    for c in [Color::Black, Color::Red] { g.players[0].mana_pool.add(c, 1); }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(crate::game::types::Target::Permanent(dead)),
+        additional_targets: vec![crate::game::types::Target::Permanent(victim)],
+        mode: None, x_value: None,
+    }).expect("cast Pyretic Rebirth");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "graveyard card returned to hand");
+    // Hill Giant is 3/3; MV 4 damage from the returned Hill Giant is lethal.
+    assert!(mv >= 3 && g.battlefield_find(victim).is_none(), "victim took its mana value ({mv}) in damage and died");
+}
+
 /// Argent Dais gains an oil counter only when two or more creatures attack.
 #[test]
 fn argent_dais_oil_on_multi_attack() {

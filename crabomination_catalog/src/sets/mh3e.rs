@@ -102,6 +102,32 @@ pub fn vega_the_watcher() -> CardDefinition {
     }
 }
 
+/// Pyretic Rebirth — {2}{B}{R} instant. Return target artifact or creature card
+/// from your graveyard to hand; deal damage equal to its mana value to a
+/// creature or planeswalker. (Printed as "up to one" damage target; modeled as
+/// a required second target.)
+pub fn pyretic_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Pyretic Rebirth",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::InYourGraveyard.and(R::Artifact.or(R::Creature)),
+                },
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Creature.or(R::Planeswalker) },
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Argent Dais — {1}{W} artifact. Enters with two oil counters. Whenever two
 /// or more creatures attack, put an oil counter on it. {2}, {T}, remove two
 /// oil: exile another target nonland permanent; its controller draws two.
