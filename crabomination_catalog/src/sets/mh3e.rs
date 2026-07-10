@@ -6,8 +6,9 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, generic, u, w, ManaSymbol, g, r};
+use crate::mana::{b, cost, generic, g, r, u, w, ManaSymbol};
 
 /// One member of the MH3 "Landscape" cycle: `{T}: Add {C}`; `{T}, Sacrifice:
 /// fetch a basic of one of three types onto the battlefield tapped`; Cycling
@@ -95,6 +96,30 @@ pub fn vega_the_watcher() -> CardDefinition {
                 },
             ),
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chthonian Nightmare — {1}{B} enchantment. ETB: get {E}{E}{E}. Pay X {E},
+/// sacrifice a creature, return this to hand: reanimate a creature card with
+/// mana value X from your graveyard. Sorcery-speed.
+pub fn chthonian_nightmare() -> CardDefinition {
+    CardDefinition {
+        name: "Chthonian Nightmare",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(3)))],
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            energy_x_cost: true,
+            sac_other_filter: Some((R::Creature, 1)),
+            return_self_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueExactlyXFromCost)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

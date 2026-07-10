@@ -9393,6 +9393,12 @@ impl GameState {
         if ability.energy_cost > 0 && self.players[p].energy < ability.energy_cost {
             return Err(GameError::InsufficientEnergy);
         }
+        // Pre-flight variable-{E} gate: "Pay X {E}" abilities spend the
+        // activation's chosen `x_value` energy (CR 107.16); reject cleanly when
+        // short. The same X gates the target filter (ManaValueExactlyXFromCost).
+        if ability.energy_x_cost && self.players[p].energy < x_value.unwrap_or(0) {
+            return Err(GameError::InsufficientEnergy);
+        }
 
         // Pre-flight exile-other-from-gy gate: confirm `count` graveyard
         // cards matching the cost's filter exist, *excluding* the source
@@ -9784,6 +9790,7 @@ impl GameState {
             || ability.sac_other_x
             || ability.exile_other_x
             || ability.remove_counter_x.is_some()
+            || ability.energy_x_cost
         {
             x_value.unwrap_or(0)
         } else {
@@ -9986,6 +9993,10 @@ impl GameState {
         // `Effect::PayEnergy` spend path, no event is emitted.
         if ability.energy_cost > 0 {
             self.players[p].energy = self.players[p].energy.saturating_sub(ability.energy_cost);
+        }
+        if ability.energy_x_cost {
+            self.players[p].energy =
+                self.players[p].energy.saturating_sub(x_value.unwrap_or(0));
         }
 
         let mut events = auto_mana_events;

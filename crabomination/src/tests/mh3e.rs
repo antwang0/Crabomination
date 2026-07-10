@@ -77,6 +77,42 @@ fn vega_draws_on_graveyard_cast() {
     assert_eq!(deplete_with(true), 3, "Vega draws one extra on the graveyard cast");
 }
 
+/// Chthonian Nightmare enters and grants three energy.
+#[test]
+fn chthonian_nightmare_etb_gives_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::chthonian_nightmare());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Chthonian Nightmare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 3, "ETB grants three energy");
+}
+
+/// Pay X {E} + sac a creature + bounce self to reanimate a MV-X creature.
+#[test]
+fn chthonian_nightmare_reanimates_by_energy_x() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let nightmare = g.add_card_to_battlefield(0, catalog::chthonian_nightmare());
+    g.players[0].energy = 5;
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Target: a MV-2 creature card in the graveyard (Grizzly Bears is {1}{G}).
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nightmare, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(dead)),
+        additional_targets: vec![], x_value: Some(2),
+    }).expect("activate for X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 3, "spent two energy");
+    assert!(g.battlefield.iter().any(|c| c.id == dead), "MV-2 creature reanimated");
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder creature sacrificed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
+}
+
 /// Cycling the land for its three colors draws a card.
 #[test]
 fn contaminated_landscape_cycles() {

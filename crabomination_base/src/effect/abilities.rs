@@ -1708,6 +1708,13 @@ pub struct ActivatedAbility {
     /// initialisations pick up the new field automatically.
     #[serde(default)]
     pub energy_cost: u32,
+    /// Optional cost: pay `X` energy, where `X` is the activation's chosen
+    /// `x_value` (CR 107.16 + a variable cost). The target filter reads the
+    /// same `X` via `ManaValueExactlyXFromCost`, so "Pay X {E}: return a
+    /// creature card with mana value X" (Chthonian Nightmare) is one field
+    /// plus that filter. Mutually exclusive with a fixed `energy_cost`.
+    #[serde(default)]
+    pub energy_x_cost: bool,
     /// Optional cost: discard `count` cards from the activator's hand
     /// matching this filter (CR 602.5b "Discard a [filter] card:" cost
     /// lines). Mirrors `sac_other_filter`/`exile_other_filter` but moves

@@ -6671,6 +6671,7 @@ static MH3E: &[Factory] = &[
     super::mh3e::tranquil_landscape,
     super::mh3e::twisted_landscape,
     super::mh3e::vega_the_watcher,
+    super::mh3e::chthonian_nightmare,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
