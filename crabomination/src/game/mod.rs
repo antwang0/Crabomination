@@ -511,6 +511,9 @@ mod tests_mh3d;
 #[path = "../tests/mh3e.rs"]
 mod tests_mh3e;
 #[cfg(test)]
+#[path = "../tests/recent115.rs"]
+mod tests_recent115;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]
@@ -6160,6 +6163,10 @@ impl GameState {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::BasePlusUnspentColorMana { base_p, base_t, color } => {
+                    let n = self.players[card.controller].mana_pool.amount(color) as i32;
+                    (base_p + n, base_t + n)
+                }
                 crate::card::DynamicPt::BasePlusCreaturesInControllerGraveyard { base } => {
                     let n = self.players[card.controller].graveyard.iter()
                         .filter(|c| c.definition.is_creature()).count() as i32;
@@ -6771,26 +6778,59 @@ impl GameState {
     /// player with an `UnspentManaBecomesColorless` static (Kruphix) keeps
     /// the total as colorless mana.
     pub(crate) fn empty_mana_pools(&mut self) {
+        use crate::effect::StaticEffect;
         let keepers: Vec<usize> = self
             .battlefield
             .iter()
             .filter(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::UnspentManaBecomesColorless)
+                    matches!(sa.effect, StaticEffect::UnspentManaBecomesColorless)
                 })
             })
             .map(|c| c.controller)
+            .collect();
+        // CR 500.4 exception — Upwelling: no player loses unspent mana at all.
+        let all_persist = self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::ManaPoolsNeverEmpty))
+        });
+        // CR 106.4 exception — per-player kept colors (Omnath keeps green).
+        let color_keepers: Vec<(usize, crate::mana::Color)> = self
+            .battlefield
+            .iter()
+            .flat_map(|c| {
+                c.definition.static_abilities.iter().filter_map(move |sa| {
+                    if let StaticEffect::UnspentColorManaPersists(col) = sa.effect {
+                        Some((c.controller, col))
+                    } else {
+                        None
+                    }
+                })
+            })
             .collect();
         // CR 702.189a — Firebending mana survives until end of combat; the
         // end-of-combat-step empty is where it finally clears (no re-seed).
         let end_of_combat = self.step == crate::game::types::TurnStep::EndCombat;
         for (i, player) in self.players.iter_mut().enumerate() {
-            if keepers.contains(&i) {
+            if all_persist {
+                // Pool survives intact; still handle firebending below.
+            } else if keepers.contains(&i) {
                 let total = player.mana_pool.total();
                 player.mana_pool.empty();
                 player.mana_pool.add_colorless(total);
             } else {
+                // Preserve the amounts of any colors this player keeps.
+                let kept: Vec<(crate::mana::Color, u32)> = color_keepers
+                    .iter()
+                    .filter(|(p, _)| *p == i)
+                    .map(|(_, col)| (*col, player.mana_pool.amount(*col)))
+                    .collect();
                 player.mana_pool.empty();
+                for (col, amt) in kept {
+                    player.mana_pool.add(col, amt);
+                }
             }
             if player.firebending_kept_red > 0 {
                 if end_of_combat {
@@ -13177,6 +13217,9 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllDamageToController
             | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::UnspentManaBecomesColorless
+            // Consulted directly at the step/phase pool-empty sites.
+            | StaticEffect::ManaPoolsNeverEmpty
+            | StaticEffect::UnspentColorManaPersists(_)
             // GraveyardAnthem is zone-special: gathered from graveyards in
             // `gather_continuous_effects_inner`, never from the battlefield.
             | StaticEffect::GraveyardAnthem { .. }

@@ -1275,6 +1275,16 @@ pub enum StaticEffect {
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.
     UnspentManaBecomesColorless,
+    /// CR 500.4 exception — "Players don't lose unspent mana as steps and
+    /// phases end" (Upwelling). Every player's pool survives step/phase ends
+    /// with its colors intact (it still empties at end of turn via cleanup's
+    /// separate path only if no keeper remains — Upwelling has no such carve-out,
+    /// so pools persist across the whole game while it's in play).
+    ManaPoolsNeverEmpty,
+    /// CR 106.4 exception — "You don't lose unspent [color] mana as steps and
+    /// phases end" (Omnath, Locus of Mana keeps green). The controller keeps
+    /// that color's mana; all other mana empties normally.
+    UnspentColorManaPersists(crate::mana::Color),
     /// "As long as this card is in your graveyard and you control a
     /// [land subtype], creatures you control have [keyword]" — the Judgment
     /// Incarnation cycle (Anger, Wonder, Brawn, Valor, Filth). Zone-special:

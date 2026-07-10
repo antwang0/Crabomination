@@ -5574,6 +5574,9 @@ static DECKS: &[Factory] = &[
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,
     super::decks::spider_man_india,
+    // recent115 — mana-persistence staples
+    super::decks::upwelling,
+    super::decks::omnath_locus_of_mana,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

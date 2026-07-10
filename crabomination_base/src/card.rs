@@ -2724,6 +2724,10 @@ pub enum DynamicPt {
     /// Power = the controller's devotion to `color` (CR 700.5), with a
     /// fixed printed toughness. Anax, Hardened in the Forge (`*/3`).
     DevotionTo { color: crate::mana::Color, base_t: i32 },
+    /// Power = `base_p` + toughness = `base_t` + the amount of unspent
+    /// `color` mana in the controller's pool. Omnath, Locus of Mana (1/1 +
+    /// green mana). Live-recomputes as mana is added/spent (CR 604.3).
+    BasePlusUnspentColorMana { base_p: i32, base_t: i32, color: crate::mana::Color },
     /// Toughness = the controller's devotion to `color`, with a fixed
     /// printed power. Daxos, Blessed by the Sun (`2/*`).
     DevotionToToughness { color: crate::mana::Color, base_p: i32 },
