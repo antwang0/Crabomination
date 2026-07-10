@@ -45,20 +45,29 @@ factory doc comment:
   (`StaticEffect::MaxOneNonbasicLandUntap`), Cursed Wombat
   (`StaticEffect::CounterAmplifierOncePerTurn` — once-per-turn per-permanent
   +1/+1 amplifier), Rush of Inspiration (energy modal DFC), Rosecot Knight
-  (ETB dig for artifact/enchantment). Still open, each
-  needing one primitive: kicker "choose one; if kicked choose both" (Depth
-  Defiler); kicker-changes-target (Expel the Unworthy); mana-Escalate at cast
-  (Collective Resistance — `Effect::Escalate.cost` is resolution-time only);
+  (ETB dig for artifact/enchantment). **mh3d batch (20 cards) shipped:** Depth
+  Defiler (`CastSpellWasKicked` choose-one/both), Expel the Unworthy
+  (kicker-widens-target), Collective Resistance (mana-Escalate — fixed the
+  `Escalate` cost overflow), Twisted Riddlekeeper + Herigast (Emerge, now used),
+  Ugin's Binding, Abstruse Appropriation, Dog Umbra, Thief of Existence,
+  Amphibian Downpour, Ondu Knotmaster // Throw a Line, Hydroelectric Specimen,
+  Eladamri, Party Thrasher, Suppression Ray, Bloodsoaked Insight, Genku,
+  Charitable Levy (`Predicate::SourceHasCountersAtLeast`), Emperor of Bones,
+  Ripples of Undeath. Still open, each needing one primitive:
   sacrifice-a-modified-creature additional cost + "if a modified creature was
   sacrificed" rider (Lethal Throwdown); Jolted Awake (dynamic `PayEnergy` =
-  target's MV); an Emerge card
-  (`CardDefinition.emerge` exists but unused — Twisted Riddlekeeper, Herigast);
-  optional Exert (CR 702.83a); an
-  exert-as-activation-cost + haste-if-spent-on-creature mana (Arena of Glory);
-  energy equip cost (Inventor's Axe); an alt-cost-by-energy permission (Primal
-  Prayers); a "may reveal + else +1/+1 counter" look-top rider (Rosecot Knight —
-  `LookPickToHand` auto-fills the pick, so the optional whiff-counter is lost);
-  and a mill-then-pay-to-return-one gate (Ripples of Undeath).
+  target's MV); optional Exert (CR 702.83a) + exert-as-activation-cost +
+  haste-if-spent-on-creature mana (Arena of Glory); energy-gain replacement
+  (Izzet Generatorium); an alt-cost-by-energy permission (Primal Prayers);
+  cast-from-not-hand *trigger* filter (Unstable Amulet); a "2+ creatures attack"
+  trigger (Argent Dais); a "may reveal + else +1/+1 counter" look-top rider
+  (Rosecot Knight); Volatile Stormdrake (needs `Keyword::HexproofFromAbilities`
+  — hexproof from activated + triggered abilities — plus an MV-scaled
+  `PayEnergyOrElse`, whose `amount` is a fixed `u32` and should take a `Value`
+  so "sacrifice unless you pay {E} equal to its mana value" is expressible). Card-level approximations are noted on each mh3d factory
+  doc comment (Party Thrasher plays both exiled cards; Ripples has no
+  {1}+3-life gate; Dog Umbra drops the opponent-control rider; Emperor drops the
+  counter reanimation; Herigast drops the emerge-granting static).
 - ⏳ **Nested modal after a payment defaults to mode 0** — `Effect::ChooseMode`
   reads `ctx.mode` (picked at trigger-push), so a modal buried inside
   `MayDo`/`PayEnergy` can't get its own resolution-time pick; bots always take
@@ -68,9 +77,10 @@ factory doc comment:
   payment** — Riddle Gate Gargoyle's on-attack pay-{E}{E}-then-target-a-creature
   is modeled with the target on the trigger (CR 603.7 wants it post-payment).
   Minor timing approximation.
-- ⏳ **Emerge is defined but unused** — `CardDefinition.emerge` exists yet no
-  catalog card sets it; Twisted Riddlekeeper (MH3) deferred until an emerge card
-  is wired and tested.
+- ✅ **Emerge wired** — `CardDefinition.emerge` + `emerge()` shortcut +
+  `CastSpellAlternative` cost reduction by the sacrificed creature's MV
+  (Wretched Gryff, Twisted Riddlekeeper, Herigast; CR 702.119 test in
+  `tests/cr_rules.rs`).
 - ✅ **No-mana-cost marker** — `CardDefinition.no_mana_cost` (replaces
   `suspend_only`; serde alias kept) rejects the pay-the-cost cast path per
   CR 601.3e; Ancestral Vision / Lotus Bloom / Crashing Footfalls / Living End

@@ -252,6 +252,18 @@ exercising each) was elided in a compaction pass; recover it from
   affinity-style counts honor explicit controller clauses;
   `SearchPickedBy` dest resolves "under YOUR control" to the effect
   controller.
+- **MH3 batch-4 primitives (modern_decks — `sets::mh3d`, 20 cards):**
+  cast-trigger "up to N target" maximization — `push_on_cast_triggers` now fills
+  slots 1.. via `auto_extra_targets_for` (CR 115.1c; Twisted Riddlekeeper's
+  emerge tap-lock); `Predicate::SourceHasCountersAtLeast { counter, n }`
+  (source counter-threshold intervening-if — Charitable Levy's three-collection
+  sacrifice); fixed a `1 + usize::MAX` overflow in the `Effect::Escalate`
+  resolver on any non-discard (mana) escalate cost (Collective Resistance is the
+  first such card). Cards ride existing Devoid/Emerge/Kicker/Storm/Adventure/
+  Prototype/`ExileTopAndGrantMayPlay`/`PlayerRef::Target` player-slot plumbing.
+  Tests in `tests/mh3d.rs`; server `/metrics` + `/status.json` now expose the
+  CR 104.3 win-kind split; client counter tooltip gains Lore/Level/Fade/Age/
+  Defense/Oil reminders.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
