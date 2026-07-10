@@ -8,6 +8,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
+
+`scripts/set_gaps.py {blb,dsk,fdn}` still lists many simple commons/uncommons.
+`decks::recent117-119` shipped a first pass (ETB bounce/impulse/modal, attack &
+expend triggers, threshold, prowess/surveil, offspring, firebreathing, modal
+burn, additional-sac drain). Next-up easy ones: Barkform Harvester (changeling +
+gy-to-bottom), Cat Collector (needs a first-lifegain-per-turn trigger), Come Back
+Wrong (steal-reanimate + sac-at-end-step), Cathartic Parting (shuffle-into-library),
+Bonebind Orator (graveyard-activated ability). Harder marquees still open in MH3
+are listed under the mh3e section below.
+
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
 Every single-faced FIN card is implemented (`python3 scripts/fin_gaps.py`
