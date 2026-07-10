@@ -38,7 +38,9 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     let refused = sl.refused_global + sl.refused_per_ip;
     format!(
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
-         \"avg_turns\":{},\"connections_current\":{},\"connections_peak\":{},\
+         \"avg_turns\":{},\"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
+         \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
+         \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{}}}\n",
         started.elapsed().as_secs(),
@@ -46,6 +48,12 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.bot_matches,
         st.pair_matches,
         st.avg_turns(),
+        st.draws,
+        st.damage_wins,
+        st.poison_wins,
+        st.deck_wins,
+        st.commander_damage_wins,
+        st.other_wins,
         sl.current,
         sl.peak,
         sl.accepted,
@@ -83,6 +91,21 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
     m("connections_refused_total", "counter", "Connections refused.", refused.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
+    // Win-kind breakdown (CR 104.3) — how decided games ended, as a labelled
+    // `crab_wins_total{kind="…"}` series so operators can watch the
+    // damage/poison/deck-out/commander mix shift without parsing the page.
+    m("draws_total", "counter", "Matches ending in a draw.", st.draws.to_string());
+    out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
+    out.push_str("# TYPE crab_wins_total counter\n");
+    for (kind, value) in [
+        ("damage", st.damage_wins),
+        ("poison", st.poison_wins),
+        ("deckout", st.deck_wins),
+        ("commander_damage", st.commander_damage_wins),
+        ("other", st.other_wins),
+    ] {
+        out.push_str(&format!("crab_wins_total{{kind=\"{kind}\"}} {value}\n"));
+    }
     out
 }
 
@@ -164,7 +187,8 @@ mod tests {
         let body = render_status_json(Instant::now(), &slots);
         assert!(body.starts_with('{') && body.trim_end().ends_with('}'), "JSON object");
         // Key fields present with numeric values (no fresh-server nulls).
-        for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0"] {
+        for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
+                    "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0"] {
             assert!(body.contains(key), "missing {key} in {body}");
         }
     }
@@ -188,6 +212,10 @@ mod tests {
         assert!(body.contains("# TYPE crab_matches_total counter"));
         assert!(body.contains("crab_connections_current 0"));
         assert!(body.contains("# HELP crab_uptime_seconds"));
+        // Win-kind breakdown is a labelled series.
+        assert!(body.contains("crab_wins_total{kind=\"poison\"} 0"));
+        assert!(body.contains("crab_wins_total{kind=\"commander_damage\"} 0"));
+        assert!(body.contains("# TYPE crab_draws_total counter"));
         // Routed as Prometheus text exposition.
         let now = Instant::now();
         assert_eq!(route("GET", "/metrics", now, &slots).1, "text/plain; version=0.0.4");

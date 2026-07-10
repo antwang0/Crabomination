@@ -1142,6 +1142,12 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Conqueror => "Zhao's conquest tally — while present, nonbasic lands become Mountains.",
         CounterType::Muster => "Assemble the Legion tally — mints a Soldier token per counter each upkeep.",
         CounterType::Acorn => "Chitterspitter tally — Squirrels you control get +1/+1 per acorn.",
+        CounterType::Lore => "Saga chapter tally — one added each turn; the matching chapter ability triggers.",
+        CounterType::Level => "Level-up tally — reaching a level band grants larger stats and abilities.",
+        CounterType::Fade => "Fading — remove one each upkeep; sacrifice this when none are left.",
+        CounterType::Age => "Cumulative upkeep tally — one added each upkeep; pay the cost per age counter.",
+        CounterType::Defense => "The battle's defense — combat and effects remove them; it's defeated at zero.",
+        CounterType::Oil => "Oil tally — powers this card's 'per oil counter' payoffs.",
         _ => return None,
     })
 }
