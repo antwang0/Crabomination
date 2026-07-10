@@ -589,3 +589,76 @@ pub fn ripples_of_undeath() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Genku, Future Shaper — {2}{W}{U} 2/5 Moonfolk Wizard. Whenever another
+/// nontoken permanent you control leaves the battlefield, create one of three
+/// creature tokens (Fox / Moonfolk / Rat). {3}{W}{U}: put a +1/+1 counter on
+/// each creature you control. (The "hasn't been chosen this turn" rotation is
+/// modeled as a free choice among the three.)
+pub fn genku_future_shaper() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let fox = TokenDefinition {
+        name: "Fox".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fox], ..Default::default() },
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    };
+    let moonfolk = TokenDefinition {
+        name: "Moonfolk".into(),
+        power: 1,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moonfolk], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    let rat = TokenDefinition {
+        name: "Rat".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        keywords: vec![Keyword::Lifelink],
+        ..Default::default()
+    };
+    let mk = |def| Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: def };
+    CardDefinition {
+        name: "Genku, Future Shaper",
+        cost: cost(&[generic(2), w(), u()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken,
+                }),
+            effect: Effect::ChooseMode(vec![mk(fox), mk(moonfolk), mk(rat)]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), u()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachMatching {
+                    zone: ZoneRef::Battlefield,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

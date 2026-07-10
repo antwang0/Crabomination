@@ -425,3 +425,38 @@ fn ripples_of_undeath_mills_and_returns_one() {
     assert_eq!(g.players[0].graveyard.len(), 2, "milled three, took one back");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "one milled card in hand");
 }
+
+/// Genku's activated ability puts a +1/+1 counter on each creature you control.
+#[test]
+fn genku_pumps_your_team() {
+    let mut g = two_player_game();
+    let genku = g.add_card_to_battlefield(0, catalog::genku_future_shaper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: genku, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "your creature grew");
+    assert_eq!(g.computed_permanent(genku).unwrap().toughness, 6, "Genku grew too");
+    assert_eq!(g.computed_permanent(opp).unwrap().power, 2, "opponent untouched");
+}
+
+/// Genku makes a token when another nontoken permanent you control leaves.
+#[test]
+fn genku_makes_a_token_on_permanent_leaving() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::genku_future_shaper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Mode 0 = the 2/2 Fox.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Fox" && c.controller == 0),
+        "created a Fox token");
+}
