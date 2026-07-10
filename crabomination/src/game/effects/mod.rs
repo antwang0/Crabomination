@@ -3232,6 +3232,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayEnergyValue { amount, then } => {
+                let p = ctx.controller;
+                let cost = self.evaluate_value(amount, ctx).max(0) as u32;
+                // "You may pay {E} equal to `amount`." Pay and run `then` when
+                // affordable (the upside is a reanimation, so bots/tests take
+                // it); a zero cost still triggers the payoff (CR 118.4).
+                if self.players[p].energy >= cost {
+                    self.players[p].energy -= cost;
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::PayAnyEnergy { then } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;

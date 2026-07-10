@@ -2400,6 +2400,12 @@ pub enum Effect {
     /// `ActivatedAbility` — the player commits by activating, and the
     /// energy is consumed when the ability resolves.
     PayEnergy { amount: u32, then: Box<Effect> },
+    /// "You may pay an amount of {E} equal to `amount`; if you do, `then`."
+    /// The `u32` sibling `PayEnergy` takes a fixed cost; this evaluates a
+    /// `Value` (typically the returned card's mana value). Pays and runs
+    /// `then` when the controller can afford it (bots/tests always take the
+    /// upside); no-op otherwise. Jolted Awake's energy reanimation.
+    PayEnergyValue { amount: Value, then: Box<Effect> },
     /// CR 701.56 — `who` time travels: for each permanent they control and each
     /// suspended card they own (in exile) with one or more time counters, they
     /// may add or remove a time counter. The bot heuristic removes one from

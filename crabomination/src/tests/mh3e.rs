@@ -115,6 +115,37 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     assert!(g.players[0].hand.iter().any(|c| c.id == nightmare), "enchantment returned to hand");
 }
 
+/// Jolted Awake grants two energy and reanimates a MV-2 card by paying it.
+#[test]
+fn jolted_awake_energy_reanimates() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::jolted_awake());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(crate::game::types::Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Jolted Awake");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dead), "MV-2 creature reanimated");
+    assert_eq!(g.players[0].energy, 0, "the two energy gained paid the MV-2 return");
+}
+
+/// Cycling Jolted Awake for {2} draws a card.
+#[test]
+fn jolted_awake_cycles() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::jolted_awake());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle for {2}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "discard one, draw one");
+}
+
 /// Lethal Throwdown's modified-sacrifice mode destroys a target and draws.
 #[test]
 fn lethal_throwdown_modified_mode_draws() {

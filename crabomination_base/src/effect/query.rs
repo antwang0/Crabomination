@@ -760,7 +760,7 @@ impl Effect {
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::AddExperience(amount) => value_has_target(amount),
-            Effect::PayEnergy { then, .. } | Effect::PayAnyEnergy { then } => then.requires_target(),
+            Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.requires_target(),
             Effect::PayAnyEnergyDealDamage { to } => sel_has_target(to),
             Effect::TimeTravel { who } => player_has_target(who),
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
@@ -977,7 +977,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
-            Effect::PayEnergy { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
+            Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::CollectEvidence { then, .. } | Effect::Forage { then } => {
                 then.primary_target_filter()
@@ -1973,7 +1973,7 @@ impl Effect {
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
-                Effect::PayEnergy { then, .. } | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
+                Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
                 Effect::PayEnergyOrElse { otherwise, .. }
                 | Effect::PayManaOrElse { otherwise, .. } => {
                     eff_find(otherwise, slot, mode, kicked)

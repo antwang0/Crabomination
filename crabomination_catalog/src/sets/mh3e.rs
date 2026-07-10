@@ -102,6 +102,33 @@ pub fn vega_the_watcher() -> CardDefinition {
     }
 }
 
+/// Jolted Awake — {W} sorcery. Target artifact or creature card in your
+/// graveyard; get {E}{E}, then you may pay {E} equal to its mana value to
+/// return it to the battlefield. Cycling {2}. (Printed "up to one" target
+/// modeled as a required target.)
+pub fn jolted_awake() -> CardDefinition {
+    CardDefinition {
+        name: "Jolted Awake",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(2)),
+            Effect::PayEnergyValue {
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                then: Box::new(Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::InYourGraveyard.and(R::Artifact.or(R::Creature)),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Lethal Throwdown — {B} sorcery. Additional cost: sacrifice a creature (or a
 /// modified creature). Destroy target creature or planeswalker; if the modified
 /// creature was sacrificed, draw a card. (The two additional-cost options are
