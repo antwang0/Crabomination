@@ -329,3 +329,44 @@ fn party_thrasher_digs_two_after_discard() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded the pitch card");
     assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Serra Angel").count(), 2, "exiled top two");
 }
+
+/// Suppression Ray taps every creature the target player controls.
+#[test]
+fn suppression_ray_taps_all_target_players_creatures() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::suppression_ray());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped,
+        "target player's creatures tapped");
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "your own creatures untouched");
+}
+
+/// Bloodsoaked Insight exiles the target opponent's top three cards and lets you
+/// play them.
+#[test]
+fn bloodsoaked_insight_exiles_opponent_top_three() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::bloodsoaked_insight());
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 1).count(), 3, "opponent's top three exiled");
+    assert!(g.exile.iter().filter(|c| c.owner == 1).all(|c| c.may_play_until.is_some()),
+        "you may play them");
+}

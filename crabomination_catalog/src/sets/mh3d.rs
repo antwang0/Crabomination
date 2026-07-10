@@ -464,3 +464,70 @@ pub fn party_thrasher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Back for an MH3 dual-color modal DFC land: enters tapped, taps for either of
+/// its two colors.
+fn dual_tapland(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(vec![a, b], Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Suppression Ray // Orderly Plaza — {3}{W/U}{W/U} Sorcery. Tap all creatures
+/// target player controls. Back is a W/U tapland. (The "pay {E} to stun that
+/// many" rider is omitted.)
+pub fn suppression_ray() -> CardDefinition {
+    use crate::mana::hybrid;
+    CardDefinition {
+        name: "Suppression Ray",
+        cost: cost(&[generic(3), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Tap {
+            what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+        },
+        back_face: Some(Box::new(dual_tapland("Orderly Plaza", Color::White, Color::Blue))),
+        ..Default::default()
+    }
+}
+
+/// Bloodsoaked Insight // Sanguine Morass — {5}{B/R}{B/R} Sorcery. Target
+/// opponent exiles the top three cards of their library; until the end of your
+/// next turn you may play them, spending mana of any type. Back is a B/R
+/// tapland. (The "costs {1} less per life your opponents lost this turn" rider
+/// is omitted.)
+pub fn bloodsoaked_insight() -> CardDefinition {
+    use crate::mana::hybrid;
+    CardDefinition {
+        name: "Bloodsoaked Insight",
+        cost: cost(&[
+            generic(5),
+            hybrid(Color::Black, Color::Red),
+            hybrid(Color::Black, Color::Red),
+        ]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::Target(0),
+            count: Value::Const(3),
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: true,
+            uncast_penalty: None,
+        },
+        back_face: Some(Box::new(dual_tapland("Sanguine Morass", Color::Black, Color::Red))),
+        ..Default::default()
+    }
+}

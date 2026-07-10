@@ -6652,6 +6652,8 @@ static MH3D: &[Factory] = &[
     super::mh3d::hydroelectric_specimen,
     super::mh3d::eladamri_korvecdal,
     super::mh3d::party_thrasher,
+    super::mh3d::suppression_ray,
+    super::mh3d::bloodsoaked_insight,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,
