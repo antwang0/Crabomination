@@ -7304,3 +7304,62 @@ fn cr_401_7_second_from_top_falls_to_bottom_when_library_short() {
     assert_eq!(g.players[1].library.len(), 1, "the tucked permanent is the only card");
     assert_eq!(g.players[1].library[0].id, victim, "it went to the bottom");
 }
+
+// ── CR 115.1c — an "up to N target" self-cast trigger maximizes its targets ───
+
+/// CR 115.1c — Twisted Riddlekeeper's "when you cast this spell, tap up to two
+/// target permanents" self-cast trigger auto-fills *both* slots (the engine
+/// maximizes an engine-resolved "up to N" trigger the same way it does an ETB).
+#[test]
+fn cr_115_1c_cast_trigger_maximizes_up_to_two_targets() {
+    let mut g = two_player_game();
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::twisted_riddlekeeper());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 10);
+    }
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("hardcast");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert!(g.battlefield_find(id).unwrap().tapped, "both up-to-two targets tapped");
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Stun), 1);
+    }
+}
+
+// ── CR 702.119 — Emerge reduces the cost by the sacrificed creature's MV ──────
+
+/// CR 702.119c — casting Twisted Riddlekeeper for Emerge {5}{C}{U} while
+/// sacrificing a mana-value-5 creature reduces the generic {5} to {0}: the
+/// caster pays only {C}{U} and the fodder is sacrificed.
+#[test]
+fn cr_702_119_emerge_reduces_generic_by_sacrificed_mana_value() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::serra_angel()); // MV 5
+    let id = g.add_card_to_hand(0, catalog::twisted_riddlekeeper());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("emerge cast for {C}{U} after MV-5 sacrifice");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
+    let cp = g.computed_permanent(id).expect("Riddlekeeper resolved");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "printed 5/5");
+}
+
+// ── CR 702.114 — Devoid makes a card colorless regardless of its mana cost ────
+
+/// CR 702.114 — Thief of Existence is cast for {1}{C}{G} yet, being Devoid, has
+/// no color on the battlefield.
+#[test]
+fn cr_702_114_devoid_creature_is_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::thief_of_existence());
+    assert!(g.computed_permanent(id).unwrap().colors.is_empty(), "Devoid → colorless");
+}
