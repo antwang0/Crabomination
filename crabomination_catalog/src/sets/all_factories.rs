@@ -5636,6 +5636,10 @@ static DECKS: &[Factory] = &[
     super::decks::eriettes_lullaby,
     super::decks::geyser_drake,
     super::decks::bristlepack_sentry,
+    // recent125 — OTJ Mounts + kicker reanimator
+    super::decks::bridled_bighorn,
+    super::decks::drover_grizzly,
+    super::decks::sun_blessed_healer,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
