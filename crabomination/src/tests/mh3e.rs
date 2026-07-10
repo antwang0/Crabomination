@@ -2,7 +2,6 @@
 
 use crate::card::CounterType;
 use crate::catalog;
-use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::{Attack, AttackTarget};
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
@@ -370,4 +369,36 @@ fn unstable_amulet_impulse_ability() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "paid two energy");
     assert!(g.exile.iter().any(|c| c.id == top), "top card exiled and playable");
+}
+
+/// Izzet Generatorium boosts energy gains by one and gates its draw on 4+ spent.
+#[test]
+fn izzet_generatorium_energy_bonus_and_draw_gate() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let generatorium = g.add_card_to_battlefield(0, catalog::izzet_generatorium());
+    g.clear_sickness(generatorium);
+    // Amulet's ETB "get {E}{E}" becomes three with the Generatorium's +1.
+    let amulet = g.add_card_to_hand(0, catalog::unstable_amulet());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: amulet, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Unstable Amulet");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 3, "two energy plus the Generatorium's one");
+    // Draw ability is locked until 4+ energy is spent this turn.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: generatorium, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "draw locked with under four energy spent");
+    // Spend four energy this turn (routed through the shared chokepoint).
+    g.players[0].energy = 4;
+    g.spend_energy(0, 4);
+    assert!(g.players[0].energy_spent_this_turn >= 4, "spent 4+ energy this turn");
+    let hand = g.players[0].hand.len();
+    let _ = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: generatorium, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("draw now unlocked");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card once 4+ energy was spent");
 }

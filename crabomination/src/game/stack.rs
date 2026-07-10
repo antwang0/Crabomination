@@ -1992,6 +1992,8 @@ impl GameState {
         // and similar). Other players' tallies advance independently
         // and are reset on their own untap.
         self.players[p].cards_drawn_this_turn = 0;
+        // Reset the per-turn {E}-spent tally (Izzet Generatorium's draw gate).
+        self.players[p].energy_spent_this_turn = 0;
         // Reset the "cards left your graveyard this turn" tally; powers
         // Lorehold "if a card left your graveyard this turn" payoffs
         // (Living History, Primary Research, Wilt in the Heat) per turn.

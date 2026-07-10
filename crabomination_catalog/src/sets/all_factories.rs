@@ -6660,6 +6660,7 @@ static MH3D: &[Factory] = &[
     super::mh3d::charitable_levy,
 ];
 static MH3E: &[Factory] = &[
+    super::mh3e::izzet_generatorium,
     super::mh3e::unstable_amulet,
     super::mh3e::planar_genesis,
     super::mh3e::reiterating_bolt,

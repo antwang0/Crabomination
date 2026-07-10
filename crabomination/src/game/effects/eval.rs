@@ -1044,6 +1044,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].attacked_this_turn),
+            Predicate::EnergyPaidThisTurnAtLeast { who, n } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].energy_spent_this_turn >= *n),
             Predicate::DealtCombatDamageToPlayerThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

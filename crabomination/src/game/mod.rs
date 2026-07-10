@@ -1748,6 +1748,16 @@ impl Clone for GameState {
 }
 
 impl GameState {
+    /// Spend `amount` {E} from player `p`, clamped to what they have, and add
+    /// it to `energy_spent_this_turn` (the tally behind "paid or lost N+ {E}
+    /// this turn" gates). All energy-cost chokepoints route through here.
+    pub(crate) fn spend_energy(&mut self, p: usize, amount: u32) {
+        let amount = amount.min(self.players[p].energy);
+        self.players[p].energy -= amount;
+        self.players[p].energy_spent_this_turn =
+            self.players[p].energy_spent_this_turn.saturating_add(amount);
+    }
+
     /// Create a fresh game.  `players` must have at least 2 entries. Defaults
     /// to 20-life, 2-player rules; call [`apply_format`] (or set
     /// `skip_first_draw` / per-player `life` directly) to configure the game
@@ -2910,6 +2920,21 @@ impl GameState {
                     .iter()
                     .filter(|sa| matches!(sa.effect, StaticEffect::ExtraCounterAllKinds))
                     .count() as u32
+            })
+            .sum()
+    }
+
+    /// CR 614 — total energy-gain bonus for `seat` from `EnergyGainBonus`
+    /// statics (Izzet Generatorium's "you get that many plus one {E} instead").
+    pub fn energy_gain_bonus_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::EnergyGainBonus { amount } => Some(amount),
+                _ => None,
             })
             .sum()
     }
@@ -8599,7 +8624,7 @@ impl GameState {
             .mana_pool
             .pay(&equip_cost)
             .map_err(GameError::Mana)?;
-        self.players[p].energy -= energy_cost;
+        self.spend_energy(p, energy_cost);
         // Attach.
         self.battlefield[equip_pos].attached_to = Some(target);
         Ok(vec![GameEvent::AttachmentMoved {
@@ -12791,6 +12816,9 @@ fn static_effect_to_effects(
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
             | StaticEffect::ExtraCounterAllKinds
+            // Energy-gain bonus — read at AddEnergy time via
+            // `GameState::energy_gain_bonus_for`; no layer effect.
+            | StaticEffect::EnergyGainBonus { .. }
             // Damage doubling/halving — read at damage time via
             // `GameState::damage_doublers` / `damage_halvers` /
             // `scale_damage_to`; no layer effect.

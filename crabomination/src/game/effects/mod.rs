@@ -3205,8 +3205,11 @@ impl GameState {
                 if base == 0 { return Ok(()); }
                 let p = ctx.controller;
                 // CR 122 / 614.16 — Winding Constrictor's player half also boosts
-                // {E} a player gets ("that many plus one").
-                let amt = base.saturating_add(self.extra_any_kind_adders_for(p));
+                // {E} a player gets ("that many plus one"); Izzet Generatorium's
+                // energy-only bonus stacks on top (CR 614).
+                let amt = base
+                    .saturating_add(self.extra_any_kind_adders_for(p))
+                    .saturating_add(self.energy_gain_bonus_for(p));
                 self.players[p].energy = self.players[p].energy.saturating_add(amt);
                 events.push(GameEvent::EnergyGained { player: p, amount: amt });
                 Ok(())
@@ -3226,7 +3229,7 @@ impl GameState {
             Effect::PayEnergy { amount, then } => {
                 let p = ctx.controller;
                 if self.players[p].energy >= *amount {
-                    self.players[p].energy -= *amount;
+                    self.spend_energy(p, *amount);
                     self.run_effect(then, ctx, events)?;
                 }
                 Ok(())
@@ -3239,7 +3242,7 @@ impl GameState {
                 // affordable (the upside is a reanimation, so bots/tests take
                 // it); a zero cost still triggers the payoff (CR 118.4).
                 if self.players[p].energy >= cost {
-                    self.players[p].energy -= cost;
+                    self.spend_energy(p, cost);
                     self.run_effect(then, ctx, events)?;
                 }
                 Ok(())
@@ -3267,7 +3270,7 @@ impl GameState {
                 } else {
                     avail
                 };
-                self.players[p].energy -= pay;
+                self.spend_energy(p, pay);
                 self.energy_paid_this_resolution = pay;
                 self.run_effect(then, ctx, events)?;
                 Ok(())
@@ -3294,7 +3297,7 @@ impl GameState {
                     _ => avail,
                 };
                 let pay = want.max(1).min(avail);
-                self.players[p].energy -= pay;
+                self.spend_energy(p, pay);
                 self.run_effect(
                     &Effect::DealDamage { to: to.clone(), amount: crate::effect::Value::Const(pay as i32) },
                     ctx,
@@ -3350,7 +3353,7 @@ impl GameState {
                 // fallback (sacrifice / bounce).
                 let p = ctx.controller;
                 if self.players[p].energy >= *amount {
-                    self.players[p].energy -= *amount;
+                    self.spend_energy(p, *amount);
                 } else {
                     self.run_effect(otherwise, ctx, events)?;
                 }
@@ -3361,7 +3364,7 @@ impl GameState {
                 let p = ctx.controller;
                 let cost = self.evaluate_value(amount, ctx).max(0) as u32;
                 if self.players[p].energy >= cost {
-                    self.players[p].energy -= cost;
+                    self.spend_energy(p, cost);
                 } else {
                     self.run_effect(otherwise, ctx, events)?;
                 }
@@ -3589,7 +3592,7 @@ impl GameState {
                 if !matches!(answer, DecisionAnswer::Bool(true)) {
                     return Ok(());
                 }
-                self.players[p].energy -= *energy;
+                self.spend_energy(p, *energy);
                 let card_def = self.find_card_anywhere(top_id).map(|c| c.definition.clone());
                 if let Some(card_def) = card_def {
                     let auto_target =

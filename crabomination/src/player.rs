@@ -450,6 +450,11 @@ pub struct Player {
     /// `Effect::PayEnergy`. Defaults to 0 for snapshot back-compat.
     #[serde(default)]
     pub energy: u32,
+    /// Energy spent (paid or lost) so far this turn — the tally behind
+    /// "activate only if you've paid or lost N+ {E} this turn" gates (Izzet
+    /// Generatorium). Reset each untap; routed through `spend_energy`.
+    #[serde(default)]
+    pub energy_spent_this_turn: u32,
     /// Experience counters (CR 122 / 720-era Commander mechanic). A per-player
     /// resource that only accumulates; payoffs read the count (Mizzix's cost
     /// reduction, Ezuri's +1/+1 distribution). Added by
@@ -736,6 +741,7 @@ impl Player {
             speed: 0,
             speed_increased_this_turn: false,
             energy: 0,
+            energy_spent_this_turn: 0,
             experience: 0,
             rad_counters: 0,
             city_blessing: false,

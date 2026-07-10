@@ -9992,11 +9992,10 @@ impl GameState {
         // pre-flight gate above guaranteed sufficient energy. Like the
         // `Effect::PayEnergy` spend path, no event is emitted.
         if ability.energy_cost > 0 {
-            self.players[p].energy = self.players[p].energy.saturating_sub(ability.energy_cost);
+            self.spend_energy(p, ability.energy_cost);
         }
         if ability.energy_x_cost {
-            self.players[p].energy =
-                self.players[p].energy.saturating_sub(x_value.unwrap_or(0));
+            self.spend_energy(p, x_value.unwrap_or(0));
         }
 
         let mut events = auto_mana_events;

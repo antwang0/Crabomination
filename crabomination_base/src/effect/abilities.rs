@@ -713,6 +713,10 @@ pub enum StaticEffect {
     /// player-counter clause is approximated away); applied alongside
     /// `ExtraPlusOneCounters` before the `DoubleCounters` multiplier.
     ExtraCounterAllKinds,
+    /// CR 614 — "If you would get one or more {E}, you get that many plus
+    /// `amount` instead." An energy-only gain bonus (Izzet Generatorium), unlike
+    /// `ExtraCounterAllKinds` which boosts every counter kind.
+    EnergyGainBonus { amount: u32 },
     /// CR 614.2 — "If a source would deal damage … it deals double that
     /// damage instead." A *global* damage-replacement (Furnace of Rath,
     /// Gratuitous Violence-class, Fiery Emancipation as ×2 stacking): read

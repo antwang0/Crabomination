@@ -918,6 +918,10 @@ pub enum Predicate {
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
     PlayerAttackedThisTurn { who: PlayerRef },
+    /// True if `who` has paid or lost at least `n` {E} this turn. Backed by
+    /// `Player.energy_spent_this_turn` (Izzet Generatorium's "{T}: Draw a card.
+    /// Activate only if you've paid or lost four or more {E} this turn").
+    EnergyPaidThisTurnAtLeast { who: PlayerRef, n: u32 },
     /// True if a creature `who` controlled dealt combat damage to a player
     /// this turn (CR 702.179 — Freerunning's alt-cost gate). Backed by
     /// `Player.dealt_combat_damage_to_player_this_turn`.

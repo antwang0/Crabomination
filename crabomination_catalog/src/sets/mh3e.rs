@@ -11,6 +11,30 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, generic, r, u, w};
 
+/// Izzet Generatorium — {U}{R} artifact. If you would get one or more {E}, you
+/// get that many plus one instead. {T}: Draw a card. Activate only if you've
+/// paid or lost four or more {E} this turn.
+pub fn izzet_generatorium() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Izzet Generatorium",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "If you would get one or more {E}, you get that many plus one instead.",
+            effect: StaticEffect::EnergyGainBonus { amount: 1 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::EnergyPaidThisTurnAtLeast { who: PlayerRef::You, n: 4 }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Unstable Amulet — {1}{R} artifact. ETB: get {E}{E}. Whenever you cast a
 /// spell from anywhere other than your hand, deal 1 damage to each opponent.
 /// {T}, Pay {E}{E}: exile the top card of your library; you may play it this
