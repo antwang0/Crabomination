@@ -6645,6 +6645,9 @@ static MH3D: &[Factory] = &[
     super::mh3d::depth_defiler,
     super::mh3d::dog_umbra,
     super::mh3d::thief_of_existence,
+    super::mh3d::depth_charge_colossus,
+    super::mh3d::amphibian_downpour,
+    super::mh3d::herigast_erupting_nullkite,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

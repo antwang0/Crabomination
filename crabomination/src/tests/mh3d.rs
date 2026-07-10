@@ -188,3 +188,60 @@ fn thief_of_existence_exiles_and_grants_ltb_draw() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "LTB trigger drew a card");
 }
+
+/// Depth Charge Colossus enters 9/9 and, once tapped, stays tapped through the
+/// untap step but untaps for its {3} ability.
+#[test]
+fn depth_charge_colossus_doesnt_untap_but_pays_to_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::depth_charge_colossus());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (9, 9), "printed 9/9");
+    g.battlefield_find_mut(id).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(id).unwrap().tapped, "stays tapped through untap step");
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("untap ability");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).unwrap().tapped, "paid untap ability untapped it");
+}
+
+/// Amphibian Downpour turns the enchanted creature into a 1/1 blue Frog with no
+/// abilities.
+#[test]
+fn amphibian_downpour_makes_a_vanilla_frog() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying vigilance
+    let aura = g.add_card_to_hand(0, catalog::amphibian_downpour());
+    cast(&mut g, aura, Some(Target::Permanent(angel)));
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "base 1/1");
+    assert!(cp.keywords.is_empty(), "lost all abilities");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Frog), "is a Frog");
+}
+
+/// Herigast's cast trigger wheels your hand into three fresh cards.
+#[test]
+fn herigast_wheels_hand_on_cast() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::serra_angel());
+    }
+    let herigast = g.add_card_to_hand(0, catalog::herigast_erupting_nullkite());
+    // MayDo defaults to "no" under AutoDecider — script the yes.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    fill_mana(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: herigast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("hardcast");
+    drain_stack(&mut g);
+    // Two grizzlies exiled; three angels drawn.
+    assert_eq!(g.players[0].hand.len(), 3, "wheeled to three fresh cards");
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name == "Serra Angel"), "drew from library");
+}

@@ -3,13 +3,13 @@
 //! lifegain rider, and an umbra-armor Aura. Tests in `tests/mh3d.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
-    EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement as R, Subtypes,
-    TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration, Predicate, Prototype,
+    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{emerge, etb, on_cast, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest, ZoneRef};
-use crate::mana::{b, colorless, cost, g, generic, u, w};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest, ZoneRef};
+use crate::mana::{b, colorless, cost, g, generic, r, u, w, Color};
 
 /// Ugin's Binding — {2}{U} Devoid instant. Bounce a nonland permanent you don't
 /// control. From the graveyard, casting a colorless spell of mana value 7+ lets
@@ -215,6 +215,93 @@ pub fn thief_of_existence() -> CardDefinition {
                     }),
                     duration: Duration::Permanent,
                 },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Depth Charge Colossus — {9} 9/9 Dreadnought artifact creature, Prototype
+/// {4}{U}{U} — 6/6. Doesn't untap during your untap step; {3}: untap it.
+pub fn depth_charge_colossus() -> CardDefinition {
+    CardDefinition {
+        name: "Depth Charge Colossus",
+        cost: cost(&[generic(9)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dreadnought],
+            ..Default::default()
+        },
+        power: 9,
+        toughness: 9,
+        prototype: Some(Box::new(Prototype { cost: cost(&[generic(4), u(), u()]), power: 6, toughness: 6 })),
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Amphibian Downpour — {2}{U} flash Aura with Storm. Enchanted creature loses
+/// all abilities and is a blue Frog with base power and toughness 1/1.
+pub fn amphibian_downpour() -> CardDefinition {
+    CardDefinition {
+        name: "Amphibian Downpour",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash, Keyword::Storm],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            set_creature_types: Some(vec![CreatureType::Frog]),
+            set_colors: Some(vec![Color::Blue]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Herigast, Erupting Nullkite — {9} 6/6 Eldrazi Dragon with flying and Emerge
+/// {6}{R}{R}. When cast, you may exile your hand; if you do, draw three cards.
+/// (The "each creature spell you cast has emerge" static is omitted.)
+pub fn herigast_erupting_nullkite() -> CardDefinition {
+    CardDefinition {
+        name: "Herigast, Erupting Nullkite",
+        cost: cost(&[generic(9)]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(emerge(cost(&[generic(6), r(), r()]))),
+        triggered_abilities: vec![on_cast(Effect::MayDo {
+            description: "Exile your hand to draw three cards?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Exile {
+                    what: Selector::EachMatching {
+                        zone: ZoneRef::Hand(PlayerRef::You),
+                        filter: R::Any,
+                    },
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
             ])),
         })],
         ..Default::default()
