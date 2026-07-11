@@ -1404,6 +1404,13 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",
         (EventKind::DealtDamage, EventScope::YourControl) => "Your crea dealt dmg",
         (EventKind::DealtDamage, EventScope::AnyPlayer) => "Any crea dealt dmg",
+        // Tap-matters triggers. `YouTapped` is the "whenever you tap …" scope
+        // (Sharae, Solitary Sanctuary); the others key off the tapped
+        // permanent's controller (Magda-style).
+        (EventKind::Tapped, EventScope::YouTapped) => "You tap",
+        (EventKind::Tapped, EventScope::SelfSource) => "When tapped",
+        (EventKind::Tapped, EventScope::YourControl) => "Yours tapped",
+        (EventKind::Tapped, EventScope::OpponentControl) => "Enemy tapped",
         // Scope-aware fallback for any EventKind x EventScope pair not
         // enumerated above. Previously these fell through to "" and
         // rendered as a blank trigger chip on the client; a scope-tagged

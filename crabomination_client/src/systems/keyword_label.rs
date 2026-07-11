@@ -111,12 +111,12 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantBeBlockedExceptBy(_) | CantBeBlockedBy(_) => "Eva",
         // "Can't be blocked by more than one creature" (anti-gang-block).
         CantBeBlockedByMoreThanOne => "1Blk",
-        // Power-gated evasion — "can't be blocked by creatures with power
-        // less than this" (Formation Breaker) / "power N or less" (Questing
-        // Beast).
-        CantBeBlockedByPowerLess | CantBeBlockedByPowerAtMost(_) | CantBeBlockedByPowerAtLeast(_) => {
-            "Eva"
-        }
+        // Power-gated evasion — split so the board reads which way the gate
+        // points: "less power than this" (Formation Breaker), "power N or less"
+        // (Questing Beast, Stormkeld Vanguard), "power N or more".
+        CantBeBlockedByPowerLess => "Eva<",
+        CantBeBlockedByPowerAtMost(_) => "Eva≤",
+        CantBeBlockedByPowerAtLeast(_) => "Eva≥",
         // "Can block only creatures with flying" (Wanderlight Spirit).
         CanBlockOnlyFlying => "FlyBlk",
         MustBeBlocked => "Lure",
