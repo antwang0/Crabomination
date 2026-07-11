@@ -2,7 +2,6 @@
 
 use crate::card::Keyword;
 use crate::catalog;
-use crate::game::types::Target;
 use crate::game::*;
 use crate::game::two_player_game;
 use crate::mana::Color;

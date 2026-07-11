@@ -76,10 +76,11 @@ impl GameState {
         // read until the wrappers run, and `MODE_PICK_DEFERRED` routes a UI
         // seat to the client modal and a bot to its decider (both post-payment,
         // since the payment only ever runs when accepted).
-        if let Some(modes) = Self::governing_modal(effect) {
-            if !modes.is_empty() && modes.iter().all(|m| !m.requires_target()) {
-                return Some(crate::game::types::MODE_PICK_DEFERRED);
-            }
+        if let Some(modes) = Self::governing_modal(effect)
+            && !modes.is_empty()
+            && modes.iter().all(|m| !m.requires_target())
+        {
+            return Some(crate::game::types::MODE_PICK_DEFERRED);
         }
         None
     }
