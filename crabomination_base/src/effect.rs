@@ -822,6 +822,10 @@ pub enum Predicate {
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.111) — pair with `who: EachOpponent`.
     PlayerLostLifeThisTurn { who: PlayerRef },
+    /// True if any player matched by `who` has gained life this turn. Backed by
+    /// `Player.life_gained_this_turn`. Powers "if you gained or lost life this
+    /// turn" end-step payoffs (Starlit Soothsayer, Star Charter).
+    PlayerGainedLifeThisTurn { who: PlayerRef },
     /// True if any player matched by `who` has drawn at least `n` cards this
     /// turn. Backed by `Player.cards_drawn_this_turn`. Paired with
     /// `who: Triggerer` + `once_per_turn` to model "whenever a player draws

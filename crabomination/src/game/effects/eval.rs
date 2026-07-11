@@ -926,6 +926,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].lost_life_this_turn),
+            Predicate::PlayerGainedLifeThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].life_gained_this_turn > 0),
             Predicate::PlayerDrewAtLeastThisTurn { who, n } => self
                 .resolve_players(who, ctx)
                 .into_iter()

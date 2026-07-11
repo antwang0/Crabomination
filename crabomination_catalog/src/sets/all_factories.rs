@@ -5952,6 +5952,13 @@ static DECKS: &[Factory] = &[
     super::decks::treeguard_duo,
     super::decks::junkblade_bruiser,
     super::decks::waterspout_warden,
+    // recent158 — BLB/DSK/OTJ conditional-static + life-matters gaps.
+    super::decks::starlit_soothsayer,
+    super::decks::omenport_vigilante,
+    super::decks::essence_channeler,
+    super::decks::cactarantula,
+    super::decks::inventive_wingsmith,
+    super::decks::mourners_surprise,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
