@@ -5837,6 +5837,16 @@ static DECKS: &[Factory] = &[
     super::decks::johann_apprentice_sorcerer,
     super::decks::solitary_sanctuary,
     super::decks::farsight_ritual,
+    // recent143 — WOE Adventure wave: Roles, token anthem, mill-then-take,
+    // life-gained -X/-X, power-gated evasion, caster-ping.
+    super::decks::ferocious_werefox,
+    super::decks::pollen_shield_hare,
+    super::decks::frolicking_familiar,
+    super::decks::gumdrop_poisoner,
+    super::decks::vantress_transmuter,
+    super::decks::picklock_prankster,
+    super::decks::stormkeld_vanguard,
+    super::decks::scalding_viper,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
