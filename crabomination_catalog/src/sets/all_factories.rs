@@ -5815,6 +5815,18 @@ static DECKS: &[Factory] = &[
     super::decks::food_coma,
     super::decks::rankles_prank,
     super::decks::song_of_totentanz,
+    // recent141 — WOE wave 14: Celebration, Food/aristocrats, tap-matters, Bargain.
+    super::decks::lady_of_laughter,
+    super::decks::sharae_of_numbing_depths,
+    super::decks::ingenious_prodigy,
+    super::decks::talions_messenger,
+    super::decks::malevolent_witchkite,
+    super::decks::old_flitterfang,
+    super::decks::obyra_dreaming_duelist,
+    super::decks::unruly_catapult,
+    super::decks::realm_scorcher_hellkite,
+    super::decks::raging_battle_mouse,
+    super::decks::tough_cookie,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
