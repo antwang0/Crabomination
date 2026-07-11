@@ -3390,7 +3390,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   turn" gates. Ships Gisa, Magda, Marchesa, Forsaken Miner, Nimble Brigand
   (`decks::recent20`). ⏳: "commit a crime" by an ability targeting a spell/
   ability an opponent controls (only spell targets are checked on the stack).
-- ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
+- ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `Effect::ClearSuspected { what }` (the "no longer suspected" inverse) + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt, Absolving Lammasu (ETB clears, death suspects).
+- ✅ **CR 119 (life-matters) — gained-or-lost-life gate** — `Predicate::PlayerGainedLifeThisTurn` (backed by `Player.life_gained_this_turn`) complements `PlayerLostLifeThisTurn`; powers end-step "if you gained or lost life this turn" payoffs (Starlit Soothsayer).
+- ✅ **CR 702.176 — Valiant** — `shortcut::valiant()` consolidates the once-per-turn `BecameTarget + YourControl` trigger (Heartfire Hero, Nettle Guard, Veteran Guardmouse, Emberheart Challenger, + Seedglaive Mentor / Mouse Trapper / Flowerfoot Swordmaster / Whiskerquill Scribe).
 - ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. (Loyalty activation now honors `detained_by`; Detain's target filter is enforced at cast time.)
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
@@ -3464,6 +3466,21 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **Deferred cards from the recent156-161 waves (each blocked on one
+  primitive):**
+  - **Two-target "your creature deals damage = power to their creature"** —
+    Felling Blow. The `Selector::Target(0/1)` shape works (Hunter's Edge) but
+    the per-slot you-control / opponent target filters aren't declared, so it's
+    approximated; wants explicit multi-target-slot filters.
+  - **Target-conditional cost reduction** — Luminous Rebuke ("{3} less if it
+    targets a tapped creature"); no `SelfCostReducedIfTargetMatches` yet.
+  - **Per-creature "prevent all combat/creature damage this turn" shield** —
+    Fleeting Flight, Eerie Interference (fog scoped to one creature / player).
+  - **Reflexive "discard N, then N targets get -2/-2"** — Miasma Demon links a
+    variable discard count to a variable target count.
+  - **"Your +1/+1-counter creatures have first strike during your turn"** —
+    Inspiring Paladin's team clause (a PumpTeamIf gated on both a turn predicate
+    and a per-creature counter filter).
 - ⏳ **recent127-128 (OTJ/WOE) follow-ups / deferred:**
   - **Young Hero Role toughness gate** — the granted attack trigger fires
     unconditionally; the printed "if its toughness is 3 or less" wants a

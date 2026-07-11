@@ -94,6 +94,15 @@ exercising each) was elided in a compaction pass; recover it from
   status.json + `/metrics`. Client HUD: `NoUntap` tag for
   `DoesntUntapWhileCounter`. Tests in `tests/recent146-148.rs`, `cr_rules.rs`
   (502.3, 613.7, 401.6).
+- **Valiant / life-matters / suspect primitives (modern_decks, recent156-161):**
+  `shortcut::valiant()` (CR 702.176 — once-per-turn `BecameTarget + YourControl`;
+  consolidates the four existing Valiant cards + four new BLB Mice);
+  `Predicate::PlayerGainedLifeThisTurn` (complements the lost-life gate — Starlit
+  Soothsayer); `Effect::ClearSuspected` (the "no longer suspected" inverse of
+  Suspect — Absolving Lammasu); `CreatureType::Lammasu`. ~40 cards across BLB /
+  DSK / OTJ / MKM / Foundations gaps. Client HUD: power-threshold suffixes on the
+  `CantBeBlockedByPowerAtMost` / `CantBlockPowerAtLeast` chips. Server:
+  `percentile_bucket` ranks in f64 (f32 drifted past 2^24 samples).
 - **MH3-energy / mana-persistence / token primitives (modern_decks, this run):**
   `Keyword::HexproofFromAbilities` (CR 702.11d — opponents' abilities can't target;
   Volatile Stormdrake), `Keyword::ReplicateEnergy(n)` (energy-paid Replicate,

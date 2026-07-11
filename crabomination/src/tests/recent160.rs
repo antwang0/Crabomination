@@ -2,7 +2,7 @@
 
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
-use crate::game::types::{Target, TurnStep};
+use crate::game::types::TurnStep;
 use crate::game::*;
 use crate::mana::Color;
 
