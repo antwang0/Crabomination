@@ -5795,6 +5795,8 @@ static DECKS: &[Factory] = &[
     super::decks::a_tale_for_the_ages,
     super::decks::break_the_spell,
     super::decks::moment_of_valor,
+    super::decks::specter_of_mortality,
+    super::decks::tangled_colony,
     super::decks::gruff_triplets,
     super::decks::howling_galefang,
 ];

@@ -208,6 +208,19 @@ impl GameState {
                     None
                 })
                 .sum(),
+            Value::MarkedDamageOn(s) => self
+                .resolve_selector(s, ctx)
+                .iter()
+                .filter_map(|e| {
+                    let cid = e.as_card_id()?;
+                    // CR 603.10 LKI first (a dies-trigger reads the damage that
+                    // was marked when it left), then the live permanent.
+                    if let Some(snap) = self.lki_snapshot(cid) {
+                        return Some(snap.damage as i32);
+                    }
+                    self.battlefield_find(cid).map(|c| c.damage as i32)
+                })
+                .sum(),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
             Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),

@@ -5228,6 +5228,55 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayExileFromYourGraveyard { filter, then } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            ctx.source,
+                        )
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let max = candidates.len() as u32;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Exile which cards from your graveyard?".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max,
+                });
+                let valid: std::collections::HashSet<CardId> =
+                    candidates.iter().map(|(id, _)| *id).collect();
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => {
+                        ids.into_iter().filter(|id| valid.contains(id)).collect()
+                    }
+                    _ => vec![],
+                };
+                if chosen.is_empty() {
+                    return Ok(());
+                }
+                // Reflexive "when you do": pin the exiled cards to
+                // `Selector::LastMoved` for the count, then run `then`.
+                self.last_moved_cards.clear();
+                for cid in &chosen {
+                    self.move_card_to(*cid, &ZoneDest::Exile, ctx, events);
+                    self.last_moved_cards.push(*cid);
+                }
+                self.run_effect(then, ctx, events)
+            }
+
             Effect::ExileAllGraveyards { filter, opponents_only } => {
                 // Rest in Peace ETB — move every (matching) graveyard card
                 // to exile (Sanctifier en-Vec passes a color filter;

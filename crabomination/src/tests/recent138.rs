@@ -4,6 +4,7 @@
 
 use crate::card::{CardInstance, Keyword};
 use crate::catalog;
+use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::Target;
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
@@ -169,6 +170,47 @@ fn experimental_confectioner_food_to_rat() {
         g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Rat"),
         "sacrificing a Food made a Rat",
     );
+}
+
+/// Tangled Colony dies to N damage and leaves N Rats (CR 120 marked damage via
+/// leaves-battlefield LKI).
+#[test]
+fn tangled_colony_leaves_rats_equal_to_damage() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let colony = g.add_card_to_battlefield(0, catalog::tangled_colony()); // 3/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(colony)), None); // 3 damage
+    assert!(g.battlefield_find(colony).is_none(), "3 damage killed the 3/2");
+    let rats = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Rat")
+        .count();
+    assert_eq!(rats, 3, "one Rat per point of damage dealt this turn");
+}
+
+/// Specter of Mortality exiles creature cards from your graveyard to shrink
+/// every other creature by -X/-X.
+#[test]
+fn specter_of_mortality_team_debuff() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let gy1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let gy2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spectre = g.add_card_to_hand(0, catalog::specter_of_mortality());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![gy1, gy2])]));
+    cast(&mut g, spectre, None, None);
+    // -2/-2 turns the 2/2 into a 0/0 → dies; the Specter (3/3) is unaffected.
+    assert!(g.battlefield_find(victim).is_none(), "other creature got -2/-2 and died");
+    let cp = g.computed_permanent(spectre).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "Specter itself unaffected (each *other*)");
 }
 
 /// Bargained Torch the Tower deals 3, scries, and exiles a lethally-damaged

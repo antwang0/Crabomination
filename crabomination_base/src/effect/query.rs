@@ -120,7 +120,8 @@ impl Effect {
         }
         fn value_has_target(v: &Value) -> bool {
             match v {
-                Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_has_target(s),
+                Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s)
+                | Value::MarkedDamageOn(s) => sel_has_target(s),
                 Value::CountersOn { what, .. } => sel_has_target(what),
                 Value::LifeOf(p) | Value::HandSizeOf(p) | Value::GraveyardSizeOf(p)
                 | Value::LibrarySizeOf(p) => {
@@ -693,6 +694,7 @@ impl Effect {
             Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
+            Effect::MayExileFromYourGraveyard { then, .. } => then.requires_target(),
             Effect::ExileAllGraveyards { .. } => false,
             Effect::LivingEnd => false,
             Effect::ExilePlayerGraveyard { who } => player_has_target(who),

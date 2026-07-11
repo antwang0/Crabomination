@@ -10,7 +10,21 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneRef};
-use crate::mana::{cost, g, generic, w};
+use crate::mana::{b, cost, g, generic, w, Color};
+
+/// 1/1 black Rat token with "This token can't block."
+fn rat_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Rat".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        keywords: vec![Keyword::CantBlock],
+        ..Default::default()
+    }
+}
 
 // ── White ─────────────────────────────────────────────────────────────────────
 
@@ -84,6 +98,57 @@ pub fn moment_of_valor() -> CardDefinition {
             ]),
             Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── Black ─────────────────────────────────────────────────────────────────────
+
+/// Specter of Mortality — {3}{B}{B} 3/3 Specter with flying. ETB: you may exile
+/// one or more creature cards from your graveyard. When you do, each other
+/// creature gets -X/-X until end of turn, where X is the number exiled.
+pub fn specter_of_mortality() -> CardDefinition {
+    let x = || Value::CountOf(Box::new(Selector::LastMoved));
+    CardDefinition {
+        name: "Specter of Mortality",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayExileFromYourGraveyard {
+            filter: R::Creature,
+            then: Box::new(Effect::PumpPT {
+                what: Selector::EachMatching {
+                    zone: ZoneRef::Battlefield,
+                    filter: R::Creature.and(R::OtherThanSource),
+                },
+                power: Value::Diff(Box::new(Value::Const(0)), Box::new(x())),
+                toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(x())),
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tangled Colony — {1}{B} 3/2 Rat that can't block. When it dies, create X
+/// 1/1 black Rats that can't block, where X is the damage dealt to it this turn.
+pub fn tangled_colony() -> CardDefinition {
+    CardDefinition {
+        name: "Tangled Colony",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::CantBlock],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::MarkedDamageOn(Box::new(Selector::This)),
+            definition: rat_token(),
+        })],
         ..Default::default()
     }
 }

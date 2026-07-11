@@ -341,6 +341,13 @@ pub enum Value {
     /// (Spined Sliver's "+1/+1 for each creature blocking it").
     BlockersOf(Box<Selector>),
     ToughnessOf(Box<Selector>),
+    /// Marked damage on the first entity the selector resolves to (CR 120.3).
+    /// Read from the live permanent, or from CR 603.10 leaves-battlefield LKI
+    /// when the source has already died — so a dies-trigger can scale on "the
+    /// amount of damage dealt to it this turn" (Tangled Colony's Rat count).
+    /// Approximates "dealt this turn" as the marked damage at death (exact
+    /// unless the damage was removed mid-turn).
+    MarkedDamageOn(Box<Selector>),
     LifeOf(PlayerRef),
     /// Lowest life total among all players in the game (CR 119.7 — Repay
     /// in Kind: "each player's life total becomes the lowest life total
@@ -3130,6 +3137,15 @@ pub enum Effect {
     /// nothing (the conservative "up to" default); the bot exiles opponents'
     /// cards. Devious Cover-Up's graveyard-strip rider.
     ExileAnyNumberFromGraveyards { filter: crate::card::SelectionRequirement },
+    /// "You may exile one or more cards matching `filter` from *your*
+    /// graveyard. When you do, `then` runs" (CR 603.7 reflexive). The exiled
+    /// cards are placed on `Selector::LastMoved`, so `then` can read their
+    /// count via `Value::CountOf(Selector::LastMoved)` — Specter of Mortality's
+    /// team `-X/-X`. Declining (or an empty graveyard) skips `then`.
+    MayExileFromYourGraveyard {
+        filter: crate::card::SelectionRequirement,
+        then: Box<Effect>,
+    },
     /// "Exile all cards from all graveyards." (Rest in Peace's ETB — a
     /// non-optional graveyard wipe across every player.) `filter` restricts
     /// the wipe to matching cards (Sanctifier en-Vec's black/red sweep).

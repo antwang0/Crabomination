@@ -3489,13 +3489,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     (`AnthemForFilter{IsEnchanted}` — the gather now resolves non-card-only anthem
     filters against live state via `evaluate_requirement_static`), ✅ ~~**Moment of
     Valor**~~ (modal untap/pump/indestructible vs destroy-power-4). recent138.
-  - recent136 deferred: **Tangled Colony** (X Rats = damage marked on it this
-    turn — no "damage marked this turn" `Value`), ✅ ~~**Torch the Tower**~~
+  - recent136 deferred: ✅ ~~**Tangled Colony**~~ (X Rats = `Value::MarkedDamageOn`
+    read via leaves-battlefield LKI; recent138), ✅ ~~**Torch the Tower**~~
     (Bargain 3-dmg + scry + `ExileIfWouldDieThisTurn`; modern.rs), ✅ ~~**Moonshaker
     Cavalry**~~ (already shipped in recent129), ✅ ~~**Gruff Triplets**~~ (ETB
-    self-copy ×2 gated `NotToken` + dies +1/+1 to same-named; recent138), **Specter
-    of Mortality** (exile-N-from-gy → team -X/-X — wants a variable graveyard-exile
-    reflexive), **Rotisserie Elemental** (skewer-counter impulse), ✅ ~~**Howling
+    self-copy ×2 gated `NotToken` + dies +1/+1 to same-named; recent138), ✅ ~~**Specter
+    of Mortality**~~ (`Effect::MayExileFromYourGraveyard { filter, then }` — reflexive
+    variable graveyard-exile pins the exiled cards to `LastMoved`; recent138),
+    **Rotisserie Elemental** (skewer-counter impulse), ✅ ~~**Howling
     Galefang**~~ (`Predicate::OwnExiledAdventureCard` + `SelfHasKeywordWhilePredicate`
     haste; recent138) / **Sentinel of Lost Lore** (adventure recursion modes).
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
