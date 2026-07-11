@@ -648,7 +648,13 @@ impl MatchStats {
             return None;
         }
         let p = p.clamp(0.0, 1.0);
-        let target = (total as f32 * p).ceil().max(1.0) as u64;
+        // Rank in f64: `total as f32` loses integer precision past 2^24
+        // (~16.7M samples), which would drift the quantile on a long-running
+        // benchmark server. f64 is exact for the u64 sample counts we see. The
+        // 1e-6 nudge absorbs the representation error of promoting a non-exact
+        // f32 `p` (e.g. 0.3 → 0.30000001), so `ceil(total*p)` still lands on
+        // the mathematically intended integer rank rather than one above it.
+        let target = ((total as f64) * (p as f64) - 1e-6).ceil().max(1.0) as u64;
         let mut acc = 0u64;
         for (i, &n) in buckets.iter().enumerate() {
             acc = acc.saturating_add(n as u64);
@@ -1056,6 +1062,16 @@ mod tests {
         assert_eq!(MatchStats::percentile_bucket(&h, 0.3), Some(0));
         assert_eq!(MatchStats::percentile_bucket(&h, 0.31), Some(5));
         assert_eq!(MatchStats::percentile_bucket(&h, 1.0), Some(5));
+    }
+
+    #[test]
+    fn percentile_bucket_precise_past_f32_range() {
+        // 2^24 samples in bucket 0 plus one in the tail (total = 2^24 + 1,
+        // odd). With f32 rank math `total as f32` rounds 16_777_217 to the
+        // nearest-even 16_777_216, so p=1.0 target=16_777_216 lands in
+        // bucket 0 — dropping the tail sample. f64 keeps the exact rank.
+        let h = [1u32 << 24, 0, 0, 0, 0, 1];
+        assert_eq!(MatchStats::percentile_bucket(&h, 1.0), Some(5), "tail sample survives");
     }
 
     #[test]

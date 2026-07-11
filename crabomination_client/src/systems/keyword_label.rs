@@ -215,6 +215,10 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     let n = match kw {
         Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
         | Poisonous(n) | CantBeBlockedExceptByN(n) | Crew(n) | Saddle(n) => *n,
+        // The power threshold in the evasion/blocker restrictions is a real
+        // combat read — "Eva≤2" (Rust-Shield Rampager) vs "Eva≤3" gate
+        // different blockers; "NoBlk≥4" says which attackers this can't stop.
+        CantBeBlockedByPowerAtMost(n) | CantBlockPowerAtLeast(n) => *n,
         _ => return None,
     };
     Some(n.to_string())
@@ -398,6 +402,13 @@ mod tests {
             )]),
             "NoUntap",
         );
+    }
+
+    #[test]
+    fn strip_surfaces_power_thresholds() {
+        // Rust-Shield Rampager — "can't be blocked by power 2 or less".
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByPowerAtMost(2)]), "Eva≤2");
+        assert_eq!(keyword_strip(&[Keyword::CantBlockPowerAtLeast(4)]), "NoBlk≥4");
     }
 
     #[test]

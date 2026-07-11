@@ -127,6 +127,8 @@ pub enum CreatureType {
     Manticore,
     // ONE (Argentum Masticore).
     Masticore,
+    // MKM (Absolving Lammasu).
+    Lammasu,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,
     // Kaladesh Fabricate Servos).
     Thopter,

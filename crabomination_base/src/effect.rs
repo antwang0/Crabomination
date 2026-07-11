@@ -2667,6 +2667,9 @@ pub enum Effect {
     /// `suspected` flag so it gains menace and can't block (injected as
     /// computed keywords). Repeat Offender, Reasonable Doubt.
     Suspect { what: Selector },
+    /// The inverse of [`Suspect`] — clear the `suspected` flag on every creature
+    /// `what` resolves to ("~ are no longer suspected", Absolving Lammasu).
+    ClearSuspected { what: Selector },
     /// CR 701.35 — *detain* each permanent `what` resolves to: stamp
     /// `detained_by = the effect's controller`. A detained permanent can't
     /// attack or block and its activated abilities can't be activated until

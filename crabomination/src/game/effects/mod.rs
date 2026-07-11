@@ -4224,6 +4224,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ClearSuspected { what } => {
+                // "~ are no longer suspected" — the inverse of Suspect.
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.suspected = false;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Detain { what } => {
                 // CR 701.35 — stamp each target permanent with the detaining
                 // player so it can't attack/block/activate until the detainer's

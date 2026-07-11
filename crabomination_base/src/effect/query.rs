@@ -455,7 +455,7 @@ impl Effect {
             }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
-            Effect::Suspect { what } => sel_has_target(what),
+            Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
             Effect::Detain { what } => sel_has_target(what),
             Effect::Fateseal { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
@@ -856,6 +856,7 @@ impl Effect {
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
             | Effect::Suspect { what }
+            | Effect::ClearSuspected { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
@@ -1869,6 +1870,7 @@ impl Effect {
                 | Effect::CounterUnless { what, .. }
                 | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
+                | Effect::ClearSuspected { what }
                 | Effect::GainControl { what, .. }
                 | Effect::GainControlWhileSourceRemains { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),

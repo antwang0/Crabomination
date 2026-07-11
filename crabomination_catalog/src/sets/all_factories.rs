@@ -5959,6 +5959,12 @@ static DECKS: &[Factory] = &[
     super::decks::cactarantula,
     super::decks::inventive_wingsmith,
     super::decks::mourners_surprise,
+    // recent159 — MKM crime / suspect / sacrifice gaps.
+    super::decks::fanatical_strength,
+    super::decks::festerleech,
+    super::decks::cornered_crook,
+    super::decks::crime_novelist,
+    super::decks::absolving_lammasu,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
