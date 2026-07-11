@@ -286,9 +286,9 @@ pub(crate) fn event_matches_spec(
         // is unchanged. Symmetric treatment for OpponentControl —
         // teammate actions aren't "opponent" actions, so the
         // implicit "not me" widens to "not on my team."
-        EventScope::YourControl => event_actor(state, event)
+        EventScope::YourControl => actor_for_scope(state, event, &spec.kind)
             .is_some_and(|p| state.same_team(p, source.controller)),
-        EventScope::OpponentControl => event_actor(state, event)
+        EventScope::OpponentControl => actor_for_scope(state, event, &spec.kind)
             .is_some_and(|p| !state.same_team(p, source.controller)),
         EventScope::AnyPlayer | EventScope::ActivePlayer => true,
         EventScope::AnotherOfYours => {
@@ -408,6 +408,23 @@ pub(crate) fn event_matches_spec(
 /// permanent's controller, looked up on the battlefield. CreatureDied
 /// fires after the card has left the battlefield, so we fall back to the
 /// graveyard owner — close enough for "your creature died" triggers.
+/// The event's actor for `YourControl`/`OpponentControl` scope, disambiguating
+/// the two sides of a `BlockerDeclared` event by the trigger's kind: a
+/// `BecomesBlocked` observer watches the *attacker*'s controller ("a creature
+/// you control becomes blocked" — Tattered Ratter), while `Blocks` watches the
+/// *blocker*'s. Every other event falls back to [`event_actor`].
+pub(crate) fn actor_for_scope(
+    state: &GameState,
+    event: &GameEvent,
+    kind: &EventKind,
+) -> Option<usize> {
+    if let GameEvent::BlockerDeclared { blocker, attacker } = event {
+        let cid = if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker };
+        return state.battlefield_find(cid).map(|c| c.controller);
+    }
+    event_actor(state, event)
+}
+
 pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize> {
     if let Some(p) = event_player(event) {
         return Some(p);

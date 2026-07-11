@@ -5799,6 +5799,18 @@ static DECKS: &[Factory] = &[
     super::decks::tangled_colony,
     super::decks::gruff_triplets,
     super::decks::howling_galefang,
+    // recent139 — WOE wave 12: Rat aristocrats, enchantment value, removal.
+    super::decks::misleading_motes,
+    super::decks::taken_by_nightmares,
+    super::decks::faerie_fencing,
+    super::decks::shatter_the_oath,
+    super::decks::lord_skitters_blessing,
+    super::decks::flick_a_coin,
+    super::decks::frantic_firebolt,
+    super::decks::ogre_chitterlord,
+    super::decks::redcap_gutter_dweller,
+    super::decks::tattered_ratter,
+    super::decks::redtooth_vanguard,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
