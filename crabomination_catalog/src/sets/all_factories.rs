@@ -5875,6 +5875,13 @@ static DECKS: &[Factory] = &[
     super::decks::gnawing_vermin,
     super::decks::hoard_robber,
     super::decks::neutralizing_blast,
+    // recent148 — WOE + Duskmourn: Faerie trick, sacrifice aristocrat, two
+    // manifest-dread Nightmares (one an Equipment).
+    super::decks::faebloom_trick,
+    super::decks::popular_egotist,
+    super::decks::overwhelmed_apprentice,
+    super::decks::fear_of_impostors,
+    super::decks::cursed_windbreaker,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
