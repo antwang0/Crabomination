@@ -1547,7 +1547,14 @@ pub enum GameEvent {
     /// client see the grant (no `EventKind` listener yet).
     KeywordCounterAdded { card_id: CardId, keyword: crate::card::Keyword, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
-    PermanentTapped { card_id: CardId },
+    /// A permanent became tapped. `actor` is the player who tapped it via a
+    /// spell/ability effect (Some), or `None` for game-driven taps (attacking,
+    /// crewing, mana). Read by "whenever you tap …" triggers (CR — Sharae,
+    /// Solitary Sanctuary).
+    PermanentTapped {
+        card_id: CardId,
+        actor: Option<usize>,
+    },
     PermanentUntapped { card_id: CardId },
     /// CR 702.171 — a Mount was saddled; `riders` lists the tapped creatures.
     /// Powers `EventKind::CrewsOrSaddles` (the riders' triggers).

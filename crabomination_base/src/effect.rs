@@ -1856,6 +1856,13 @@ pub enum EventScope {
     /// in `GameState.auras_at_death` as having carried the source Aura.
     /// Powers "when enchanted creature dies" Aura triggers (Minion's Return).
     EnchantedBySource,
+    /// A permanent was tapped by an effect the source's controller controls
+    /// ("whenever you tap …" — Sharae, Solitary Sanctuary). Matches a
+    /// `PermanentTapped` whose `actor` equals the trigger's controller; the
+    /// tapped permanent is the subject, so a `.with_filter` restricts it (e.g.
+    /// to an opponent's creature). Distinct from `Tapped`/`YourControl`, which
+    /// key off the tapped permanent's controller rather than the tapper.
+    YouTapped,
 }
 
 /// A structural filter over the unified `GameEvent` stream. The trigger fires

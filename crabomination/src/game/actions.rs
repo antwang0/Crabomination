@@ -5300,7 +5300,7 @@ impl GameState {
                     for id in ids {
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: id });
+                            events.push(GameEvent::PermanentTapped { card_id: id, actor: None });
                         }
                     }
                 }
@@ -10319,7 +10319,7 @@ impl GameState {
         // Vorinclex's opponent-land lock). Emitted after the mana payment
         // succeeded so a rolled-back activation never announces a tap.
         if ability.tap_cost {
-            events.push(GameEvent::PermanentTapped { card_id });
+            events.push(GameEvent::PermanentTapped { card_id, actor: None });
         }
         if ability.untap_self_cost {
             events.push(GameEvent::PermanentUntapped { card_id });

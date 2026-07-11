@@ -2182,7 +2182,7 @@ impl From<&GameEvent> for GameEventWire {
                     count: *count,
                 }
             }
-            GameEvent::PermanentTapped { card_id } => {
+            GameEvent::PermanentTapped { card_id, .. } => {
                 GameEventWire::PermanentTapped { card_id: *card_id }
             }
             GameEvent::PermanentUntapped { card_id } => {
@@ -2442,7 +2442,7 @@ impl GameEventWire {
                 counter_type,
                 count,
             } => format!("−{count} {counter_type:?} on {}", name(*card_id)),
-            E::PermanentTapped { card_id } => format!("{} tapped", name(*card_id)),
+            E::PermanentTapped { card_id, .. } => format!("{} tapped", name(*card_id)),
             E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
             E::PermanentPhasedIn { card_id } => format!("{} phased in", name(*card_id)),

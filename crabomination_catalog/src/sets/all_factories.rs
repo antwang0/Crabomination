@@ -5827,6 +5827,16 @@ static DECKS: &[Factory] = &[
     super::decks::realm_scorcher_hellkite,
     super::decks::raging_battle_mouse,
     super::decks::tough_cookie,
+    // recent142 — WOE legends + spells: Food aristocrats, Rat swarm, enchantment-
+    // and tap-matters (YouTapped scope), restricted mana (HighMvOrX), Bargain dig.
+    super::decks::greta_sweettooth_scourge,
+    super::decks::totentanz_swarm_piper,
+    super::decks::neva_stalked_by_nightmares,
+    super::decks::syr_armont_the_redeemer,
+    super::decks::troyan_gutsy_explorer,
+    super::decks::johann_apprentice_sorcerer,
+    super::decks::solitary_sanctuary,
+    super::decks::farsight_ritual,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

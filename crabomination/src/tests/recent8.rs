@@ -430,7 +430,7 @@ fn compassionate_healer_triggers_on_tap() {
     let healer = g.add_card_to_battlefield(0, catalog::compassionate_healer());
     let life = g.players[0].life;
     g.battlefield_find_mut(healer).unwrap().tapped = true;
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: healer }]);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: healer, actor: None }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "gained 1 life on tap");
 }

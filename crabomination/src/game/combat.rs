@@ -423,7 +423,7 @@ impl GameState {
                 card.tapped = true;
                 // CR 508.1f — attacking taps the creature; surface a
                 // "becomes tapped" event so Tapped triggers fire (Magda).
-                events.push(GameEvent::PermanentTapped { card_id: id });
+                events.push(GameEvent::PermanentTapped { card_id: id, actor: None });
             }
             // CR 702.83 — Exert. We auto-exert any attacking creature with
             // the keyword (the "you may" choice is collapsed; the AutoDecider

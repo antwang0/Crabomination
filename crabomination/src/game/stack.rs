@@ -448,7 +448,8 @@ impl GameState {
             EventScope::YourPermanentTargetedByOpponent
             | EventScope::YourCreatureTargeted
             | EventScope::EnchantedBySource
-            | EventScope::YourSourceDamagedOpponent => false, // event-based
+            | EventScope::YourSourceDamagedOpponent
+            | EventScope::YouTapped => false, // event-based
             EventScope::ControllerAttackedByOpponent => false, // combat-based
         };
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self

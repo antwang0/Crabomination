@@ -219,7 +219,7 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             // "Whenever this creature becomes tapped" (Vampire Envoy).
             event,
-            GameEvent::PermanentTapped { card_id } if *card_id == source.id
+            GameEvent::PermanentTapped { card_id, .. } if *card_id == source.id
         ) || matches!(
             // "Whenever this Equipment becomes attached" (Blade of Shared
             // Souls). Source must equal the moved attachment.
@@ -381,6 +381,13 @@ pub(crate) fn event_matches_spec(
                 .is_some_and(|host| host == *cid),
             _ => false,
         },
+        // "Whenever you tap …" — the tap must have been performed by an effect
+        // this trigger's controller controls. The subject (tapped permanent) is
+        // gated by the trigger's `.with_filter` (typically an opponent's creature).
+        EventScope::YouTapped => matches!(
+            event,
+            GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, source.controller)
+        ),
     };
 
     if !scope_ok {
@@ -536,7 +543,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         )),
         GameEvent::AttackerWentUnblocked { attacker } => Some(EntityRef::Permanent(*attacker)),
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentTapped { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         // CR 702.122/702.171 — bind `Selector::TriggerSource` to the crewed
         // Vehicle / saddled Mount ("that Mount or Vehicle gains …").
@@ -650,6 +657,10 @@ pub(crate) fn emblem_event_matches(
             event_actor(state, event).is_some_and(|p| !state.same_team(p, controller))
         }
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
+        EventScope::YouTapped => matches!(
+            event,
+            GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, controller)
+        ),
         EventScope::FromYourGraveyard
         | EventScope::YourPermanentTargetedByOpponent
         | EventScope::YourCreatureTargeted
@@ -670,7 +681,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CardMilled { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::CreatureLeftWithoutDying { card_id, .. }
-        | GameEvent::PermanentTapped { card_id }
+        | GameEvent::PermanentTapped { card_id, .. }
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::Explored { card_id, .. }

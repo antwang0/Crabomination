@@ -3149,6 +3149,8 @@ impl CardDefinition {
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             equipment: self.is_equipment(),
             colorless: self.printed_colors().is_empty(),
+            mana_value: self.cost.cmc(),
+            has_x: self.cost.has_x(),
         }
     }
 

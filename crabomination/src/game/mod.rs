@@ -596,6 +596,9 @@ mod tests_recent140;
 #[path = "../tests/recent141.rs"]
 mod tests_recent141;
 #[cfg(test)]
+#[path = "../tests/recent142.rs"]
+mod tests_recent142;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]
@@ -8967,7 +8970,7 @@ impl GameState {
         for &cid in crew_creatures {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
                 c.tapped = true;
-                events.push(GameEvent::PermanentTapped { card_id: cid });
+                events.push(GameEvent::PermanentTapped { card_id: cid, actor: None });
             }
         }
         // Animate the Vehicle until end of turn.
@@ -9042,7 +9045,7 @@ impl GameState {
         for &cid in creatures {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
                 c.tapped = true;
-                events.push(GameEvent::PermanentTapped { card_id: cid });
+                events.push(GameEvent::PermanentTapped { card_id: cid, actor: None });
             }
         }
         if let Some(m) = self.battlefield.iter_mut().find(|c| c.id == mount) {

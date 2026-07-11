@@ -66,7 +66,11 @@ pub fn sharae_of_numbing_depths() -> CardDefinition {
                 },
             ])),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Tapped, EventScope::OpponentControl)
+                event: EventSpec::new(EventKind::Tapped, EventScope::YouTapped)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    })
                     .once_per_turn(),
                 effect: draw(1),
             },

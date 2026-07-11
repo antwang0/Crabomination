@@ -432,6 +432,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a colorless spell or to activate an
     /// ability." (Sage of the Unknowable.)
     ColorlessSpellsOrAbilities,
+    /// "Spend this mana only to cast spells with mana value 5 or greater or
+    /// spells with {X} in their mana costs." (Troyan, Gutsy Explorer.)
+    HighMvOrX,
 }
 
 impl SpendRestriction {
@@ -458,6 +461,7 @@ impl SpendRestriction {
             SpendRestriction::ColorlessSpellsOrAbilities => {
                 kind.colorless || kind.activating_ability
             }
+            SpendRestriction::HighMvOrX => kind.mana_value >= 5 || kind.has_x,
         }
     }
 }
@@ -496,6 +500,11 @@ pub struct SpellKind {
     /// Casting a colorless spell (Sage of the Unknowable's "spend this mana
     /// only to cast a colorless spell or to activate an ability").
     pub colorless: bool,
+    /// Mana value of the spell being cast (0 for ability activations). Read by
+    /// `HighMvOrX` restrictions (Troyan, Gutsy Explorer).
+    pub mana_value: u32,
+    /// The spell being cast has `{X}` in its mana cost (Troyan's restriction).
+    pub has_x: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

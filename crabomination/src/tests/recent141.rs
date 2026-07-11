@@ -51,6 +51,26 @@ fn sharae_taps_and_stuns() {
     assert_eq!(e.counter_count(CounterType::Stun), 1, "stun counter added");
 }
 
+/// Sharae's "whenever you tap …" fires only when the tap is your effect, not
+/// when the opponent's own creature becomes tapped.
+#[test]
+fn sharae_you_tapped_actor_gating() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sharae_of_numbing_depths());
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    // Opponent taps their own creature — no draw.
+    let hand = g.players[0].hand.len();
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(1) }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "opponent self-tap does not trigger");
+    // You tap it — draw once.
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "your tap draws a card");
+}
+
 /// Ingenious Prodigy enters with X +1/+1 counters and cashes one for a card.
 #[test]
 fn ingenious_prodigy_x_counters_then_draw() {

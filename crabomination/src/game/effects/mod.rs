@@ -2430,7 +2430,7 @@ impl GameState {
                     for id in candidates.into_iter().take(n) {
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: id });
+                            events.push(GameEvent::PermanentTapped { card_id: id, actor: Some(ctx.controller) });
                         }
                     }
                     self.run_effect(then, ctx, events)?;
@@ -5568,7 +5568,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid)
                         && !c.tapped {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: cid });
+                            events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
                         }
                 }
                 Ok(())
@@ -5602,7 +5602,7 @@ impl GameState {
                 for (_, _, cid) in candidates.into_iter().take(n) {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.tapped = true;
-                        events.push(GameEvent::PermanentTapped { card_id: cid });
+                        events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
                     }
                 }
                 Ok(())
@@ -5974,7 +5974,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         if !c.tapped {
                             c.tapped = true;
-                            events.push(GameEvent::PermanentTapped { card_id: cid });
+                            events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
                         }
                         if *skip_untap {
                             c.skip_next_untap = true;
@@ -5994,7 +5994,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid) {
                             if !c.tapped {
                                 c.tapped = true;
-                                events.push(GameEvent::PermanentTapped { card_id: cid });
+                                events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller) });
                             }
                             c.untap_locked_by = source;
                         }
@@ -7889,7 +7889,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(helper) {
                         c.tapped = true;
                     }
-                    events.push(GameEvent::PermanentTapped { card_id: helper });
+                    events.push(GameEvent::PermanentTapped { card_id: helper, actor: Some(ctx.controller) });
                     if let Some(c) = self.battlefield_find_mut(src) {
                         c.power_bonus += power;
                         events.push(GameEvent::PumpApplied { card_id: src, power, toughness: 0 });
