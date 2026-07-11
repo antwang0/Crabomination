@@ -8038,3 +8038,29 @@ fn cr_401_6_johann_cap_resets_next_turn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 14, "both Bolts resolved across two turns");
 }
+
+/// CR 509.1b/702.111 — Menace: a creature with menace can't be blocked by
+/// fewer than two creatures. One blocker is illegal; two is legal.
+#[test]
+fn cr_509_1b_menace_requires_two_blockers() {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    use crate::game::types::Attack;
+    let menacer_def = CardDefinition {
+        name: "Menacer",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, menacer_def);
+    g.clear_sickness(attacker);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    assert!(g.declare_blockers(vec![(b1, attacker)]).is_err(), "one blocker is illegal");
+    g.declare_blockers(vec![(b1, attacker), (b2, attacker)]).expect("two blockers is legal");
+}
