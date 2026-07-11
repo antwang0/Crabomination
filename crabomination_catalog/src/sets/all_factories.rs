@@ -5847,6 +5847,13 @@ static DECKS: &[Factory] = &[
     super::decks::picklock_prankster,
     super::decks::stormkeld_vanguard,
     super::decks::scalding_viper,
+    // recent144 — WOE tap-matters + high-MV + first-spell + Adventure utility.
+    super::decks::icewrought_sentry,
+    super::decks::galvanic_giant,
+    super::decks::aquatic_alchemist,
+    super::decks::threadbind_clique,
+    super::decks::twining_twins,
+    super::decks::spellscorn_coven,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
