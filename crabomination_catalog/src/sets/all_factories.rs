@@ -5811,6 +5811,10 @@ static DECKS: &[Factory] = &[
     super::decks::redcap_gutter_dweller,
     super::decks::tattered_ratter,
     super::decks::redtooth_vanguard,
+    // recent140 — WOE wave 13: Rat payoffs, symmetric modal, exile-until-leaves.
+    super::decks::food_coma,
+    super::decks::rankles_prank,
+    super::decks::song_of_totentanz,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -1,6 +1,5 @@
 //! Functionality tests for `catalog::sets::decks::recent139` (WOE wave 12).
 
-use crate::card::Keyword;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::{Attack, AttackTarget, Target};
