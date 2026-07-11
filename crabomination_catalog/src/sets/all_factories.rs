@@ -5976,6 +5976,12 @@ static DECKS: &[Factory] = &[
     super::decks::prideful_parent,
     super::decks::firespitter_whelp,
     super::decks::guarded_heir,
+    // recent161 — Foundations burn / Morbid / Landfall.
+    super::decks::incinerating_blast,
+    super::decks::needletooth_pack,
+    super::decks::grappling_kraken,
+    super::decks::joust_through,
+    super::decks::quakestrider_ceratops,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
