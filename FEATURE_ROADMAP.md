@@ -439,6 +439,20 @@ exercising each) was elided in a compaction pass; recover it from
   Drossclaw), energy dies-triggers (Cyclops Superconductor), and
   owner's-choice graveyard recycling (Not Forgotten). Also surfaces CR 700.9
   `PermanentView.modified` for the client.
+- **Tap-actor / restricted-mana / Adventure primitives (modern_decks — WOE waves
+  14-16):** `GameEvent::PermanentTapped.actor` (who tapped it, `Some` for
+  effect-driven taps) + `EventScope::YouTapped` ("whenever you tap …" — Sharae,
+  Solitary Sanctuary; distinct from the tapped-permanent-controller scopes,
+  gated per CR 603.3d once-per-turn); `SpendRestriction::HighMvOrX` (spend only
+  on MV-5+ or `{X}` spells — Troyan, Gutsy Explorer; `SpellKind` now carries
+  `mana_value`/`has_x`). All other cards ride existing primitives (Celebration,
+  `SacrificeAnyNumber`, `CostReductionNthSpell`, `PlayFromLibraryTop`,
+  `CreateTokenAttachedTo`, `MillThenToHandN`, `Value::LifeGainedThisTurn`,
+  `CantBeBlockedByPowerAtMost`). ~27 cards across `decks::recent141-143`; tests
+  in `tests/recent141-143.rs`, `cr_rules.rs` (509.1a tapped-can't-block, 702.19e
+  deathtouch-trample, 603.3d once-per-turn). Client keyword strip splits
+  power-gated evasion (`Eva</≤/≥`); server status/`/metrics` expose
+  `min_turns`/`max_turns`/`turn_stddev`; view trigger labels cover tap-matters.
 
 ## Tier 1 — High-leverage engine primitives
 
