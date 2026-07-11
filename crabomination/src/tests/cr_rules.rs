@@ -7810,3 +7810,96 @@ fn cr_715_3_adventure_card_exiles_for_later_creature_cast() {
         "the adventure card sits in exile, ready to be cast as its creature (CR 715.3)",
     );
 }
+
+// ── CR 702.166 — Bargain (optional additional sacrifice cost) ─────────────────
+
+/// Bargain lets a spell's controller sacrifice an artifact, enchantment, or
+/// token as an additional cost; `SpellWasBargained` then gates the bonus
+/// (Torch the Tower: 3 damage instead of 2).
+#[test]
+fn cr_702_166_bargain_sacrifice_enables_bonus() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let token = g.add_token_to_battlefield(0, &crate::game::effects::food_token());
+    let id = g.add_card_to_hand(0, catalog::torch_the_tower());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id,
+        sacrifice: Some(token),
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(token).is_none(), "the token was sacrificed to bargain");
+    assert_eq!(g.battlefield_find(target).unwrap().damage, 3, "bargained Torch deals 3, not 2");
+}
+
+// ── CR 701.21 — "whenever you sacrifice a [permanent]" watcher ────────────────
+
+/// Sacrificing a permanent (here a Food, to its own ability) fires a
+/// `PermanentSacrificed` watcher (Experimental Confectioner → Rat).
+#[test]
+fn cr_701_21_sacrifice_a_food_fires_watcher() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::experimental_confectioner());
+    let food = g.add_token_to_battlefield(0, &crate::game::effects::food_token());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: food,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Rat"),
+        "sacrificing a Food fired the PermanentSacrificed watcher (CR 701.21)",
+    );
+}
+
+// ── CR 702.19b — basic trample assigns lethal, then excess to the player ──────
+
+/// A plain (single-strike) trampler assigns exactly lethal to its lone blocker
+/// and tramples the remainder to the defending player in the combat step.
+#[test]
+fn cr_702_19b_trample_overflows_single_blocker() {
+    fn big_trampler() -> crate::card::CardDefinition {
+        crate::card::CardDefinition {
+            name: "Test Trampler",
+            cost: crate::mana::cost(&[crate::mana::generic(4), crate::mana::g()]),
+            card_types: vec![crate::card::CardType::Creature],
+            power: 5,
+            toughness: 5,
+            keywords: vec![crate::card::Keyword::Trample],
+            ..Default::default()
+        }
+    }
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, big_trampler());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(blocker);
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert!(g.battlefield_find(blocker).is_none(), "2 lethal to the 2/2 blocker");
+    assert_eq!(g.players[1].life, life - 3, "5 - 2 lethal = 3 tramples to the player");
+}
