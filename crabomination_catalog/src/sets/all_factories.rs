@@ -5965,6 +5965,17 @@ static DECKS: &[Factory] = &[
     super::decks::cornered_crook,
     super::decks::crime_novelist,
     super::decks::absolving_lammasu,
+    // recent160 — Foundations gaps.
+    super::decks::erudite_wizard,
+    super::decks::gorehorn_raider,
+    super::decks::gutless_plunderer,
+    super::decks::hinterland_sanctifier,
+    super::decks::hungry_ghoul,
+    super::decks::icewind_elemental,
+    super::decks::infestation_sage,
+    super::decks::prideful_parent,
+    super::decks::firespitter_whelp,
+    super::decks::guarded_heir,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
