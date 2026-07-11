@@ -69,6 +69,19 @@ exercising each) was elided in a compaction pass; recover it from
   surfaced a combat.rs bug: Attacks-trigger filters bound the source as
   `EntityRef::Card` so `ToughnessOf` read 0 — now `Permanent` (CR 506.5/603.4).
   The six Role Aura tokens are consolidated in `decks::woe_roles`.
+- **WOE enchantment-matters / graveyard / combat-observer primitives (modern_decks,
+  recent138-140):** `Predicate::OwnExiledAdventureCard` (CR 715 — haste while you
+  own an exiled Adventure, Howling Galefang); `StaticEffect::AnthemForFilter` now
+  resolves non-card-only filters (e.g. `IsEnchanted`) against live state via
+  `evaluate_requirement_static`, so enchanted-matters anthems work (A Tale for the
+  Ages); `Effect::MayExileFromYourGraveyard { filter, then }` (reflexive variable
+  graveyard-exile pinning exiled cards to `Selector::LastMoved` — Specter of
+  Mortality's team `-X/-X`); `Value::MarkedDamageOn(Selector)` (marked damage via
+  CR 603.10 LKI — Tangled Colony's Rat count); and a `YourControl`/`OpponentControl`
+  scope fix (`actor_for_scope`) so a `BecomesBlocked` observer watches the
+  *attacker*'s controller (Tattered Ratter), not the blocker's. ~24 cards across
+  `decks::recent138-140`, tests in `tests/recent138-140.rs` + `cr_rules.rs`
+  (Bargain 702.166, sacrifice-watcher 701.21, basic trample 702.19b).
 - **MH3-energy / mana-persistence / token primitives (modern_decks, this run):**
   `Keyword::HexproofFromAbilities` (CR 702.11d — opponents' abilities can't target;
   Volatile Stormdrake), `Keyword::ReplicateEnergy(n)` (energy-paid Replicate,
