@@ -110,10 +110,7 @@ impl CardImage {
 /// the prefetcher. Engine-invented MDFCs only -- tokens are now
 /// fetched via the real Scryfall token-search path (`is:token+t:...`)
 /// in [`download_token_image`].
-const FICTIONAL_CARDS: &[&str] = &[
-    "Sundering Eruption",
-    "Mount Tyrhus",
-];
+const FICTIONAL_CARDS: &[&str] = &["Sundering Eruption", "Mount Tyrhus"];
 
 fn is_fictional(name: &str) -> bool {
     FICTIONAL_CARDS.iter().any(|f| f.eq_ignore_ascii_case(name))
@@ -198,7 +195,9 @@ pub fn reload_completed_images(
     if prefetch.finished.load(std::sync::atomic::Ordering::Relaxed) {
         *drained_after_finish = true;
     }
-    let Ok(mut completed) = prefetch.completed.lock() else { return };
+    let Ok(mut completed) = prefetch.completed.lock() else {
+        return;
+    };
     for path in completed.drain(..) {
         asset_server.reload(path);
     }
@@ -226,8 +225,13 @@ pub fn ensure_card_images_with_progress(
     // prefetch and leave the menu progress bar incomplete forever. Treat an
     // unwritable assets dir as "prefetch disabled" instead.
     if let Err(e) = fs::create_dir_all(&cards_dir) {
-        eprintln!("card prefetch disabled: cannot create {}: {e}", cards_dir.display());
-        progress.finished.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!(
+            "card prefetch disabled: cannot create {}: {e}",
+            cards_dir.display()
+        );
+        progress
+            .finished
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         return;
     }
 
@@ -309,8 +313,6 @@ pub fn ensure_card_images_with_progress(
             }
         }
         progress.done.fetch_add(1, Ordering::Relaxed);
-
-        thread::sleep(Duration::from_millis(120));
     }
     progress.finished.store(true, Ordering::Relaxed);
 
@@ -341,8 +343,7 @@ pub fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
 /// the placeholder for cards with no Scryfall art (synthesized cards, MDFC
 /// backs, 404s). With `font == None` it's a blank white card.
 fn render_placeholder(name: &str, font: Option<&FontVec>) -> RgbaImage {
-    let mut img =
-        RgbaImage::from_pixel(PLACEHOLDER_W, PLACEHOLDER_H, Rgba([245, 245, 245, 255]));
+    let mut img = RgbaImage::from_pixel(PLACEHOLDER_W, PLACEHOLDER_H, Rgba([245, 245, 245, 255]));
 
     // Card frame: a couple of nested dark rectangles.
     let frame = Rgba([70, 70, 70, 255]);
@@ -414,7 +415,12 @@ fn placeholder_png_bytes(name: &str, font: Option<&FontVec>) -> Vec<u8> {
 /// path that isn't a card image, so the reader only ever synthesizes card
 /// art (never fonts / models / the cardback).
 fn card_name_from_asset_path(path: &Path) -> Option<String> {
-    if path.parent().and_then(|p| p.file_name()).and_then(|s| s.to_str()) != Some("cards") {
+    if path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|s| s.to_str())
+        != Some("cards")
+    {
         return None;
     }
     let stem = path.file_stem()?.to_str()?;
@@ -651,8 +657,11 @@ fn try_lookup(
 /// Identify the client to Scryfall. Their API guidelines ask every caller to
 /// send a descriptive `User-Agent` (anonymous traffic is rate-limited more
 /// aggressively, which is the usual source of the 429 cascades).
-const SCRYFALL_USER_AGENT: &str =
-    concat!("Crabomination/", env!("CARGO_PKG_VERSION"), " (card-image prefetch)");
+const SCRYFALL_USER_AGENT: &str = concat!(
+    "Crabomination/",
+    env!("CARGO_PKG_VERSION"),
+    " (card-image prefetch)"
+);
 
 /// How many times to retry a single request that comes back rate-limited
 /// (HTTP 429) or with a transient 5xx before giving up on that card. Kept
@@ -721,10 +730,13 @@ fn urlenccode(s: &str) -> String {
         match byte {
             b' ' => out.push('+'),
             // Unreserved characters (RFC 3986) pass through unchanged.
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9'
-            | b'-' | b'_' | b'.' | b'~' => out.push(byte as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(byte as char)
+            }
             // Everything else (including non-ASCII UTF-8 bytes) is encoded.
-            b => { let _ = write!(out, "%{b:02X}"); }
+            b => {
+                let _ = write!(out, "%{b:02X}");
+            }
         }
     }
     out
@@ -738,7 +750,10 @@ mod tests {
     fn front_image_filename_matches_asset_path() {
         let spec = CardImage::Front("Lightning Bolt");
         assert_eq!(spec.filename(), "lightning_bolt.png");
-        assert_eq!(card_asset_path("Lightning Bolt"), "cards/lightning_bolt.png");
+        assert_eq!(
+            card_asset_path("Lightning Bolt"),
+            "cards/lightning_bolt.png"
+        );
     }
 
     #[test]
@@ -794,11 +809,11 @@ mod tests {
         // `cards/wear_//_tear.png` as a nested path and panics with
         // NotFound when the implied parent dirs don't exist.
         assert_eq!(card_filename("Wear // Tear"), "wear____tear.png");
-        assert_eq!(card_asset_path("Reduce // Rubble"), "cards/reduce____rubble.png");
         assert_eq!(
-            card_back_face_filename("Foo / Bar"),
-            "foo___bar_back.png",
+            card_asset_path("Reduce // Rubble"),
+            "cards/reduce____rubble.png"
         );
+        assert_eq!(card_back_face_filename("Foo / Bar"), "foo___bar_back.png",);
     }
 
     #[test]
@@ -817,7 +832,9 @@ mod tests {
         // Tokens are real Scryfall printings (queried via
         // `is:token+t:<name>`); only invented cards trigger the
         // cardback placeholder.
-        for name in ["Bird", "Citizen", "Clue", "Faerie", "Food", "Giant", "Blood", "Treasure"] {
+        for name in [
+            "Bird", "Citizen", "Clue", "Faerie", "Food", "Giant", "Blood", "Treasure",
+        ] {
             let spec = CardImage::Token { name };
             assert!(!spec.is_fictional(), "{name} token must not be fictional");
             assert_eq!(spec.filename(), format!("{}.png", name.to_lowercase()));
@@ -834,10 +851,7 @@ mod tests {
     fn ensure_card_images_writes_no_file_for_fictional_cards() {
         use std::fs;
         // Use a temp asset dir so we don't pollute the repo.
-        let tmp = std::env::temp_dir().join(format!(
-            "crab-scryfall-test-{}",
-            std::process::id(),
-        ));
+        let tmp = std::env::temp_dir().join(format!("crab-scryfall-test-{}", std::process::id(),));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(tmp.join("cards")).expect("temp setup");
 
@@ -860,7 +874,10 @@ mod tests {
         // A real card carrying a catalog disambiguator resolves to its true
         // Scryfall name...
         assert_eq!(scryfall_lookup_name("Putrefy (Modern)"), "Putrefy");
-        assert_eq!(scryfall_lookup_name("Lightning Bolt (Legacy)"), "Lightning Bolt");
+        assert_eq!(
+            scryfall_lookup_name("Lightning Bolt (Legacy)"),
+            "Lightning Bolt"
+        );
         // ...while plain names and the synthesized-audit `(bNNN)` suffix are
         // left untouched (those aren't real Scryfall cards).
         assert_eq!(scryfall_lookup_name("Lightning Bolt"), "Lightning Bolt");
@@ -873,10 +890,8 @@ mod tests {
     #[test]
     fn unavailable_manifest_round_trips() {
         use std::fs;
-        let tmp = std::env::temp_dir().join(format!(
-            "crab-scryfall-unavail-{}",
-            std::process::id(),
-        ));
+        let tmp =
+            std::env::temp_dir().join(format!("crab-scryfall-unavail-{}", std::process::id(),));
         let cards = tmp.join("cards");
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(&cards).expect("temp setup");
@@ -926,13 +941,18 @@ mod tests {
             front: "Cragcrown Pathway",
             back: "Timbercrown Pathway",
         };
-        assert_eq!(spec.label(), "Timbercrown Pathway (back of Cragcrown Pathway)");
+        assert_eq!(
+            spec.label(),
+            "Timbercrown Pathway (back of Cragcrown Pathway)"
+        );
     }
 
     #[test]
     fn reader_synthesizes_placeholder_for_missing_card_but_not_other_paths() {
         use bevy::asset::AsyncReadExt;
-        use bevy::asset::io::{AssetReader, AssetReaderError, ErasedAssetReader, PathStream, Reader};
+        use bevy::asset::io::{
+            AssetReader, AssetReaderError, ErasedAssetReader, PathStream, Reader,
+        };
         use bevy::tasks::block_on;
         use std::path::Path;
 

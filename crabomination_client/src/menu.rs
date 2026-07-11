@@ -434,7 +434,10 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     padding: UiRect::all(Val::Px(28.0)),
                     row_gap: Val::Px(18.0),
                     align_items: AlignItems::Center,
-                    min_width: Val::Px(380.0),
+                    // Fixed width: the status / download-progress lines below
+                    // change length as they update, and a fit-content panel
+                    // would visibly resize with them.
+                    width: Val::Px(560.0),
                     border_radius: BorderRadius::all(RADIUS_PANEL),
                     ..default()
                 },
@@ -597,10 +600,14 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     TextColor(theme::TEXT_PLACEHOLDER),
                 ));
 
+                // Both live-updating lines are capped to the panel's inner
+                // width so an extra-long message wraps instead of widening
+                // the (fixed-width) panel.
                 p.spawn((
                     Text::new(""),
                     tf(12.0),
                     TextColor(theme::ACCENT_ORANGE),
+                    Node { max_width: Val::Px(504.0), ..default() },
                     MenuStatusText,
                 ));
 
@@ -608,6 +615,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Text::new(""),
                     tf(11.0),
                     TextColor(theme::TEXT_SECONDARY),
+                    Node { max_width: Val::Px(504.0), ..default() },
                     DownloadProgressText,
                 ));
             });
