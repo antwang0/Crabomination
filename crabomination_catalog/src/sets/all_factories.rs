@@ -5910,6 +5910,13 @@ static DECKS: &[Factory] = &[
     super::decks::grab_the_prize,
     super::decks::malevolent_chandelier,
     super::decks::moonstone_harbinger,
+    // recent152 — WOE/OTJ/BLB: Bargain dig, finality reanimator w/ Flashback,
+    // graveyard-recursion drain, X-token maker, Flashback prowess Otter.
+    super::decks::rowans_grim_search,
+    super::decks::rite_of_the_moth,
+    super::decks::hazels_nocturne,
+    super::decks::form_a_posse,
+    super::decks::otterball_antics,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
