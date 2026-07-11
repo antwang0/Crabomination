@@ -5917,6 +5917,13 @@ static DECKS: &[Factory] = &[
     super::decks::hazels_nocturne,
     super::decks::form_a_posse,
     super::decks::otterball_antics,
+    // recent153 — OTJ/DSK/MKM: Treasure/manifest Equipment, token-payoff Vampire,
+    // and two "haven't cast a spell this turn" end-step payoffs.
+    super::decks::gold_pan,
+    super::decks::conductive_machete,
+    super::decks::baron_bertram_graywater,
+    super::decks::jem_lightfoote_sky_explorer,
+    super::decks::canyon_crab,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

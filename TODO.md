@@ -28,6 +28,24 @@ Next-up primitives to unblock more OTJ: `Value::OtherSpellsCastThisTurn` (Thunde
 Salvo), a "committed a crime this turn" gate on activated abilities (Blood
 Hustler), and Spree-on-instant modal costs (Metamorphic Blast, Getaway Glamer).
 
+`decks::recent149-152` shipped ~27 BLB/DSK/OTJ/WOE cards (modal removal, surveil-
+riders, conditional threaten/exile-until-leaves, impulse Plotter, manifest-dread
+Equipment, mana dorks, saddled Mount, Delirium self-reanimate, finality reanimator
++ Flashback, graveyard recursion, X-token maker, prowess Otter) plus the new
+`Effect::ChooseNumberDestroyByPower` (Expel the Interlopers). Cards deliberately
+skipped this run, each needing one primitive:
+- **Gnawing Crescendo / Mardu-style "this turn when a creature dies"** — a
+  duration-scoped delayed *triggered* ability granted to the player.
+- **Spree** modal-additional-costs (Jailbreak Scheme, Getaway Glamer, Betrayer's
+  Bargain's sac-or-pay choice).
+- **DSK Rooms / doors** (Rampaging Soulrager, Keys to the House's door mode,
+  the `Enchantment — Room` split cards).
+- **BLB Gift / Valiant / Offspring / Expend** ability words (Jolly Gerbils,
+  Flowerfoot Swordmaster, Junkblade Bruiser, the Gift spells).
+- **"Becomes plotted" trigger** (Aloe Alchemist) and **"becomes the target of an
+  opponent's spell/ability"** (Cactarantula).
+- **Delirium widens a modal to choose-one-or-more** (Let's Play a Game).
+
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
 Every single-faced FIN card is implemented (`python3 scripts/fin_gaps.py`
