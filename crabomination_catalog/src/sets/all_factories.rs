@@ -5941,6 +5941,17 @@ static DECKS: &[Factory] = &[
     super::decks::mouse_trapper,
     super::decks::flowerfoot_swordmaster,
     super::decks::whiskerquill_scribe,
+    // recent157 — BLB common/uncommon gaps.
+    super::decks::darkstar_augur,
+    super::decks::honored_dreyleader,
+    super::decks::fecund_greenshell,
+    super::decks::hazardroot_herbalist,
+    super::decks::rust_shield_rampager,
+    super::decks::seedpod_squire,
+    super::decks::steampath_charger,
+    super::decks::treeguard_duo,
+    super::decks::junkblade_bruiser,
+    super::decks::waterspout_warden,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
