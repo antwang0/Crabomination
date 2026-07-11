@@ -4969,6 +4969,25 @@ impl GameState {
                 )
             }
 
+            Effect::ChooseNumberDestroyByPower { max } => {
+                use crate::card::SelectionRequirement as R;
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = match self.decider.decide(&Decision::ChooseAmount {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Choose a number; destroy all creatures with power ≥ it".to_string(),
+                    max: *max,
+                }) {
+                    DecisionAnswer::Amount(n) => n.min(*max),
+                    _ => 0,
+                };
+                let req = R::Creature.and(R::PowerAtLeast(n as i32));
+                self.run_effect(
+                    &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::Regenerate { what } => {
                 // CR 701.15 — add one regeneration shield per resolved
                 // permanent. The shield is consumed by the next destruction

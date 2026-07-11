@@ -166,6 +166,9 @@ impl Effect {
             Effect::MillThenBranchByType { .. } => false,
             // "As this enters, choose a number" — no cast-time target.
             Effect::ChooseNumberForSource { .. } => false,
+            // "Choose a number; destroy all creatures with power ≥ it" — the
+            // number is picked at resolution; the wipe is untargeted.
+            Effect::ChooseNumberDestroyByPower { .. } => false,
             // "As this enters, choose a permanent" — chosen at resolution.
             Effect::ChoosePermanentForSource { .. } => false,
             // CR 603.7 — a reflexive payoff is opaque to cast-time target

@@ -3042,6 +3042,11 @@ pub enum Effect {
     /// and destroys every nonland permanent whose mana value matches. Ratchet
     /// Bomb, Engineered Explosives, Blast Zone.
     DestroyEachNonlandWithManaValue { value: Value },
+    /// "Choose a number between 0 and `max`. Destroy all creatures with power
+    /// greater than or equal to the chosen number." The controller picks the
+    /// number at resolution (`Decision::ChooseAmount`); a bot/AutoDecider picks
+    /// 0 (destroy everything). Expel the Interlopers.
+    ChooseNumberDestroyByPower { max: u32 },
     /// CR 701.15 — add a regeneration shield to each resolved permanent.
     /// The shield is a one-shot replacement that fires the next time the
     /// permanent would be destroyed this turn (tap + remove from combat +

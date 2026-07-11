@@ -5892,6 +5892,15 @@ static DECKS: &[Factory] = &[
     super::decks::psychic_whorl,
     super::decks::reptilian_recruiter,
     super::decks::raccoon_rallier,
+    // recent150 — OTJ/DSK/WOE: surveil-riders, impulse Plotter, manifest-dread
+    // Equipment, Horror trick, choose-a-number board wipe.
+    super::decks::consuming_ashes,
+    super::decks::failed_fording,
+    super::decks::harrier_strix,
+    super::decks::irascible_wolverine,
+    super::decks::killers_mask,
+    super::decks::jump_scare,
+    super::decks::expel_the_interlopers,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
