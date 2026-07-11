@@ -5901,6 +5901,15 @@ static DECKS: &[Factory] = &[
     super::decks::killers_mask,
     super::decks::jump_scare,
     super::decks::expel_the_interlopers,
+    // recent151 — DSK/OTJ/BLB: Delirium self-reanimator, mana dorks, saddled
+    // Mount, additional-cost draw-burn, graveyard-hate flyer, life-matters Bat.
+    super::decks::resurrected_cultist,
+    super::decks::overgrown_zealot,
+    super::decks::intrepid_stablemaster,
+    super::decks::gila_courser,
+    super::decks::grab_the_prize,
+    super::decks::malevolent_chandelier,
+    super::decks::moonstone_harbinger,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
