@@ -3676,17 +3676,13 @@ pub fn emberheart_challenger() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![
             crate::effect::shortcut::prowess(),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl)
-                    .once_per_turn(),
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
-                    uncast_penalty: None,
-                },
-            },
+            crate::effect::shortcut::valiant(Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                duration: MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            }),
         ],
         ..Default::default()
     }
@@ -5031,6 +5027,7 @@ pub fn quaketusk_boar() -> CardDefinition {
 /// becomes the target of a spell or ability you control each turn, it gets
 /// +1/+0 and gains first strike until end of turn, then scry 1.
 pub fn veteran_guardmouse() -> CardDefinition {
+    use crate::effect::shortcut::valiant;
     use crate::mana::hybrid;
     use crate::mana::Color::{Red, White};
     CardDefinition {
@@ -5043,23 +5040,20 @@ pub fn veteran_guardmouse() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl).once_per_turn(),
-            effect: Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::Const(1),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::This,
-                    keyword: Keyword::FirstStrike,
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            ]),
-        }],
+        triggered_abilities: vec![valiant(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]))],
         ..Default::default()
     }
 }

@@ -300,6 +300,16 @@ pub fn on_you_attack(effect: Effect) -> TriggeredAbility {
         effect,
     }
 }
+/// Valiant (CR 702.176): "Whenever this creature becomes the target of a spell
+/// or ability you control for the first time each turn, `effect`." A
+/// once-per-turn `BecameTarget` trigger — the implicit source==target guard
+/// pins it to this creature and `YourControl` refines on your own casts.
+pub fn valiant(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl).once_per_turn(),
+        effect,
+    }
+}
 /// Revolt (CR 702.139): "When this enters, if a permanent left the
 /// battlefield under your control this turn, `body`." An ETB trigger
 /// gated on `Predicate::RevoltActive { You }`. Models "enters with a

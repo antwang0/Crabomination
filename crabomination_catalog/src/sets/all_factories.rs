@@ -5936,6 +5936,11 @@ static DECKS: &[Factory] = &[
     super::decks::benthic_criminologists,
     super::decks::agency_coroner,
     super::decks::call_a_surprise_witness,
+    // recent156 — BLB Valiant Mice.
+    super::decks::seedglaive_mentor,
+    super::decks::mouse_trapper,
+    super::decks::flowerfoot_swordmaster,
+    super::decks::whiskerquill_scribe,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

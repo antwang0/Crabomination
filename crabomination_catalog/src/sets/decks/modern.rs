@@ -31992,11 +31992,9 @@ pub fn cacophony_scamp() -> CardDefinition {
     }
 }
 
-/// Heartfire Hero — {R} 1/1 Mouse Soldier. Valiant — the first time each turn
-/// it becomes the target of a spell or ability you control, put a +1/+1
-/// counter on it. When it dies, it deals damage equal to its power to any
-/// target (last-known power, CR 603.10 LKI). Valiant rides
-/// `BecameTarget + YourControl` with `once_per_turn` (CR 603.3d).
+/// Heartfire Hero — {R} 1/1 Mouse Soldier. Valiant: put a +1/+1 counter on it.
+/// When it dies, it deals damage equal to its power to each opponent
+/// (last-known power, CR 603.10 LKI).
 pub fn heartfire_hero() -> CardDefinition {
     CardDefinition {
         name: "Heartfire Hero",
@@ -32009,21 +32007,13 @@ pub fn heartfire_hero() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl)
-                    .once_per_turn(),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-            },
+            crate::effect::shortcut::valiant(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
             on_dies(Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
+                to: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::PowerOf(Box::new(Selector::This)),
             }),
         ],
@@ -32431,15 +32421,12 @@ pub fn nettle_guard() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Mouse, CreatureType::Soldier], ..Default::default() },
         power: 3,
         toughness: 1,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl).once_per_turn(),
-            effect: Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(0),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::valiant(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(0),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
