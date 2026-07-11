@@ -5,7 +5,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
-    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
     WardCost,
 };
@@ -14,44 +14,9 @@ use crate::effect::{Duration, Effect, ManaPayload, PlayerRef};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use super::woe_roles::{cursed_role, sorcerer_role};
 
-/// Sorcerer Role Aura token: enchanted creature gets +1/+1 and scries 1 on attack.
-fn sorcerer_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Sorcerer".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::White],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus {
-            power: 1,
-            toughness: 1,
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-            }],
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
 
-/// Cursed Role Aura token: enchanted creature is 1/1.
-fn cursed_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Cursed".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus { set_base_pt: Some((1, 1)), ..Default::default() }),
-        ..Default::default()
-    }
-}
 
 /// 1/1 black Rat token with "This token can't block."
 fn rat_token() -> TokenDefinition {

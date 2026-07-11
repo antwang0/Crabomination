@@ -61,6 +61,14 @@ exercising each) was elided in a compaction pass; recover it from
   `OneNonartifactSpellPerTurn` — Rule of Law / Deafening Silence / Ethersworn
   Canonist, surfaced via `PlayerView.spell_cast_lock`); off-turn spell tax
   (`SpellsCostMoreExceptOnControllerTurn` — Defense Grid).
+- **WOE Adventure / Role / token primitives (modern_decks):**
+  `Predicate::CastSpellIsAdventure` (reads the cast spell's `adventuring` flag —
+  Chancellor of Tales), `Effect::CreateTokenAttachedToEach` (one Aura-token per
+  matching permanent — Asinine Antics, Twisted Sewer-Witch), and the Young Hero
+  Role toughness gate (`ValueAtMost(ToughnessOf(TriggerSource), 3)`), which
+  surfaced a combat.rs bug: Attacks-trigger filters bound the source as
+  `EntityRef::Card` so `ToughnessOf` read 0 — now `Permanent` (CR 506.5/603.4).
+  The six Role Aura tokens are consolidated in `decks::woe_roles`.
 - **MH3-energy / mana-persistence / token primitives (modern_decks, this run):**
   `Keyword::HexproofFromAbilities` (CR 702.11d — opponents' abilities can't target;
   Volatile Stormdrake), `Keyword::ReplicateEnergy(n)` (energy-paid Replicate,

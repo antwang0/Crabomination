@@ -263,6 +263,7 @@ impl Effect {
             Effect::ExileUpToNFromGraveyards { count, .. } => value_has_target(count),
             Effect::SpellTaxUntilYourNextTurn { .. } => false,
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
+            Effect::CreateTokenAttachedToEach { target, .. } => sel_has_target(target),
             Effect::ManifestDread { .. } => false,
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands => false,
@@ -901,7 +902,8 @@ impl Effect {
             | Effect::CreateTokenCopiesHasteSac { source, .. } => sel_filter(source),
             // CreateTokenAttachedTo — the `target` is the creature the minted
             // Aura/Role token attaches to (Splashy Spellcaster's Role).
-            Effect::CreateTokenAttachedTo { target, .. } => sel_filter(target),
+            Effect::CreateTokenAttachedTo { target, .. }
+            | Effect::CreateTokenAttachedToEach { target, .. } => sel_filter(target),
             Effect::PumpPT { what, .. }
             | Effect::SetBasePT { what, .. }
             | Effect::SwitchPT { what, .. }
@@ -1899,7 +1901,8 @@ impl Effect {
                 Effect::RevealUntilLandDamage { to, .. }
                 | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
-                Effect::CreateTokenAttachedTo { target, .. } => sel_find(target, slot),
+                Effect::CreateTokenAttachedTo { target, .. }
+                | Effect::CreateTokenAttachedToEach { target, .. } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }

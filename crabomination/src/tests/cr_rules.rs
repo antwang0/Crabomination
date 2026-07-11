@@ -7682,3 +7682,131 @@ fn cr_700_4_noncreature_self_death_trigger_fires() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "the enchantment's own death trigger drained the opponent");
 }
+
+// ── CR 704.5y — a creature keeps only the newest Role its controller owns ─────
+
+/// CR 704.5y — if a permanent has two or more Role Auras controlled by the same
+/// player, the older ones are put into the graveyard as a state-based action.
+#[test]
+fn cr_704_5y_second_role_replaces_first() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Monstrous Rage grants a Monster Role; a second Role must evict the first.
+    let rage1 = g.add_card_to_hand(0, catalog::monstrous_rage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rage1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    // A second Monster Role must evict the first — a creature keeps one Role.
+    let rage2 = g.add_card_to_hand(0, catalog::monstrous_rage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rage2,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    let roles = g.battlefield.iter().filter(|c| c.attached_to == Some(bear)
+        && c.definition.name == "Monster").count();
+    assert_eq!(roles, 1, "only the newest Role survives (CR 704.5y)");
+}
+
+// ── CR 603.4 / 506.5 — an Attacks intervening-if reads the attacker's P/T ─────
+
+/// CR 603.4 + 506.5 — a "whenever this attacks, if its toughness is 3 or less"
+/// trigger is evaluated post-batch against the attacker's live toughness, so a
+/// pump above the threshold before combat suppresses it.
+#[test]
+fn cr_603_4_attacker_toughness_intervening_if() {
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::types::{AttackTarget, Target};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    // Young Hero Role via Embereth Veteran's sac.
+    let vet = g.add_card_to_battlefield(0, catalog::embereth_veteran());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vet,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    // Pump the bear's toughness above 3 before it attacks.
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        bear, 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(
+        &Effect::PumpPT {
+            what: Selector::Target(0),
+            power: Value::Const(0),
+            toughness: Value::Const(3),
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        &ctx,
+    )
+    .unwrap();
+    g.clear_sickness(bear);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        0,
+        "toughness 5 > 3 suppresses the Young Hero counter (CR 603.4)",
+    );
+}
+
+// ── CR 715.3 — an adventure card exiles after its adventure resolves ─────────
+
+/// CR 715.3 — casting the Adventure half exiles the card afterwards, from where
+/// its creature half can be cast; `SpellCast.adventuring` marks the cast.
+#[test]
+fn cr_715_3_adventure_card_exiles_for_later_creature_cast() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Puny Snack (Gingerbread Hunter's adventure): -2/-2.
+    let gh = g.add_card_to_hand(0, catalog::gingerbread_hunter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: gh,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == gh),
+        "the adventure card sits in exile, ready to be cast as its creature (CR 715.3)",
+    );
+}

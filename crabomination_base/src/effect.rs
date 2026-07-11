@@ -1033,6 +1033,10 @@ pub enum Predicate {
     /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
     /// against the topmost matching `StackItem::Spell`'s card definition.
     CastSpellMatches(SelectionRequirement),
+    /// True if the just-cast spell (located via `ctx.trigger_source`) was cast
+    /// as an Adventure (CR 715 — its `adventuring` flag is set). Powers
+    /// Chancellor of Tales' "whenever you cast an Adventure spell".
+    CastSpellIsAdventure,
     /// True if the card pointed to by `ctx.trigger_source` (the just-cast
     /// spell or just-played land) shares at least one card type with the card
     /// exiled by this source (`exiled_with == ctx.source`). Drives the
@@ -4303,6 +4307,11 @@ pub enum Effect {
     /// — Wicked Role; CR 111.10). The token must be an Aura-style
     /// attachment; it enters attached.
     CreateTokenAttachedTo { target: Selector, definition: crate::card::TokenDefinition },
+    /// Like `CreateTokenAttachedTo`, but mints one token per permanent the
+    /// selector resolves to (CR 111.10) — "for each creature your opponents
+    /// control, create a Cursed Role token attached to that creature"
+    /// (Asinine Antics).
+    CreateTokenAttachedToEach { target: Selector, definition: crate::card::TokenDefinition },
     /// Indomitable Creativity: destroy up to X chosen permanent targets
     /// matching `filter` (slots `0..X` from the cast's target list); for
     /// each destroyed this way its controller reveals from the top until an

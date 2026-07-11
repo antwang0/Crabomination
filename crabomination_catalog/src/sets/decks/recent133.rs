@@ -3,14 +3,14 @@
 //! `crabomination/src/tests/recent133.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
     Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::food_token;
 use crate::mana::{b, cost, g, generic, r, w, Color};
+use super::woe_roles::{cursed_role, wicked_role};
 
 /// 1/1 black Rat token with "This token can't block."
 fn rat_token() -> TokenDefinition {
@@ -26,40 +26,7 @@ fn rat_token() -> TokenDefinition {
     }
 }
 
-/// Wicked Role Aura token: enchanted creature gets +1/+1; when the Role dies,
-/// each opponent loses 1 life.
-fn wicked_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Wicked".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
-            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
-        }],
-        ..Default::default()
-    }
-}
 
-/// Cursed Role Aura token: enchanted creature is 1/1.
-fn cursed_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Cursed".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus { set_base_pt: Some((1, 1)), ..Default::default() }),
-        ..Default::default()
-    }
-}
 
 // ── Black ─────────────────────────────────────────────────────────────────────
 

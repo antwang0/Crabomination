@@ -3,72 +3,17 @@
 //! this turn). Tests in `crabomination/src/tests/recent128.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
+    ActivatedAbility, CardDefinition, CardType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value, WardCost,
+    StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w};
+use super::woe_roles::{cursed_role, monster_role, young_hero_role};
 
-fn monster_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Monster".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Red],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus {
-            power: 1,
-            toughness: 1,
-            keywords: vec![Keyword::Trample],
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
 
-fn young_hero_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Young Hero".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::White],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus {
-            // Printed: "if its toughness is 3 or less, put a +1/+1 counter"; the
-            // toughness gate is approximated as unconditional.
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: crate::card::CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            }],
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
 
-fn cursed_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Cursed".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus { set_base_pt: Some((1, 1)), ..Default::default() }),
-        ..Default::default()
-    }
-}
 
 /// Armory Mice — {1}{W} 3/1 Mouse. Celebration — +0/+2 while two or more nonland
 /// permanents entered under your control this turn.

@@ -580,7 +580,10 @@ impl GameState {
                     controller,
                     source: Some(source),
                     targets: vec![],
-                    trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
+                    // The attacker is a battlefield permanent — bind it as such
+                    // so `ToughnessOf(TriggerSource)`-style gates (Young Hero
+                    // Role) resolve its P/T (CR 506.5 post-batch view).
+                    trigger_source: Some(crate::game::effects::EntityRef::Permanent(source)),
                     mode: 0,
                     x_value: 0,
                     converged_value: 0,

@@ -1185,6 +1185,15 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellIsAdventure => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.adventuring,
+                    _ => false,
+                })
+            }
             Predicate::SharesCardTypeWithExiledBySource => {
                 let Some(src) = ctx.source else { return false };
                 // Card types of whatever this source exiled (CR — the

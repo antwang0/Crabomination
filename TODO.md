@@ -3470,12 +3470,23 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     (previously only `CreatureDied`/`PermanentLeavesBattlefield` were gathered —
     fixed in `stack.rs`). Also new: `Value`-free `MayPay` reflexives on ETBs
     (Unassuming Sage, Snaremaster Sprite).
-  - **Dream Spoilers** deferred — wants a "cast a spell during an opponent's
-    turn" trigger filter (no whose-turn predicate on `EventSpec` yet).
+  - ✅ ~~**Dream Spoilers**~~ — shipped via a `Not(IsTurnOf(You))` SpellCast
+    filter (the whose-turn predicate already existed); recent135.
+  - ✅ ~~**Chancellor of Tales**~~ — shipped: `Predicate::CastSpellIsAdventure`
+    (reads the cast spell's `adventuring` flag) + `CopySpellMayChooseTargets`;
+    recent135.
+  - ✅ ~~**Young Hero Role toughness gate**~~ — the granted attack trigger now
+    carries `ValueAtMost(ToughnessOf(TriggerSource), 3)`; combat.rs was binding
+    the Attacks-trigger source as `EntityRef::Card` (so `ToughnessOf` read 0) —
+    fixed to `Permanent`. Role token helpers consolidated in `decks::woe_roles`.
   - **Discerning Financier**'s donate ability (give a Treasure to another
     player, draw) deferred — no control-donation-of-a-token primitive.
-  - **Chancellor of Tales** (copy your Adventure spells) deferred — needs a
-    "cast an Adventure spell" cast filter.
+  - **Experimental Confectioner**'s "whenever you sacrifice a Food, make a Rat"
+    deferred — no Food-sacrifice trigger (needs `PermanentSacrificed` + an
+    artifact-subtype filter). The ETB-Food half ships.
+  - **Break the Spell**, **A Tale for the Ages** (enchanted-creatures anthem),
+    **Moment of Valor** (modal untap/pump vs destroy-power-4) noticed, not
+    tackled — each wants a small new primitive.
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the

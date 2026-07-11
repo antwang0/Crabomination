@@ -9175,6 +9175,23 @@ impl GameState {
 
 
             Effect::CreateTokenAttachedTo { target, definition } => self.resolve_create_token_attached_to(target, definition, ctx, events),
+            Effect::CreateTokenAttachedToEach { target, definition } => {
+                // CR 111.10 — one Aura-style token per resolved permanent.
+                let hosts: Vec<CardId> = self
+                    .resolve_selector(target, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|id| self.battlefield_find(*id).is_some())
+                    .collect();
+                for host in hosts {
+                    let def = token_to_card_definition(definition);
+                    let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
+                    if let Some(c) = self.battlefield_find_mut(minted) {
+                        c.attached_to = Some(host);
+                    }
+                }
+                Ok(())
+            }
 
 
             Effect::DestroyTargetsPolymorph { filter } => self.resolve_destroy_targets_polymorph(filter, ctx, events),

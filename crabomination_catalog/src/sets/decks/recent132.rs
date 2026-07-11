@@ -3,35 +3,15 @@
 //! keyword (Squeak By). Tests in `crabomination/src/tests/recent132.rs`.
 
 use crate::card::{
-    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType,
-    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
-    WardCost,
+    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef};
 use crate::game::effects::{food_token, treasure_token};
 use crate::mana::{b, cost, g, generic, r, w};
+use super::woe_roles::{royal_role};
 
-/// Royal Role Aura token: enchanted creature gets +1/+1 and has ward {1}.
-fn royal_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Royal".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![crate::mana::Color::White],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus {
-            power: 1,
-            toughness: 1,
-            keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
 
 // ── White ─────────────────────────────────────────────────────────────────────
 

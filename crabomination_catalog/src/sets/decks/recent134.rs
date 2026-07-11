@@ -3,59 +3,15 @@
 //! `crabomination/src/tests/recent134.rs`.
 
 use crate::card::{
-    Adventure, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Adventure, CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate, SelectionRequirement as R, Selector,
+    StaticAbility, StaticEffect, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use super::woe_roles::{wicked_role, young_hero_role};
 
-/// Wicked Role Aura token: enchanted creature gets +1/+1; on death each opponent
-/// loses 1 life.
-fn wicked_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Wicked".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
-            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
-        }],
-        ..Default::default()
-    }
-}
 
-/// Young Hero Role Aura token: enchanted creature gets a +1/+1 counter on
-/// attack (the printed "toughness 3 or less" gate is approximated away).
-fn young_hero_role() -> TokenDefinition {
-    TokenDefinition {
-        name: "Young Hero".into(),
-        card_types: vec![CardType::Enchantment],
-        colors: vec![Color::White],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
-            ..Default::default()
-        },
-        equipped_bonus: Some(EquipBonus {
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            }],
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
 
 fn white_human_token() -> TokenDefinition {
     TokenDefinition {
