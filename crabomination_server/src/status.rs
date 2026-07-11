@@ -50,6 +50,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
          \"avg_turns\":{},\"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
          \"median_turns\":{},\"turn_p90\":{},\
+         \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
@@ -69,6 +70,10 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.turn_count_stddev(),
         st.turn_percentile(0.5),
         st.turn_percentile(0.9),
+        st.inconclusive,
+        st.inconclusive_pct(),
+        st.decisive_pct(),
+        st.draw_pct(),
         st.draws,
         st.damage_wins,
         st.poison_wins,
@@ -124,6 +129,10 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("turn_stddev", "gauge", "Standard deviation of final turn counts.", format!("{:.2}", st.turn_count_stddev()));
     m("median_turns", "gauge", "Median (p50) final turn count.", st.turn_percentile(0.5).to_string());
     m("turn_p90", "gauge", "90th-percentile final turn count.", st.turn_percentile(0.9).to_string());
+    m("inconclusive_total", "counter", "Matches that ended with no declared outcome (stuck / disconnected).", st.inconclusive.to_string());
+    m("inconclusive_pct", "gauge", "Percent of completed matches that were inconclusive.", st.inconclusive_pct().to_string());
+    m("decisive_pct", "gauge", "Percent of resolved matches (wins+draws) that ended decisively.", st.decisive_pct().to_string());
+    m("draw_pct", "gauge", "Percent of completed matches that ended in a draw.", st.draw_pct().to_string());
     m("avg_duration_seconds", "gauge", "Average match duration in seconds.", st.avg_duration().as_secs().to_string());
     m("min_duration_seconds", "gauge", "Shortest match duration in seconds.", st.min_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
     m("max_duration_seconds", "gauge", "Longest match duration in seconds.", st.max_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
@@ -263,6 +272,8 @@ mod tests {
                     "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
                     "\"min_turns\":0", "\"max_turns\":0", "\"turn_stddev\":0.00",
                     "\"median_turns\":0", "\"turn_p90\":0",
+                    "\"inconclusive\":0", "\"inconclusive_pct\":0",
+                    "\"decisive_pct\":0", "\"draw_pct\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
                     "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
@@ -292,6 +303,9 @@ mod tests {
         assert!(body.contains("crab_wins_total{kind=\"poison\"} 0"));
         assert!(body.contains("crab_wins_total{kind=\"commander_damage\"} 0"));
         assert!(body.contains("# TYPE crab_draws_total counter"));
+        // Match-outcome health gauges (stuck-match / decisive / draw shares).
+        assert!(body.contains("crab_inconclusive_total 0"));
+        assert!(body.contains("crab_decisive_pct 0"));
         // Duration gauges + histogram bands.
         assert!(body.contains("crab_avg_duration_seconds 0"));
         assert!(body.contains("crab_match_duration_bucket{band=\"<30s\"} 0"));

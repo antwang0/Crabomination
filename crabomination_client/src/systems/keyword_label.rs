@@ -207,12 +207,14 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
 /// The numeric magnitude worth appending to a count-carrying keyword's tag —
 /// the N in Rampage N / Toxic N / Annihilator N etc. materially changes how the
 /// creature reads in combat, so surface it ("Rmp2", "Tox3") rather than dropping
-/// it. Cost-carrying keywords (Ward, Crew) aren't plain integers, so skip them.
+/// it. Crew N / Saddle N carry the total *power* needed to online the
+/// Vehicle/Mount, a real board read ("Crew3" is much harder to turn on than
+/// "Crew1"), so include them too. Ward isn't a plain integer, so skip it.
 fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     use Keyword::*;
     let n = match kw {
         Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
-        | Poisonous(n) | CantBeBlockedExceptByN(n) => *n,
+        | Poisonous(n) | CantBeBlockedExceptByN(n) | Crew(n) | Saddle(n) => *n,
         _ => return None,
     };
     Some(n.to_string())
@@ -383,8 +385,8 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
         assert_eq!(keyword_strip(&[Keyword::Prowess]), "Prw");
         assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
-        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
-        assert_eq!(keyword_strip(&[Keyword::Saddle(3)]), "Sdl");
+        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew2");
+        assert_eq!(keyword_strip(&[Keyword::Saddle(3)]), "Sdl3");
         assert_eq!(keyword_strip(&[Keyword::Regenerate(0)]), "Rgn");
         assert_eq!(keyword_strip(&[Keyword::UmbraArmor]), "TArm");
         assert_eq!(keyword_strip(&[Keyword::ProtectionFromCreatures]), "ProCr");
@@ -466,7 +468,7 @@ mod tests {
     #[test]
     fn strip_surfaces_must_attack_and_crew() {
         assert_eq!(keyword_strip(&[Keyword::MustAttack]), "Atk!");
-        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
+        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew2");
     }
 
     #[test]
