@@ -7903,3 +7903,74 @@ fn cr_702_19b_trample_overflows_single_blocker() {
     assert!(g.battlefield_find(blocker).is_none(), "2 lethal to the 2/2 blocker");
     assert_eq!(g.players[1].life, life - 3, "5 - 2 lethal = 3 tramples to the player");
 }
+
+/// CR 509.1a — a tapped creature can't be declared as a blocker.
+#[test]
+fn cr_509_1a_tapped_creature_cannot_block() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(blocker).unwrap().tapped = true;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    let res = g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]));
+    assert!(matches!(res, Err(GameError::CannotBlock(_))), "tapped creature rejected as blocker");
+}
+
+/// CR 702.19e — a trampler with deathtouch needs assign only 1 (lethal) to each
+/// blocker before the rest tramples through.
+#[test]
+fn cr_702_19e_deathtouch_trample_assigns_one() {
+    fn deadly_trampler() -> crate::card::CardDefinition {
+        crate::card::CardDefinition {
+            name: "Deadly Trampler",
+            cost: crate::mana::cost(&[crate::mana::generic(4), crate::mana::g()]),
+            card_types: vec![crate::card::CardType::Creature],
+            power: 5,
+            toughness: 5,
+            keywords: vec![crate::card::Keyword::Trample, crate::card::Keyword::Deathtouch],
+            ..Default::default()
+        }
+    }
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, deadly_trampler());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.clear_sickness(blocker);
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert!(g.battlefield_find(blocker).is_none(), "deathtouch kills the 4/4 with 1 damage");
+    assert_eq!(g.players[1].life, life - 4, "only 1 lethal assigned; 4 tramples over");
+}
+
+/// CR 603.3d — a "triggers only once each turn" ability fires once even when
+/// its event happens twice in a turn (Sharae's tap-draw).
+#[test]
+fn cr_603_3d_once_each_turn_fires_once() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sharae_of_numbing_depths());
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+    drain_stack(&mut g);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: enemy, actor: Some(0) }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "only one draw despite two taps this turn");
+}
