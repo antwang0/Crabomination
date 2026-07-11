@@ -59,6 +59,14 @@ fn is_cast_action(a: &GameAction) -> bool {
             | GameAction::CastSpellDelve { .. }
             | GameAction::CastSpellAlternative { .. }
             | GameAction::CastFromCommandZone { .. }
+            // Graveyard recasts pay mana through the same forced-only path,
+            // so they too can bounce back as `ManualTapRequired`.
+            | GameAction::CastFlashback { .. }
+            | GameAction::CastMayhem { .. }
+            | GameAction::CastHarmonize { .. }
+            | GameAction::CastDisturb { .. }
+            | GameAction::CastRetrace { .. }
+            | GameAction::CastEscape { .. }
     )
 }
 
@@ -108,6 +116,11 @@ pub struct PendingCast {
     /// Human-readable hint (the engine's message, carrying the cost) shown
     /// in the on-screen banner.
     pub hint: String,
+    /// Turn + step when the cast was armed. Passing the phase (or losing
+    /// priority) abandons the cast, so the banner doesn't linger after the
+    /// player skips casting.
+    pub armed_turn: u32,
+    pub armed_step: crabomination::TurnStep,
 }
 
 #[derive(Resource, Default)]
@@ -328,14 +341,21 @@ pub fn poll_net(
                 if e.contains(MANUAL_TAP_MARKER) {
                     if let Some(outbox) = &outbox
                         && let Some(action) = outbox.last_cast()
+                        && let Some(cv) = view.0.as_ref()
                     {
-                        let total = view
-                            .0
-                            .as_ref()
-                            .and_then(|cv| cv.players.iter().find(|p| p.seat == cv.your_seat))
+                        let total = cv
+                            .players
+                            .iter()
+                            .find(|p| p.seat == cv.your_seat)
                             .map(|p| p.mana_pool.total())
                             .unwrap_or(0);
-                        pending_cast.0 = Some(PendingCast { action, last_pool_total: total, hint: e });
+                        pending_cast.0 = Some(PendingCast {
+                            action,
+                            last_pool_total: total,
+                            hint: e,
+                            armed_turn: cv.turn,
+                            armed_step: cv.step,
+                        });
                     }
                 } else if e.contains("action timeout") {
                     // The rope fired and the server acted for us — show a
@@ -568,12 +588,25 @@ pub fn drive_pending_mana_cast(
     };
     let Some(pc) = pending.0.as_mut() else { return };
 
+    // Passing the phase (or priority) abandons the cast — clear the banner
+    // instead of letting it linger into the next step.
+    if cv.turn != pc.armed_turn
+        || cv.step != pc.armed_step
+        || cv.priority != cv.your_seat
+    {
+        pending.0 = None;
+        return;
+    }
+    let Some(pc) = pending.0.as_mut() else { return };
+
     let card_id = cast_action_card_id(&pc.action);
     let Some(me) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
-    // Still castable? (in hand or the command zone). If not, it resolved or
-    // moved — drop the pending cast.
+    // Still castable? (in hand, the command zone, or — for flashback-style
+    // recasts — the graveyard). If not, it resolved or moved — drop the
+    // pending cast.
     let present = me.hand.iter().any(|h| h.id() == card_id)
-        || me.command.iter().any(|h| h.id() == card_id);
+        || me.command.iter().any(|h| h.id() == card_id)
+        || me.graveyard.iter().any(|g| g.id == card_id);
     if !present {
         pending.0 = None;
         return;
@@ -1066,7 +1099,13 @@ pub fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
         | GameAction::CastSpellBack { card_id, .. }
         | GameAction::CastSpellDelve { card_id, .. }
         | GameAction::CastSpellAlternative { card_id, .. }
-        | GameAction::CastFromCommandZone { card_id, .. } => *card_id,
+        | GameAction::CastFromCommandZone { card_id, .. }
+        | GameAction::CastFlashback { card_id, .. }
+        | GameAction::CastMayhem { card_id, .. }
+        | GameAction::CastHarmonize { card_id, .. }
+        | GameAction::CastDisturb { card_id, .. }
+        | GameAction::CastRetrace { card_id, .. }
+        | GameAction::CastEscape { card_id, .. } => *card_id,
         // The pending-cast tracker keys off the prepared creature — it's
         // the persistent object the re-armed cast references.
         GameAction::CastPrepareSpell { creature_id, .. } => *creature_id,

@@ -770,6 +770,7 @@ impl PendingDecision {
             ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
             ResumeContext::ActionSearchPick { actor, .. } => *actor,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
+            ResumeContext::CastExtraTargetPick { caster, .. } => *caster,
         }
     }
 }
@@ -855,6 +856,15 @@ pub enum AbilityCostChoice {
     /// Lavamancer, Scrapheap Scrounger). Answered via a `ChooseCards` modal
     /// since graveyard cards aren't selectable with the in-scene cursor.
     ExileOther,
+    /// The ability's *effect* targets a graveyard card ("Return target
+    /// creature card from your graveyard" — Cauldron of Essence). Answered
+    /// via a `ChooseCards` modal; the resume binds the pick as the
+    /// activation's slot-0 target.
+    GraveyardTarget,
+    /// The ability's mana cost has {X} and the activator sent no X
+    /// ({X}, {T}: … — Berta, Imbraham). Answered via a `ChooseAmount`
+    /// modal; the resume replays with the chosen X.
+    XValue,
 }
 
 /// Recorded where resolution suspended so it can resume after the decision.
@@ -1032,6 +1042,15 @@ pub(crate) enum ResumeContext {
         player: usize,
         attacker: CardId,
         kind: CombatDecisionKind,
+    },
+    /// A `wants_ui` caster's spell references a target slot beyond the ones
+    /// the client sent (multi-target spells — Chelonian Tackle's fight
+    /// defender). The cast suspended before any cost was paid; on answer the
+    /// pick is appended to the action's `additional_targets` and the action
+    /// is replayed (which may suspend again for a further slot).
+    CastExtraTargetPick {
+        caster: usize,
+        action: Box<GameAction>,
     },
 }
 
@@ -1225,6 +1244,10 @@ pub enum PendingEffectState {
         /// by the rest-to-graveyard sweep (Discerning Taste).
         #[serde(default)]
         gain_life_greatest_power_rest: bool,
+        /// Non-picked cards are exiled instead of bottomed/milled (Devourer
+        /// of Destiny's opening-hand reveal). Overrides `rest_to_graveyard`.
+        #[serde(default)]
+        rest_to_exile: bool,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the

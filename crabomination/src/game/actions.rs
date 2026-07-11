@@ -74,6 +74,30 @@ fn source_color_signature(card: &crate::card::CardInstance) -> Vec<ManaColor> {
         .collect()
 }
 
+/// Broad permanent kind for the manual-tap signature: tapping a Forest vs
+/// a Mox Emerald matters even though both make `[Green]` (a Wasteland /
+/// Shatter cares which stays untapped), so same-color sources of
+/// *different kinds* count as a genuine tapping choice.
+fn source_kind(card: &crate::card::CardInstance) -> u8 {
+    if card.definition.is_land() {
+        0
+    } else if card.definition.is_creature() {
+        // Creature first: a mana dork riding an artifact body (Solemn-style)
+        // taps like a creature (summoning sickness, combat).
+        2
+    } else if card.definition.is_artifact() {
+        1
+    } else {
+        3
+    }
+}
+
+/// Kind-aware source signature — see [`source_kind`] /
+/// [`source_color_signature`].
+fn source_kind_signature(card: &crate::card::CardInstance) -> (u8, Vec<ManaColor>) {
+    (source_kind(card), source_color_signature(card))
+}
+
 /// Pull the "when you cast this spell" (`EventKind::SpellCast` +
 /// `EventScope::SelfSource`) triggers off a card. Used by the cast paths
 /// to push these onto the stack above the cast spell so they resolve
@@ -2202,6 +2226,74 @@ impl GameState {
             let p = self.priority.player_with_priority;
             if self.players[p].hand.iter().any(|c| c.id == card_id && c.definition.no_mana_cost) {
                 return Err(GameError::NoManaCost);
+            }
+        }
+        // Multi-target spells (Chelonian Tackle's "then it fights up to one
+        // target creature an opponent controls"): the client's cast flow only
+        // collects slot 0, so slots 1+ arrive empty and the extra half of the
+        // effect silently no-ops. Bind the next missing slot here — a
+        // `wants_ui` caster picks via a `ChooseTarget` cursor decision
+        // (suspend + clean replay; nothing has been paid yet), everyone else
+        // auto-fills. No legal candidate leaves the slot empty, which is the
+        // printed "up to one" behavior.
+        {
+            let p = self.priority.player_with_priority;
+            let slot_info = if target.is_some() && self.players[p].wants_ui {
+                self.find_card_anywhere(card_id).and_then(|card| {
+                    // "Extra target only on your main phase" spells (Return
+                    // to Dust) genuinely cast single-target off-main — don't
+                    // prompt for the slot the rules forbid.
+                    if card.definition.extra_targets_main_phase_only
+                        && !(self.active_player_idx == p && self.step.is_main_phase())
+                    {
+                        return None;
+                    }
+                    let slot = 1 + additional_targets.len() as u8;
+                    card.definition
+                        .effect
+                        .target_filter_for_slot_in_mode(slot, mode)
+                        .map(|f| {
+                            (
+                                f.resolve_x(x_value.unwrap_or(0)),
+                                card.definition.name.to_string(),
+                            )
+                        })
+                })
+            } else {
+                None
+            };
+            if let Some((filter, source_name)) = slot_info {
+                let candidates: Vec<Target> = self
+                    .battlefield
+                    .iter()
+                    .map(|c| Target::Permanent(c.id))
+                    .chain((0..self.players.len()).map(Target::Player))
+                    .filter(|t| {
+                        self.evaluate_requirement_static(&filter, t, p, Some(card_id))
+                            && self.check_target_legality(t, p).is_ok()
+                    })
+                    .collect();
+                if !candidates.is_empty() {
+                    self.pending_decision = Some(crate::game::types::PendingDecision {
+                        decision: crate::decision::Decision::ChooseTarget {
+                            source: card_id,
+                            legal: candidates,
+                            source_name,
+                            description: "choose an additional target".into(),
+                        },
+                        resume: crate::game::types::ResumeContext::CastExtraTargetPick {
+                            caster: p,
+                            action: Box::new(crate::game::types::GameAction::CastSpell {
+                                card_id,
+                                target,
+                                additional_targets,
+                                mode,
+                                x_value,
+                            }),
+                        },
+                    });
+                    return Ok(vec![]);
+                }
             }
         }
         // Muldrotha — cast a permanent spell of each permanent type from
@@ -8096,16 +8188,50 @@ impl GameState {
                     .expect("pool covered the cost a line ago");
                 return Ok(PaymentReceipt { auto_events: vec![], side_effects, pool_before });
             }
+            // A from-hand mana source (Elvish Spirit Guide) that could chip
+            // in is a payment option the auto-tapper can't exercise — stop
+            // before tapping anything so the player decides.
+            if self.hand_mana_source_could_pay(payer, cost) {
+                return Err(GameError::ManualTapRequired { cost: cost.summary() });
+            }
             // Eagerly tap for the *forced colored* pips — their colour can
             // only come from those sources, so there's no choice to leave
             // the player (which Forest pays {G} doesn't matter). This mana
             // stays floating in the pool; if the rest of the cost needs a
             // manual tap, the player only has to tap the ambiguous part.
+            // A colour producible by sources of different kind/signature
+            // (Forest vs Mox Emerald) is NOT forced — leave those pips out
+            // of the eager tap so the choice check below can prompt.
+            let color_is_forced = |col: ManaColor| -> bool {
+                use std::collections::HashSet;
+                let need = cost
+                    .symbols
+                    .iter()
+                    .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == col))
+                    .count() as u32;
+                if self.players[payer].mana_pool.amount(col) >= need {
+                    return true; // pool covers the pip — no tap involved
+                }
+                let sigs: HashSet<(u8, Vec<ManaColor>)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == payer
+                            && !c.tapped
+                            && c.definition.activated_abilities.iter().any(|a| {
+                                is_mana_ability(&a.effect)
+                                    && effect_produces_color(&a.effect, col)
+                            })
+                    })
+                    .map(source_kind_signature)
+                    .collect();
+                sigs.len() <= 1
+            };
             let colored_only = crate::mana::ManaCost {
                 symbols: cost
                     .symbols
                     .iter()
-                    .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)))
+                    .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(c) if color_is_forced(*c)))
                     .copied()
                     .collect(),
             };
@@ -8224,6 +8350,12 @@ impl GameState {
     fn payment_requires_manual_choice(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
         use crate::mana::{Color, ManaSymbol};
         use std::collections::{HashMap, HashSet};
+        // A from-hand mana source (Elvish Spirit Guide) is invisible to the
+        // auto-tapper but a real payment option — its presence alone makes
+        // the payment a manual choice.
+        if self.hand_mana_source_could_pay(player, cost) {
+            return true;
+        }
         // Hybrids keep the simpler conservative behaviour.
         if cost
             .symbols
@@ -8257,8 +8389,10 @@ impl GameState {
             }
         }
 
-        // Untapped mana sources, each as its colour-production signature.
-        let sigs: Vec<Vec<Color>> = self
+        // Untapped mana sources, each as its kind + colour-production
+        // signature (a Forest and a Mox Emerald both make `[Green]` but
+        // tapping one over the other is a genuine choice).
+        let sigs: Vec<(u8, Vec<Color>)> = self
             .battlefield
             .iter()
             .filter(|c| {
@@ -8269,7 +8403,7 @@ impl GameState {
                         .iter()
                         .any(|a| is_mana_ability(&a.effect))
             })
-            .map(source_color_signature)
+            .map(source_kind_signature)
             .collect();
 
         // Reserve sources for each still-needed colored pip (most dedicated
@@ -8279,23 +8413,23 @@ impl GameState {
         let mut color_choice = false;
         for (c, rc) in &colored_from_sources {
             let mut cands: Vec<usize> = (0..sigs.len())
-                .filter(|i| !reserved[*i] && sigs[*i].contains(c))
+                .filter(|i| !reserved[*i] && sigs[*i].1.contains(c))
                 .collect();
             if (cands.len() as u32) < *rc {
                 return false; // unaffordable for this colour
             }
-            let distinct: HashSet<&Vec<Color>> = cands.iter().map(|i| &sigs[*i]).collect();
+            let distinct: HashSet<&(u8, Vec<Color>)> = cands.iter().map(|i| &sigs[*i]).collect();
             if distinct.len() > 1 {
                 color_choice = true;
             }
-            cands.sort_by_key(|i| sigs[*i].len()); // dedicated (shortest sig) first
+            cands.sort_by_key(|i| sigs[*i].1.len()); // dedicated (shortest sig) first
             for &i in cands.iter().take(*rc as usize) {
                 reserved[i] = true;
             }
         }
 
         // Generic: pool leftover first, then the remaining untapped sources.
-        let remaining: Vec<&Vec<Color>> =
+        let remaining: Vec<&(u8, Vec<Color>)> =
             (0..sigs.len()).filter(|i| !reserved[*i]).map(|i| &sigs[i]).collect();
         let pool_left = pool.total().saturating_sub(pool_used);
         let gen_from_sources = generic.saturating_sub(pool_left);
@@ -8311,10 +8445,33 @@ impl GameState {
         // More candidate sources than the generic needs → some are held
         // back; that's a real choice only if they aren't all interchangeable.
         if (remaining.len() as u32) > gen_from_sources {
-            let distinct: HashSet<&&Vec<Color>> = remaining.iter().collect();
+            let distinct: HashSet<&&(u8, Vec<Color>)> = remaining.iter().collect();
             return distinct.len() >= 2;
         }
         false
+    }
+
+    /// True when `player` holds a hand card with a live from-hand mana
+    /// ability (Elvish / Simian Spirit Guide) that could contribute to
+    /// `cost` — a payment option the auto-tapper can't see, so the player
+    /// must choose manually.
+    fn hand_mana_source_could_pay(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
+        use crate::mana::ManaSymbol;
+        let flexible = cost.symbols.iter().any(|s| {
+            matches!(s, ManaSymbol::Generic(n) if *n > 0)
+                || matches!(s, ManaSymbol::MonoHybrid(_, _))
+        });
+        let cost_colors = cost.colors();
+        self.players[player].hand.iter().any(|c| {
+            c.definition.activated_abilities.iter().any(|a| {
+                a.from_hand
+                    && is_mana_ability(&a.effect)
+                    && (flexible
+                        || cost_colors
+                            .iter()
+                            .any(|col| effect_produces_color(&a.effect, *col)))
+            })
+        })
     }
 
     // ── Auto-tap mana sources ─────────────────────────────────────────────────
@@ -9035,6 +9192,54 @@ impl GameState {
             }
         };
 
+        // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a `wants_ui`
+        // activator who didn't send an X picks one via a `ChooseAmount`
+        // modal (suspend + clean replay — nothing has been paid yet).
+        // Bots pass an explicit X; the auto path keeps `x_value` as-is
+        // (unwrapped to 0 downstream, the historical behavior).
+        if ability.mana_cost.has_x()
+            && x_value.is_none()
+            && self.players[p].wants_ui
+        {
+            let pool = self.players[p].mana_pool.total();
+            let sources = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && !c.tapped
+                        && (c.definition
+                            .activated_abilities
+                            .iter()
+                            .any(|a| is_mana_ability(&a.effect))
+                            || !self.intrinsic_land_mana_abilities(c.id).is_empty())
+                })
+                .count() as u32;
+            let fixed = ability.mana_cost.with_x_value(0).cmc();
+            let max = (pool + sources).saturating_sub(fixed);
+            let source_name = self
+                .find_card_anywhere(card_id)
+                .map(|c| c.definition.name.to_string())
+                .unwrap_or_default();
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::ChooseAmount {
+                    source: card_id,
+                    max,
+                    prompt: format!("{source_name}: choose X"),
+                },
+                resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                    activator: p,
+                    card_id,
+                    ability_index,
+                    target,
+                    additional_targets,
+                    x_value: None,
+                    kind: crate::game::types::AbilityCostChoice::XValue,
+                },
+            });
+            return Ok(vec![]);
+        }
+
         // Spend context for restricted mana: an ArtifactOnly pool entry
         // (Power Depot) may fund abilities of artifact sources.
         let ability_spend_kind = {
@@ -9402,6 +9607,91 @@ impl GameState {
                 .is_some()
         {
             return Err(GameError::SelectionRequirementViolated);
+        }
+
+        // Graveyard-card targets (reanimation abilities — Cauldron of
+        // Essence's "Return target creature card from your graveyard"):
+        // the in-scene cursor can't select graveyard cards, so clients
+        // activate with `target: None`. Bind slot 0 here — a `wants_ui`
+        // activator with a real choice picks via a `ChooseCards` modal
+        // (suspend + clean replay, like the cost picks below); otherwise
+        // auto-pick. Without this the effect went on the stack unbound
+        // and silently no-opped.
+        let mut target = target;
+        if target.is_none()
+            && ability.effect.prefers_graveyard_target()
+            && let Some(filter) = ability
+                .effect
+                .target_filter_for_slot(0)
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+        {
+            let candidates: Vec<CardId> = self
+                .players
+                .iter()
+                .flat_map(|pl| pl.graveyard.iter())
+                .filter(|c| c.id != card_id)
+                .filter(|c| {
+                    self.evaluate_requirement_static(
+                        &filter,
+                        &Target::Permanent(c.id),
+                        p,
+                        Some(card_id),
+                    )
+                })
+                .map(|c| c.id)
+                .collect();
+            if candidates.is_empty() {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            if candidates.len() > 1 && self.players[p].wants_ui {
+                let source_name = self
+                    .find_card_anywhere(card_id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                let named: Vec<(CardId, String)> = candidates
+                    .iter()
+                    .map(|id| {
+                        (
+                            *id,
+                            self.find_card_anywhere(*id)
+                                .map(|c| c.definition.name.to_string())
+                                .unwrap_or_default(),
+                        )
+                    })
+                    .collect();
+                self.pending_decision = Some(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseCards {
+                        source: card_id,
+                        prompt: format!(
+                            "{source_name}: choose a card in a graveyard to target"
+                        ),
+                        candidates: named,
+                        min: 1,
+                        max: 1,
+                    },
+                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                        activator: p,
+                        card_id,
+                        ability_index,
+                        target: None,
+                        additional_targets: additional_targets.clone(),
+                        x_value,
+                        kind: crate::game::types::AbilityCostChoice::GraveyardTarget,
+                    },
+                });
+                return Ok(vec![]);
+            }
+            // Auto-pick the highest-MV candidate (reanimation-style effects
+            // want the biggest card back).
+            target = candidates
+                .iter()
+                .copied()
+                .max_by_key(|id| {
+                    self.find_card_anywhere(*id)
+                        .map(|c| c.definition.cost.cmc())
+                        .unwrap_or(0)
+                })
+                .map(Target::Permanent);
         }
 
         // Pre-flight life-cost gate: reject activation cleanly when the

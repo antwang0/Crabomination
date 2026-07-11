@@ -2767,10 +2767,14 @@ pub enum Effect {
     /// `ImpulsePending` machinery with `keep_on_top: true`. With
     /// `who: Some(..)` the effect reads another player's library instead and
     /// auto-picks (lowest MV kept on an opponent's — Dimir Charm mode 3).
+    /// With `exile_rest` the non-kept cards are exiled instead of milled
+    /// (Devourer of Destiny's opening-hand reveal).
     LookTopKeepOneRestToGraveyard {
         count: Value,
         #[serde(default)]
         who: Option<PlayerRef>,
+        #[serde(default)]
+        exile_rest: bool,
     },
     /// Remove all counters from the selected permanent; the controller's
     /// next spell this turn costs {1} less per counter removed (Mutated

@@ -10935,6 +10935,18 @@ impl GameState {
                     None => result,
                 };
             }
+            ResumeContext::CastExtraTargetPick { caster, action } => {
+                let DecisionAnswer::Target(t) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let _ = caster;
+                let mut action = *action;
+                let GameAction::CastSpell { additional_targets, .. } = &mut action else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                additional_targets.push(t);
+                return self.perform_action(action);
+            }
             ResumeContext::ActionSearchPick { actor, action } => {
                 // CR 702.29e — the cycler picked which card to fetch. Stash
                 // and replay the originating action.
@@ -10987,6 +10999,36 @@ impl GameState {
                         // minus the source); `activate_ability` re-checks each id
                         // is still in the graveyard and matches the filter.
                         self.pending_ability_exile_other = Some(ids);
+                    }
+                    K::XValue => {
+                        let DecisionAnswer::Amount(n) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        return self.activate_ability(
+                            card_id,
+                            ability_index,
+                            target,
+                            additional_targets,
+                            Some(n),
+                        );
+                    }
+                    K::GraveyardTarget => {
+                        // The pick is the activation's slot-0 target (a
+                        // graveyard card); the replay re-validates it against
+                        // the effect's target filter.
+                        let DecisionAnswer::Cards(ids) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        let Some(id) = ids.first().copied() else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        return self.activate_ability(
+                            card_id,
+                            ability_index,
+                            Some(Target::Permanent(id)),
+                            additional_targets,
+                            x_value,
+                        );
                     }
                 }
                 return self.activate_ability(card_id, ability_index, target, additional_targets, x_value);
@@ -11253,7 +11295,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, rest_to_exile } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -11347,7 +11389,11 @@ impl GameState {
                         continue;
                     }
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *rid) {
-                        if rest_to_graveyard {
+                        if rest_to_exile {
+                            // Devourer of Destiny — the non-kept cards are
+                            // exiled outright.
+                            self.exile.push(card);
+                        } else if rest_to_graveyard {
                             // Discerning Taste — track the greatest power
                             // among milled creature cards.
                             if gain_life_greatest_power_rest && card.definition.is_creature() {

@@ -4006,19 +4006,14 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType, Supertype};
     use crate::effect::ManaPayload;
     use crate::effect::shortcut::increment_self_plus_one;
-    use crate::mana::{g, u};
+    use crate::mana::{g, u, x};
     use super::sorceries::fractal_token;
-    // Push (modern_decks, batch 87): the printed `{X}, {T}: Create a
-    // 0/0 G/U Fractal token and put X +1/+1 counters on it` activation
-    // is approximated as a fixed `{2}, {T}: Create a Fractal + 2
-    // counters`. The engine's `activate_ability` path doesn't accept an
-    // x_value (X resolves to 0 for activated abilities, which would
-    // mint a 0/0 token that immediately dies to SBA — strictly
-    // worse than the printed Oracle in every scenario). The fixed
-    // {2} approximation captures a typical mid-game play pattern (a
-    // 2/2 Fractal for 2 mana via Berta's tap); the X-scaling at higher
-    // mana counts is the remaining engine gap (same X-cost activation
-    // gap as Tester of the Tangential's combat-step pay-X trigger).
+    // Push (modern_decks bugfix pass): the printed `{X}, {T}` activation
+    // is now wired for real — `activate_ability` accepts an `x_value`
+    // (`mana_cost.with_x_value`), a `wants_ui` activator picks X via a
+    // `ChooseAmount` modal, and the counter amount reads
+    // `Value::XFromCost`. X=0 mints a 0/0 that dies to SBA, matching
+    // the printed Oracle.
     CardDefinition {
         name: "Berta, Wise Extrapolator",
         cost: cost(&[generic(2), g(), u()]),
@@ -4034,7 +4029,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: cost(&[x()]),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,
@@ -4044,7 +4039,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
                     kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(2),
+                    amount: Value::XFromCost,
                 },
             ]),
             once_per_turn: false,

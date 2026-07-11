@@ -16,7 +16,7 @@ pub fn wrath_of_god() -> CardDefinition {
     }
 }
 
-/// Armageddon — {2}{W}{W} Sorcery: destroy all lands
+/// Armageddon — {3}{W} Sorcery: destroy all lands
 pub fn armageddon() -> CardDefinition {
     CardDefinition {
         name: "Armageddon",

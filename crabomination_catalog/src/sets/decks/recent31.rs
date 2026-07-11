@@ -74,6 +74,7 @@ pub fn dimir_charm() -> CardDefinition {
             Effect::LookTopKeepOneRestToGraveyard {
                 count: Value::Const(3),
                 who: Some(PlayerRef::Target(0)),
+                exile_rest: false,
             },
         ]),
         ..Default::default()

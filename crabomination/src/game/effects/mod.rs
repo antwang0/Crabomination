@@ -5608,7 +5608,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopKeepOneRestToGraveyard { who: Some(who), count } => {
+            Effect::LookTopKeepOneRestToGraveyard { who: Some(who), count, exile_rest: _ } => {
                 // Dimir Charm mode 3. Auto-pick: keep the lowest-MV card on
                 // an opponent's library, the highest on your own.
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
@@ -9844,6 +9844,7 @@ impl GameState {
                     keep_on_top: false,
                     gain_life_if_pick: gain_life_if_pick.clone(),
                     gain_life_greatest_power_rest: *gain_life_greatest_power_rest,
+                    rest_to_exile: false,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -9905,6 +9906,7 @@ impl GameState {
                     keep_on_top: false,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    rest_to_exile: false,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -9916,7 +9918,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopKeepOneRestToGraveyard { count, who: None } => {
+            Effect::LookTopKeepOneRestToGraveyard { count, who: None, exile_rest } => {
                 use crate::decision::Decision;
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -9936,7 +9938,7 @@ impl GameState {
                 let pending = PendingEffectState::ImpulsePending {
                     player: p,
                     revealed: top_ids,
-                    rest_to_graveyard: true,
+                    rest_to_graveyard: !*exile_rest,
                     eligible: None,
                     take: 1,
                     to_battlefield: false,
@@ -9944,6 +9946,7 @@ impl GameState {
                     keep_on_top: true,
                     gain_life_if_pick: None,
                     gain_life_greatest_power_rest: false,
+                    rest_to_exile: *exile_rest,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

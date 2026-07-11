@@ -3848,7 +3848,20 @@ pub fn handle_game_input(
                         _ => None,
                     });
                 if let Some(k) = known {
-                    if k.has_alternative_cost && k.alt_cost_available {
+                    if cv.pitchable_hand.contains(&card_id) {
+                        // From-hand mana ability (Elvish / Simian Spirit
+                        // Guide): right-click pitches it for its mana. The
+                        // Guides' pitch is their only ability, so index 0;
+                        // the engine validates the `from_hand` flag either
+                        // way.
+                        outbox.submit(GameAction::ActivateAbility {
+                            card_id,
+                            ability_index: 0,
+                            target: None,
+                            additional_targets: vec![],
+                            x_value: None,
+                        });
+                    } else if k.has_alternative_cost && k.alt_cost_available {
                         r.alt_cast.pending = Some(card_id);
                     } else if cv.squadable_hand.contains(&card_id) {
                         r.pay_times.pending =

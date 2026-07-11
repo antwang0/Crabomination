@@ -99,11 +99,20 @@ pub fn cosmogoyf() -> CardDefinition {
     }
 }
 
-/// Devourer of Destiny — {7}, 6/6 colorless Eldrazi. "When you cast this
-/// spell, scry 2." The on-cast trigger fires off the just-cast card via
-/// the engine's `SpellCast` + `SelfSource` path (the scry resolves before
-/// Devourer enters the battlefield).
+/// Devourer of Destiny — {5}{C}{C}, 6/6 colorless Eldrazi.
+/// "You may reveal this card from your opening hand. If you do, at the
+/// beginning of your first upkeep, look at the top four cards of your
+/// library. You may put one of those cards back on top of your library.
+/// Exile the rest. / When you cast this spell, exile target permanent
+/// that's one or more colors."
+///
+/// - Opening hand: `OpeningHandEffect::RevealForDelayedTrigger` +
+///   `LookTopKeepOneRestToGraveyard { exile_rest: true }` (the shared
+///   Sage-of-Days keep-one-on-top picker, with the rest exiled).
+/// - Cast trigger: `SpellCast` + `SelfSource`, exiling a target
+///   non-colorless permanent (resolves before Devourer enters).
 pub fn devourer_of_destiny() -> CardDefinition {
+    use crate::effect::{DelayedTriggerKind, OpeningHandEffect};
     CardDefinition {
         name: "Devourer of Destiny",
         cost: cost(&[generic(5), colorless(2)]),
@@ -114,9 +123,22 @@ pub fn devourer_of_destiny() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
+        opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
+            kind: DelayedTriggerKind::YourNextUpkeep,
+            body: Effect::LookTopKeepOneRestToGraveyard {
+                count: Value::Const(4),
+                who: None,
+                exile_rest: true,
+            },
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Permanent.and(
+                    SelectionRequirement::Not(Box::new(SelectionRequirement::Colorless)),
+                )),
+                to: ZoneDest::Exile,
+            },
         }],
         ..Default::default()
     }

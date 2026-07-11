@@ -15028,3 +15028,152 @@ fn prepare_castable_affordance_tracks_mana_availability() {
     assert!(view.prepare_castable.contains(&id),
         "two untapped lands → prepared creature surfaces in prepare_castable");
 }
+
+// ── Diagnostics (claude/modern_decks bugfix pass) ───────────────────────────
+
+#[test]
+fn cauldron_activation_reanimates_and_sac_fires_death_drain() {
+    let mut g = two_player_game();
+    let cauldron = g.add_card_to_battlefield(0, catalog::cauldron_of_essence());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_life = g.players[1].life;
+    let _ = (cauldron, bear);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cauldron,
+        ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None })
+    .expect("Cauldron reanimation activatable");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == dead),
+        "dead bear reanimated to battlefield",
+    );
+    assert_eq!(
+        g.players[1].life, opp_life - 1,
+        "sacrificing the bear as a cost fires the death drain",
+    );
+}
+
+#[test]
+fn berta_activation_creates_fractal_token() {
+    let mut g = two_player_game();
+    let berta = g.add_card_to_battlefield(0, catalog::berta_wise_extrapolator());
+    g.clear_sickness(berta);
+    g.players[0].mana_pool.add_colorless(2);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: berta,
+        ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: Some(2) })
+    .expect("Berta token ability activatable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before + 1, "Fractal token created");
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Fractal").expect("Fractal on battlefield");
+    let view = g.computed_permanent(token.id).unwrap();
+    assert_eq!((view.power, view.toughness), (2, 2), "0/0 + 2 counters");
+}
+
+#[test]
+fn chelonian_tackle_ui_prompts_for_fight_defender() {
+    // A `wants_ui` caster sends only slot 0 (the client's cast flow has
+    // no multi-target pick); the engine suspends a ChooseTarget for the
+    // fight defender, and the answered cast resolves both halves.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::chelonian_tackle());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast suspends on the defender pick");
+    let pending = g.pending_decision.as_ref().expect("defender ChooseTarget pending");
+    match &pending.decision {
+        crate::decision::Decision::ChooseTarget { legal, .. } => {
+            assert_eq!(legal, &vec![Target::Permanent(opp)], "only the opp creature is legal");
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(opp)))
+        .expect("answer replays the cast with both slots");
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == opp),
+        "opp bear dies to the fight",
+    );
+    assert!(g.computed_permanent(friendly).is_some(), "friendly bear survives at 2/12");
+}
+
+#[test]
+fn ui_player_prompted_when_spirit_guide_could_pay() {
+    // Forest on the battlefield AND Elvish Spirit Guide in hand: the {G}
+    // could come from either, and the auto-tapper can't exercise the
+    // guide — the cast must stop for a manual choice.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::elvish_spirit_guide());
+    let id = g.add_card_to_hand(0, catalog::crop_rotation());
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(
+        matches!(result, Err(GameError::ManualTapRequired { .. })),
+        "Spirit Guide in hand must force a manual payment choice, got {result:?}",
+    );
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "spell stays in hand");
+}
+
+#[test]
+fn ui_player_prompted_when_land_and_rock_make_same_color() {
+    // Forest + Mox Emerald both make {G}: same colour signature but
+    // different permanent kinds — tapping one over the other is a real
+    // choice, so the cast prompts instead of auto-tapping.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let mox = g.add_card_to_battlefield(0, catalog::mox_emerald());
+    let id = g.add_card_to_hand(0, catalog::crop_rotation());
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(
+        matches!(result, Err(GameError::ManualTapRequired { .. })),
+        "land vs rock is a genuine tap choice, got {result:?}",
+    );
+    for src in [forest, mox] {
+        assert!(
+            !g.battlefield.iter().find(|c| c.id == src).unwrap().tapped,
+            "neither ambiguous source auto-tapped",
+        );
+    }
+}
+
+#[test]
+fn spirit_guide_activates_from_hand() {
+    // Right-click path: `ActivateAbility` on a hand card with a
+    // `from_hand` mana ability exiles the guide and floats {G}.
+    let mut g = two_player_game();
+    let guide = g.add_card_to_hand(0, catalog::elvish_spirit_guide());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: guide, ability_index: 0,
+        target: None, additional_targets: Vec::new(), x_value: None })
+    .expect("guide's mana ability usable from hand");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "{{G}} floats");
+    assert!(g.exile.iter().any(|c| c.id == guide), "guide exiled as its cost");
+}

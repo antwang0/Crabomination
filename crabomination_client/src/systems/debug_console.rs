@@ -43,6 +43,10 @@ pub struct DebugLifeButton(pub i32);
 #[derive(Component)]
 pub struct DebugAddCardButton;
 
+/// Button that empties the `card_name` buffer.
+#[derive(Component)]
+pub struct DebugClearCardButton;
+
 /// Clickable region around the card-name text — clicking it toggles
 /// `card_input_focused`.
 #[derive(Component)]
@@ -113,7 +117,8 @@ pub fn handle_debug_console_input(
                 {
                     outbox.submit_debug(DebugAction::AddCardToHand { name });
                 }
-                state.card_name.clear();
+                // Keep the buffer so the same card can be added again;
+                // the Clear button wipes it explicitly.
                 state.card_input_focused = false;
                 return;
             }
@@ -353,18 +358,36 @@ fn spawn_panel(
                     Pickable::IGNORE,
                 ));
             });
-            p.spawn((
-                Node {
-                    padding: UiRect::axes(Val::Px(10.0), Val::Px(5.0)),
-                    align_self: AlignSelf::FlexStart,
-                    ..default()
-                },
-                BackgroundColor(theme::BUTTON_NEUTRAL_BG),
-                Button,
-                DebugAddCardButton,
-            ))
-            .with_children(|b| {
-                b.spawn((Text::new("Add Card"), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(4.0),
+                ..default()
+            })
+            .with_children(|row| {
+                row.spawn((
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(5.0)),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    Button,
+                    DebugAddCardButton,
+                ))
+                .with_children(|b| {
+                    b.spawn((Text::new("Add Card"), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
+                });
+                row.spawn((
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(5.0)),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    Button,
+                    DebugClearCardButton,
+                ))
+                .with_children(|b| {
+                    b.spawn((Text::new("Clear"), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
+                });
             });
 
             // Autocomplete suggestions populated by sync_debug_console_ui
@@ -424,7 +447,8 @@ pub fn handle_debug_console_buttons(
                 if !name.is_empty() {
                     outbox.submit_debug(DebugAction::AddCardToHand { name });
                 }
-                state.card_name.clear();
+                // Keep the buffer so the same card can be added again;
+                // the Clear button wipes it explicitly.
                 state.card_input_focused = false;
                 *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
             }
@@ -449,7 +473,11 @@ pub fn handle_debug_console_suggestions(
     mut state: ResMut<DebugConsoleState>,
     mut q: Query<
         (&Interaction, &DebugSuggestion, &mut BackgroundColor),
-        Changed<Interaction>,
+        (Changed<Interaction>, Without<DebugClearCardButton>),
+    >,
+    mut clear_q: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<DebugClearCardButton>, Without<DebugSuggestion>),
     >,
 ) {
     for (interaction, sug, mut bg) in q.iter_mut() {
@@ -457,6 +485,16 @@ pub fn handle_debug_console_suggestions(
             Interaction::Pressed => {
                 state.card_name = sug.name.clone();
                 state.card_input_focused = true;
+                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
+            }
+            Interaction::Hovered => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT),
+            Interaction::None => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+        }
+    }
+    for (interaction, mut bg) in clear_q.iter_mut() {
+        match interaction {
+            Interaction::Pressed => {
+                state.card_name.clear();
                 *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
             }
             Interaction::Hovered => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT),

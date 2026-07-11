@@ -2615,20 +2615,13 @@ fn force_of_negation_alt_cost_works_on_opponents_turn() {
 }
 
 #[test]
-fn devourer_of_destiny_etb_scries_two() {
-    // ETB Scry 2: a scripted ScryOrder decision sends both top cards to
-    // the bottom; the 3rd library card should bubble up to the top.
+fn devourer_of_destiny_cast_trigger_exiles_colored_permanent() {
+    // "When you cast this spell, exile target permanent that's one or
+    // more colors." The colorless Devourer itself and lands aren't legal
+    // targets; the opp's colored bear is auto-picked and exiled.
     let mut g = two_player_game();
-    let _bottom_a = g.add_card_to_library(0, catalog::forest());
-    let _bottom_b = g.add_card_to_library(0, catalog::plains());
-    g.add_card_to_library(0, catalog::island());
-    let third = g.players[0].library[2].id;
-    let scry_a = g.players[0].library[0].id;
-    let scry_b = g.players[0].library[1].id;
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
-        kept_top: vec![],
-        bottom: vec![scry_a, scry_b],
-    }]));
+    let _land = g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
     let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
     g.players[0].mana_pool.add_colorless(7);
@@ -2639,8 +2632,39 @@ fn devourer_of_destiny_etb_scries_two() {
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == dev));
-    assert_eq!(g.players[0].library[0].id, third,
-        "After scry-2-to-bottom, the 3rd library card should be on top");
+    assert!(
+        g.exile.iter().any(|c| c.id == bear),
+        "cast trigger exiles the colored bear",
+    );
+}
+
+#[test]
+fn devourer_of_destiny_opening_hand_digs_four_exiles_rest() {
+    // Opening-hand reveal → at the first upkeep, look at the top four,
+    // keep one on top, exile the other three. The AutoDecider's
+    // SearchLibrary pick keeps the top card.
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lib_before = g.players[0].library.len();
+    g.step = TurnStep::Untap; // reset so we can step into Upkeep
+    g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.fire_start_of_game_effects();
+    assert_eq!(g.delayed_triggers.len(), 1, "reveal queues one upkeep trigger");
+    // Walk priority until the upkeep fires the delayed trigger.
+    for _ in 0..30 {
+        if g.players[0].library.len() < lib_before { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].library.len(),
+        lib_before - 3,
+        "three of the top four exiled, one kept on top",
+    );
+    assert_eq!(g.exile.len(), 3, "the rest are exiled");
 }
 
 #[test]
