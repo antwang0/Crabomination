@@ -5854,6 +5854,9 @@ static DECKS: &[Factory] = &[
     super::decks::threadbind_clique,
     super::decks::twining_twins,
     super::decks::spellscorn_coven,
+    // recent145 — WOE legends: Hylda's tap-matters reflexive modal, Celebration.
+    super::decks::hylda_of_the_icy_crown,
+    super::decks::ash_party_crasher,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
