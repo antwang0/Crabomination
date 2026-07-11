@@ -5924,6 +5924,12 @@ static DECKS: &[Factory] = &[
     super::decks::baron_bertram_graywater,
     super::decks::jem_lightfoote_sky_explorer,
     super::decks::canyon_crab,
+    // recent154 — BLB/DSK/OTJ: impulse Otter, life-loss Gecko, ETB value
+    // enchantment, graveyard-affinity flash Crab.
+    super::decks::harnesser_of_storms,
+    super::decks::flamecache_gecko,
+    super::decks::intimidation_campaign,
+    super::decks::eddymurk_crab,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
