@@ -5773,13 +5773,13 @@ static DECKS: &[Factory] = &[
     super::decks::fae_flight,
     super::decks::gingerbread_hunter,
     // recent136 — WOE wave 9: modal ETBs, Food/Rat aristocrats, mana/Roles
-    super::decks::kindled_heroism,
     super::decks::merfolk_coralsmith,
     super::decks::living_lectern,
     super::decks::stingblade_assassin,
     super::decks::lord_skitters_butcher,
     super::decks::provisions_merchant,
     super::decks::scarecrow_guide,
+    super::decks::royal_treatment,
     // recent137 — WOE wave 10: Adventures, Celebration, Bargain, cast-Adventure
     super::decks::pests_of_honor,
     super::decks::shrouded_shepherd,

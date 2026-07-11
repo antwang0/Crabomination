@@ -32,19 +32,24 @@ fn activate(g: &mut GameState, id: CardId, idx: usize, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Kindled Heroism pumps and grants first strike.
+
+/// Royal Treatment grants hexproof and mints a Royal Role.
 #[test]
-fn kindled_heroism_pumps_and_first_strikes() {
+fn royal_treatment_hexproof_and_role() {
     let mut g = two_player_game();
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let spell = g.add_card_to_hand(0, catalog::kindled_heroism());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    let spell = g.add_card_to_hand(0, catalog::royal_treatment());
+    g.players[0].mana_pool.add(Color::Green, 1);
     cast(&mut g, spell, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!(cp.power, 3, "+1/+0");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "gained first strike");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "gained hexproof");
+    assert_eq!(cp.power, 3, "Royal Role gives +1/+1");
+    assert!(
+        g.battlefield.iter().any(|c| c.attached_to == Some(bear) && c.definition.name == "Royal"),
+        "Royal Role attached",
+    );
 }
 
 /// Merfolk Coralsmith's {1} ability shifts +1/-1 until end of turn.

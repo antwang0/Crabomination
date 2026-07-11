@@ -9,9 +9,33 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, ZoneRef};
 use crate::game::effects::food_token;
-use crate::mana::{b, cost, g, generic, r, u, Color};
+use crate::mana::{b, cost, g, generic, u, Color};
 
-use super::woe_roles::sorcerer_role;
+use super::woe_roles::{royal_role, sorcerer_role};
+
+// ── Green ─────────────────────────────────────────────────────────────────────
+
+/// Royal Treatment — {G} Instant. Target creature you control gains hexproof
+/// until end of turn; create a Royal Role token attached to it.
+pub fn royal_treatment() -> CardDefinition {
+    CardDefinition {
+        name: "Royal Treatment",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateTokenAttachedTo {
+                target: Selector::Target(0),
+                definition: royal_role(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
 
 /// 1/1 black Rat token with "This token can't block."
 fn rat_token() -> crate::card::TokenDefinition {
@@ -31,34 +55,6 @@ fn rat_token() -> crate::card::TokenDefinition {
 fn your_creatures() -> Selector {
     Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature.and(R::ControlledByYou) }
 }
-
-// ── White / Red instants ───────────────────────────────────────────────────────
-
-/// Kindled Heroism — {R} Instant. Target creature gets +1/+0 and gains first
-/// strike until end of turn. Scry 1.
-pub fn kindled_heroism() -> CardDefinition {
-    CardDefinition {
-        name: "Kindled Heroism",
-        cost: cost(&[r()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(R::Creature),
-                power: Value::ONE,
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::FirstStrike,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-        ]),
-        ..Default::default()
-    }
-}
-
 
 // ── Blue ──────────────────────────────────────────────────────────────────────
 
