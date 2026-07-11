@@ -5930,6 +5930,12 @@ static DECKS: &[Factory] = &[
     super::decks::flamecache_gecko,
     super::decks::intimidation_campaign,
     super::decks::eddymurk_crab,
+    // recent155 — MKM: Investigate trick, sac-for-value Merfolk, sacrifice-draw
+    // Ogre, small reanimator.
+    super::decks::auspicious_arrival,
+    super::decks::benthic_criminologists,
+    super::decks::agency_coroner,
+    super::decks::call_a_surprise_witness,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
