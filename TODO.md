@@ -3526,6 +3526,24 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   (`StaticEffect::EntersTappedUnless`), Back for Seconds (bargain `If`/`MayDo`
   reanimation — the "up to two" targets are auto-picked), and Johann
   (`StaticEffect::PlayFromLibraryTopOncePerTurn` + `Player.cast_from_library_top_this_turn`).
+- ⏳ **Noticed in recent146-148 (approximations worth revisiting):**
+  - **Back for Seconds** returns only one card to hand if bargained but the
+    reanimation is declined (the "up to two total" cap models the
+    battlefield-put as *replacing* the second return); faithful when you take
+    the reanimation. A true "choose up to two targets, then optionally redirect
+    one" would need a post-target redirect step.
+  - **Faebloom Trick / Twisted Sewer-Witch-style "when you do" reflexive taps**
+    are modeled as a plain `Effect::Seq` (targets chosen up front) rather than a
+    CR 603.7 reflexive trigger.
+  - **ManifestDread + attach** (Cursed Windbreaker) attaches to "a face-down
+    creature you control" because `Selector::LastMoved` is clobbered by the
+    dread's second card going to the graveyard after the manifest. A
+    `Selector::LastManifested` (or having `ManifestDread` stamp the manifested
+    id) would let "attach to that creature" be exact when multiple face-downs
+    exist.
+  - **Johann once-per-turn** is a per-player flag, so two Johanns still grant
+    only one top-of-library cast per turn (each printed ability is independently
+    "once each turn").
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the

@@ -197,6 +197,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CumulativeUpkeep(_) => "CmUp",
         Fading(_) => "Fade",
         Vanishing(_) => "Vanish",
+        // "Doesn't untap while it has a [kind] counter" (Steel Dromedary) — a
+        // board read: the creature stays tapped until the counter comes off.
+        DoesntUntapWhileCounter(_) => "NoUntap",
         _ => return None,
     })
 }
@@ -387,6 +390,12 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::ProtectionFromCreatures]), "ProCr");
         assert_eq!(keyword_strip(&[Keyword::CantAttackAlone]), "Pack");
         assert_eq!(keyword_strip(&[Keyword::CantAttackOrBlockAlone]), "Pack");
+        assert_eq!(
+            keyword_strip(&[Keyword::DoesntUntapWhileCounter(
+                crabomination::card::CounterType::Charge
+            )]),
+            "NoUntap",
+        );
     }
 
     #[test]

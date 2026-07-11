@@ -49,6 +49,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     format!(
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
          \"avg_turns\":{},\"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
+         \"median_turns\":{},\"turn_p90\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
@@ -66,6 +67,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.min_turns.unwrap_or(0),
         st.max_turns.unwrap_or(0),
         st.turn_count_stddev(),
+        st.turn_percentile(0.5),
+        st.turn_percentile(0.9),
         st.draws,
         st.damage_wins,
         st.poison_wins,
@@ -119,6 +122,8 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("min_turns", "gauge", "Fewest turns in a completed match.", st.min_turns.unwrap_or(0).to_string());
     m("max_turns", "gauge", "Most turns in a completed match.", st.max_turns.unwrap_or(0).to_string());
     m("turn_stddev", "gauge", "Standard deviation of final turn counts.", format!("{:.2}", st.turn_count_stddev()));
+    m("median_turns", "gauge", "Median (p50) final turn count.", st.turn_percentile(0.5).to_string());
+    m("turn_p90", "gauge", "90th-percentile final turn count.", st.turn_percentile(0.9).to_string());
     m("avg_duration_seconds", "gauge", "Average match duration in seconds.", st.avg_duration().as_secs().to_string());
     m("min_duration_seconds", "gauge", "Shortest match duration in seconds.", st.min_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
     m("max_duration_seconds", "gauge", "Longest match duration in seconds.", st.max_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
@@ -257,6 +262,7 @@ mod tests {
                     "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
                     "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
                     "\"min_turns\":0", "\"max_turns\":0", "\"turn_stddev\":0.00",
+                    "\"median_turns\":0", "\"turn_p90\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
                     "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
@@ -297,6 +303,8 @@ mod tests {
         assert!(body.contains("crab_min_turns 0"));
         assert!(body.contains("crab_max_turns 0"));
         assert!(body.contains("crab_turn_stddev 0.00"));
+        assert!(body.contains("crab_median_turns 0"));
+        assert!(body.contains("crab_turn_p90 0"));
         // Play/draw balance + win-margin gauges.
         assert!(body.contains("crab_first_seat_win_pct 50"));
         assert!(body.contains("# TYPE crab_avg_win_life_delta gauge"));

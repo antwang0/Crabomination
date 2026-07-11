@@ -82,6 +82,18 @@ exercising each) was elided in a compaction pass; recover it from
   *attacker*'s controller (Tattered Ratter), not the blocker's. ~24 cards across
   `decks::recent138-140`, tests in `tests/recent138-140.rs` + `cr_rules.rs`
   (Bargain 702.166, sacrifice-watcher 701.21, basic trample 702.19b).
+- **WOE deferred-card primitives (modern_decks, recent146-148):**
+  `StaticEffect::EntersTappedUnless` (conditional enters-tapped — Horned
+  Loch-Whale, Gingerbread Cabin); `StaticEffect::PlayFromLibraryTopOncePerTurn`
+  + `Player.cast_from_library_top_this_turn` (Johann); state-aware
+  `SetBasePtForFilter`/`GrantKeyword` gathering over *stateful* filters like
+  `IsEnchanted` (Archon of the Wild Rose — resolved live in
+  `gather_continuous_effects_inner`, pinned to matching ids);
+  `SelectionRequirement::AttachedToSource` (source-precise "sac an Aura attached
+  to this" cost — Faunsbane Troll). Server: `median_turns`/`turn_p90` in
+  status.json + `/metrics`. Client HUD: `NoUntap` tag for
+  `DoesntUntapWhileCounter`. Tests in `tests/recent146-148.rs`, `cr_rules.rs`
+  (502.3, 613.7, 401.6).
 - **MH3-energy / mana-persistence / token primitives (modern_decks, this run):**
   `Keyword::HexproofFromAbilities` (CR 702.11d — opponents' abilities can't target;
   Volatile Stormdrake), `Keyword::ReplicateEnergy(n)` (energy-paid Replicate,
