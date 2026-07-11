@@ -50,6 +50,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
          \"avg_turns\":{},\"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
+         \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
@@ -67,6 +68,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.deck_wins,
         st.commander_damage_wins,
         st.other_wins,
+        st.first_seat_win_pct(),
+        st.avg_win_life_delta(),
         sl.current,
         sl.peak,
         sl.accepted,
@@ -123,6 +126,11 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     // `crab_wins_total{kind="…"}` series so operators can watch the
     // damage/poison/deck-out/commander mix shift without parsing the page.
     m("draws_total", "counter", "Matches ending in a draw.", st.draws.to_string());
+    // Play/draw balance: the share of decided matches the first seat won. A
+    // persistent skew above ~55% is the classic "first-player advantage" signal
+    // operators watch when tuning bot mulligans or seat assignment.
+    m("first_seat_win_pct", "gauge", "Percent of decided matches won by the first seat.", st.first_seat_win_pct().to_string());
+    m("avg_win_life_delta", "gauge", "Average life margin of victory across wins.", st.avg_win_life_delta().to_string());
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
     for (kind, value) in [
@@ -240,6 +248,7 @@ mod tests {
         // Key fields present with numeric values (no fresh-server nulls).
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
                     "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
+                    "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
                     "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
@@ -276,6 +285,9 @@ mod tests {
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
         assert!(body.contains("crab_peak_per_ip 0"));
+        // Play/draw balance + win-margin gauges.
+        assert!(body.contains("crab_first_seat_win_pct 50"));
+        assert!(body.contains("# TYPE crab_avg_win_life_delta gauge"));
         // Routed as Prometheus text exposition.
         let now = Instant::now();
         assert_eq!(route("GET", "/metrics", now, &slots).1, "text/plain; version=0.0.4");

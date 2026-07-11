@@ -1521,6 +1521,8 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         }
         Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
+        Predicate::CastSpellIsAdventure => "after Adventure cast".into(),
+        Predicate::CastSpellMatches(_) => "cast spell matches".into(),
         Predicate::CastSpellManaSpentAtLeast(n) => format!("if ≥{n} mana spent"),
         Predicate::IncrementSatisfied => "Increment (mana > P or T)".into(),
         Predicate::CommittedCrimeThisTurn { .. } => "if you committed a crime".into(),
@@ -1759,6 +1761,9 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::AddCounter { .. } => "Add counter",
         Effect::RemoveCounter { .. } => "Remove counter",
         Effect::CreateToken { .. } => "Create token",
+        Effect::CreateTokenAttachedTo { .. } | Effect::CreateTokenAttachedToEach { .. } => {
+            "Create attached token"
+        }
         Effect::CounterSpell { .. } => "Counter spell",
         Effect::CounterSpellToZone { .. } => "Counter spell (alt zone)",
         Effect::CounterAbility { .. } => "Counter ability",
@@ -2625,6 +2630,19 @@ mod tests {
         // Mending Hands's prevention effect.
         let mh = catalog::mending_hands();
         assert_eq!(ability_effect_label(&mh.effect), "Prevent damage");
+    }
+
+    #[test]
+    fn woe_adventure_and_role_labels_are_specific() {
+        use crate::card::Predicate;
+        // Chancellor of Tales' "after Adventure cast" trigger predicate.
+        assert_eq!(predicate_short_label(&Predicate::CastSpellIsAdventure), "after Adventure cast");
+        // Asinine Antics / Curse of the Werefox mint an attached Role token —
+        // not the generic "Create token" label.
+        assert_eq!(
+            ability_effect_label(&catalog::curse_of_the_werefox().effect),
+            "Create attached token",
+        );
     }
 
     #[test]
