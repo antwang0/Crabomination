@@ -1443,6 +1443,11 @@ impl GameState {
                 // CR 701.67 — true iff this spell's optional waterbend cost was paid.
                 ctx.cast_via_waterbend
             }
+            Predicate::OwnExiledAdventureCard => {
+                // CR 715 — the controller owns a card in exile on an Adventure.
+                let owner = ctx.controller;
+                self.exile.iter().any(|c| c.owner == owner && c.on_adventure)
+            }
             Predicate::CastSpellTargetsSource => {
                 // CR 702.85 — Heroic. The just-cast spell (trigger source,
                 // a card on the stack) targets this trigger's own source.

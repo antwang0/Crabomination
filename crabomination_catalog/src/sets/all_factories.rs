@@ -5789,6 +5789,14 @@ static DECKS: &[Factory] = &[
     super::decks::fell_horseman,
     super::decks::minecart_daredevil,
     super::decks::intrepid_trufflesnout,
+    // recent138 — WOE wave 11: completing deferred cards (enchanted anthem,
+    // conditional enchantment-destroy, modal trick, self-copy, exile-Adventure
+    // haste static).
+    super::decks::a_tale_for_the_ages,
+    super::decks::break_the_spell,
+    super::decks::moment_of_valor,
+    super::decks::gruff_triplets,
+    super::decks::howling_galefang,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

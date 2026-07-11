@@ -1191,6 +1191,11 @@ pub enum Predicate {
     /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional
     /// cost was paid, …" riders (Katara, Seeking Revenge; Secret of Bloodbending).
     SpellWasWaterbend,
+    /// CR 715 — true iff `ctx.controller` owns a card in exile that is on an
+    /// Adventure (a creature card cast for its Adventure half, waiting in exile
+    /// to be recast). Gates Howling Galefang's "has haste as long as you own a
+    /// card in exile that has an Adventure".
+    OwnExiledAdventureCard,
     /// True if any opponent of `ctx.controller` controls more lands
     /// than `ctx.controller` does. Backed by walking the battlefield
     /// and counting `Land` permanents per seat. Used by catch-up ramp

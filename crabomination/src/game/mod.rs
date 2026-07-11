@@ -584,6 +584,9 @@ mod tests_recent136;
 #[path = "../tests/recent137.rs"]
 mod tests_recent137;
 #[cfg(test)]
+#[path = "../tests/recent138.rs"]
+mod tests_recent138;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]
@@ -6163,15 +6166,36 @@ impl GameState {
                     vec![card.controller]
                 };
                 for seat in seats {
-                    // "[filter] you control" for `seat` — wrap the printed filter
-                    // with the controller restriction relative to `seat`.
-                    let req = crate::card::SelectionRequirement::And(
-                        Box::new(filter.clone()),
-                        Box::new(crate::card::SelectionRequirement::ControlledByYou),
-                    );
-                    let affected = AffectedPermanents::CardMatch {
-                        source_controller: seat,
-                        requirement: Box::new(req),
+                    // "[filter] you control" for `seat`. A printed-characteristics
+                    // filter routes through the dynamic (GameState-blind) CardMatch
+                    // path; a stateful filter (e.g. `IsEnchanted`, which must scan
+                    // the battlefield for attached Auras — A Tale for the Ages) is
+                    // resolved here against live state and pinned to those ids.
+                    let affected = if crate::game::layers::requirement_is_card_only(filter) {
+                        let req = crate::card::SelectionRequirement::And(
+                            Box::new(filter.clone()),
+                            Box::new(crate::card::SelectionRequirement::ControlledByYou),
+                        );
+                        AffectedPermanents::CardMatch {
+                            source_controller: seat,
+                            requirement: Box::new(req),
+                        }
+                    } else {
+                        let ids: Vec<CardId> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == seat)
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &crate::game::types::Target::Permanent(c.id),
+                                    seat,
+                                    Some(card.id),
+                                )
+                            })
+                            .map(|c| c.id)
+                            .collect();
+                        AffectedPermanents::Specific(ids)
                     };
                     if *power != 0 || *toughness != 0 {
                         all_effects.push(ContinuousEffect {

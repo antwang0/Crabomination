@@ -1093,24 +1093,32 @@ pub fn mental_misstep() -> CardDefinition {
 // `If(SpellWasBargained, …)`.
 
 /// Torch the Tower — {R} Instant with Bargain. Deals 2 damage to target
-/// creature or planeswalker; 3 if it was bargained. (The "exile if it would
-/// die" rider on the bargained mode is dropped.)
+/// creature or planeswalker; if bargained, instead 3 damage and scry 1. If a
+/// permanent it damaged would die this turn, exile it instead.
 pub fn torch_the_tower() -> CardDefinition {
     CardDefinition {
         name: "Torch the Tower",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Bargain],
-        effect: Effect::If {
-            cond: Predicate::SpellWasBargained,
-            then: Box::new(Effect::DealDamage {
-                to: target_filtered(
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: target_filtered(
                     SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 ),
-                amount: Value::Const(3),
-            }),
-            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) }),
-        },
+            },
+            Effect::If {
+                cond: Predicate::SpellWasBargained,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+                    Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                ])),
+                else_: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(2),
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

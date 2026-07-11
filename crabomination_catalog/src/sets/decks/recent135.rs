@@ -153,8 +153,8 @@ pub fn feed_the_cauldron() -> CardDefinition {
     }
 }
 
-/// Experimental Confectioner — {2}{B} 2/3 Human Peasant. ETB create a Food. (The
-/// sacrifice-a-Food → Rat payoff is omitted — no Food-sacrifice trigger yet.)
+/// Experimental Confectioner — {2}{B} 2/3 Human Peasant. ETB create a Food.
+/// Whenever you sacrifice a Food, create a 1/1 black Rat token that can't block.
 pub fn experimental_confectioner() -> CardDefinition {
     CardDefinition {
         name: "Experimental Confectioner",
@@ -166,11 +166,25 @@ pub fn experimental_confectioner() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: food_token(),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: food_token(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasArtifactSubtype(crate::card::ArtifactSubtype::Food),
+                    }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: rat_token(),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

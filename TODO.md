@@ -3481,19 +3481,23 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     fixed to `Permanent`. Role token helpers consolidated in `decks::woe_roles`.
   - **Discerning Financier**'s donate ability (give a Treasure to another
     player, draw) deferred — no control-donation-of-a-token primitive.
-  - **Experimental Confectioner**'s "whenever you sacrifice a Food, make a Rat"
-    deferred — no Food-sacrifice trigger (needs `PermanentSacrificed` + an
-    artifact-subtype filter). The ETB-Food half ships.
-  - **Break the Spell**, **A Tale for the Ages** (enchanted-creatures anthem),
-    **Moment of Valor** (modal untap/pump vs destroy-power-4) noticed, not
-    tackled — each wants a small new primitive.
+  - ✅ ~~**Experimental Confectioner**~~ — Food-sac → Rat shipped via a
+    `PermanentSacrificed`/`YourControl` trigger filtered on `HasArtifactSubtype(Food)`
+    (recent135; test in recent138).
+  - ✅ ~~**Break the Spell**~~ (destroy enchantment + conditional draw via
+    `EntityMatches{Target, ControlledByYou|IsToken}`), ✅ ~~**A Tale for the Ages**~~
+    (`AnthemForFilter{IsEnchanted}` — the gather now resolves non-card-only anthem
+    filters against live state via `evaluate_requirement_static`), ✅ ~~**Moment of
+    Valor**~~ (modal untap/pump/indestructible vs destroy-power-4). recent138.
   - recent136 deferred: **Tangled Colony** (X Rats = damage marked on it this
-    turn — no "damage marked this turn" `Value`), **Torch the Tower** (Bargain
-    damage scaling + would-die-exile rider), **Moonshaker Cavalry** (+X/+X where
-    X = creatures you control), **Gruff Triplets** (ETB self-copy ×2), **Specter
-    of Mortality** (exile-N-from-gy → team -X/-X), **Rotisserie Elemental**
-    (skewer-counter impulse), **Howling Galefang**/**Sentinel of Lost Lore**
-    (own-an-exiled-Adventure state / adventure recursion modes).
+    turn — no "damage marked this turn" `Value`), ✅ ~~**Torch the Tower**~~
+    (Bargain 3-dmg + scry + `ExileIfWouldDieThisTurn`; modern.rs), ✅ ~~**Moonshaker
+    Cavalry**~~ (already shipped in recent129), ✅ ~~**Gruff Triplets**~~ (ETB
+    self-copy ×2 gated `NotToken` + dies +1/+1 to same-named; recent138), **Specter
+    of Mortality** (exile-N-from-gy → team -X/-X — wants a variable graveyard-exile
+    reflexive), **Rotisserie Elemental** (skewer-counter impulse), ✅ ~~**Howling
+    Galefang**~~ (`Predicate::OwnExiledAdventureCard` + `SelfHasKeywordWhilePredicate`
+    haste; recent138) / **Sentinel of Lost Lore** (adventure recursion modes).
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the
