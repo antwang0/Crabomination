@@ -5865,6 +5865,16 @@ static DECKS: &[Factory] = &[
     super::decks::horned_loch_whale,
     super::decks::faunsbane_troll,
     super::decks::back_for_seconds,
+    // recent147 — WOE: Saga, Adventure, Food land (EntersTappedUnless), Elf
+    // payoff, aristocrats, multicolor counter.
+    super::decks::the_witchs_vanity,
+    super::decks::imodanes_recruiter,
+    super::decks::gingerbread_cabin,
+    super::decks::yevas_forcemage,
+    super::decks::elvish_vanguard,
+    super::decks::gnawing_vermin,
+    super::decks::hoard_robber,
+    super::decks::neutralizing_blast,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

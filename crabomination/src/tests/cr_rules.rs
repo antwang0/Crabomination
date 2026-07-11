@@ -7974,3 +7974,67 @@ fn cr_603_3d_once_each_turn_fires_once() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "only one draw despite two taps this turn");
 }
+
+/// CR 502.3 — an Aura's "doesn't untap during its controller's untap step"
+/// lock is continuous, not sticky: once the Aura leaves the battlefield the
+/// creature untaps normally again.
+#[test]
+fn cr_502_3_untap_lock_releases_when_aura_leaves() {
+    let mut g = two_player_game();
+    let chill = g.add_card_to_battlefield(0, catalog::bitter_chill());
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(chill).unwrap().attached_to = Some(creature);
+    g.battlefield_find_mut(creature).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(creature).unwrap().tapped, "locked while enchanted");
+    // Remove the Aura; the lock lifts.
+    g.battlefield.retain(|c| c.id != chill);
+    g.do_untap();
+    assert!(!g.battlefield_find(creature).unwrap().tapped, "untaps once the Aura is gone");
+}
+
+/// CR 613.7 — a state-set base P/T (layer 7b) composes with a +1/+1 counter
+/// (layer 7c): Archon of the Wild Rose sets enchanted creatures to base 4/4,
+/// and a counter stacks on top for 5/5.
+#[test]
+fn cr_613_7_set_base_pt_stacks_with_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archon_of_the_wild_rose());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::pacifism());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "base 4/4 (7b) + counter (7c) = 5/5");
+}
+
+/// CR 401.6 / 603.3d — Johann's once-each-turn top-of-library cast refreshes
+/// at the turn boundary.
+#[test]
+fn cr_401_6_johann_cap_resets_next_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::johann_apprentice_sorcerer());
+    let bolt1 = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first top cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].cast_from_library_top_this_turn, "cap consumed");
+    // The next untap step clears the charge (do_untap turn-boundary reset).
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(!g.players[0].cast_from_library_top_this_turn, "charge reset at untap");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("second top cast after reset");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "both Bolts resolved across two turns");
+}
