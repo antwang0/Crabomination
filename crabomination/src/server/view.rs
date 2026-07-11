@@ -1338,7 +1338,9 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::AbilityActivated, _) => "Ability activated",
         (EventKind::BecameTarget, EventScope::SelfSource) => "Becomes target",
         (EventKind::Blocks, EventScope::AnotherOfYours) => "Another blocks",
-        (EventKind::BecomesBlocked, EventScope::YourControl) => "Your blocker",
+        // CR 509 — a creature *you control* becomes blocked (the attacker side,
+        // e.g. Tattered Ratter's "whenever a Rat you control becomes blocked").
+        (EventKind::BecomesBlocked, EventScope::YourControl) => "Yours blocked",
         (EventKind::PermanentSacrificed, EventScope::SelfSource) => "Self sac",
         (EventKind::PermanentSacrificed, EventScope::AnyPlayer) => "Any sac",
         (EventKind::CreatureSacrificed, EventScope::AnyPlayer) => "Any creature sac",

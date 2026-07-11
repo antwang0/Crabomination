@@ -3499,6 +3499,24 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     **Rotisserie Elemental** (skewer-counter impulse), ✅ ~~**Howling
     Galefang**~~ (`Predicate::OwnExiledAdventureCard` + `SelfHasKeywordWhilePredicate`
     haste; recent138) / **Sentinel of Lost Lore** (adventure recursion modes).
+- ⏳ **recent139 (WOE wave 12) noticed / deferred:**
+  - **Gnawing Crescendo**'s "whenever a nontoken creature you control dies this
+    turn, make a Rat" wants a delayed-death turn-scoped trigger sibling of
+    `Effect::CreaturesYouControlEnteringThisTurn` (only the enters variant
+    exists). The +2/+0 team-pump half is trivial once that lands.
+  - **Eerie Interference** ("prevent all damage by creatures to you and your
+    creatures this turn") wants a source-filtered scoped fog — the existing
+    `PreventAllDamageThisTurn`/`PreventAllCombatDamageInvolving` don't gate on
+    *dealer is a creature*.
+  - **Expel the Interlopers** (destroy all creatures with power ≥ a chosen
+    0–10) wants a dynamic power threshold in the destroy filter (filters take a
+    fixed `i32`; the chosen number would need `PowerAtLeastValue`).
+  - **Frantic Firebolt** approximates X = 2 + instant/sorcery cards in gy,
+    dropping the "…or have an Adventure" graveyard contribution (no
+    graveyard-card `HasAdventure` filter).
+  - **Discerning Financier** donate (give a Treasure to another player, draw),
+    **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
+    (exile-Adventure modal) still deferred.
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the
