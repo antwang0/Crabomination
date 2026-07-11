@@ -43,8 +43,11 @@
 //! P/T ordering where a dynamic anthem stacks with +1/+1 counters and
 //! re-scales live to the board (CR 613.7 — Warrior of Light), Aura-granted
 //! indestructible surviving lethal damage (CR 704.5g — Shielded by Faith), an
-//! Opalescence-animated enchantment dying to lethal (CR 613), and a
-//! protection-from-creatures attacker being unblockable (CR 702.16e).
+//! Opalescence-animated enchantment dying to lethal (CR 613), a
+//! protection-from-creatures attacker being unblockable (CR 702.16e), reflexive
+//! "when you do" payoffs gated on the action (CR 603.12 — Bloodcrazed
+//! Socialite), loyalty abilities once-per-turn at sorcery speed (CR 606.3 —
+//! Nissa), and deathtouch making any damage lethal (CR 702.2b).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -8063,4 +8066,123 @@ fn cr_509_1b_menace_requires_two_blockers() {
     g.active_player_idx = 0;
     assert!(g.declare_blockers(vec![(b1, attacker)]).is_err(), "one blocker is illegal");
     g.declare_blockers(vec![(b1, attacker), (b2, attacker)]).expect("two blockers is legal");
+}
+
+// ── CR 603.12 — reflexive "when you do" triggers only on the action ───────────
+/// A reflexive triggered ability fires only when its gating action is actually
+/// taken during the parent's resolution: Bloodcrazed Socialite's on-attack
+/// "you may sacrifice a Blood; when you do, it gets +2/+2" pumps only when a
+/// Blood is present to sacrifice — with no Blood the payoff never fires.
+#[test]
+fn cr_603_12_reflexive_payoff_gated_on_the_action() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let attack = |g: &mut GameState, id| {
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: id,
+            target: AttackTarget::Player(1),
+        }]))
+        .unwrap();
+        drain_stack(g);
+    };
+    // No Blood to sacrifice → reflexive payoff never fires; stays 3/3.
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::bloodcrazed_socialite());
+    g.clear_sickness(s);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, s);
+    assert_eq!(
+        g.computed_permanent(s).map(|c| (c.power, c.toughness)),
+        Some((3, 3)),
+        "no Blood → the reflexive +2/+2 does not fire (CR 603.12)"
+    );
+    // With a Blood present and accepted, the sacrifice happens → +2/+2.
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::bloodcrazed_socialite());
+    g.clear_sickness(s);
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::blood_token());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, s);
+    assert_eq!(
+        g.computed_permanent(s).map(|c| (c.power, c.toughness)),
+        Some((5, 5)),
+        "sacrificing the Blood fires the reflexive +2/+2 (CR 603.12)"
+    );
+}
+
+// ── CR 606.3 — a loyalty ability: once per turn, only at sorcery speed ────────
+/// A planeswalker's loyalty ability may be activated only when its controller
+/// could cast a sorcery, and only once per permanent per turn.
+#[test]
+fn cr_606_3_loyalty_once_per_turn_and_sorcery_speed() {
+    let mut g = two_player_game();
+    let nissa = g.add_card_to_battlefield(0, catalog::nissa_voice_of_zendikar());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    // First +1 (make a Plant): loyalty 3 → 4.
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: nissa, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("first loyalty activation succeeds");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(nissa).unwrap().counter_count(CounterType::Loyalty), 4);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Plant" && c.controller == 0));
+    // Second activation the same turn → rejected (CR 606.3).
+    let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: nissa, ability_index: 0, target: None, x_value: None,
+    })
+    .unwrap_err();
+    assert!(matches!(err, GameError::LoyaltyAbilityAlreadyUsed(id) if id == nissa));
+    // Sorcery-speed gate: on the opponent's turn it can't be activated at all.
+    let mut g = two_player_game();
+    let nissa = g.add_card_to_battlefield(0, catalog::nissa_voice_of_zendikar());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: nissa, ability_index: 0, target: None, x_value: None,
+    })
+    .unwrap_err();
+    assert!(matches!(err, GameError::SorcerySpeedOnly), "off-turn activation is illegal (CR 606.3)");
+}
+
+// ── CR 702.2b — deathtouch: any damage from a deathtouch source is lethal ─────
+/// A 1/1 deathtouch blocker destroys a 5/5 attacker as a state-based action:
+/// one point of deathtouch combat damage is lethal (CR 702.2b).
+#[test]
+fn cr_702_2b_deathtouch_one_damage_is_lethal() {
+    fn tiny_deathtoucher() -> crate::card::CardDefinition {
+        crate::card::CardDefinition {
+            name: "Tiny Deathtoucher",
+            card_types: vec![crate::card::CardType::Creature],
+            power: 1,
+            toughness: 1,
+            keywords: vec![crate::card::Keyword::Deathtouch],
+            ..Default::default()
+        }
+    }
+    fn bruiser() -> crate::card::CardDefinition {
+        crate::card::CardDefinition {
+            name: "Bruiser",
+            card_types: vec![crate::card::CardType::Creature],
+            power: 5,
+            toughness: 5,
+            ..Default::default()
+        }
+    }
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, bruiser());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, tiny_deathtoucher());
+    g.clear_sickness(blocker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert!(g.battlefield_find(attacker).is_none(), "1 deathtouch damage kills the 5/5 (CR 702.2b)");
+    assert!(g.battlefield_find(blocker).is_none(), "the 1/1 also dies to 5 damage");
 }
