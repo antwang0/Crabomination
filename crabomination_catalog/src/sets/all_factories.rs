@@ -5772,6 +5772,14 @@ static DECKS: &[Factory] = &[
     super::decks::knight_of_doves,
     super::decks::fae_flight,
     super::decks::gingerbread_hunter,
+    // recent136 — WOE wave 9: modal ETBs, Food/Rat aristocrats, mana/Roles
+    super::decks::kindled_heroism,
+    super::decks::merfolk_coralsmith,
+    super::decks::living_lectern,
+    super::decks::stingblade_assassin,
+    super::decks::lord_skitters_butcher,
+    super::decks::provisions_merchant,
+    super::decks::scarecrow_guide,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

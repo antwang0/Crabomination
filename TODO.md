@@ -3487,6 +3487,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Break the Spell**, **A Tale for the Ages** (enchanted-creatures anthem),
     **Moment of Valor** (modal untap/pump vs destroy-power-4) noticed, not
     tackled — each wants a small new primitive.
+  - recent136 deferred: **Tangled Colony** (X Rats = damage marked on it this
+    turn — no "damage marked this turn" `Value`), **Torch the Tower** (Bargain
+    damage scaling + would-die-exile rider), **Moonshaker Cavalry** (+X/+X where
+    X = creatures you control), **Gruff Triplets** (ETB self-copy ×2), **Specter
+    of Mortality** (exile-N-from-gy → team -X/-X), **Rotisserie Elemental**
+    (skewer-counter impulse), **Howling Galefang**/**Sentinel of Lost Lore**
+    (own-an-exiled-Adventure state / adventure recursion modes).
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the
