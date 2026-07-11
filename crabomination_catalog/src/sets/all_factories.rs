@@ -5780,6 +5780,15 @@ static DECKS: &[Factory] = &[
     super::decks::lord_skitters_butcher,
     super::decks::provisions_merchant,
     super::decks::scarecrow_guide,
+    // recent137 — WOE wave 10: Adventures, Celebration, Bargain, cast-Adventure
+    super::decks::pests_of_honor,
+    super::decks::shrouded_shepherd,
+    super::decks::storyteller_pixie,
+    super::decks::obyras_attendants,
+    super::decks::high_fae_negotiator,
+    super::decks::fell_horseman,
+    super::decks::minecart_daredevil,
+    super::decks::intrepid_trufflesnout,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
