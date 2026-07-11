@@ -210,10 +210,14 @@ pub fn riddle_gate_gargoyle() -> CardDefinition {
                 description: "Pay {E}{E}?".into(),
                 body: Box::new(Effect::PayEnergy {
                     amount: 2,
-                    then: Box::new(Effect::GrantKeyword {
-                        what: target_filtered(R::Creature.and(R::ControlledByYou)),
-                        keyword: Keyword::Lifelink,
-                        duration: Duration::EndOfTurn,
+                    // CR 603.7 — the lifelink target is chosen *after* the {E}{E}
+                    // is paid, via the reflexive "when you do" payoff.
+                    then: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::GrantKeyword {
+                            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                            keyword: Keyword::Lifelink,
+                            duration: Duration::EndOfTurn,
+                        }),
                     }),
                 }),
             }),

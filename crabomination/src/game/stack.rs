@@ -68,8 +68,37 @@ impl GameState {
             if let DecisionAnswer::Mode(idx) = answer {
                 return Some(idx.min(modes.len() - 1));
             }
+            return None;
+        }
+        // CR 603.7 — a modal buried behind a reflexive payment (Voltstorm
+        // Angel's "pay {E}{E}. When you do, choose one …") owns its pick at
+        // resolution, *after* the payment succeeds. Defer it: the mode isn't
+        // read until the wrappers run, and `MODE_PICK_DEFERRED` routes a UI
+        // seat to the client modal and a bot to its decider (both post-payment,
+        // since the payment only ever runs when accepted).
+        if let Some(modes) = Self::governing_modal(effect) {
+            if !modes.is_empty() && modes.iter().all(|m| !m.requires_target()) {
+                return Some(crate::game::types::MODE_PICK_DEFERRED);
+            }
         }
         None
+    }
+
+    /// Unwrap reflexive-payment wrappers (`MayDo`/`MayPay*`/`PayEnergy*`) to
+    /// find a nested `ChooseMode` whose pick must wait for the payment. Only
+    /// descends single-child bodies — a `Seq` or branching effect is left to
+    /// its own resolution-time handling.
+    fn governing_modal(effect: &Effect) -> Option<&Vec<Effect>> {
+        match effect {
+            Effect::ChooseMode(modes) => Some(modes),
+            Effect::MayDo { body, .. }
+            | Effect::PayEnergy { then: body, .. }
+            | Effect::PayEnergyValue { then: body, .. } => Self::governing_modal(body),
+            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
+                Self::governing_modal(body)
+            }
+            _ => None,
+        }
     }
 }
 

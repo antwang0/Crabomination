@@ -688,6 +688,27 @@ fn voltstorm_angel_combat_energy_mode() {
         "mode 0 granted vigilance + lifelink");
 }
 
+/// A modal nested behind Voltstorm Angel's reflexive `pay {E}{E}` now owns its
+/// own pick at resolution (CR 603.7): scripting `Mode(1)` after the `Bool(true)`
+/// takes the second mode (other creatures get +1/+1) instead of defaulting to 0.
+#[test]
+fn voltstorm_angel_nested_modal_picks_second_mode() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::voltstorm_angel());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].energy = 2;
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Mode(1)]));
+    g.fire_step_triggers(crate::game::TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "paid {{E}}{{E}}");
+    // Mode 1: the *other* creature gets +1/+1; the Angel itself does not.
+    assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((3, 3)),
+        "mode 1 pumped the other creature");
+    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&Keyword::Vigilance),
+        "mode 1 did not grant the Angel vigilance");
+}
+
 /// Strix Serenade counters a creature spell and gives its controller a Bird.
 #[test]
 fn strix_serenade_counters_and_gifts_bird() {

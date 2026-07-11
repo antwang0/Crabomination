@@ -107,15 +107,16 @@ factory doc comment:
   opponent-control rider; Emperor drops the counter reanimation; Herigast drops
   the emerge-granting static; Pyretic Rebirth/Jolted Awake model "up to one"
   targets as required).
-- ⏳ **Nested modal after a payment defaults to mode 0** — `Effect::ChooseMode`
-  reads `ctx.mode` (picked at trigger-push), so a modal buried inside
-  `MayDo`/`PayEnergy` can't get its own resolution-time pick; bots always take
-  the first mode (Voltstorm Angel's combat modal). A `PayEnergy { then:
-  ChooseMode }` should re-prompt at resolution.
-- ⏳ **Reflexive "when you do" targets are chosen at trigger-push, not after the
-  payment** — Riddle Gate Gargoyle's on-attack pay-{E}{E}-then-target-a-creature
-  is modeled with the target on the trigger (CR 603.7 wants it post-payment).
-  Minor timing approximation.
+- ✅ **Nested modal after a payment picks at resolution** — `pick_trigger_mode`
+  now unwraps reflexive-payment wrappers (`MayDo`/`MayPay*`/`PayEnergy*`) via
+  `governing_modal` and stamps `MODE_PICK_DEFERRED`, so a modal buried behind a
+  payment owns its own pick *after* the payment succeeds (CR 603.7): a UI seat
+  gets the client modal, a bot/scripted decider decides at resolution (Voltstorm
+  Angel's combat modal — test `voltstorm_angel_nested_modal_picks_second_mode`).
+- ✅ **Reflexive "when you do" targets chosen after the payment** — Riddle Gate
+  Gargoyle's on-attack `pay {E}{E}. When you do, target a creature gains lifelink`
+  now wraps the payoff in `Effect::Reflexive`, so the target is picked at
+  resolution *after* the {E}{E} is paid (CR 603.7).
 - ✅ **Emerge wired** — `CardDefinition.emerge` + `emerge()` shortcut +
   `CastSpellAlternative` cost reduction by the sacrificed creature's MV
   (Wretched Gryff, Twisted Riddlekeeper, Herigast; CR 702.119 test in
