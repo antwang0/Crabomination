@@ -2491,6 +2491,10 @@ impl GameState {
                 self.find_card_anywhere(*id)
                     .is_some_and(|c| c.definition.name == card.definition.name)
             }),
+            // "Attached to something" — the source-precise intersection (the
+            // permanent must be attached to *this* source) happens in the
+            // sac-cost path, which knows the source id.
+            R::AttachedToSource => card.attached_to.is_some(),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
             | R::IsAttacking | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone

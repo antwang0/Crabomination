@@ -132,17 +132,31 @@ fn troyan_high_mv_or_x_restriction() {
     assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "two restricted mana floated");
 }
 
-/// Johann lets you cast an instant from the top of your library.
+/// Johann lets you cast one instant/sorcery from the top of your library each
+/// turn; the second top card can't be cast until the cap resets.
 #[test]
-fn johann_casts_from_top() {
+fn johann_casts_from_top_once_per_turn() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::johann_apprentice_sorcerer());
-    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // top of library
+    let bolt1 = g.add_card_to_library(0, catalog::lightning_bolt()); // top of library
+    let bolt2 = g.add_card_to_library(0, catalog::lightning_bolt());
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::Red, 1);
-    cast(&mut g, bolt, Some(Target::Player(1)), None);
-    assert_eq!(g.players[1].life, 17, "Lightning Bolt cast from top dealt 3");
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, bolt1, Some(Target::Player(1)), None);
+    assert_eq!(g.players[1].life, 17, "first Bolt cast from top dealt 3");
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt2,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "second top-of-library cast is blocked by the once-per-turn cap",
+    );
+    assert_eq!(g.players[1].life, 17, "no second Bolt this turn");
 }
 
 /// Solitary Sanctuary grows one of your creatures when you tap an enemy creature.

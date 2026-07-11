@@ -1544,6 +1544,7 @@ impl GameState {
         // Oracle of Mul Daya) lets the land be played off the library top.
         let from_top = !self.players[p].has_in_hand(card_id)
             && self.library_top_playable(p, card_id);
+        let from_top_capped = from_top && self.library_top_cast_is_capped(p, card_id);
         let mut card = if from_top {
             self.players[p].library.remove(0)
         } else if self.players[p].has_in_hand(card_id) {
@@ -1576,6 +1577,9 @@ impl GameState {
         } else if !card.definition.is_land() {
             restore(self, card);
             return Err(GameError::NotALand(card_id));
+        }
+        if from_top_capped {
+            self.players[p].cast_from_library_top_this_turn = true;
         }
         self.place_land_card(p, card)
     }
@@ -1744,13 +1748,30 @@ impl GameState {
         // A permanent's own `EntersTapped { applies_to: This/Source }` (e.g.
         // Overlord of the Hauntwoods' "Everywhere" land token) taps itself —
         // the cross-permanent loop below skips the entering card, so handle the
-        // self case up front.
+        // self case up front. `EntersTappedUnless` (Horned Loch-Whale) taps
+        // itself unless its predicate holds, evaluated with the entrant as
+        // source/controller.
+        let self_seat = self.battlefield[idx].controller;
+        let self_id = self.battlefield[idx].id;
         for sa in &self.battlefield[idx].definition.static_abilities {
-            if let StaticEffect::EntersTapped { applies_to } = &sa.effect
-                && matches!(applies_to, crate::effect::Selector::This)
-            {
-                should_tap = true;
-                break;
+            match &sa.effect {
+                StaticEffect::EntersTapped { applies_to: crate::effect::Selector::This } => {
+                    should_tap = true;
+                    break;
+                }
+                StaticEffect::EntersTappedUnless {
+                    applies_to: crate::effect::Selector::This,
+                    condition,
+                } => {
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        self_id, self_seat, None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        should_tap = true;
+                        break;
+                    }
+                }
+                _ => {}
             }
         }
         for src in &self.battlefield {
@@ -2367,15 +2388,18 @@ impl GameState {
             })
             && self.library_top_playable(p, card_id)
         {
+            let capped = self.library_top_cast_is_capped(p, card_id);
             let card = self.players[p].library.remove(0);
             self.players[p].hand.push(card);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
-            if r.is_err()
-                && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
-            {
-                self.players[p].library.insert(0, card);
+            if r.is_err() {
+                if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                    self.players[p].library.insert(0, card);
+                }
+            } else if capped {
+                self.players[p].cast_from_library_top_this_turn = true;
             }
             return r;
         }
@@ -2457,13 +2481,55 @@ impl GameState {
         if self.players[p].play_from_top_this_turn {
             return true;
         }
+        let capped_used = self.players[p].cast_from_library_top_this_turn;
         self.battlefield.iter().any(|c| {
             c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(&sa.effect, StaticEffect::PlayFromLibraryTop { filter }
-                        if self.evaluate_requirement_on_card(filter, card, p))
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::PlayFromLibraryTop { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, p)
+                    }
+                    // Johann — the once-per-turn grant lapses after the first
+                    // top-of-library cast this turn.
+                    StaticEffect::PlayFromLibraryTopOncePerTurn { filter } => {
+                        !capped_used && self.evaluate_requirement_on_card(filter, card, p)
+                    }
+                    _ => false,
                 })
         })
+    }
+
+    /// True when the *only* grant letting `p` play `card_id` off the library
+    /// top is a `PlayFromLibraryTopOncePerTurn` (Johann) — so casting it should
+    /// consume the once-per-turn charge. If any uncapped grant also covers the
+    /// card, the charge is not spent.
+    pub(crate) fn library_top_cast_is_capped(&self, p: usize, card_id: CardId) -> bool {
+        use crate::effect::StaticEffect;
+        if self.players[p].play_from_top_this_turn {
+            return false;
+        }
+        let Some(card) = self.players[p].library.first() else { return false };
+        if card.id != card_id {
+            return false;
+        }
+        let mut capped = false;
+        for c in self.battlefield.iter().filter(|c| c.controller == p) {
+            for sa in &c.definition.static_abilities {
+                match &sa.effect {
+                    StaticEffect::PlayFromLibraryTop { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        return false;
+                    }
+                    StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        capped = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        capped
     }
 
     /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
@@ -9852,10 +9918,18 @@ impl GameState {
             } else {
                 *count as usize
             };
+            // `AttachedToSource` in the cost filter means "attached to *this*
+            // permanent" — a source-precise check the source-blind
+            // `evaluate_requirement_on_card` can't make, so intersect the
+            // source id here (Faunsbane Troll — "Sacrifice an Aura attached to
+            // this creature").
+            let needs_attached_to_source =
+                crate::game::requirement_mentions_attached_to_source(filter);
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| !needs_attached_to_source || c.attached_to == Some(card_id))
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();

@@ -336,6 +336,12 @@ pub struct Player {
     /// `library_top_playable` and the top-revealed view.
     #[serde(default)]
     pub play_from_top_this_turn: bool,
+    /// CR 603.3d-adjacent — set once this player casts/plays a card from the
+    /// top of their library under a `PlayFromLibraryTopOncePerTurn` grant
+    /// (Johann, Apprentice Sorcerer). Cleared at end of turn. Read by
+    /// `library_top_playable` to enforce the once-per-turn cap.
+    #[serde(default)]
+    pub cast_from_library_top_this_turn: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -703,6 +709,7 @@ impl Player {
             lost_life_this_turn: false,
             graveyard_cast_types_this_turn: Vec::new(),
             play_from_top_this_turn: false,
+            cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
             prowl_types_this_turn: Vec::new(),

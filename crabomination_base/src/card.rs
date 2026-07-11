@@ -1389,6 +1389,12 @@ pub enum SelectionRequirement {
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
+    /// True when the candidate is currently attached to *some* permanent
+    /// (`attached_to.is_some()`). Source-precise "attached to this creature"
+    /// filters (Faunsbane Troll's "Sacrifice an Aura attached to this
+    /// creature") intersect this with the source id in the cost path, since a
+    /// source-blind requirement can't know which permanent "this" is.
+    AttachedToSource,
     /// True when the candidate permanent has at least `n` Equipment attached
     /// (CR 301.5). Battlefield-only. Balan's "double strike as long as two or
     /// more Equipment are attached to it".

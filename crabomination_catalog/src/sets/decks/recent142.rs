@@ -245,8 +245,8 @@ pub fn troyan_gutsy_explorer() -> CardDefinition {
 }
 
 /// Johann, Apprentice Sorcerer — {2}{U}{R} 2/5 legendary Human Wizard Sorcerer.
-/// You may cast instant and sorcery spells from the top of your library. (The
-/// once-each-turn limit is omitted.)
+/// Once each turn, you may cast an instant or sorcery spell from the top of your
+/// library.
 pub fn johann_apprentice_sorcerer() -> CardDefinition {
     CardDefinition {
         name: "Johann, Apprentice Sorcerer",
@@ -260,8 +260,8 @@ pub fn johann_apprentice_sorcerer() -> CardDefinition {
         power: 2,
         toughness: 5,
         static_abilities: vec![StaticAbility {
-            description: "You may cast instant and sorcery spells from the top of your library.",
-            effect: StaticEffect::PlayFromLibraryTop {
+            description: "Once each turn, cast an instant or sorcery from the top of your library.",
+            effect: StaticEffect::PlayFromLibraryTopOncePerTurn {
                 filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
             },
         }],

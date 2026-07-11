@@ -5857,6 +5857,14 @@ static DECKS: &[Factory] = &[
     // recent145 — WOE legends: Hylda's tap-matters reflexive modal, Celebration.
     super::decks::hylda_of_the_icy_crown,
     super::decks::ash_party_crasher,
+    // recent146 — WOE deferred cards: untap-lock Aura, planeswalker-hate Food
+    // Knight, Aura-anthem Archon, conditional-enters-tapped Whale adventure.
+    super::decks::bitter_chill,
+    super::decks::syr_ginger_the_meal_ender,
+    super::decks::archon_of_the_wild_rose,
+    super::decks::horned_loch_whale,
+    super::decks::faunsbane_troll,
+    super::decks::back_for_seconds,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

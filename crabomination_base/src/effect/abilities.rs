@@ -261,6 +261,12 @@ pub enum StaticEffect {
     CantHaveKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
     EntersTapped { applies_to: Selector },
+    /// "This permanent enters tapped unless [condition]" (Horned Loch-Whale —
+    /// "enters tapped unless it's your turn"). The conditional sibling of
+    /// `EntersTapped`: affected permanents enter tapped only when `condition`
+    /// (evaluated with the source as context) is *false*. Applied in
+    /// `apply_enters_tapped_replacement`.
+    EntersTappedUnless { applies_to: Selector, condition: Predicate },
     /// "Lands you control enter the battlefield untapped" (Spelunking, Amulet
     /// of Vigor-adjacent). An enters-untapped replacement that overrides any
     /// enters-tapped static for lands the source's controller controls.
@@ -848,6 +854,11 @@ pub enum StaticEffect {
     /// Oracle of Mul Daya lands, Mystic Forge artifact+colorless spells).
     /// Checked in `play_land_with_face` and `cast_spell`.
     PlayFromLibraryTop { filter: crate::card::SelectionRequirement },
+    /// Like `PlayFromLibraryTop`, but capped at one cast/play from the library
+    /// top per turn (Johann, Apprentice Sorcerer — "Once each turn, you may cast
+    /// an instant or sorcery spell from the top of your library"). Tracked via
+    /// `Player.cast_from_library_top_this_turn`.
+    PlayFromLibraryTopOncePerTurn { filter: crate::card::SelectionRequirement },
     /// "Creatures you control with +1/+1 counters on them have all
     /// activated abilities of all creature cards exiled with [the
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of

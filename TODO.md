@@ -3517,23 +3517,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Discerning Financier** donate (give a Treasure to another player, draw),
     **Rotisserie Elemental** (skewer-counter impulse), **Sentinel of Lost Lore**
     (exile-Adventure modal) still deferred.
-- ⏳ **recent141-145 (WOE waves 14-18) noticed / deferred:**
-  - **Archon of the Wild Rose** wants a `SetBasePTForFilter` static (set base
-    P/T + grant flying to a filtered subset — your Aura-enchanted creatures);
-    no set-base-P/T-for-many static exists yet.
-  - **Faunsbane Troll** wants an "Aura attached to this creature" activation
-    sac-cost filter (`sac_other_filter` can't express attached-to-source) plus
-    the fight-then-exile rider chained as a cost.
-  - **Bitter Chill** wants a flat "enchanted creature doesn't untap" static
-    (only `DoesntUntapWhileCounter` exists).
-  - **Syr Ginger** wants a conditional keyword grant "has X while an opponent
-    controls a planeswalker" (`SelfHasKeywordWhile` lacks that condition).
-  - **Horned Loch-Whale** wants a conditional enters-tapped ("unless it's your
-    turn"); **Back for Seconds** wants up-to-two graveyard-card targets with a
-    bargained onto-battlefield rider.
-  - **Johann, Apprentice Sorcerer** ships without the "once each turn" cap on
-    casting instants/sorceries from the top of the library (`PlayFromLibraryTop`
-    is uncapped) — wants a per-turn gate.
+- ✅ ~~**recent141-145 (WOE waves 14-18) deferred cards**~~ — all shipped in
+  `decks::recent146` (tests in `tests/recent146.rs`): Archon of the Wild Rose
+  (state-aware `SetBasePtForFilter`/`GrantKeyword` for stateful `IsEnchanted`
+  filters), Faunsbane Troll (`SelectionRequirement::AttachedToSource` sac-cost +
+  `ExileIfWouldDieThisTurn`+`Fight`), Bitter Chill (existing `PreventUntap`
+  AttachedTo), Syr Ginger (`SelfHasKeywordWhilePredicate`×3), Horned Loch-Whale
+  (`StaticEffect::EntersTappedUnless`), Back for Seconds (bargain `If`/`MayDo`
+  reanimation — the "up to two" targets are auto-picked), and Johann
+  (`StaticEffect::PlayFromLibraryTopOncePerTurn` + `Player.cast_from_library_top_this_turn`).
 - ⏳ **recent113 (MH1 + Eldrazi) follow-ups / deferred:**
   - **Vorinclex, Voice of Hunger** — needs a "whenever you/an opponent tap a
     land for mana" trigger (no `EventKind` for tap-land-for-mana yet); the

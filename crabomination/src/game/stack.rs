@@ -1981,6 +1981,8 @@ impl GameState {
             pl.committed_crime_this_turn = false;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;
+            // Johann's once-per-turn top-of-library cast resets each turn.
+            pl.cast_from_library_top_this_turn = false;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters

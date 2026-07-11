@@ -608,6 +608,9 @@ mod tests_recent144;
 #[path = "../tests/recent145.rs"]
 mod tests_recent145;
 #[cfg(test)]
+#[path = "../tests/recent146.rs"]
+mod tests_recent146;
+#[cfg(test)]
 #[path = "../tests/ogw.rs"]
 mod tests_ogw;
 #[cfg(test)]
@@ -6241,6 +6244,65 @@ impl GameState {
                         });
                     }
                 }
+            }
+        }
+        // State-aware `SetBasePtForFilter` / `GrantKeyword` — when the
+        // `applies_to` selector carries a *stateful* filter (e.g. `IsEnchanted`,
+        // which must scan the battlefield for attached Auras — Archon of the
+        // Wild Rose's "other creatures you control enchanted by Auras … have
+        // base P/T 4/4 and flying"), `selector_to_affected` can't decompose it
+        // and the per-static gather emits nothing. Resolve those live here and
+        // pin the effect to the matching ids, mirroring the `AnthemForFilter`
+        // stateful path above.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let (req, modification, layer, sublayer) = match &sa.effect {
+                    crate::effect::StaticEffect::SetBasePtForFilter {
+                        applies_to: crate::effect::Selector::EachPermanent(req),
+                        power,
+                        toughness,
+                    } if !crate::game::layers::requirement_is_card_only(req) => (
+                        req,
+                        Modification::SetPowerToughness(*power, *toughness),
+                        Layer::L7PowerTough,
+                        Some(PtSublayer::SetValue),
+                    ),
+                    crate::effect::StaticEffect::GrantKeyword {
+                        applies_to: crate::effect::Selector::EachPermanent(req),
+                        keyword,
+                    } if !crate::game::layers::requirement_is_card_only(req) => (
+                        req,
+                        Modification::AddKeyword(keyword.clone()),
+                        Layer::L6Ability,
+                        None,
+                    ),
+                    _ => continue,
+                };
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            req,
+                            &crate::game::types::Target::Permanent(c.id),
+                            card.controller,
+                            Some(card.id),
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if ids.is_empty() {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(ids),
+                    layer,
+                    sublayer,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification,
+                });
             }
         }
         // Predicate-gated self keyword (`StaticEffect::SelfHasKeywordIf`) —
@@ -13027,6 +13089,7 @@ fn static_effect_to_effects(
                 }
             }
             StaticEffect::EntersTapped { .. }
+            | StaticEffect::EntersTappedUnless { .. }
             | StaticEffect::LandsEnterUntapped
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
@@ -13104,6 +13167,7 @@ fn static_effect_to_effects(
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.
             | StaticEffect::PlayFromLibraryTop { .. }
+            | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
             | StaticEffect::TopOfLibraryRevealed
             | StaticEffect::AllLibraryTopsRevealed
             // NamedSpellCantBeCast — consulted in cast_spell_with_convoke
@@ -13622,6 +13686,21 @@ fn requirement_mentions_power(req: &SelectionRequirement) -> bool {
             requirement_mentions_power(a) || requirement_mentions_power(b)
         }
         R::Not(inner) => requirement_mentions_power(inner),
+        _ => false,
+    }
+}
+
+/// True when `req` contains an `AttachedToSource` leaf — the cost path uses
+/// this to intersect candidates against the actual source id (Faunsbane Troll).
+pub(crate) fn requirement_mentions_attached_to_source(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::AttachedToSource => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_attached_to_source(a)
+                || requirement_mentions_attached_to_source(b)
+        }
+        R::Not(inner) => requirement_mentions_attached_to_source(inner),
         _ => false,
     }
 }
