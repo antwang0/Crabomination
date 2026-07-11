@@ -5882,6 +5882,16 @@ static DECKS: &[Factory] = &[
     super::decks::overwhelmed_apprentice,
     super::decks::fear_of_impostors,
     super::decks::cursed_windbreaker,
+    // recent149 — BLB: modal removal, combat tricks, conditional threaten,
+    // exile-until-leaves coyote, sorcery-speed haste-granter.
+    super::decks::driftgloom_coyote,
+    super::decks::early_winter,
+    super::decks::high_stride,
+    super::decks::mabels_mettle,
+    super::decks::playful_shove,
+    super::decks::psychic_whorl,
+    super::decks::reptilian_recruiter,
+    super::decks::raccoon_rallier,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
