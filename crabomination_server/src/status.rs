@@ -146,6 +146,11 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("avg_duration_seconds", "gauge", "Average match duration in seconds.", st.avg_duration().as_secs().to_string());
     m("min_duration_seconds", "gauge", "Shortest match duration in seconds.", st.min_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
     m("max_duration_seconds", "gauge", "Longest match duration in seconds.", st.max_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
+    // Median/p90 match duration from the duration histogram — the average is
+    // pulled up by a few grindy games, so operators watching "does a typical
+    // match feel snappy?" want the p50, and the p90 flags the slow tail.
+    m("median_duration_seconds", "gauge", "Median (p50) match duration in seconds (histogram upper bound).", st.percentile(0.5).as_secs().to_string());
+    m("duration_p90_seconds", "gauge", "90th-percentile match duration in seconds (slow-tail bound).", st.percentile(0.9).as_secs().to_string());
     m("connections_current", "gauge", "Active connections.", sl.current.to_string());
     m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
@@ -324,6 +329,8 @@ mod tests {
         assert!(body.contains("crab_decisive_pct 0"));
         // Duration gauges + histogram bands.
         assert!(body.contains("crab_avg_duration_seconds 0"));
+        assert!(body.contains("crab_median_duration_seconds 0"));
+        assert!(body.contains("crab_duration_p90_seconds 0"));
         assert!(body.contains("crab_match_duration_bucket{band=\"<30s\"} 0"));
         // Refusal breakdown by reason + peak-per-ip gauge.
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));

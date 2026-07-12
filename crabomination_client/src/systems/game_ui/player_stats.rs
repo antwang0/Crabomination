@@ -65,8 +65,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
-        // Speed (CR 702.179 — "Start your engines!") — a Aetherdrift racing
-        // crimson that brightens toward max speed.
+        // Speed (CR 702.179 — "Start your engines!") — an Aetherdrift racing
+        // crimson; the chip label reads "🏁 MAX" once the player hits speed 4.
         StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Coven (Innistrad) — a witchy moonlit green: 3+ creatures, distinct powers.
         StatChipKind::Coven => (Color::srgba(0.14, 0.30, 0.20, 1.0), theme::TEXT_PRIMARY),
@@ -199,6 +199,17 @@ fn deck_chip_kind(library_size: usize) -> StatChipKind {
         StatChipKind::DeckLow
     } else {
         StatChipKind::Deck
+    }
+}
+
+/// Label for the CR 702.179 speed chip. At max speed (4) it reads "🏁 MAX" so
+/// the threshold that unlocks "Max speed —" abilities is glanceable, otherwise
+/// the running count "🏁 N/4".
+fn speed_chip_label(speed: u32, at_max: bool) -> String {
+    if at_max {
+        "🏁 MAX".to_string()
+    } else {
+        format!("🏁 {speed}/4")
     }
 }
 
@@ -632,7 +643,7 @@ pub fn update_player_stats_chips(
         }
         // CR 702.179 speed — surface once "Start your engines!" has started it.
         if p.speed > 0 {
-            spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, speed_chip_label(p.speed, p.at_max_speed));
         }
         // CR 122 rad counters — only surface once the player has any (Phyrexia
         // poison-mill clock).
@@ -1052,7 +1063,7 @@ pub fn update_opponent_stats_rows(
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Experience, format!("✦ {}", p.experience));
                 }
                 if p.speed > 0 {
-                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, speed_chip_label(p.speed, p.at_max_speed));
                 }
                 if p.rad_counters > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
