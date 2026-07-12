@@ -6134,6 +6134,7 @@ static DECKS: &[Factory] = &[
     super::decks::rangers_aetherhive,
     super::decks::reef_roads,
     super::decks::rocky_roads,
+    super::decks::wild_roads,
     super::decks::salvation_engine,
     // recent171 — DFT commons/uncommons on existing primitives.
     super::decks::rover_blades,
@@ -6143,6 +6144,12 @@ static DECKS: &[Factory] = &[
     super::decks::trip_up,
     super::decks::veloheart_bike,
     super::decks::venomsac_lagac,
+    // recent172 — more DFT gap cards on existing primitives.
+    super::decks::haunted_hellride,
+    super::decks::starting_column,
+    super::decks::thundering_broodwagon,
+    super::decks::tune_up,
+    super::decks::unswerving_sloth,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

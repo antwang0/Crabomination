@@ -92,6 +92,11 @@ pub fn reef_roads() -> CardDefinition {
     roads_land("Reef Roads", Color::Blue)
 }
 
+/// Wild Roads — Land. {T}: Add {G}.
+pub fn wild_roads() -> CardDefinition {
+    roads_land("Wild Roads", Color::Green)
+}
+
 /// Rangers' Aetherhive — {1}{G}{U} Artifact — Vehicle 3/5. Vigilance. Whenever
 /// you activate an exhaust ability, create a 1/1 Thopter with flying. Crew 1.
 pub fn rangers_aetherhive() -> CardDefinition {

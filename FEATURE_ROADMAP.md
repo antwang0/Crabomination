@@ -25,14 +25,15 @@ exercising each) was elided in a compaction pass; recover it from
   Walker, exhaust Vehicles, Ooze Patrol, cycling payoffs, value creatures);
   tests in `tests/recent167.rs`.
 
-- **Vehicle/Mount + DFT-gap primitives (recent168/169 — DFT):**
+- **Vehicle/Mount + DFT-gap primitives (recent168–172 — DFT):**
   `Predicate::SacrificedWasVehicle` (Hellish Sideswipe), `StaticEffect::
   SelfIsCreatureIf` (turn-gated is-a-creature — Midnight Mangler), `Effect::
   SetSaddled` + `Effect::AnimateAsCreature` (add Creature type for a duration
   keeping printed P/T — Guidelight Matrix), and `StaticEffect::
   SelfCrewsSaddlesWithToughness` (Interface Ace crews/saddles by toughness).
-  ~14 DFT cards across `decks::recent168`/`recent169`; tests in
-  `tests/recent168.rs` / `tests/recent169.rs`.
+  ~33 DFT gap cards across `decks::recent168`–`recent172` (the Roads land
+  cycle, exhaust/speed/anthem Vehicles, saddled Mounts, removal, tuck, ETB
+  value); tests in `tests/recent168.rs`–`tests/recent172.rs`.
 
 - **Impulse-until-nonland + impulse-cost fix (recent166 — EOE/TLA/DFT):**
   `Effect::ExileTopUntilNonlandMayPlay` exiles from the top of a library until a
