@@ -225,3 +225,26 @@ fn thopter_fabricator_mints_on_second_draw() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count(), 1,
         "second draw mints a Thopter");
 }
+
+/// Coalstoke Gearhulk reanimates a small creature with a finality counter and
+/// grants it haste/menace/deathtouch; it's exiled at the next end step.
+#[test]
+fn coalstoke_gearhulk_reanimates_then_exiles() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears()); // MV 2, opponent's gy
+    let hulk = g.add_card_to_battlefield(0, catalog::coalstoke_gearhulk());
+    g.fire_self_etb_triggers(hulk, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(dead).expect("reanimated onto the battlefield");
+    assert_eq!(cp.controller, 0, "under my control");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert_eq!(g.battlefield_find(dead).unwrap().counter_count(CounterType::Finality), 1);
+    // At my next end step it's exiled.
+    g.step = TurnStep::End;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_none(), "exiled at the next end step");
+    assert!(g.exile.iter().any(|c| c.id == dead), "moved to exile");
+}

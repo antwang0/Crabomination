@@ -3,16 +3,17 @@
 //! attacked-by debuff (Sabotage Strategist), a copy-an-artifact-or-creature
 //! Shapeshifter (Waxen Shapethief), mill+conditional-destroy (Quag Feast), a
 //! modal fight/destroy (Plow Through), a blink+board-wipe (Explosive Getaway),
-//! and a Start-your-engines Aura (Lightwheel Enhancements). Tests in
-//! `crabomination/src/tests/recent175.rs`.
+//! a Start-your-engines Aura (Lightwheel Enhancements), a second-draw Thopter
+//! maker (Thopter Fabricator), and a temporary-reanimator (Coalstoke Gearhulk).
+//! Tests in `crabomination/src/tests/recent175.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
     Predicate, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::etb;
-use crate::effect::{Duration, Effect, PlayerRef, Selector};
+use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Magmakin Artillerist — {2}{R} 1/4 Elemental Pirate. Whenever you discard one
@@ -263,6 +264,43 @@ pub fn thopter_fabricator() -> CardDefinition {
                 .once_per_turn(),
             effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: thopter },
         }],
+        ..Default::default()
+    }
+}
+
+/// Coalstoke Gearhulk — {1}{B}{B}{R}{R} 5/4 Construct. Menace, deathtouch. ETB:
+/// put target creature card with mana value 4 or less from a graveyard onto the
+/// battlefield under your control with a finality counter; it gains menace,
+/// deathtouch, and haste. Exile it at the beginning of your next end step.
+pub fn coalstoke_gearhulk() -> CardDefinition {
+    let grant = |kw: Keyword| Effect::GrantKeyword {
+        what: Selector::Target(0),
+        keyword: kw,
+        duration: Duration::Permanent,
+    };
+    CardDefinition {
+        name: "Coalstoke Gearhulk",
+        cost: cost(&[generic(1), b(), b(), r(), r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Menace, Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(4))),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Finality,
+                amount: Value::ONE,
+            },
+            grant(Keyword::Menace),
+            grant(Keyword::Deathtouch),
+            grant(Keyword::Haste),
+            Effect::AtNextEndStep { body: Box::new(Effect::Exile { what: Selector::Target(0) }) },
+        ]))],
         ..Default::default()
     }
 }
