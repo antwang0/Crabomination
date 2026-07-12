@@ -2722,6 +2722,25 @@ pub enum Effect {
         #[serde(default)]
         filter: Option<crate::card::SelectionRequirement>,
     },
+    /// "Exile cards from the top of `who`'s library until you exile a nonland
+    /// card; you may play/cast that card [`duration`]. The other exiled cards
+    /// stay in exile." The impulse-until-nonland family (Territorial Bruntar's
+    /// landfall, Solstice Revelations) — unlike `Discover`, there's no MV cap
+    /// on the stop and the passed-over cards aren't bottomed.
+    ExileTopUntilNonlandMayPlay {
+        who: PlayerRef,
+        duration: crate::card::MayPlayDuration,
+        /// `true` grants a free cast; otherwise the caster pays the card's
+        /// normal mana cost from exile.
+        #[serde(default)]
+        free: bool,
+        /// When `Some`, the may-play is granted only if the nonland card's mana
+        /// value is *less than* this value; otherwise it's put into hand
+        /// instead (Solstice Revelations — "if its mana value is less than the
+        /// number of Mountains you control").
+        #[serde(default)]
+        hand_unless_mv_below: Option<Value>,
+    },
     /// "Look at the top `count` cards of your library. You may put a land card
     /// from among them onto the battlefield tapped. Put the rest on the bottom
     /// of your library in a random order." Ignis Scientia's ETB. Reuses the
@@ -4119,6 +4138,13 @@ pub enum Effect {
         /// `false` keeps the free-cast grant (Robber of the Rich).
         #[serde(default)]
         pay_any_color: bool,
+        /// "You may play them" *paying their own mana cost* — the plain
+        /// impulse-draw grant (Light Up the Stage, Reckless Impulse,
+        /// Wrenn's Resolve). Stamps the card's actual cost as its alt-cast
+        /// cost so the may-play isn't a free cast. Mutually exclusive with
+        /// `pay_any_color`; `false` keeps the free-cast default.
+        #[serde(default)]
+        pay_own_cost: bool,
         /// "If you don't [cast it], …" fallback (Chandra, Torch of
         /// Defiance's +1). Registers a next-end-step delayed trigger that
         /// runs this body if the exiled card is still in exile (uncast).

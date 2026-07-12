@@ -16,6 +16,14 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Impulse-until-nonland + impulse-cost fix (recent166 — EOE/TLA/DFT):**
+  `Effect::ExileTopUntilNonlandMayPlay` exiles from the top of a library until a
+  nonland card, then grants a may-play (free or pay-own-cost) with an optional
+  MV gate that diverts the card to hand instead (Territorial Bruntar's landfall,
+  Solstice Revelations). `Effect::ExileTopAndGrantMayPlay` gained a
+  `pay_own_cost` flag so plain impulse spells (Light Up the Stage, Reckless
+  Impulse, Wrenn's Resolve) charge the card's real cost rather than free-casting.
+
 - **Core loop:** LIFO stack, multiplayer priority, state-based actions, delayed
   triggers, intervening-`if` (603.4), the layer system (613), split
   first-strike / regular combat-damage steps, APNAP ordering.

@@ -3680,7 +3680,7 @@ pub fn emberheart_challenger() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
+                pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             }),
         ],
@@ -3821,7 +3821,7 @@ pub fn galvanic_relay() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(1),
             duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: false,
+            pay_any_color: false, pay_own_cost: false,
             uncast_penalty: None,
         },
         ..Default::default()
@@ -4729,7 +4729,7 @@ pub fn inti_seneschal_of_the_sun() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
             },
@@ -5510,7 +5510,7 @@ pub fn hugs_grisly_guardian() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::XFromCost,
             duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: false,
+            pay_any_color: false, pay_own_cost: false,
             uncast_penalty: None,
         })],
         ..Default::default()
@@ -6437,7 +6437,7 @@ pub fn cori_mountain_monastery() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
                 ..Default::default()
@@ -9511,7 +9511,7 @@ pub fn unlucky_witness() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(2),
             duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: false,
+            pay_any_color: false, pay_own_cost: false,
             uncast_penalty: None,
         })],
         ..Default::default()

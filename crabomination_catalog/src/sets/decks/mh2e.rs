@@ -94,7 +94,7 @@ pub fn breyas_apprentice() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     duration: MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
                 Effect::PumpPT {

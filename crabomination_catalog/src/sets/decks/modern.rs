@@ -666,7 +666,7 @@ pub fn light_up_the_stage() -> CardDefinition {
         effect: Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: true,
             uncast_penalty: None,
         },
         alternative_cost: Some(crate::effect::shortcut::spectacle(cost(&[r()]))),
@@ -746,7 +746,7 @@ pub fn abbot_of_keral_keep() -> CardDefinition {
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
             },
@@ -818,7 +818,7 @@ pub fn reckless_impulse() -> CardDefinition {
         effect: Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: true,
             uncast_penalty: None,
         },
         ..Default::default()
@@ -835,7 +835,7 @@ pub fn wrenns_resolve() -> CardDefinition {
         effect: Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: true,
             uncast_penalty: None,
         },
         ..Default::default()
@@ -20305,7 +20305,7 @@ pub fn fallen_shinobi() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::DefendingPlayer,
                 count: Value::Const(2),
-                duration: crate::card::MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             },
         }],
@@ -21575,7 +21575,7 @@ pub fn robber_of_the_rich() -> CardDefinition {
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+                    duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 }),
                 else_: Box::new(Effect::Noop),
@@ -25463,7 +25463,7 @@ pub fn minds_desire() -> CardDefinition {
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+                duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             },
         ]),
@@ -49226,7 +49226,7 @@ pub fn ral_monsoon_mage() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(8),
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
                 ..Default::default()
@@ -49770,7 +49770,7 @@ pub fn questing_druid() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                pay_any_color: false,
+                pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             },
         })),

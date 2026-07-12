@@ -8251,3 +8251,80 @@ fn cr_509_1b_cant_block_keyword_rejects_blocker() {
     g.step = TurnStep::DeclareBlockers;
     assert!(g.declare_blockers(vec![(foe, sower)]).is_err(), "a can't-block creature can't be declared as a blocker");
 }
+
+// ── CR 702.171 — Saddle (sorcery-speed + "other creatures") ─────────────────
+
+/// CR 702.171d — Saddle can be activated only as a sorcery, and CR 702.171a's
+/// "other untapped creatures" excludes the Mount itself.
+#[test]
+fn cr_702_171_saddle_is_sorcery_speed_and_excludes_the_mount() {
+    let mut g = two_player_game();
+    let mount = g.add_card_to_battlefield(0, catalog::gloryheath_lynx()); // Saddle 2
+    let ox = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    g.clear_sickness(mount);
+    g.clear_sickness(ox);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Instant speed (opponent's turn) → rejected.
+    g.active_player_idx = 1;
+    assert!(
+        matches!(
+            g.perform_action(GameAction::Saddle { mount, creatures: vec![ox] }),
+            Err(GameError::SorcerySpeedOnly)
+        ),
+        "saddle only as a sorcery",
+    );
+    // Back on your turn, the Mount can't be one of its own saddlers.
+    g.active_player_idx = 0;
+    assert!(
+        g.perform_action(GameAction::Saddle { mount, creatures: vec![mount] }).is_err(),
+        "a Mount can't saddle itself",
+    );
+    // A legal 2-power saddler works.
+    g.perform_action(GameAction::Saddle { mount, creatures: vec![ox] }).expect("saddle");
+    assert!(g.battlefield_find(mount).unwrap().saddled, "Mount is saddled");
+}
+
+// ── CR 613.1d / 613.4 — additive type-changing (animated Vehicle) ────────────
+
+/// CR 613.4 layer-4: adding the creature type to a Vehicle is *additive* — the
+/// permanent keeps its Artifact type, becoming an "artifact creature".
+#[test]
+fn cr_613_4_animated_vehicle_keeps_artifact_type() {
+    let mut g = two_player_game();
+    let sub = g.add_card_to_battlefield(0, catalog::invasion_submersible());
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("exhaust animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(sub).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types.contains(&crate::card::CardType::Artifact), "still an artifact (additive)");
+}
+
+// ── CR 701.42 — Surveil ──────────────────────────────────────────────────────
+
+/// CR 701.42a — a surveiled card the player declines to keep on top goes to the
+/// graveyard (not the bottom of the library, as scry would).
+#[test]
+fn cr_701_42_surveil_routes_declined_card_to_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::effect::{Effect, PlayerRef, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::grim_bauble());
+    let top = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![],
+        bottom: vec![top],
+    }]));
+    let ctx = EffectContext::for_ability(src, 0, None);
+    let events = g
+        .resolve_effect(&Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }, &ctx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "declined surveil card hits the graveyard");
+}

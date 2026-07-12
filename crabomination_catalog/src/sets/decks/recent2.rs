@@ -1326,7 +1326,7 @@ pub fn experimental_synthesizer() -> CardDefinition {
         who: PlayerRef::You,
         count: Value::Const(1),
         duration: MayPlayDuration::EndOfThisTurn,
-        pay_any_color: false,
+        pay_any_color: false, pay_own_cost: false,
         uncast_penalty: None,
     };
     let samurai = TokenDefinition {

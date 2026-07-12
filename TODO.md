@@ -235,6 +235,32 @@ Remaining known approximations (each noted on its factory doc):
   Encroaching Mycosynth's off-battlefield halves, Green Sun's Twilight's
   one-per-type pick.
 
+## Discovered follow-ups — EOE/TLA/DFT (`decks::recent166`)
+
+- **Graveyard-functioning triggered abilities.** Wolfbat ("whenever you draw
+  your second card each turn, return this from your graveyard…") and the
+  Bloodghast/Prized-Amalgam/Vengevine family need triggered abilities that fire
+  while the source is in the graveyard. The trigger walk only scans
+  `self.battlefield`; add a graveyard scan gated by a per-ability
+  `functions_from_graveyard` flag. Wolfbat deferred pending this.
+- **Dual-zone tutor + `NoAbilities`/`Vanilla` filter.** Fang-Druid Summoner
+  searches library *and/or* graveyard for a creature card with no abilities;
+  modeled as library-only, filter dropped. Also blocks Delivery Moogle.
+- **Vehicle animate-with-own-P/T until EOT.** Guidelight Matrix's "target Vehicle
+  becomes an artifact creature until end of turn" needs an animate reading the
+  target's printed P/T (`BecomeCreature` takes fixed P/T; `AddCardType…` is
+  indefinite-only). Guidelight Matrix not yet added.
+- **Restricted-mana variants.** White Lotus Hideout drops the Shrine half of
+  "Lesson or Shrine"; Jasmine Dragon Tea Shop approximates "Ally spell/ability"
+  as `CreatureOfType(Ally)`. Add `LessonOrShrineSpellsOnly` /
+  `AllySpellsOrAbilities`.
+- **Approximations dropped this batch (noted in factory docs):** Firebender
+  Ascension's quest-copy; Ragost's "artifacts are Foods"; Secret Tunnel's
+  two-shared-type unblockable; Basri's exert (plain tap); Grim Javelineer's
+  death-gated surveil; Far Fortune / Hazoret max-speed riders; Coalstoke /
+  Sothera / Requiem Monolith not yet added (delayed-exile reanimate, exile-edict,
+  damage-triggered granted ability).
+
 ## Discovered follow-ups — AFR venture batch (`decks::afr`)
 
 - Rooms resolve inline (no stack round-trip); Tomb's two pay-or-lose rooms are

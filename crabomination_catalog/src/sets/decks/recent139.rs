@@ -273,7 +273,7 @@ pub fn redcap_gutter_dweller() -> CardDefinition {
                             who: PlayerRef::You,
                             count: Value::ONE,
                             duration: MayPlayDuration::EndOfThisTurn,
-                            pay_any_color: false,
+                            pay_any_color: false, pay_own_cost: false,
                             uncast_penalty: None,
                         },
                     ])),

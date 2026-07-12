@@ -2262,7 +2262,7 @@ pub fn bonehoard_dracosaur() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(2),
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
                 Effect::If {

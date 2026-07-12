@@ -73,6 +73,10 @@ pub(crate) struct SlotSnapshot {
     /// Lifetime accepted-connection count — the denominator for
     /// [`refusal_rate_pct`](Self::refusal_rate_pct).
     pub(crate) accepted: u64,
+    /// The configured global cap (0 = unlimited), carried so
+    /// [`occupancy_pct`](Self::occupancy_pct) can be read off a snapshot
+    /// without a second call back into the manager.
+    pub(crate) global_cap: usize,
 }
 
 impl SlotSnapshot {
@@ -85,6 +89,22 @@ impl SlotSnapshot {
         let refused = self.refused_global.saturating_add(self.refused_per_ip);
         let attempts = self.accepted.saturating_add(refused);
         refused.saturating_mul(100).checked_div(attempts).unwrap_or(0)
+    }
+
+    /// Live global-cap occupancy as a percentage (`current / global_cap`).
+    /// Returns 0 when the global cap is unlimited (no ceiling to fill).
+    /// Unlike [`refusal_rate_pct`](Self::refusal_rate_pct) — which only moves
+    /// once the server is *already* turning connections away — occupancy
+    /// rises smoothly toward 100 as load approaches the cap, so it's the
+    /// earlier "provision more headroom" signal.
+    pub(crate) fn occupancy_pct(&self) -> u64 {
+        if self.global_cap == 0 {
+            return 0;
+        }
+        (self.current as u64)
+            .saturating_mul(100)
+            .checked_div(self.global_cap as u64)
+            .unwrap_or(0)
     }
 }
 
@@ -152,6 +172,7 @@ impl SlotManager {
             max_per_ip: state.per_ip.values().copied().max().unwrap_or(0),
             peak_per_ip: state.peak_per_ip,
             accepted: state.accepted,
+            global_cap: self.global_cap,
         }
     }
 }
@@ -290,5 +311,26 @@ mod tests {
         for _ in 0..50 {
             guards.push(mgr.try_acquire(ip(1)).expect("unlimited"));
         }
+    }
+
+    #[test]
+    fn occupancy_pct_tracks_fill_and_drain() {
+        let mgr = SlotManager::new(4, 0);
+        assert_eq!(mgr.snapshot().occupancy_pct(), 0, "empty");
+        let a = mgr.try_acquire(ip(1)).expect("slot");
+        let b = mgr.try_acquire(ip(2)).expect("slot");
+        assert_eq!(mgr.snapshot().occupancy_pct(), 50, "2 of 4 = 50%");
+        let _c = mgr.try_acquire(ip(3)).expect("slot");
+        let _d = mgr.try_acquire(ip(4)).expect("slot");
+        assert_eq!(mgr.snapshot().occupancy_pct(), 100, "full before any refusal");
+        drop((a, b));
+        assert_eq!(mgr.snapshot().occupancy_pct(), 50, "drops as slots free");
+    }
+
+    #[test]
+    fn occupancy_pct_is_zero_when_unbounded() {
+        let mgr = SlotManager::new(0, 0);
+        let _g = mgr.try_acquire(ip(1)).expect("slot");
+        assert_eq!(mgr.snapshot().occupancy_pct(), 0, "no ceiling → no occupancy");
     }
 }

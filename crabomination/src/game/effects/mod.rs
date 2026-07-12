@@ -13613,7 +13613,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopAndGrantMayPlay { who, count, duration, pay_any_color, uncast_penalty } => {
+            Effect::ExileTopAndGrantMayPlay {
+                who,
+                count,
+                duration,
+                pay_any_color,
+                pay_own_cost,
+                uncast_penalty,
+            } => {
                 // Atomic helper: move the top `count` cards of `who`'s library
                 // to exile and stamp `may_play_until` on each in one step.
                 // The top of the library is index 0 (see `Player::draw_top`
@@ -13646,6 +13653,10 @@ impl GameState {
                                     Some(crate::mana::ManaCost::new(vec![crate::mana::generic(
                                         card.definition.cost.cmc(),
                                     )]));
+                            } else if *pay_own_cost {
+                                // Plain impulse — "you may play them" pays the
+                                // card's real mana cost, not a free cast.
+                                card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
                             }
                         }
                         // "If you don't [cast it], …" — check at the next
@@ -14340,6 +14351,52 @@ impl GameState {
                             ctx,
                             events,
                         );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileTopUntilNonlandMayPlay { who, duration, free, hand_unless_mv_below } => {
+                use crate::card::CardType;
+                use crate::effect::ZoneDest;
+                let granted_turn = self.turn_number;
+                for p in self.resolve_players(who, ctx) {
+                    let mut hit: Option<crate::card::CardId> = None;
+                    while !self.players[p].library.is_empty() {
+                        let top = &self.players[p].library[0];
+                        let cid = top.id;
+                        let is_land = top.definition.card_types.contains(&CardType::Land);
+                        self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                        if !is_land {
+                            hit = Some(cid);
+                            break;
+                        }
+                    }
+                    let Some(cid) = hit else { continue };
+                    // Solstice's MV gate — put the card into hand instead of
+                    // granting the free cast when its MV isn't below the bound.
+                    let to_hand = hand_unless_mv_below.as_ref().is_some_and(|thr| {
+                        let thr = self.evaluate_value(thr, ctx) as i64;
+                        let mv = self
+                            .find_card_anywhere(cid)
+                            .map_or(0, |c| c.definition.cost.cmc() as i64);
+                        mv >= thr
+                    });
+                    if to_hand {
+                        self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                        continue;
+                    }
+                    if let Some(card) = self.find_card_anywhere_mut(cid) {
+                        let real_cost = card.definition.cost.clone();
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: ctx.controller,
+                            granted_turn,
+                            duration: *duration,
+                            exile_after: false,
+                        });
+                        if !*free {
+                            card.granted_alt_cast_cost_eot = Some(real_cost);
+                        }
                     }
                 }
                 Ok(())

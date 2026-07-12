@@ -162,7 +162,7 @@ pub fn impossible_inferno() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 }),
                 else_: Box::new(Effect::Noop),

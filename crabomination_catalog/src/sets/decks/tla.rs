@@ -2932,7 +2932,7 @@ pub fn zuko_exiled_prince() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
+                pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             },
             ..Default::default()

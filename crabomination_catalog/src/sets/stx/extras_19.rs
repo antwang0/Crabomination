@@ -292,7 +292,7 @@ fn nassari_dean_of_expression() -> CardDefinition {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true,
+                    pay_any_color: true, pay_own_cost: false,
                     uncast_penalty: None,
                 },
             },

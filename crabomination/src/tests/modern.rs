@@ -360,6 +360,11 @@ fn reckless_impulse_exiles_top_two() {
     cast(&mut g, id);
     let exiled = g.exile.iter().filter(|c| (c.id == a || c.id == b) && c.may_play_until.is_some()).count();
     assert_eq!(exiled, 2, "both top cards exiled and playable");
+    // Impulse "you may play them" pays each card's own cost — not a free cast.
+    assert!(
+        g.exile.iter().filter(|c| c.id == a || c.id == b).all(|c| c.granted_alt_cast_cost_eot.is_some()),
+        "impulsed cards cost their own mana, not free",
+    );
 }
 
 /// Wrenn's Resolve exiles the top two cards and lets you play them.

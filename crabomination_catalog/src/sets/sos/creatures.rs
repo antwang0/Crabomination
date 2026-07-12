@@ -3626,7 +3626,7 @@ pub fn elemental_mascot() -> CardDefinition {
                 Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 },
             ]),

@@ -162,7 +162,7 @@ pub fn ardent_dustspeaker() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+            duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
             uncast_penalty: None,
         })],
         ..Default::default()

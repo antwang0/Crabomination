@@ -228,6 +228,7 @@ impl Effect {
             Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
             Effect::LookTopMayDeployAttacking { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
+            Effect::ExileTopUntilNonlandMayPlay { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::NameCardTargetDiscardsMatching => true,
@@ -1369,6 +1370,13 @@ impl Effect {
             Effect::Goad { .. } => "goad target creature".into(),
             Effect::Suspect { .. } => "suspect target creature".into(),
             Effect::Discover { .. } => "discover".into(),
+            Effect::ExileTopUntilNonlandMayPlay { free, .. } => {
+                if *free {
+                    "exile from the top of your library until a nonland card; you may cast it".into()
+                } else {
+                    "exile from the top of your library until a nonland card; you may play it this turn".into()
+                }
+            }
             // Walk every child and concatenate the non-empty pieces. The
             // earlier "first non-empty wins" version produced a misleading
             // summary for cards like Artistic Process mode 2 — Seq([

@@ -67,7 +67,7 @@ pub fn unstable_amulet() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
+                pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             },
             ..Default::default()
@@ -285,7 +285,7 @@ pub fn glimpse_the_impossible() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(3),
             duration: MayPlayDuration::EndOfThisTurn,
-            pay_any_color: false,
+            pay_any_color: false, pay_own_cost: false,
             uncast_penalty: Some(Box::new(Effect::Seq(vec![
                 Effect::Move { what: Selector::Target(0), to: ZoneDest::Graveyard },
                 Effect::CreateToken {

@@ -6234,7 +6234,7 @@ pub fn memorial_vault() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Sum(vec![Value::Const(1), Value::SacrificedManaValue]),
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                pay_any_color: true,
+                pay_any_color: true, pay_own_cost: false,
                 uncast_penalty: None,
             },
             ..Default::default()
@@ -6667,7 +6667,7 @@ pub fn possibility_technician() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 duration: crate::card::MayPlayDuration::WhileExiled,
-                pay_any_color: false,
+                pay_any_color: false, pay_own_cost: false,
                 uncast_penalty: None,
             },
         }],

@@ -1125,7 +1125,7 @@ pub fn tectonic_giant() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                pay_any_color: true,
+                pay_any_color: true, pay_own_cost: false,
                 uncast_penalty: None,
             },
         ])
@@ -5166,7 +5166,7 @@ pub fn furious_rise() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     duration: crate::card::MayPlayDuration::WhileExiled,
-                    pay_any_color: false,
+                    pay_any_color: false, pay_own_cost: false,
                     uncast_penalty: None,
                 }),
                 else_: Box::new(Effect::Noop),
