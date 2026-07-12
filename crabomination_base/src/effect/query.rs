@@ -747,6 +747,7 @@ impl Effect {
             Effect::PreventAllCombatDamageThisTurn => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
+            Effect::PreventCombatDamageToTargetThisTurn { target } => sel_has_target(target),
             Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount }
             | Effect::PreventNextDamageAndGainLife { target, amount } => {
@@ -1807,7 +1808,8 @@ impl Effect {
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
-                | Effect::PreventAllCombatDamageInvolving { target } => sel_find(target, slot),
+                | Effect::PreventAllCombatDamageInvolving { target }
+                | Effect::PreventCombatDamageToTargetThisTurn { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }

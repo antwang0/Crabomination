@@ -656,6 +656,9 @@ mod tests_recent160;
 #[path = "../tests/recent161.rs"]
 mod tests_recent161;
 #[cfg(test)]
+#[path = "../tests/recent164.rs"]
+mod tests_recent164;
+#[cfg(test)]
 #[path = "../tests/recent163.rs"]
 mod tests_recent163;
 #[cfg(test)]
@@ -1461,6 +1464,13 @@ pub struct GameState {
     /// in this set. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
+    /// CR 615 — creatures that prevent all combat damage dealt *to* them this
+    /// turn (incoming only; they still deal their own). The turn-scoped sibling
+    /// of the `PreventAllCombatDamageToThis` static (Fog Bank), granted by a
+    /// one-shot effect — Fleeting Flight's "prevent all combat damage that would
+    /// be dealt to it this turn". Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_this_turn: Vec<CardId>,
     /// CR 510.1c — attackers that became blocked this combat. An attacker
     /// stays blocked even if all its blockers leave combat (double-strike
     /// step-one kills, post-block removal): without trample it assigns no
@@ -1863,6 +1873,7 @@ impl Clone for GameState {
             additional_upkeep_steps: self.additional_upkeep_steps,
             upkeep_steps_this_turn: self.upkeep_steps_this_turn,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
+            combat_damage_prevented_to_this_turn: self.combat_damage_prevented_to_this_turn.clone(),
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
@@ -2031,6 +2042,7 @@ impl GameState {
             additional_upkeep_steps: 0,
             upkeep_steps_this_turn: 0,
             combat_damage_prevented_creatures: Vec::new(),
+            combat_damage_prevented_to_this_turn: Vec::new(),
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
@@ -3862,7 +3874,8 @@ impl GameState {
     /// resolver to zero damage marked on Fog Bank / Guard Gomazoa.
     pub fn combat_damage_prevented_to_self(&self, tgt: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
-            && self.permanent_prevents_all_combat_damage_to_self(tgt)
+            && (self.permanent_prevents_all_combat_damage_to_self(tgt)
+                || self.combat_damage_prevented_to_this_turn.contains(&tgt))
     }
 
     /// Scale a pending damage event by the global doubling/halving

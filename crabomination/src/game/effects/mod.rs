@@ -13324,6 +13324,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventCombatDamageToTargetThisTurn { target } => {
+                // CR 615 — Fleeting Flight: prevent all combat damage dealt *to*
+                // the target this turn (it still deals its own).
+                for ent in self.resolve_selector(target, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent
+                        && !self.combat_damage_prevented_to_this_turn.contains(&id)
+                    {
+                        self.combat_damage_prevented_to_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromChosenSourceThisTurn { filter } => {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());

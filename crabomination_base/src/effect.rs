@@ -4953,6 +4953,14 @@ pub enum Effect {
     /// then skips that creature in both directions. Maze of Ith.
     PreventAllCombatDamageInvolving { target: Selector },
 
+    /// CR 615 — "Prevent all combat damage that would be dealt to `target` this
+    /// turn." Incoming-only (the creature still deals its own combat damage) —
+    /// the turn-scoped sibling of the `PreventAllCombatDamageToThis` static.
+    /// Adds the target to `GameState.combat_damage_prevented_to_this_turn`,
+    /// which the resolver consults via `combat_damage_prevented_to_self`.
+    /// Fleeting Flight.
+    PreventCombatDamageToTargetThisTurn { target: Selector },
+
     /// "Target creature can't block `source` this turn." Records a
     /// `(target, source)` pair in `GameState.cant_block_pairs`; the
     /// declare-blockers validator rejects that specific block. Kozilek's

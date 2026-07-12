@@ -2257,6 +2257,7 @@ impl GameState {
         self.prevent_combat_damage_this_turn = false;
         self.prevent_combat_damage_except = None;
         self.combat_damage_prevented_creatures.clear();
+        self.combat_damage_prevented_to_this_turn.clear();
         self.auras_at_death.clear();
         self.creature_etb_steal_this_turn.clear();
         self.search_tax_paid_this_turn.clear();

@@ -6004,6 +6004,10 @@ static DECKS: &[Factory] = &[
     super::decks::high_society_hunter,
     super::decks::dropkick_bomber,
     super::decks::seekers_folly,
+    // recent164 — Foundations: combat-damage prevention / excess-damage / self-copy.
+    super::decks::fleeting_flight,
+    super::decks::goblin_negotiation,
+    super::decks::homunculus_horde,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
