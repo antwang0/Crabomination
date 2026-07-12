@@ -6128,6 +6128,13 @@ static DECKS: &[Factory] = &[
     super::decks::rocketeer_boostbuggy,
     super::decks::run_over,
     super::decks::skybox_ferry,
+    // recent170 — Roads land cycle + exhaust/speed/anthem Vehicles.
+    super::decks::foul_roads,
+    super::decks::racers_scoreboard,
+    super::decks::rangers_aetherhive,
+    super::decks::reef_roads,
+    super::decks::rocky_roads,
+    super::decks::salvation_engine,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
