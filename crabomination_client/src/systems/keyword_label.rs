@@ -16,7 +16,7 @@
 use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
-use crabomination::card::{CardId, Keyword};
+use crabomination::card::{CardId, Keyword, WardCost};
 
 use crate::card::{BattlefieldCard, GameCardId, CARD_HEIGHT};
 use crate::net_plugin::CurrentView;
@@ -204,14 +204,37 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
     })
 }
 
+/// Render a Ward cost compactly for its "Ward…" tag: the mana total for a mana
+/// ward ("Ward2"), the life for "Ward—Pay N life" ("Ward7♥"), and terse markers
+/// for the discard / blight / sacrifice / dynamic variants. What the opponent
+/// has to pay to target this permanent is a real board read.
+fn ward_suffix(cost: &WardCost) -> String {
+    use WardCost::*;
+    match cost {
+        Mana(c) => c.cmc().to_string(),
+        Life(n) => format!("{n}♥"),
+        ManaAndLife(c, n) => format!("{}+{n}♥", c.cmc()),
+        Discard(n) => format!("{n}↓"),
+        Blight(n) => format!("{n}☠"),
+        SacrificeCreature => "sac".into(),
+        SacrificePermanents(n) => format!("sac{n}"),
+        GenericSourcePower => "P".into(),
+        LifeSourcePower => "P♥".into(),
+    }
+}
+
 /// The numeric magnitude worth appending to a count-carrying keyword's tag —
 /// the N in Rampage N / Toxic N / Annihilator N etc. materially changes how the
 /// creature reads in combat, so surface it ("Rmp2", "Tox3") rather than dropping
 /// it. Crew N / Saddle N carry the total *power* needed to online the
 /// Vehicle/Mount, a real board read ("Crew3" is much harder to turn on than
-/// "Crew1"), so include them too. Ward isn't a plain integer, so skip it.
+/// "Crew1"), so include them too. Ward renders its concrete cost via
+/// `ward_suffix` ("Ward2", "Ward7♥").
 fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     use Keyword::*;
+    if let Ward(cost) = kw {
+        return Some(ward_suffix(cost));
+    }
     let n = match kw {
         Rampage(n) | Bushido(n) | Frenzy(n) | Annihilator(n) | Absorb(n) | Toxic(n)
         | Poisonous(n) | CantBeBlockedExceptByN(n) | Crew(n) | Saddle(n) => *n,
@@ -379,6 +402,16 @@ mod tests {
     fn strip_skips_non_displayable_keywords() {
         // Flash isn't a board-glance combat status → no badge.
         assert_eq!(keyword_strip(&[Keyword::Flash]), "");
+    }
+
+    #[test]
+    fn strip_surfaces_ward_cost() {
+        use crabomination::card::WardCost;
+        use crabomination::mana::{cost, generic};
+        // Ward—Pay 7 life (Sire of Seven Deaths) reads the concrete life cost.
+        assert_eq!(keyword_strip(&[Keyword::Ward(WardCost::Life(7))]), "Ward7♥");
+        // Ward {2} shows the mana total.
+        assert_eq!(keyword_strip(&[Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))]), "Ward2");
     }
 
     #[test]

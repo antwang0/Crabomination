@@ -503,6 +503,7 @@ impl MatchStats {
             self.cumulative_win_life_delta / (self.win_life_samples as i64)
         }
     }
+
     /// Population standard deviation of the win-by-life delta (σ = √(E[x²] −
     /// E[x]²)). Returns 0.0 with no samples. A tight σ next to the average
     /// means a consistent win margin; a large σ flags a "blowout-or-squeaker"

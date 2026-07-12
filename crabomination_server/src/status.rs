@@ -54,6 +54,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
+         \"median_win_life_delta\":{},\"win_life_delta_stddev\":{:.2},\
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
@@ -82,6 +83,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.other_wins,
         st.first_seat_win_pct(),
         st.avg_win_life_delta(),
+        st.win_life_delta_median(),
+        st.win_life_delta_stddev(),
         sl.current,
         sl.peak,
         sl.accepted,
@@ -152,6 +155,8 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     // operators watch when tuning bot mulligans or seat assignment.
     m("first_seat_win_pct", "gauge", "Percent of decided matches won by the first seat.", st.first_seat_win_pct().to_string());
     m("avg_win_life_delta", "gauge", "Average life margin of victory across wins.", st.avg_win_life_delta().to_string());
+    m("median_win_life_delta", "gauge", "Median (p50) life margin of victory.", st.win_life_delta_median().to_string());
+    m("win_life_delta_stddev", "gauge", "Standard deviation of the win-by-life margin.", format!("{:.2}", st.win_life_delta_stddev()));
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
     for (kind, value) in [
@@ -270,6 +275,7 @@ mod tests {
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
                     "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
                     "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
+                    "\"median_win_life_delta\":0", "\"win_life_delta_stddev\":0.00",
                     "\"min_turns\":0", "\"max_turns\":0", "\"turn_stddev\":0.00",
                     "\"median_turns\":0", "\"turn_p90\":0",
                     "\"inconclusive\":0", "\"inconclusive_pct\":0",
