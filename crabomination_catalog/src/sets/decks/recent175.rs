@@ -9,7 +9,7 @@
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    Predicate, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
@@ -232,6 +232,37 @@ pub fn lightwheel_enhancements() -> CardDefinition {
             keywords: vec![Keyword::Vigilance],
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+/// Thopter Fabricator — {2}{U} Artifact — Vehicle 4/4. Flying. Whenever you draw
+/// your second card each turn, create a 1/1 colorless Thopter artifact creature
+/// token with flying. Crew 2.
+pub fn thopter_fabricator() -> CardDefinition {
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Thopter Fabricator",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                .once_per_turn(),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: thopter },
+        }],
         ..Default::default()
     }
 }

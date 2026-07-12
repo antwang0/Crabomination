@@ -205,3 +205,23 @@ fn lightwheel_enhancements_pumps_and_seeds_speed() {
     assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
     assert_eq!(g.players[0].speed, 1, "Start your engines! seeded speed 1");
 }
+
+/// Thopter Fabricator mints a Thopter on your second draw each turn (once).
+#[test]
+fn thopter_fabricator_mints_on_second_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thopter_fabricator());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev); // first draw — no token
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count(), 0);
+    let mut ev2 = vec![];
+    g.draw_one(0, &mut ev2); // second draw — one Thopter
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count(), 1,
+        "second draw mints a Thopter");
+}

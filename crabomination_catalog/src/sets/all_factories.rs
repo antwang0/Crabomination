@@ -6172,6 +6172,7 @@ static DECKS: &[Factory] = &[
     super::decks::plow_through,
     super::decks::explosive_getaway,
     super::decks::lightwheel_enhancements,
+    super::decks::thopter_fabricator,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
