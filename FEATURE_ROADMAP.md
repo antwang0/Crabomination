@@ -123,7 +123,7 @@ exercising each) was elided in a compaction pass; recover it from
   Illusion via `Value::CastSpellManaSpent` + `TokenDefinition.dynamic_pt`), and
   kicker ETB counters (Untamed Kavu).
 - **Marvel's Spider-Man + faithful Cosmogoyf (modern_decks, this run):**
-  `decks::spm` (33 Standard cards on existing primitives — Spiders-matter,
+  `decks::spm` (41 Standard cards on existing primitives — Spiders-matter,
   Villain value, LTB tokens, connive, `MayDo` auto-attach, `Value::XFromCost`
   counters+burn, modal spells, Ward/modified statics), `CreatureType::Performer`,
   and `DynamicPt::CardsYouOwnInExile`

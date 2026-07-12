@@ -845,3 +845,207 @@ pub fn scout_the_city() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 1/1 green-and-white Human Citizen creature token.
+fn human_citizen_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Human Citizen".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// News Helicopter — {3} 1/1 Construct artifact. Flying. ETB: create a 1/1
+/// green-and-white Human Citizen token.
+pub fn news_helicopter() -> CardDefinition {
+    CardDefinition {
+        name: "News Helicopter",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: human_citizen_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Spider-Byte, Web Warden — {2}{U} 2/2 Spider Avatar Hero. ETB: return up to
+/// one target nonland permanent to its owner's hand.
+pub fn spider_byte_web_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Spider-Byte, Web Warden",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Avatar, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: R::Permanent.and(R::Nonland),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Web Up — {2}{W} Enchantment. ETB: exile target nonland permanent an opponent
+/// controls until this enchantment leaves the battlefield.
+pub fn web_up() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Web Up",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByOpponent)),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Taxi Driver — {1}{R} 3/1 Human Pilot. {1}, {T}: target creature gains haste
+/// until end of turn.
+pub fn taxi_driver() -> CardDefinition {
+    CardDefinition {
+        name: "Taxi Driver",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Pilot], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Web-Warriors — {4}{G/W} 4/3 Spider Hero. ETB: put a +1/+1 counter on each
+/// other creature you control.
+pub fn web_warriors() -> CardDefinition {
+    CardDefinition {
+        name: "Web-Warriors",
+        cost: cost(&[generic(4), hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider, CreatureType::Hero], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Starling, Aerial Ally — {4}{W} 3/4 Human Hero. Flying. ETB: another target
+/// creature you control gains flying until end of turn.
+pub fn starling_aerial_ally() -> CardDefinition {
+    CardDefinition {
+        name: "Starling, Aerial Ally",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Hero], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ezekiel Sims, Spider-Totem — {4}{G} 3/5 Spider Human Advisor. Reach. At the
+/// beginning of combat on your turn, target Spider you control gets +2/+2 until
+/// end of turn.
+pub fn ezekiel_sims_spider_totem() -> CardDefinition {
+    CardDefinition {
+        name: "Ezekiel Sims, Spider-Totem",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::PumpPT {
+                what: target_filtered(R::HasCreatureType(CreatureType::Spider).and(R::ControlledByYou)),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Agent Venom — {2}{B} 2/3 Symbiote Soldier Hero. Flash, menace. Whenever
+/// another nontoken creature you control dies, draw a card and lose 1 life.
+pub fn agent_venom() -> CardDefinition {
+    CardDefinition {
+        name: "Agent Venom",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Symbiote, CreatureType::Soldier, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                crate::effect::shortcut::lose_life(1, Selector::You),
+            ]),
+        }],
+        ..Default::default()
+    }
+}

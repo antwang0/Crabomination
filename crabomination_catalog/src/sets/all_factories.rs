@@ -6080,6 +6080,14 @@ static DECKS: &[Factory] = &[
     super::decks::spectacular_tactics,
     super::decks::spectacular_spider_man,
     super::decks::scout_the_city,
+    super::decks::news_helicopter,
+    super::decks::spider_byte_web_warden,
+    super::decks::web_up,
+    super::decks::taxi_driver,
+    super::decks::web_warriors,
+    super::decks::starling_aerial_ally,
+    super::decks::ezekiel_sims_spider_totem,
+    super::decks::agent_venom,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -425,3 +425,98 @@ fn spectacular_spider_man_shields_team() {
     assert!(!g.computed_permanent(enemy).unwrap().keywords.contains(&Keyword::Indestructible),
         "enemy creature unaffected");
 }
+
+/// News Helicopter mints a Human Citizen token on enter.
+#[test]
+fn news_helicopter_makes_citizen() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::news_helicopter());
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Human Citizen"),
+        "Human Citizen token created",
+    );
+}
+
+/// Spider-Byte bounces a nonland permanent on enter.
+#[test]
+fn spider_byte_bounces_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    g.move_card_to_battlefield_for_test(0, catalog::spider_byte_web_warden());
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear in owner's hand");
+}
+
+/// Web Up exiles an opponent's permanent until it leaves.
+#[test]
+fn web_up_exiles_until_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let web = g.move_card_to_battlefield_for_test(0, catalog::web_up());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled");
+    // Web Up leaving returns the bear.
+    let _ = g.remove_to_graveyard_with_triggers(web);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returned when Web Up left");
+}
+
+/// Taxi Driver grants haste.
+#[test]
+fn taxi_driver_grants_haste() {
+    let mut g = two_player_game();
+    let taxi = g.add_card_to_battlefield(0, catalog::taxi_driver());
+    g.clear_sickness(taxi);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: taxi, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("grant haste");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "bear has haste");
+}
+
+/// Web-Warriors buffs each other creature you control.
+#[test]
+fn web_warriors_buffs_team() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::web_warriors());
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 3, "other creature 2/2 -> 3/3");
+}
+
+/// Ezekiel Sims pumps a target Spider at the beginning of combat.
+#[test]
+fn ezekiel_sims_pumps_spider_in_combat() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ezekiel_sims_spider_totem());
+    let spider = g.add_card_to_battlefield(0, catalog::radioactive_spider());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(spider).unwrap().power, 3, "Spider 1/1 +2/+2 -> 3 power");
+}
+
+/// Agent Venom draws and loses life when another nontoken creature dies.
+#[test]
+fn agent_venom_draws_on_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::agent_venom());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    let mut evs = g.remove_to_graveyard_with_triggers(bear);
+    evs.push(GameEvent::CreatureDied { card_id: bear });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    assert_eq!(g.players[0].life, life_before - 1, "lost 1 life");
+}

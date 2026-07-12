@@ -91,8 +91,8 @@ pub enum CreatureType {
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
     Siren, Citizen, Leech,
-    // SPM expansion (Marvel's Spider-Man — Mary Jane Watson).
-    Performer,
+    // SPM expansion (Marvel's Spider-Man — Mary Jane Watson, Agent Venom).
+    Performer, Symbiote,
     // BLB / VOW expansion (Prosperous Innkeeper).
     Halfling,
     // THB expansion (Venomous Hierophant, Pharika's Spawn).
