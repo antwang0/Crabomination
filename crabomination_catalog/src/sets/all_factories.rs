@@ -6135,6 +6135,14 @@ static DECKS: &[Factory] = &[
     super::decks::reef_roads,
     super::decks::rocky_roads,
     super::decks::salvation_engine,
+    // recent171 — DFT commons/uncommons on existing primitives.
+    super::decks::rover_blades,
+    super::decks::spikeshell_harrier,
+    super::decks::spotcycle_scouter,
+    super::decks::stall_out,
+    super::decks::trip_up,
+    super::decks::veloheart_bike,
+    super::decks::venomsac_lagac,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
