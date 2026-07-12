@@ -1257,9 +1257,12 @@ pub fn wilt_in_the_heat() -> CardDefinition {
         // replacement on the target, then deal 5. The SBA that kills it
         // routes through `remove_from_battlefield_to_graveyard`, which
         // honors the replacement and sends it to exile.
+        // Slot 0 carries the printed "target creature" filter — a bare
+        // `Target(0)` had no filter, so the auto-targeter fell back to
+        // "any target" and burned the opponent's face.
         effect: Effect::Seq(vec![
             Effect::ExileIfWouldDieThisTurn {
-                what: Selector::Target(0),
+                what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::DealDamage {
                 to: Selector::Target(0),

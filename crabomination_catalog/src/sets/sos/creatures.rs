@@ -1294,8 +1294,9 @@ pub fn teachers_pest() -> CardDefinition {
 /// toughness 1 or less dies, target opponent loses 2 life and you gain
 /// 2 life."
 ///
-/// Wired with deathtouch + a `CreatureDied/AnotherOfYours`-scoped
-/// trigger filtered by the dying creature's P or T being ≤ 1 via
+/// Wired with deathtouch + a `CreatureDied/YourControl`-scoped trigger
+/// (printed "a creature you control" — includes a shrunken Arnyn
+/// itself) filtered by the dying creature's P or T being ≤ 1 via
 /// `Predicate::EntityMatches { what: TriggerSource, filter: PowerAtMost
 /// (1).or(ToughnessAtMost(1)) }`. The drain uses `Effect::Drain` from
 /// each opponent to the controller.
@@ -1315,7 +1316,7 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::PowerAtMost(1)
@@ -3175,7 +3176,13 @@ pub fn matterbending_mage() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    // Printed "one OTHER target creature" — without
+                    // OtherThanSource the auto-targeter could bounce the
+                    // Mage itself.
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 },
             },
@@ -3850,9 +3857,13 @@ pub fn ennis_debate_moderator() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
                     Effect::Move {
+                        // Printed "one OTHER target creature you control" —
+                        // without OtherThanSource the auto-targeter could
+                        // flicker Ennis itself.
                         what: crate::effect::shortcut::target_filtered(
                             SelectionRequirement::Creature
-                                .and(SelectionRequirement::ControlledByYou),
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
                         ),
                         to: ZoneDest::Exile,
                     },

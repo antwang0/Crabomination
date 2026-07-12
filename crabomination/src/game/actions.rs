@@ -2249,6 +2249,104 @@ impl GameState {
                 return Err(GameError::NoManaCost);
             }
         }
+        // {X} cast costs: a `wants_ui` caster who didn't send an X picks one
+        // via a `ChooseAmount` modal (suspend + clean replay — nothing has
+        // been paid yet). Without this the client's `x_value: None` resolved
+        // every human-cast X spell at X=0 (a 0/0 Fractal Summoning token,
+        // a 0-card Mind Twist, …). Bots pass an explicit X.
+        {
+            let p = self.priority.player_with_priority;
+            if x_value.is_none()
+                && self.players[p].wants_ui
+                && let Some(card) = self.find_card_anywhere(card_id)
+                && card.definition.cost.has_x()
+            {
+                let max = self.max_prompt_x(p, &card.definition.cost);
+                let source_name = card.definition.name.to_string();
+                self.pending_decision = Some(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseAmount {
+                        source: card_id,
+                        max,
+                        prompt: format!("{source_name}: choose X"),
+                    },
+                    resume: crate::game::types::ResumeContext::CastXPick {
+                        caster: p,
+                        action: Box::new(crate::game::types::GameAction::CastSpell {
+                            card_id,
+                            target,
+                            additional_targets,
+                            mode,
+                            x_value: None,
+                        }),
+                    },
+                });
+                return Ok(vec![]);
+            }
+        }
+        // Slot-0 targets that live in an off-board zone ("return target
+        // nonland card from your graveyard …"): the client's targeting
+        // cursor can't select graveyard/exile cards, so it submits the cast
+        // with no target — gather the pick here via a `ChooseCards` modal.
+        {
+            let p = self.priority.player_with_priority;
+            let slot0 = if target.is_none() && self.players[p].wants_ui {
+                self.find_card_anywhere(card_id).and_then(|card| {
+                    card.definition
+                        .effect
+                        .target_filter_for_slot_in_mode(0, mode)
+                        .filter(|f| f.mentions_offboard_zone())
+                        .map(|f| {
+                            (
+                                f.resolve_x(x_value.unwrap_or(0)),
+                                card.definition.name.to_string(),
+                            )
+                        })
+                })
+            } else {
+                None
+            };
+            if let Some((filter, source_name)) = slot0 {
+                let candidates: Vec<(CardId, String)> = self
+                    .players
+                    .iter()
+                    .flat_map(|pl| pl.graveyard.iter())
+                    .chain(self.exile.iter())
+                    .filter(|c| {
+                        c.id != card_id
+                            && self.evaluate_requirement_static(
+                                &filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                Some(card_id),
+                            )
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                self.pending_decision = Some(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseCards {
+                        source: card_id,
+                        prompt: format!("{source_name}: choose a card to target"),
+                        candidates,
+                        min: 1,
+                        max: 1,
+                    },
+                    resume: crate::game::types::ResumeContext::CastSlot0TargetPick {
+                        caster: p,
+                        action: Box::new(crate::game::types::GameAction::CastSpell {
+                            card_id,
+                            target: None,
+                            additional_targets,
+                            mode,
+                            x_value,
+                        }),
+                    },
+                });
+                return Ok(vec![]);
+            }
+        }
         // Multi-target spells (Chelonian Tackle's "then it fights up to one
         // target creature an opponent controls"): the client's cast flow only
         // collects slot 0, so slots 1+ arrive empty and the extra half of the
@@ -6064,6 +6162,32 @@ impl GameState {
             },
         };
 
+        // {X} flashback costs: a `wants_ui` caster who didn't send an X
+        // picks one via `ChooseAmount` (suspend + clean replay — nothing
+        // has been paid yet). Mirrors the cast_spell X prompt.
+        if flashback_cost.has_x() && x_value.is_none() && self.players[p].wants_ui {
+            let max = self.max_prompt_x(p, &flashback_cost);
+            let source_name = card.definition.name.to_string();
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::ChooseAmount {
+                    source: card_id,
+                    max,
+                    prompt: format!("{source_name}: choose X"),
+                },
+                resume: crate::game::types::ResumeContext::CastXPick {
+                    caster: p,
+                    action: Box::new(crate::game::types::GameAction::CastFlashback {
+                        card_id,
+                        target,
+                        additional_targets,
+                        mode,
+                        x_value: None,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
+
         // Timing: instants can be cast at instant speed, others at sorcery
         // speed. Honor Teferi-style opponent restriction.
         // Sigarda's Aid — a battlefield static can grant flash timing to
@@ -8517,6 +8641,29 @@ impl GameState {
         false
     }
 
+    /// Ceiling for the "choose X" prompt on an {X} cost: floating mana plus
+    /// one per untapped mana source, minus the cost's fixed part. Display /
+    /// clamp guidance only — the payment path remains the authority on
+    /// whether the chosen X is actually affordable.
+    fn max_prompt_x(&self, player: usize, cost: &crate::mana::ManaCost) -> u32 {
+        let pool = self.players[player].mana_pool.total();
+        let sources = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == player
+                    && !c.tapped
+                    && (c.definition
+                        .activated_abilities
+                        .iter()
+                        .any(|a| is_mana_ability(&a.effect))
+                        || !self.intrinsic_land_mana_abilities(c.id).is_empty())
+            })
+            .count() as u32;
+        let fixed = cost.with_x_value(0).cmc();
+        (pool + sources).saturating_sub(fixed)
+    }
+
     /// True when `player` holds a hand card with a live from-hand mana
     /// ability (Elvish / Simian Spirit Guide) that could contribute to
     /// `cost` — a payment option the auto-tapper can't see, so the player
@@ -9267,22 +9414,7 @@ impl GameState {
             && x_value.is_none()
             && self.players[p].wants_ui
         {
-            let pool = self.players[p].mana_pool.total();
-            let sources = self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.controller == p
-                        && !c.tapped
-                        && (c.definition
-                            .activated_abilities
-                            .iter()
-                            .any(|a| is_mana_ability(&a.effect))
-                            || !self.intrinsic_land_mana_abilities(c.id).is_empty())
-                })
-                .count() as u32;
-            let fixed = ability.mana_cost.with_x_value(0).cmc();
-            let max = (pool + sources).saturating_sub(fixed);
+            let max = self.max_prompt_x(p, &ability.mana_cost);
             let source_name = self
                 .find_card_anywhere(card_id)
                 .map(|c| c.definition.name.to_string())

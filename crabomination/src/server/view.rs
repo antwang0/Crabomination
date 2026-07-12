@@ -709,7 +709,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
     let (modal_descriptions, modal_needs_target) =
         if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
             let descs = modes.iter().map(|m| m.effect_short_text()).collect();
-            let needs = modes.iter().map(|m| m.requires_target()).collect();
+            let needs = modes.iter().map(cursor_needs_target).collect();
             (descs, needs)
         } else {
             (Vec::new(), Vec::new())
@@ -719,7 +719,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         name: card.definition.name.to_string(),
         cost: card.definition.cost.clone(),
         card_types: card.definition.card_types.clone(),
-        needs_target: card.definition.effect.requires_target(),
+        needs_target: cursor_needs_target(&card.definition.effect),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
         alt_cost_needs_pitch: card
             .definition
@@ -1200,7 +1200,7 @@ fn project_permanent(
             .definition
             .prepare_spell
             .as_ref()
-            .is_some_and(|p| p.effect.requires_target()),
+            .is_some_and(|p| cursor_needs_target(&p.effect)),
         creature_subtypes: cp
             .map(|c| c.subtypes.creature_types.clone())
             .unwrap_or_else(|| card.definition.subtypes.creature_types.clone()),
@@ -1423,6 +1423,18 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
     }
 }
 
+/// Whether the client should arm the in-scene targeting cursor before
+/// submitting this effect: it takes a target AND that target lives on the
+/// board. Slot-0 targets in an off-board zone (graveyard / exile — "return
+/// target card from your graveyard") are gathered by an engine-side
+/// `ChooseCards` suspend instead, so the client must submit with no target.
+fn cursor_needs_target(effect: &crate::effect::Effect) -> bool {
+    effect.requires_target()
+        && !effect
+            .target_filter_for_slot(0)
+            .is_some_and(|f| f.mentions_offboard_zone())
+}
+
 fn project_loyalty_abilities(
     card: &CardInstance,
     battlefield: &[CardInstance],
@@ -1437,7 +1449,7 @@ fn project_loyalty_abilities(
             loyalty_cost: a.loyalty_cost,
             x_cost: a.x_cost,
             effect_label: ability_effect_label(&a.effect).to_string(),
-            needs_target: a.effect.requires_target(),
+            needs_target: cursor_needs_target(&a.effect),
         })
         .collect()
 }
@@ -1465,7 +1477,7 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
                 index: i,
                 cost_label: ability_cost_label(a),
                 effect_label: ability_effect_label(&a.effect).to_string(),
-                needs_target: a.effect.requires_target(),
+                needs_target: cursor_needs_target(&a.effect),
                 is_mana: is_mana_ability(&a.effect),
                 once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
                 gate_label,

@@ -623,10 +623,12 @@ pub fn vicious_rivalry() -> CardDefinition {
 ///   discarded this way."
 ///
 /// Mode 0: discard your hand, then draw a number of cards equal to the
-/// (chosen) opponent's hand size. Wired faithfully — the spell's target
-/// slot picks the opponent (auto-decider grabs an opponent), and
-/// `Value::HandSizeOf(PlayerRef::Target(0))` reads that opponent's
-/// hand at resolution time.
+/// opponent's hand size. Approximation: the printed "target opponent"
+/// is collapsed to the first opponent (`PlayerRef::EachOpponent`'s
+/// singular fallback — exact in 1v1, same collapse as Mathemagics).
+/// The old wiring read `PlayerRef::Target(0)` but the card registers
+/// no target slot, so the draw always evaluated to 0 — discard your
+/// hand, draw nothing.
 ///
 /// Mode 1: discard your hand, then draw cards equal to the number of
 /// cards discarded this way. Wired faithfully via the new
@@ -651,7 +653,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
                 },
                 Effect::Draw {
                     who: Selector::You,
-                    amount: Value::HandSizeOf(PlayerRef::Target(0)),
+                    amount: Value::HandSizeOf(PlayerRef::EachOpponent),
                 },
             ]),
             // Mode 1: discard hand, then draw cards equal to the number

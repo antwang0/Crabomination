@@ -15177,3 +15177,273 @@ fn spirit_guide_activates_from_hand() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "{{G}} floats");
     assert!(g.exile.iter().any(|c| c.id == guide), "guide exiled as its cost");
 }
+
+// ── Audit fixes (SOS audit pass) ────────────────────────────────────────────
+
+#[test]
+fn ui_player_x_spell_prompts_choose_amount() {
+    // A wants_ui player casting an {X} spell with no x_value gets a
+    // ChooseAmount suspend; the answered amount is the cast's X.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let id = g.add_card_to_hand(0, catalog::wild_hypothesis());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast suspends on the X pick");
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(crate::decision::Decision::ChooseAmount { .. }),
+        ),
+        "X spell should pose a ChooseAmount",
+    );
+    g.submit_decision(DecisionAnswer::Amount(3)).expect("X=3 replays the cast");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before + 1, "Fractal token survives at X=3");
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Fractal").unwrap();
+    let view = g.computed_permanent(token.id).unwrap();
+    assert_eq!((view.power, view.toughness), (3, 3), "X=3 counters applied");
+}
+
+#[test]
+fn ui_player_graveyard_step_trigger_poses_card_picker_not_cursor() {
+    // Ascendant Dustspeaker's begin-combat trigger targets a card in a
+    // graveyard. Step triggers route through `drain_trigger_queue`,
+    // which used to pose a ChooseTarget listing graveyard ids the
+    // cursor can't click — an unanswerable soft-lock. It must now pose
+    // a ChooseCards modal instead.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let dust = g.add_card_to_battlefield(0, catalog::ascendant_dustspeaker());
+    g.clear_sickness(dust);
+    let gy_card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+
+    // Walk priority from main into Begin Combat, where the trigger fires
+    // and must suspend on the modal.
+    for _ in 0..12 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    let pending = g.pending_decision.as_ref().expect("begin-combat target pick pending");
+    match &pending.decision {
+        crate::decision::Decision::ChooseCards { candidates, .. } => {
+            assert!(candidates.iter().any(|(cid, _)| *cid == gy_card), "graveyard card offered");
+        }
+        other => panic!("expected ChooseCards for a graveyard target, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![gy_card])).expect("pick resolves");
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == gy_card),
+        "picked graveyard card exiled by Dustspeaker",
+    );
+}
+
+#[test]
+fn graveyard_etb_trigger_auto_picks_for_ui_player() {
+    // Self-ETB triggers push with an auto-picked target (stack.rs's
+    // resolve path) — a wants_ui Zealous Lorecaster controller doesn't
+    // get a picker, but the trigger must still resolve (no soft-lock,
+    // an I/S card comes back to hand).
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::zealous_lorecaster());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Lorecaster castable");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bolt),
+        "ETB auto-returns the instant from the graveyard",
+    );
+}
+
+#[test]
+fn borrowed_knowledge_mode_0_draws_opponent_hand_size() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let extra = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let _ = extra;
+    let id = g.add_card_to_hand(0, catalog::borrowed_knowledge());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("Borrowed Knowledge castable");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].hand.len(),
+        4,
+        "hand discarded, then draw = opponent's hand size (4)",
+    );
+}
+
+#[test]
+fn wilt_in_the_heat_rejects_player_target() {
+    // Printed "target creature" — a bare Target(0) let the spell aim at
+    // (and the bot auto-pick) the opponent's face. The slot-0 Creature
+    // filter must reject a player target and still kill a creature.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(
+        matches!(result, Err(GameError::SelectionRequirementViolated)),
+        "player target must be rejected, got {result:?}",
+    );
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("creature target still legal");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear dies to 5 damage");
+}
+
+#[test]
+fn primary_research_does_not_reanimate_from_opponent_graveyard() {
+    let mut g = two_player_game();
+    let opp_card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::primary_research());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Primary Research castable");
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == opp_card),
+        "printed 'from your graveyard' — the opponent's card stays put",
+    );
+}
+
+#[test]
+fn matterbending_mage_does_not_bounce_itself_when_alone() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::matterbending_mage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Mage castable");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == id),
+        "printed 'one OTHER target creature' — the Mage never bounces itself",
+    );
+}
+
+#[test]
+fn ennis_does_not_flicker_itself_when_alone() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::ennis_debate_moderator());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Ennis castable");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == id),
+        "printed 'one OTHER target creature you control' — Ennis never exiles itself",
+    );
+}
+
+#[test]
+fn ui_player_graveyard_spell_target_via_card_picker() {
+    // Moment of Reckoning mode 1 targets a nonland card in your
+    // graveyard. A wants_ui cast with no target must suspend on a
+    // ChooseCards modal (the cursor can't select graveyard cards), then
+    // resolve with the picked card.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::moment_of_reckoning());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast suspends on the graveyard pick");
+    let pending = g.pending_decision.as_ref().expect("graveyard pick pending");
+    match &pending.decision {
+        crate::decision::Decision::ChooseCards { candidates, .. } => {
+            assert!(candidates.iter().any(|(cid, _)| *cid == dead), "dead bear offered");
+        }
+        other => panic!("expected ChooseCards, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![dead])).expect("pick replays the cast");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == dead),
+        "picked card reanimated to the battlefield",
+    );
+}
+
+#[test]
+fn ui_player_loyalty_graveyard_target_via_card_picker() {
+    // Ral Zarek, Guest Lecturer's −2 targets a creature card (MV ≤ 3)
+    // in your graveyard. A wants_ui activation with no target must
+    // suspend on a ChooseCards modal, then reanimate the pick.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let ral = g.add_card_to_battlefield(0, catalog::ral_zarek_guest_lecturer());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ral, ability_index: 2, target: None, x_value: None,
+    })
+    .expect("loyalty activation suspends on the graveyard pick");
+    let pending = g.pending_decision.as_ref().expect("graveyard pick pending");
+    match &pending.decision {
+        crate::decision::Decision::ChooseCards { candidates, .. } => {
+            assert!(candidates.iter().any(|(cid, _)| *cid == dead), "dead bear offered");
+        }
+        other => panic!("expected ChooseCards, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![dead])).expect("pick replays the activation");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == dead),
+        "picked creature reanimated by the −2",
+    );
+}

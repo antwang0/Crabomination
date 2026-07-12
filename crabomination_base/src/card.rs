@@ -1677,6 +1677,26 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when the filter requires the candidate to be a *card in an
+    /// off-board zone* (graveyard / exile) rather than a battlefield
+    /// permanent or player. Such targets have no clickable board entity,
+    /// so UIs must gather the pick through a card-list modal instead of
+    /// the in-scene targeting cursor. Recurses through And/Or (a `Not`
+    /// of a zone requirement doesn't *demand* the zone, so it doesn't
+    /// count).
+    pub fn mentions_offboard_zone(&self) -> bool {
+        match self {
+            Self::InGraveyard
+            | Self::InYourGraveyard
+            | Self::InOpponentGraveyard
+            | Self::InExile => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.mentions_offboard_zone() || b.mentions_offboard_zone()
+            }
+            _ => false,
+        }
+    }
+
     /// Replace `ManaValueAtMostConverged` with a concrete
     /// `ManaValueAtMost(n)` for the resolving spell's converge count
     /// (Bring to Light), recursing through And/Or/Not.

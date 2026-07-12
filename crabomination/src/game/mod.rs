@@ -10325,19 +10325,63 @@ impl GameState {
                     self.push_pending_trigger(pending, None);
                     continue;
                 }
+                // The targeting cursor can only select players and
+                // battlefield permanents. Off-board candidates (graveyard /
+                // exile cards) must go through a `ChooseCards` modal —
+                // leaving them in a `ChooseTarget` list soft-locks the game
+                // on an unanswerable picker (Zealous Lorecaster's ETB).
+                let (clickable, offboard): (Vec<Target>, Vec<Target>) =
+                    legal.into_iter().partition(|t| match t {
+                        Target::Player(_) => true,
+                        Target::Permanent(id) => {
+                            self.battlefield.iter().any(|c| c.id == *id)
+                        }
+                    });
+                // Modal when the effect genuinely targets an off-board zone
+                // ("… card from a graveyard") or nothing on the board is
+                // clickable; otherwise cursor over the clickable set only
+                // (dropping spurious off-board matches of board-shaped
+                // filters like "target permanent").
+                let zone_filter = pending
+                    .effect
+                    .primary_target_filter()
+                    .is_some_and(|f| f.mentions_offboard_zone());
                 let remaining: Vec<PendingTriggerPush> = iter.collect();
                 let source_name = self
                     .find_card_anywhere(pending.source)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
                 let description = pending.effect.effect_short_text();
-                self.pending_decision = Some(PendingDecision {
-                    decision: Decision::ChooseTarget {
+                let decision = if !offboard.is_empty() && (zone_filter || clickable.is_empty()) {
+                    let candidates: Vec<(CardId, String)> = offboard
+                        .iter()
+                        .filter_map(|t| match t {
+                            Target::Permanent(id) => Some((
+                                *id,
+                                self.find_card_anywhere(*id)
+                                    .map(|c| c.definition.name.to_string())
+                                    .unwrap_or_default(),
+                            )),
+                            Target::Player(_) => None,
+                        })
+                        .collect();
+                    Decision::ChooseCards {
                         source: pending.source,
-                        legal,
+                        prompt: format!("{source_name}: {description}"),
+                        candidates,
+                        min: 1,
+                        max: 1,
+                    }
+                } else {
+                    Decision::ChooseTarget {
+                        source: pending.source,
+                        legal: clickable,
                         source_name,
                         description,
-                    },
+                    }
+                };
+                self.pending_decision = Some(PendingDecision {
+                    decision,
                     resume: ResumeContext::TriggerTargetPick {
                         pending,
                         remaining,
@@ -10593,6 +10637,59 @@ impl GameState {
             .get(ability_index)
             .cloned()
             .ok_or(GameError::AbilityIndexOutOfBounds)?;
+
+        // Off-board (graveyard / exile) targets — "return target creature
+        // card from your graveyard" (Professor Dellian, Fel −2): the cursor
+        // can't select those, so the client activates with no target. Bind
+        // slot 0 via a `ChooseCards` modal (suspend + clean replay — the
+        // loyalty cost hasn't been paid yet).
+        if target.is_none()
+            && self.players[p].wants_ui
+            && let Some(filter) = ability
+                .effect
+                .target_filter_for_slot(0)
+                .filter(|f| f.mentions_offboard_zone())
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+        {
+            let candidates: Vec<(CardId, String)> = self
+                .players
+                .iter()
+                .flat_map(|pl| pl.graveyard.iter())
+                .chain(self.exile.iter())
+                .filter(|c| {
+                    self.evaluate_requirement_static(
+                        &filter,
+                        &Target::Permanent(c.id),
+                        p,
+                        Some(card_id),
+                    )
+                })
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            if candidates.is_empty() {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            let source_name = self.battlefield[pos].definition.name.to_string();
+            self.pending_decision = Some(PendingDecision {
+                decision: Decision::ChooseCards {
+                    source: card_id,
+                    prompt: format!("{source_name}: choose a card to target"),
+                    candidates,
+                    min: 1,
+                    max: 1,
+                },
+                resume: ResumeContext::CastSlot0TargetPick {
+                    caster: p,
+                    action: Box::new(GameAction::ActivateLoyaltyAbility {
+                        card_id,
+                        ability_index,
+                        target: None,
+                        x_value,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
 
         // Validate target — both targeting legality (hexproof / shroud /
         // protection / Leyline-of-Sanctity) and the loyalty effect's
@@ -10928,9 +11025,16 @@ impl GameState {
                 // Apply the answered target to the trigger that was
                 // waiting on it, then continue draining the queue
                 // (which may suspend again on the next targeted
-                // trigger in the same batch).
+                // trigger in the same batch). Off-board (graveyard /
+                // exile) picks arrive as `Cards` from the modal flow.
                 let target = match answer {
                     DecisionAnswer::Target(t) => Some(t),
+                    DecisionAnswer::Cards(ids) => {
+                        let Some(id) = ids.first().copied() else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        Some(Target::Permanent(id))
+                    }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 };
                 self.push_pending_trigger(pending, target);
@@ -11067,7 +11171,57 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 additional_targets.push(t);
-                return self.perform_action(action);
+                // Prepare-spell copies suspend/resume through plain CastSpell
+                // replays — settle their bookkeeping wherever the cast lands.
+                let cast_card = action.cast_card_id();
+                let result = self.perform_action(action);
+                return match cast_card {
+                    Some(id) => self.settle_prepare_after_cast(id, result),
+                    None => result,
+                };
+            }
+            ResumeContext::CastXPick { caster, action } => {
+                let DecisionAnswer::Amount(n) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let _ = caster;
+                let mut action = *action;
+                match &mut action {
+                    GameAction::CastSpell { x_value, .. }
+                    | GameAction::CastPrepareSpell { x_value, .. }
+                    | GameAction::CastFlashback { x_value, .. } => *x_value = Some(n),
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                }
+                let cast_card = action.cast_card_id();
+                let result = self.perform_action(action);
+                return match cast_card {
+                    Some(id) => self.settle_prepare_after_cast(id, result),
+                    None => result,
+                };
+            }
+            ResumeContext::CastSlot0TargetPick { caster, action } => {
+                let DecisionAnswer::Cards(ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let Some(id) = ids.first().copied() else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let _ = caster;
+                let mut action = *action;
+                match &mut action {
+                    GameAction::CastSpell { target, .. }
+                    | GameAction::CastPrepareSpell { target, .. }
+                    | GameAction::ActivateLoyaltyAbility { target, .. } => {
+                        *target = Some(Target::Permanent(id));
+                    }
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                }
+                let cast_card = action.cast_card_id();
+                let result = self.perform_action(action);
+                return match cast_card {
+                    Some(id) => self.settle_prepare_after_cast(id, result),
+                    None => result,
+                };
             }
             ResumeContext::ActionSearchPick { actor, action } => {
                 // CR 702.29e — the cycler picked which card to fetch. Stash

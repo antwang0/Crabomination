@@ -771,6 +771,8 @@ impl PendingDecision {
             ResumeContext::ActionSearchPick { actor, .. } => *actor,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
             ResumeContext::CastExtraTargetPick { caster, .. } => *caster,
+            ResumeContext::CastXPick { caster, .. } => *caster,
+            ResumeContext::CastSlot0TargetPick { caster, .. } => *caster,
         }
     }
 }
@@ -1049,6 +1051,22 @@ pub(crate) enum ResumeContext {
     /// pick is appended to the action's `additional_targets` and the action
     /// is replayed (which may suspend again for a further slot).
     CastExtraTargetPick {
+        caster: usize,
+        action: Box<GameAction>,
+    },
+    /// A `wants_ui` caster's {X} spell arrived with no X (the client never
+    /// sends one). The cast suspended on a `ChooseAmount` before any cost
+    /// was paid; on answer the amount is written into the action's
+    /// `x_value` and the action is replayed.
+    CastXPick {
+        caster: usize,
+        action: Box<GameAction>,
+    },
+    /// A `wants_ui` caster's spell targets an off-board card ("return
+    /// target card from your graveyard") the cursor can't select. The cast
+    /// suspended on a `ChooseCards` modal; on answer the pick becomes the
+    /// action's slot-0 target and the action is replayed.
+    CastSlot0TargetPick {
         caster: usize,
         action: Box<GameAction>,
     },

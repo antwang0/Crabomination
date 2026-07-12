@@ -163,7 +163,12 @@ pub fn primary_research() -> CardDefinition {
                 effect: Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Nonland
-                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                            .and(SelectionRequirement::ManaValueAtMost(3))
+                            // Printed "from your graveyard" — without the
+                            // zone scope this could reanimate out of an
+                            // opponent's graveyard (or "return" battlefield
+                            // permanents as a no-op).
+                            .and(SelectionRequirement::InYourGraveyard),
                     ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
