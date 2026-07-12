@@ -8456,3 +8456,62 @@ fn cr_601_2f_cost_reduction_when_targeting_spider() {
         "no reduction on a non-Spider target — {{G}} is insufficient",
     );
 }
+
+// ── CR 301.7 — Vehicles are creatures only when an effect makes them one ──────
+
+/// A Vehicle with a conditional "is an artifact creature" static (Midnight
+/// Mangler, `StaticEffect::SelfIsCreatureIf`) counts as a creature only while
+/// its predicate holds — here, only during turns that aren't its controller's.
+#[test]
+fn cr_301_7_conditional_vehicle_is_creature_only_off_turn() {
+    use crate::card::CardType;
+    let mut g = two_player_game();
+    let mangler = g.add_card_to_battlefield(0, catalog::midnight_mangler());
+    g.active_player_idx = 0;
+    assert!(!g.computed_permanent(mangler).unwrap().card_types.contains(&CardType::Creature),
+        "not a creature on its controller's turn");
+    g.active_player_idx = 1;
+    assert!(g.computed_permanent(mangler).unwrap().card_types.contains(&CardType::Creature),
+        "an artifact creature during other players' turns");
+}
+
+// ── CR 702.122 — Crew (crewing with toughness) ───────────────────────────────
+
+/// A creature that "crews using its toughness rather than its power"
+/// (Interface Ace, `StaticEffect::SelfCrewsSaddlesWithToughness`) can online a
+/// Crew 2 Vehicle off its toughness even with power 0.
+#[test]
+fn cr_702_122_crew_counts_toughness_for_interface_ace() {
+    let mut g = two_player_game();
+    let vehicle = g.add_card_to_battlefield(0, catalog::boommobile()); // Crew 2
+    let ace = g.add_card_to_battlefield(0, catalog::interface_ace()); // 0/4
+    g.clear_sickness(ace);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle, crew_creatures: vec![ace] })
+        .expect("toughness 4 ≥ Crew 2 even though power is 0");
+}
+
+// ── CR 702.171 — Saddle (Effect::SetSaddled) ─────────────────────────────────
+
+/// `Effect::SetSaddled` (Guidelight Matrix) marks a target Mount saddled
+/// without tapping riders, and the marker clears at end of turn (702.171b).
+#[test]
+fn cr_702_171_effect_set_saddled_marks_mount() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let matrix = g.add_card_to_battlefield(0, catalog::guidelight_matrix());
+    let mount = g.add_card_to_battlefield(0, catalog::bridled_bighorn());
+    g.clear_sickness(matrix);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: matrix, ability_index: 0, target: Some(Target::Permanent(mount)),
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("saddle the mount");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mount).unwrap().saddled, "Mount marked saddled");
+}

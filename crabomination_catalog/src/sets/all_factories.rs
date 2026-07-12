@@ -6117,6 +6117,17 @@ static DECKS: &[Factory] = &[
     super::decks::hellish_sideswipe,
     super::decks::interface_ace,
     super::decks::midnight_mangler,
+    // recent169 — DFT gap cards on existing primitives.
+    super::decks::perilous_snare,
+    super::decks::point_the_way,
+    super::decks::pothole_mole,
+    super::decks::pride_of_the_road,
+    super::decks::rangers_refueler,
+    super::decks::ripclaw_wrangler,
+    super::decks::roadside_blowout,
+    super::decks::rocketeer_boostbuggy,
+    super::decks::run_over,
+    super::decks::skybox_ferry,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

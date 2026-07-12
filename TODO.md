@@ -12,11 +12,20 @@ resolved permanent's cast `x_value` onto the `CardInstance` and pass it into the
 ETB trigger's `EffectContext::for_trigger` (currently hard-coded 0). Dune Drifter
 is deferred until then.
 
-**DFT gaps (recent168 shipped Interface Ace, Midnight Mangler, Guidelight
-Matrix, Hellish Sideswipe with their four primitives). Remaining:**
+**DFT gaps (recent168/169 shipped ~14 cards). Remaining, each needing one
+primitive or a heavier build:**
 - **Magmakin Artillerist** — "whenever you discard one or more cards, deal that
   much damage to each opponent" needs a *batched* discard event (a single event
   carrying the count), not the per-card `CardDiscarded`.
+- **Demonic Junker** — ETB "for each player, destroy up to one target creature
+  that player controls" needs a per-player multi-target destroy with a
+  "creature-you-controlled-was-destroyed" rider.
+- **Flood the Engine** — Aura that taps the enchanted permanent, strips all
+  abilities, and keeps it from untapping (needs a doesn't-untap Aura static).
+- **Ancient Vendetta** — name-a-card then exile up to four copies from an
+  opponent's graveyard *and* hand *and* library (a cross-zone name-exile).
+- **Push the Limit / Outpace Oblivion / Point the Way-style "each player
+  without max speed"** — a player filter keyed on `Player.speed < 4`.
 
 See `CUBE_FEATURES.md` (cube-card implementation status),
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
@@ -262,10 +271,6 @@ Remaining known approximations (each noted on its factory doc):
 - **Dual-zone tutor + `NoAbilities`/`Vanilla` filter.** Fang-Druid Summoner
   searches library *and/or* graveyard for a creature card with no abilities;
   modeled as library-only, filter dropped. Also blocks Delivery Moogle.
-- **Vehicle animate-with-own-P/T until EOT.** Guidelight Matrix's "target Vehicle
-  becomes an artifact creature until end of turn" needs an animate reading the
-  target's printed P/T (`BecomeCreature` takes fixed P/T; `AddCardType…` is
-  indefinite-only). Guidelight Matrix not yet added.
 - **Restricted-mana variants.** White Lotus Hideout drops the Shrine half of
   "Lesson or Shrine"; Jasmine Dragon Tea Shop approximates "Ally spell/ability"
   as `CreatureOfType(Ally)`. Add `LessonOrShrineSpellsOnly` /
@@ -892,7 +897,9 @@ Mechanics deferred while batching the 20-card `recent23` wave:
   "saddles Mounts and crews Vehicles as though its power were N greater") —
   `StaticEffect::CrewSaddlePowerBonus`, read by `crew`/`saddle`, the bot's
   `pick_crew`, and surfaced in `PermanentView.crew_power_bonus` (Cloudspire
-  Captain, Deathless Pilot in `decks::recent24`).
+  Captain, Deathless Pilot in `decks::recent24`). Also ✅ crew/saddle **by
+  toughness** (`StaticEffect::SelfCrewsSaddlesWithToughness` — Interface Ace),
+  and effect-driven saddle (`Effect::SetSaddled` — Guidelight Matrix).
 - ✅ **Crew/saddle triggered event** (DFT, CR 702.122/702.171 — "whenever this
   creature saddles a Mount or crews a Vehicle during your main phase, …") —
   `EventKind::CrewsOrSaddles` + `GameEvent::VehicleCrewed { crew }` /

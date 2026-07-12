@@ -435,6 +435,15 @@ impl MatchStats {
     pub(crate) fn win_life_delta_median(&self) -> i64 {
         self.win_life_delta_percentile(0.5)
     }
+    /// Interquartile range of the win-by-life delta (p75 − p25), the margin
+    /// analogue of [`turn_count_iqr`](Self::turn_count_iqr). Robust to blowout
+    /// outliers that inflate σ: a tight IQR next to a wide σ marks a
+    /// mostly-consistent win margin with a few runaway stomps. Returns 0 with
+    /// no samples. Bucket-quantised like the other percentile readouts.
+    pub(crate) fn win_life_delta_iqr(&self) -> i64 {
+        self.win_life_delta_percentile(0.75)
+            .saturating_sub(self.win_life_delta_percentile(0.25))
+    }
     /// Classify one clean win as a damage win or an "alternate" win
     /// (deckout / poison / mill / win-the-game). Prefers the outcome's
     /// precise per-seat `loss_reasons`; if any losing seat died to

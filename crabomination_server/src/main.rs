@@ -1109,6 +1109,20 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn win_life_delta_iqr_is_p75_minus_p25() {
+        let mut s = MatchStats::default();
+        // Deltas 1,1,2,40 → buckets: 1→(0,1], 2→(1,3], 40→open. p25 lands in
+        // the 1-bucket (upper 1), p75 in the 3-bucket (upper 3): IQR = 3 − 1 = 2.
+        for d in [1, 1, 2, 40] {
+            s.observe_win_life_delta(0, &[d, 0]);
+        }
+        assert_eq!(s.win_life_delta_iqr(),
+            s.win_life_delta_percentile(0.75) - s.win_life_delta_percentile(0.25));
+        assert!(s.win_life_delta_iqr() < 40, "IQR ignores the blowout tail");
+        assert_eq!(MatchStats::default().win_life_delta_iqr(), 0);
+    }
+
+    #[test]
     pub(crate) fn observe_win_life_delta_clamps_negative_lead_to_zero() {
         let mut s = MatchStats::default();
         // Pathological: winner ended at less life than opp (shouldn't

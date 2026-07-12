@@ -205,6 +205,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Doesn't untap while it has a [kind] counter" (Steel Dromedary) — a
         // board read: the creature stays tapped until the counter comes off.
         DoesntUntapWhileCounter(_) => "NoUntap",
+        // Start your engines! (CR 702.179) — flags that this permanent feeds the
+        // speed mechanic and carries "Max speed —" abilities that come online
+        // once its controller reaches speed 4.
+        StartYourEngines => "Eng",
         _ => return None,
     })
 }
@@ -429,6 +433,7 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
         assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew2");
         assert_eq!(keyword_strip(&[Keyword::Saddle(3)]), "Sdl3");
+        assert_eq!(keyword_strip(&[Keyword::StartYourEngines]), "Eng");
         assert_eq!(keyword_strip(&[Keyword::Regenerate(0)]), "Rgn");
         assert_eq!(keyword_strip(&[Keyword::UmbraArmor]), "TArm");
         assert_eq!(keyword_strip(&[Keyword::ProtectionFromCreatures]), "ProCr");

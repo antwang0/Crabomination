@@ -55,6 +55,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
          \"median_win_life_delta\":{},\"win_life_delta_p90\":{},\"win_life_delta_stddev\":{:.2},\
+         \"win_life_delta_iqr\":{},\
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
@@ -88,6 +89,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.win_life_delta_median(),
         st.win_life_delta_percentile(0.9),
         st.win_life_delta_stddev(),
+        st.win_life_delta_iqr(),
         sl.current,
         sl.peak,
         sl.accepted,
@@ -163,6 +165,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("median_win_life_delta", "gauge", "Median (p50) life margin of victory.", st.win_life_delta_median().to_string());
     m("win_life_delta_p90", "gauge", "90th-percentile life margin of victory (blowout tail).", st.win_life_delta_percentile(0.9).to_string());
     m("win_life_delta_stddev", "gauge", "Standard deviation of the win-by-life margin.", format!("{:.2}", st.win_life_delta_stddev()));
+    m("win_life_delta_iqr", "gauge", "Interquartile range (p75-p25) of the win-by-life margin.", st.win_life_delta_iqr().to_string());
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
     for (kind, value) in [
