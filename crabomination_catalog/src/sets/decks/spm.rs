@@ -8,7 +8,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{each_creature, etb, on_attack, on_dies, target_filtered};
+use crate::effect::shortcut::{each_your_creature, etb, on_attack, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
@@ -806,12 +806,12 @@ pub fn spectacular_spider_man() -> CardDefinition {
                 sac_cost: true,
                 effect: Effect::Seq(vec![
                     Effect::GrantKeyword {
-                        what: each_creature(),
+                        what: each_your_creature(),
                         keyword: Keyword::Hexproof,
                         duration: Duration::EndOfTurn,
                     },
                     Effect::GrantKeyword {
-                        what: each_creature(),
+                        what: each_your_creature(),
                         keyword: Keyword::Indestructible,
                         duration: Duration::EndOfTurn,
                     },

@@ -410,6 +410,7 @@ fn spectacular_spider_man_shields_team() {
     let mut g = two_player_game();
     let spidey = g.add_card_to_battlefield(0, catalog::spectacular_spider_man());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
@@ -420,4 +421,7 @@ fn spectacular_spider_man_shields_team() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Indestructible), "bear gained indestructible");
     assert!(cp.keywords.contains(&Keyword::Hexproof), "bear gained hexproof");
+    // Opponents' creatures are not shielded.
+    assert!(!g.computed_permanent(enemy).unwrap().keywords.contains(&Keyword::Indestructible),
+        "enemy creature unaffected");
 }
