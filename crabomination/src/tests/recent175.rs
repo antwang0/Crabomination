@@ -327,3 +327,16 @@ fn repurposing_bay_fetches_mana_value_plus_one() {
         "fetched the MV+1 artifact onto the battlefield");
     assert!(g.battlefield_find(fodder).is_none(), "the MV-1 fodder artifact was sacrificed");
 }
+
+/// Wreck Remover's ETB exiles a graveyard card and gains 1 life.
+#[test]
+fn wreck_remover_exiles_graveyard_card_and_gains_life() {
+    let mut g = two_player_game();
+    let gy_card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let wr = g.add_card_to_battlefield(0, catalog::wreck_remover());
+    g.fire_self_etb_triggers(wr, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gy_card), "graveyard card exiled");
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life");
+}

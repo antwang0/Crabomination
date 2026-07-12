@@ -426,3 +426,36 @@ pub fn repurposing_bay() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wreck Remover — {4} 3/4 Construct. Whenever this enters or attacks, exile up
+/// to one target card from a graveyard and gain 1 life. Cycling {2}.
+pub fn wreck_remover() -> CardDefinition {
+    let ability = || Effect::Seq(vec![
+        Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: R::InGraveyard,
+            effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+        },
+        Effect::GainLife { who: Selector::You, amount: Value::ONE },
+    ]);
+    CardDefinition {
+        name: "Wreck Remover",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: ability(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: ability(),
+            },
+        ],
+        ..Default::default()
+    }
+}

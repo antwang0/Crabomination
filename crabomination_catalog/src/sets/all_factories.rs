@@ -6178,6 +6178,7 @@ static DECKS: &[Factory] = &[
     super::decks::possession_engine,
     super::decks::oildeep_gearhulk,
     super::decks::repurposing_bay,
+    super::decks::wreck_remover,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
