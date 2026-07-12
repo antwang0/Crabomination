@@ -8515,3 +8515,71 @@ fn cr_702_171_effect_set_saddled_marks_mount() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(mount).unwrap().saddled, "Mount marked saddled");
 }
+
+/// CR 701.9 — a discard that removes several cards in one resolution fires a
+/// single "discard one or more cards" batch carrying the count (Magmakin
+/// Artillerist deals that much to each opponent, once).
+#[test]
+fn cr_701_9_discard_batch_fires_once_with_count() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::magmakin_artillerist());
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); }
+    let opp = g.players[1].life;
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(
+        &crate::effect::Effect::Discard {
+            who: crate::effect::Selector::You,
+            amount: crate::effect::Value::Const(3),
+            random: false,
+        },
+        &ctx,
+    ).unwrap();
+    // Exactly one batch event for the discarder, carrying the full count.
+    let batches: Vec<_> = events.iter().filter(|e| matches!(e,
+        crate::game::types::GameEvent::DiscardedBatch { player: 0, .. })).collect();
+    assert_eq!(batches.len(), 1, "one batch per resolution");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 3, "3 discarded → 3 damage, applied once");
+}
+
+/// CR 702.179 — "each player who doesn't have max speed" excludes speed-4
+/// players (Outpace Oblivion's sacrifice).
+#[test]
+fn cr_702_179_each_player_without_max_speed_excludes_speed_4() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(0, catalog::outpace_oblivion());
+    g.players[0].speed = 4;
+    g.players[1].speed = 0; // no speed also counts as below max
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ench, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0, "max-speed player spared");
+    assert_eq!(g.players[1].life, l1 - 2, "no-speed player took 2");
+}
+
+/// CR 115.1c — a self-source Attacks trigger with an "up to N target" effect
+/// fills every slot, not just the first (Lagorin counters two Vehicles).
+#[test]
+fn cr_115_1c_attack_trigger_fills_all_target_slots() {
+    let mut g = two_player_game();
+    let lagorin = g.add_card_to_battlefield(0, catalog::lagorin_soul_of_alacria());
+    let v1 = g.add_card_to_battlefield(0, catalog::skybox_ferry());
+    let v2 = g.add_card_to_battlefield(0, catalog::veloheart_bike());
+    g.clear_sickness(lagorin);
+    g.battlefield_find_mut(lagorin).unwrap().saddled = true;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lagorin, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(v1).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(v2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
