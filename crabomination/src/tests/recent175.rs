@@ -271,3 +271,18 @@ fn march_of_the_world_ooze_anthem_and_token() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elephant" && c.controller == 0).count(), 1,
         "minted a 3/3 Elephant");
 }
+
+/// Possession Engine steals a creature while it stays on the battlefield.
+#[test]
+fn possession_engine_steals_a_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let engine = g.add_card_to_battlefield(0, catalog::possession_engine());
+    g.fire_self_etb_triggers(engine, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "now under my control");
+    // Sacrifice the engine → control reverts.
+    g.remove_to_graveyard_with_triggers(engine);
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 1, "control reverts when the Vehicle leaves");
+}
