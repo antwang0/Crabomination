@@ -6008,6 +6008,11 @@ static DECKS: &[Factory] = &[
     super::decks::fleeting_flight,
     super::decks::goblin_negotiation,
     super::decks::homunculus_horde,
+    // recent165 — Foundations: Raid tempo, tap-down Aura, conditional keywords.
+    super::decks::skyship_buccaneer,
+    super::decks::starlight_snare,
+    super::decks::inspiring_paladin,
+    super::decks::dreadwing_scavenger,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
