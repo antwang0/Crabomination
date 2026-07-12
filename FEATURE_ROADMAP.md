@@ -34,6 +34,17 @@ exercising each) was elided in a compaction pass; recover it from
   ~40 DFT gap cards across `decks::recent168`–`recent174` (the Roads land
   cycle, exhaust/speed/anthem Vehicles, saddled Mounts, removal, tuck, ETB
   value); tests in `tests/recent168.rs`–`tests/recent174.rs`.
+- **DFT-gap batch 2 primitives (recent175 — DFT):**
+  `PlayerRef::EachPlayerWithoutMaxSpeed` (CR 702.179 — Outpace Oblivion),
+  `GameEvent::DiscardedBatch` / `EventKind::DiscardedOneOrMore` (CR 701.9 discard
+  batch — Magmakin Artillerist), `Value::MountsVehiclesEnteredThisTurn` (Cloudspire
+  Coordinator), `StaticEffect::OtherExhaustActivationCostReduction` (Boom Scholar,
+  promoted to faithful), and two fixes: `ControllerAttackedByOpponent` triggers now
+  bind the attacker as `Selector::TriggerSource` (Sabotage Strategist), and
+  self-source Attacks triggers fill every "up to N target" slot via
+  `auto_extra_targets_for` (CR 115.1c — Lagorin). ~19 DFT gap cards; tests in
+  `tests/recent175.rs` + `cr_rules.rs` (701.9, 702.179, 115.1c). Server:
+  median/p90 match-duration gauges. Client: "🏁 MAX" speed chip at speed 4.
 
 - **Impulse-until-nonland + impulse-cost fix (recent166 — EOE/TLA/DFT):**
   `Effect::ExileTopUntilNonlandMayPlay` exiles from the top of a library until a

@@ -29,7 +29,21 @@ primitive or a heavier build:**
 - **Cursecloth Wrappings / Wickerfolk Indomitable** — grant-embalm-to-a-gy-card
   and graveyard-cast-with-additional-cost respectively.
 - **Tyrant cycle (Sundial/Tyrox/Kalakscion/Terrian)** — Scryfall oracle text is
-  empty in the local cache; re-verify against a live fetch before adding.
+  genuinely empty on Scryfall too (confirmed via a live `cards/named` fetch,
+  2026-07-12 — incomplete Aetherdrift preview data). Not implementable until
+  Scryfall backfills the rules text; keep skipping.
+- **Wickerfolk Indomitable** — cast from graveyard by paying 2 life + sacrificing
+  an artifact/creature (an Escape-like graveyard-cast permission with arbitrary
+  additional costs — generalize `Keyword::Escape` to non-exile costs).
+- **Rise from the Wreck** — return up to one each of four *distinctly-filtered*
+  graveyard cards to hand (creature / Mount / Vehicle / no-abilities creature);
+  needs a multi-slot up-to-one graveyard return (each `ApplyToTargets` currently
+  owns only slot 0).
+- **Push the Limit** — return *all* Mount/Vehicle cards from your graveyard to
+  the battlefield, sacrifice them at the next end step, animate your Vehicles +
+  team haste; needs a "return-all-matching-from-graveyard" effect plus a
+  delayed sacrifice of the moved set (`Selector::LastMoved` doesn't survive to
+  the end step).
 - **Skyseer's Chariot** — name-a-card on ETB + "activated abilities of sources
   with the chosen name cost {2} more" (an activated-ability *tax* keyed on a
   chosen name; the `OtherExhaustActivationCostReduction` sibling shipped for
