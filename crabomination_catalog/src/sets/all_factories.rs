@@ -5982,6 +5982,19 @@ static DECKS: &[Factory] = &[
     super::decks::grappling_kraken,
     super::decks::joust_through,
     super::decks::quakestrider_ceratops,
+    // recent162 — Foundations: fight/dig/Raid/Affinity/Eldrazi.
+    super::decks::felling_blow,
+    super::decks::inspiration_from_beyond,
+    super::decks::sower_of_chaos,
+    super::decks::searslicer_goblin,
+    super::decks::sire_of_seven_deaths,
+    super::decks::preposterous_proportions,
+    super::decks::slumbering_cerberus,
+    super::decks::squad_rallier,
+    super::decks::sphinx_of_forgotten_lore,
+    super::decks::claws_out,
+    super::decks::skyknight_squire,
+    super::decks::luminous_rebuke,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
