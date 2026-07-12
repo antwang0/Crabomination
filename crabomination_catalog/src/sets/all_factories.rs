@@ -6150,6 +6150,15 @@ static DECKS: &[Factory] = &[
     super::decks::thundering_broodwagon,
     super::decks::tune_up,
     super::decks::unswerving_sloth,
+    // recent173 — Pilot Aura, control swap, affinity draw, hand disruption.
+    super::decks::aggressive_negotiations,
+    super::decks::roadside_assistance,
+    super::decks::trade_the_helm,
+    super::decks::voyage_home,
+    // recent174 — max-speed copier, exhaust team-trample, scaling exhaust Vehicle.
+    super::decks::boom_scholar,
+    super::decks::slick_imitator,
+    super::decks::spire_mechcycle,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

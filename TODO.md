@@ -12,7 +12,7 @@ resolved permanent's cast `x_value` onto the `CardInstance` and pass it into the
 ETB trigger's `EffectContext::for_trigger` (currently hard-coded 0). Dune Drifter
 is deferred until then.
 
-**DFT gaps (recent168/169 shipped ~14 cards). Remaining, each needing one
+**DFT gaps (recent168–174 shipped ~40 cards). Remaining, each needing one
 primitive or a heavier build:**
 - **Magmakin Artillerist** — "whenever you discard one or more cards, deal that
   much damage to each opponent" needs a *batched* discard event (a single event
@@ -24,8 +24,24 @@ primitive or a heavier build:**
   abilities, and keeps it from untapping (needs a doesn't-untap Aura static).
 - **Ancient Vendetta** — name-a-card then exile up to four copies from an
   opponent's graveyard *and* hand *and* library (a cross-zone name-exile).
-- **Push the Limit / Outpace Oblivion / Point the Way-style "each player
-  without max speed"** — a player filter keyed on `Player.speed < 4`.
+- **Push the Limit / Outpace Oblivion "each player without max speed"** — a
+  player filter keyed on `Player.speed < 4`.
+- **Dune Drifter** — ETB *triggered ability* reading the cast X value (the
+  recent167 gap: ETB triggers hard-code X=0; needs `x_value` threaded to
+  `EffectContext::for_trigger`).
+- **Skyserpent Seeker** — exhaust "reveal until two land cards, put them onto
+  the battlefield tapped, rest to the bottom in a random order."
+- **Sabotage Strategist** — "whenever one or more creatures attack you, those
+  creatures get -1/-0" needs a creatures-attack-you batch trigger.
+- **Cloudspire Coordinator** — token count keyed on "Mounts/Vehicles that
+  entered under your control this turn."
+- **Cursecloth Wrappings / Wickerfolk Indomitable** — grant-embalm-to-a-gy-card
+  and graveyard-cast-with-additional-cost respectively.
+- **Boom Scholar's "exhaust abilities of other permanents cost {2} less"**
+  static (the exhaust half shipped; the ability-cost-reduction static is
+  dropped) — needs an activated-ability cost-reduction static.
+- **Tyrant cycle (Sundial/Tyrox/Kalakscion/Terrian)** — Scryfall oracle text is
+  empty in the local cache; re-verify against a live fetch before adding.
 
 See `CUBE_FEATURES.md` (cube-card implementation status),
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
