@@ -6,9 +6,9 @@ use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered};
+use crate::effect::shortcut::{each_creature, etb, on_attack, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
@@ -605,6 +605,243 @@ pub fn vibrant_cityscape() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Flying Octobot — {1}{U} 1/1 Robot Villain artifact. Flying. Whenever another
+/// Villain you control enters, put a +1/+1 counter on it (once each turn).
+pub fn flying_octobot() -> CardDefinition {
+    CardDefinition {
+        name: "Flying Octobot",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot, CreatureType::Villain], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Villain).and(R::OtherThanSource),
+                })
+                .once_per_turn(),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hobgoblin, Mantled Marauder — {1}{R} 1/2 Goblin Human Villain. Flying,
+/// haste. Whenever you discard a card, Hobgoblin gets +2/+0 until end of turn.
+pub fn hobgoblin_mantled_marauder() -> CardDefinition {
+    CardDefinition {
+        name: "Hobgoblin, Mantled Marauder",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Human, CreatureType::Villain],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyward Spider — {W/U}{W/U} 2/2 Spider Human Hero. Ward {2}. Has flying as
+/// long as it's modified.
+pub fn skyward_spider() -> CardDefinition {
+    CardDefinition {
+        name: "Skyward Spider",
+        cost: cost(&[hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        static_abilities: vec![StaticAbility {
+            description: "Skyward Spider has flying as long as it's modified.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Flying,
+                condition: Predicate::EntityMatches { what: Selector::This, filter: R::IsModified },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Costume Closet — {1}{W} Artifact. Enters with two +1/+1 counters. {T}
+/// (sorcery): move a +1/+1 counter from this onto target creature you control.
+/// Whenever a modified creature you control leaves, put a +1/+1 counter on this.
+pub fn costume_closet() -> CardDefinition {
+    CardDefinition {
+        name: "Costume Closet",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::MoveCounters {
+                from: Selector::This,
+                to: target_filtered(R::Creature.and(R::ControlledByYou)),
+                counter: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::IsModified),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eerie Gravestone — {2} Artifact. ETB: draw a card. {1}{B}, Sacrifice this:
+/// mill four, you may put a creature card from among them into your hand.
+pub fn eerie_gravestone() -> CardDefinition {
+    CardDefinition {
+        name: "Eerie Gravestone",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_cost: true,
+            effect: Effect::MillThenToHandN {
+                amount: Value::Const(4),
+                filter: R::Creature,
+                take: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spectacular Tactics — {1}{W} Instant. Choose one — put a +1/+1 counter on a
+/// creature you control and give it hexproof; or destroy a creature with power
+/// 4 or greater.
+pub fn spectacular_tactics() -> CardDefinition {
+    CardDefinition {
+        name: "Spectacular Tactics",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spectacular Spider-Man — {1}{W} 3/2 Spider Human Hero. Flash. {1}: gains
+/// flying until end of turn. {1}, Sacrifice this: creatures you control gain
+/// hexproof and indestructible until end of turn.
+pub fn spectacular_spider_man() -> CardDefinition {
+    CardDefinition {
+        name: "Spectacular Spider-Man",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                sac_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: each_creature(),
+                        keyword: Keyword::Hexproof,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: each_creature(),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Scout the City — {1}{G} Sorcery. Choose one — mill three, you may take a
+/// permanent card from among them, and gain 3 life; or destroy a creature with
+/// flying.
+pub fn scout_the_city() -> CardDefinition {
+    CardDefinition {
+        name: "Scout the City",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::MillThenToHandN {
+                    amount: Value::Const(3),
+                    filter: R::Permanent,
+                    take: Value::Const(1),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))) },
+        ]),
         ..Default::default()
     }
 }

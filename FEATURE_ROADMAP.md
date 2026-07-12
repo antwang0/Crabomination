@@ -123,9 +123,10 @@ exercising each) was elided in a compaction pass; recover it from
   Illusion via `Value::CastSpellManaSpent` + `TokenDefinition.dynamic_pt`), and
   kicker ETB counters (Untamed Kavu).
 - **Marvel's Spider-Man + faithful Cosmogoyf (modern_decks, this run):**
-  `decks::spm` (26 Standard cards on existing primitives — Spiders-matter,
+  `decks::spm` (33 Standard cards on existing primitives — Spiders-matter,
   Villain value, LTB tokens, connive, `MayDo` auto-attach, `Value::XFromCost`
-  counters+burn), `CreatureType::Performer`, and `DynamicPt::CardsYouOwnInExile`
+  counters+burn, modal spells, Ward/modified statics), `CreatureType::Performer`,
+  and `DynamicPt::CardsYouOwnInExile`
   making Cosmogoyf the faithful EOE card (was a fabricated Tarmogoyf stand-in;
   the BRG demo now points at the real Tarmogoyf). Server `/status` + `/metrics`
   gained `turn_p10` and `win_life_delta_p90` (distribution tails). Client HUD:

@@ -6072,6 +6072,14 @@ static DECKS: &[Factory] = &[
     super::decks::spider_girl_legacy_hero,
     super::decks::spider_ham_peter_porker,
     super::decks::vibrant_cityscape,
+    super::decks::flying_octobot,
+    super::decks::hobgoblin_mantled_marauder,
+    super::decks::skyward_spider,
+    super::decks::costume_closet,
+    super::decks::eerie_gravestone,
+    super::decks::spectacular_tactics,
+    super::decks::spectacular_spider_man,
+    super::decks::scout_the_city,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::spm` — Marvel's Spider-Man.
 
-use crate::card::Keyword;
+use crate::card::{CounterType, Keyword};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::Target;
@@ -313,4 +313,111 @@ fn cosmogoyf_scales_with_exiled_cards() {
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!(cp.power, 2, "2 exiled -> 2 power");
     assert_eq!(cp.toughness, 3, "toughness = power + 1");
+}
+
+/// Flying Octobot grows when another Villain you control enters (once/turn).
+#[test]
+fn flying_octobot_grows_on_villain() {
+    let mut g = two_player_game();
+    let octo = g.add_card_to_battlefield(0, catalog::flying_octobot());
+    let villain = g.add_card_to_hand(0, catalog::common_crook());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.cast_spell(villain, None, vec![], None, None).expect("cast Villain");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(octo).unwrap().power, 2, "1/1 -> 2/2 on Villain enter");
+}
+
+/// Hobgoblin pumps +2/+0 whenever you discard a card.
+#[test]
+fn hobgoblin_pumps_on_discard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hobgoblin_mantled_marauder());
+    g.add_card_to_hand(0, catalog::forest());
+    let cast = g.add_card_to_hand(0, catalog::romantic_rendezvous());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Romantic Rendezvous discards a card as it resolves → Hobgoblin triggers.
+    g.cast_spell(cast, None, vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "1/2 +2/+0 -> 3 power");
+}
+
+/// Skyward Spider flies only while modified (a +1/+1 counter counts).
+#[test]
+fn skyward_spider_flies_while_modified() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::skyward_spider());
+    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "grounded unmodified");
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "flies while modified");
+}
+
+/// Costume Closet enters with two counters and hands one to a creature.
+#[test]
+fn costume_closet_moves_counter() {
+    let mut g = two_player_game();
+    let closet = g.move_card_to_battlefield_for_test(0, catalog::costume_closet());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: closet, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("move counter");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 3, "bear 2/2 -> 3/3");
+}
+
+/// Eerie Gravestone draws on enter.
+#[test]
+fn eerie_gravestone_draws_on_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::eerie_gravestone());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card on enter");
+}
+
+/// Spectacular Tactics' destroy mode kills a power-4+ creature.
+#[test]
+fn spectacular_tactics_destroys_big_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer
+    let cast = g.add_card_to_hand(0, catalog::spectacular_tactics());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Choose mode 1 (destroy) targeting the 4/4.
+    g.cast_spell(cast, Some(Target::Permanent(big)), vec![], Some(1), None).expect("cast destroy mode");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big), "the 4/4 was destroyed");
+}
+
+/// Spectacular Spider-Man's sac ability blankets your team in hexproof +
+/// indestructible.
+#[test]
+fn spectacular_spider_man_shields_team() {
+    let mut g = two_player_game();
+    let spidey = g.add_card_to_battlefield(0, catalog::spectacular_spider_man());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spidey, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("sac for team shield");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "bear gained indestructible");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "bear gained hexproof");
 }
