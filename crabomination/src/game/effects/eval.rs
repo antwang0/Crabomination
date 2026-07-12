@@ -1433,6 +1433,9 @@ impl GameState {
             Predicate::SacrificedWasOutlaw => {
                 self.sacrificed_was_outlaw.unwrap_or(false)
             }
+            Predicate::SacrificedWasVehicle => {
+                self.sacrificed_was_vehicle.unwrap_or(false)
+            }
             Predicate::TriggerSourceEnteredFromGraveyard => {
                 let cid = match ctx.trigger_source {
                     Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,

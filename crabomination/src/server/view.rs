@@ -1551,6 +1551,7 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::ControlsOutlaw { .. } => "if you control an outlaw".into(),
         Predicate::SacrificedWasOutlaw => "if an outlaw was sacrificed".into(),
         Predicate::SacrificedWasArtifact => "if an artifact was sacrificed".into(),
+        Predicate::SacrificedWasVehicle => "if a Vehicle was sacrificed".into(),
         Predicate::SourceSaddled => "while saddled".into(),
         Predicate::OpponentControlsMoreLandsThanYou => "if behind on lands".into(),
         // Catch-all: no human-readable form yet.
@@ -1799,6 +1800,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::PayOrLoseGame { .. } => "Pay or lose",
         Effect::DelayUntil { .. } => "Delayed trigger",
         Effect::Tap { .. } => "Tap",
+        Effect::SetSaddled { .. } => "Saddle",
         Effect::Untap { .. } => "Untap",
         Effect::PumpPT { .. } => "Pump",
         Effect::SetBasePT { .. } => "Set base P/T",

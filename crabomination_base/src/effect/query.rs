@@ -197,6 +197,7 @@ impl Effect {
             Effect::LookTopTakeOneDeployLandsRestGraveyard { .. } => false,
             Effect::ReduceEquipCost { .. } | Effect::SacrificeAtNextUpkeep { .. } => false,
             Effect::Unattach { what } => sel_has_target(what),
+            Effect::SetSaddled { what } => sel_has_target(what),
             Effect::AtNextEndStep { body } => body.requires_target(),
             Effect::RevealFiveDraftAgainstOpponent => false,
             Effect::EncoreTokens => false,
@@ -564,6 +565,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::AnimateAsCreature { what, .. } => sel_has_target(what),
             Effect::SetBasePower { what, power, .. } => {
                 sel_has_target(what) || value_has_target(power)
             }
@@ -889,6 +891,7 @@ impl Effect {
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
             | Effect::Tap { what }
+            | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
             | Effect::Untap { what, .. } => {
                 sel_filter(what).or_else(|| implicit_player_if_controlled_by_target(what))
@@ -919,6 +922,7 @@ impl Effect {
                 sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
             }
             Effect::BecomeCreature { what, .. } => sel_filter(what),
+            Effect::AnimateAsCreature { what, .. } => sel_filter(what),
             Effect::SetBasePower { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. }
             | Effect::ReplaceColorWord { what, .. }
@@ -1088,6 +1092,7 @@ impl Effect {
             Effect::SetBasePT { .. } => false,
             // Animating your own land into a creature is a friendly self-buff.
             Effect::BecomeCreature { .. } => true,
+            Effect::AnimateAsCreature { .. } => true,
             // "Base power becomes equal to …" is a self-pump (Belligerent Yearling).
             Effect::SetBasePower { .. } => true,
             // Doubling a life total is a gift — point Beacon of Immortality at
@@ -1531,6 +1536,7 @@ impl Effect {
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
             | Effect::Tap { what }
+            | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
             | Effect::Untap { what, .. } => {
                 matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
@@ -1550,6 +1556,7 @@ impl Effect {
             | Effect::SetBasePT { .. }
             | Effect::SwitchPT { .. }
             | Effect::BecomeCreature { .. }
+            | Effect::AnimateAsCreature { .. }
             | Effect::SetBasePower { .. }
             | Effect::GrantKeyword { .. }
             | Effect::ResetCreature { .. }
@@ -1892,6 +1899,7 @@ impl Effect {
                 | Effect::GrantSuspend { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::Tap { what }
+                | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }
                 | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
@@ -1903,6 +1911,7 @@ impl Effect {
                     sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))
                 }
                 Effect::BecomeCreature { what, .. } => sel_find(what, slot),
+                Effect::AnimateAsCreature { what, .. } => sel_find(what, slot),
                 Effect::SetBasePower { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),

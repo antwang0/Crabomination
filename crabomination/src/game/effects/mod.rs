@@ -5604,6 +5604,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetSaddled { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                        && !c.saddled {
+                            c.saddled = true;
+                            events.push(GameEvent::MountSaddled { mount: cid, riders: vec![] });
+                        }
+                }
+                Ok(())
+            }
+
             Effect::PlayerTapsUntapped { who, filter, amount } => {
                 // Tangle Wire: `who` taps N untapped matching permanents.
                 // Auto-pick lands first, then other noncreatures, then
@@ -6391,6 +6403,28 @@ impl GameState {
                             modification: Modification::AddKeyword(kw.clone()),
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::AnimateAsCreature { what, duration } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
+                };
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::AddCardType(crate::card::CardType::Creature),
+                    });
                 }
                 Ok(())
             }

@@ -133,6 +133,11 @@ pub enum StaticEffect {
     /// modification). `applies_to` is usually `Selector::This` (Cloudspire
     /// Captain, Deathless Pilot). Read in `GameState::crew` / `saddle`.
     CrewSaddlePowerBonus { applies_to: Selector, amount: i32 },
+    /// "This creature crews Vehicles and saddles Mounts using its toughness
+    /// rather than its power" (Interface Ace). Read in `GameState::crew` /
+    /// `saddle` — a self-only marker; the crew/saddle sum substitutes the
+    /// creature's computed toughness for its power.
+    SelfCrewsSaddlesWithToughness,
     /// CR 613 — the source has `keyword` as long as it itself matches
     /// `condition` ("As long as this creature is equipped, it has double
     /// strike" — Kor Duelist). Recomputed live against the source via
@@ -1023,6 +1028,12 @@ pub enum StaticEffect {
     /// (a `SelectionRequirement` over the source's own characteristics) this
     /// reads game state via the `Predicate` machinery.
     SelfHasKeywordIf { keyword: Keyword, condition: Predicate },
+    /// "As long as [condition], this is an artifact creature" — the type-line
+    /// analogue of `SelfHasKeywordIf`. Emits a layer-4 `AddCardType(Creature)`
+    /// self-effect while the predicate holds (Midnight Mangler — a Vehicle that
+    /// is a creature during turns other than its controller's; the printed P/T
+    /// already carry the stats). Read via live game state.
+    SelfIsCreatureIf { condition: Predicate },
     /// "You and creatures you control have protection from the chosen card
     /// type" (Serra's Emissary). The type is the source's
     /// `chosen_card_type`; grants `Keyword::ProtectionFromCardType` to the

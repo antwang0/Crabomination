@@ -668,6 +668,9 @@ mod tests_spm;
 #[path = "../tests/recent167.rs"]
 mod tests_recent167;
 #[cfg(test)]
+#[path = "../tests/recent168.rs"]
+mod tests_recent168;
+#[cfg(test)]
 #[path = "../tests/recent164.rs"]
 mod tests_recent164;
 #[cfg(test)]
@@ -1068,6 +1071,10 @@ pub struct GameState {
     /// between resolutions.
     #[serde(default)]
     pub(crate) sacrificed_was_outlaw: Option<bool>,
+    /// Transient: whether the most-recently-sacrificed cost permanent was a
+    /// Vehicle — Hellish Sideswipe's `Predicate::SacrificedWasVehicle`.
+    #[serde(default)]
+    pub(crate) sacrificed_was_vehicle: Option<bool>,
     /// Transient: card-type count of the most recently discarded card
     /// (`Value::LastDiscardedCardTypes` — Mount Velus Manticore). Stamped in
     /// `discard_card`.
@@ -1823,6 +1830,7 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             sacrificed_was_artifact: self.sacrificed_was_artifact,
             sacrificed_was_outlaw: self.sacrificed_was_outlaw,
+            sacrificed_was_vehicle: self.sacrificed_was_vehicle,
             last_discarded_card_types: self.last_discarded_card_types,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
@@ -1992,6 +2000,7 @@ impl GameState {
             sacrificed_power: None,
             sacrificed_was_artifact: None,
             sacrificed_was_outlaw: None,
+            sacrificed_was_vehicle: None,
             last_discarded_card_types: 0,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
@@ -6409,6 +6418,33 @@ impl GameState {
                 });
             }
         }
+        // Predicate-gated self is-a-creature (`StaticEffect::SelfIsCreatureIf`) —
+        // Midnight Mangler is an artifact creature during turns other than yours.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SelfIsCreatureIf { condition } = &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                if !self.evaluate_predicate(condition, &ctx) {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddCardType(CardType::Creature),
+                });
+            }
+        }
         // CR 604.3 — characteristic-defining dynamic P/T injection. The
         // formula lives on `CardDefinition.dynamic_pt`; we resolve it here
         // on every layer recompute and emit a layer-7 SetPT effect.
@@ -9070,6 +9106,21 @@ impl GameState {
         bonus
     }
 
+    /// CR 702.122 / 702.171 — Interface Ace: a crewing/saddling creature that
+    /// counts its toughness instead of its power (`SelfCrewsSaddlesWithToughness`).
+    pub(crate) fn crew_saddle_uses_toughness(&self, cid: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .find(|c| c.id == cid)
+            .is_some_and(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::SelfCrewsSaddlesWithToughness))
+            })
+    }
+
     fn crew(
         &mut self,
         vehicle: crate::card::CardId,
@@ -9112,7 +9163,8 @@ impl GameState {
             if tapped {
                 return Err(GameError::CardIsTapped(cid));
             }
-            total_power += (cp.power + self.crew_saddle_power_bonus(cid)).max(0);
+            let base = if self.crew_saddle_uses_toughness(cid) { cp.toughness } else { cp.power };
+            total_power += (base + self.crew_saddle_power_bonus(cid)).max(0);
         }
         if (total_power as u32) < crew_n {
             return Err(GameError::SelectionRequirementViolated);
@@ -9188,7 +9240,8 @@ impl GameState {
             if tapped {
                 return Err(GameError::CardIsTapped(cid));
             }
-            total_power += (cp.power + self.crew_saddle_power_bonus(cid)).max(0);
+            let base = if self.crew_saddle_uses_toughness(cid) { cp.toughness } else { cp.power };
+            total_power += (base + self.crew_saddle_power_bonus(cid)).max(0);
         }
         if (total_power as u32) < saddle_n {
             return Err(GameError::SelectionRequirementViolated);
@@ -13455,6 +13508,8 @@ fn static_effect_to_effects(
             // CrewSaddlePowerBonus — read directly by `crew` / `saddle` when
             // summing crew/saddle power; not a real P/T modification.
             | StaticEffect::CrewSaddlePowerBonus { .. }
+            // SelfCrewsSaddlesWithToughness — read directly by `crew` / `saddle`.
+            | StaticEffect::SelfCrewsSaddlesWithToughness
             // GrantTriggeredAbility — surfaced by `statics_granted_triggers_for`
             // in both trigger dispatchers; no layer effect.
             | StaticEffect::GrantTriggeredAbility { .. }
@@ -13547,6 +13602,7 @@ fn static_effect_to_effects(
             // (opponents / predicate eval); resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForFilter { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
+            | StaticEffect::SelfIsCreatureIf { .. }
             // GrantKeywordToChosenType — reads the source's live chosen type;
             // resolved in `gather_continuous_effects`.
             | StaticEffect::GrantKeywordToChosenType { .. }

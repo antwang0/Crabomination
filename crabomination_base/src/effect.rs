@@ -1180,6 +1180,9 @@ pub enum Predicate {
     /// scratch stamped by the activated `sac_other_filter` path (Boneyard
     /// Desecrator).
     SacrificedWasOutlaw,
+    /// "If the sacrificed permanent was a Vehicle" — reads the sacrifice
+    /// scratch (Hellish Sideswipe's draw rider).
+    SacrificedWasVehicle,
     /// The entering permanent bound to `ctx.trigger_source` arrived from a
     /// graveyard this turn, or was cast from one (escape / unearth — read
     /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).
@@ -3257,6 +3260,10 @@ pub enum Effect {
     /// an opponent's) — the controller's choice is a deferred UI follow-up.
     HauntCreature { body: Box<Effect> },
     Tap     { what: Selector },
+    /// CR 702.171 — "Target Mount you control becomes saddled" (Guidelight
+    /// Matrix). Sets `CardInstance.saddled` on each `what` and fires
+    /// `GameEvent::MountSaddled` (no riders), so saddled-attack triggers see it.
+    SetSaddled { what: Selector },
     /// "That player taps `amount` untapped permanents matching `filter` they
     /// control" (Tangle Wire). Auto-pick: lands, then other noncreatures,
     /// then creatures by ascending power. Taps as many as exist when short.
@@ -3335,6 +3342,13 @@ pub enum Effect {
         keywords: Vec<Keyword>,
         duration: Duration,
     },
+    /// "[what] becomes an artifact creature for `duration`" — adds
+    /// `CardType::Creature` (layer 4) only, keeping the permanent's printed
+    /// power/toughness (correct for Vehicles, which carry P/T even when not a
+    /// creature). Unlike `BecomeCreature` this never sets P/T. Guidelight
+    /// Matrix's "target Vehicle you control becomes an artifact creature until
+    /// end of turn".
+    AnimateAsCreature { what: Selector, duration: Duration },
     /// CR 613 layer 7b — "[what]'s base power becomes `power`" for `duration`,
     /// leaving base toughness intact (Belligerent Yearling: base power becomes
     /// equal to the entering Dinosaur's power until end of turn).

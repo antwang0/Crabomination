@@ -6111,6 +6111,12 @@ static DECKS: &[Factory] = &[
     super::decks::transit_mage,
     super::decks::veteran_beastrider,
     super::decks::wreckage_wickerfolk,
+    // recent168 — DFT gap cards: SacrificedWasVehicle, SelfIsCreatureIf,
+    // SetSaddled/AnimateAsCreature, SelfCrewsSaddlesWithToughness.
+    super::decks::guidelight_matrix,
+    super::decks::hellish_sideswipe,
+    super::decks::interface_ace,
+    super::decks::midnight_mangler,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

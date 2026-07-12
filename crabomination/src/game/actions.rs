@@ -5240,7 +5240,7 @@ impl GameState {
                     // (tokens first, then lowest mana value, then lowest power)
                     // for any remainder. The first sacrifice's power becomes
                     // the spell's X.
-                    let chosen: Vec<(CardId, u32, bool, i32, u32, bool)> = {
+                    let chosen: Vec<(CardId, u32, bool, i32, u32, bool, bool)> = {
                         let mut picked: Vec<&crate::card::CardInstance> = Vec::new();
                         if let Some(ids) = chosen_override.take() {
                             for id in ids {
@@ -5295,11 +5295,12 @@ impl GameState {
                                     c.toughness(),
                                     c.definition.cost.cmc(),
                                     c.definition.is_artifact(),
+                                    c.definition.is_vehicle(),
                                 )
                             })
                             .collect()
                     };
-                    for (idx, (id, power, is_creature, tough, mv, is_artifact)) in
+                    for (idx, (id, power, is_creature, tough, mv, is_artifact, is_vehicle)) in
                         chosen.into_iter().enumerate()
                     {
                         if idx == 0 {
@@ -5311,6 +5312,7 @@ impl GameState {
                             self.sacrificed_toughness = Some(tough);
                             self.sacrificed_mana_value = Some(mv);
                             self.sacrificed_was_artifact = Some(is_artifact);
+                            self.sacrificed_was_vehicle = Some(is_vehicle);
                         }
                         if is_creature {
                             if let Some(c) = self.dying_snapshot(id) {
@@ -10688,6 +10690,7 @@ impl GameState {
                 self.sacrificed_toughness = Some(t_val);
                 self.sacrificed_mana_value = Some(mv);
                 self.sacrificed_was_artifact = Some(snap.definition.is_artifact());
+                self.sacrificed_was_vehicle = Some(snap.definition.is_vehicle());
                 self.sacrificed_was_outlaw =
                     Some(crate::game::effects::card_is_outlaw(&snap));
                 cost_sac_pt = Some((p_val, t_val));
