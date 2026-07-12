@@ -17,8 +17,6 @@ primitive or a heavier build:**
 - **Demonic Junker** — ETB "for each player, destroy up to one target creature
   that player controls" needs a per-player multi-target destroy with a
   "creature-you-controlled-was-destroyed" rider.
-- **Flood the Engine** — Aura that taps the enchanted permanent, strips all
-  abilities, and keeps it from untapping (needs a doesn't-untap Aura static).
 - **Ancient Vendetta** — name-a-card then exile up to four copies from an
   opponent's graveyard *and* hand *and* library (a cross-zone name-exile).
 - **Dune Drifter** — ETB *triggered ability* reading the cast X value (the

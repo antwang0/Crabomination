@@ -380,3 +380,26 @@ fn riverchurn_monument_mills_each_opponent() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), gy_before + 2, "opponent milled two");
 }
+
+/// Flood the Engine taps the enchanted permanent, strips its abilities, and
+/// keeps it from untapping.
+#[test]
+fn flood_the_engine_taps_and_locks() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(1, catalog::skybox_ferry()); // has Crew/Flying/Cycling
+    let aura = g.add_card_to_hand(0, catalog::flood_the_engine());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(aura, Some(Target::Permanent(veh)), vec![], None, None).expect("enchant the Vehicle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(veh).unwrap().tapped, "ETB tapped it");
+    // Abilities stripped (no keywords in the computed view).
+    assert!(g.computed_permanent(veh).unwrap().keywords.is_empty(), "lost all abilities");
+    // It stays tapped through its controller's untap step.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(veh).unwrap().tapped, "doesn't untap");
+}

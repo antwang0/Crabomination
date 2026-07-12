@@ -8,8 +8,9 @@
 //! team base-6/6-Ooze anthem (March of the World Ooze), a theft Vehicle
 //! (Possession Engine), a coercive discard-then-draw (Oildeep Gearhulk), a
 //! sac-to-tutor-MV+1 artifact (Repurposing Bay), a graveyard-hate Construct
-//! (Wreck Remover), a saddled Mount (Lagorin, Soul of Alacria), and a
-//! mill-each-opponent artifact (Riverchurn Monument). Tests in
+//! (Wreck Remover), a saddled Mount (Lagorin, Soul of Alacria), a
+//! mill-each-opponent artifact (Riverchurn Monument), and a tap-down/lose-
+//! abilities Aura (Flood the Engine). Tests in
 //! `crabomination/src/tests/recent175.rs`.
 
 use crate::card::{
@@ -527,6 +528,33 @@ pub fn riverchurn_monument() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Flood the Engine — {2}{U} Aura. Enchant creature or Vehicle. ETB: tap the
+/// enchanted permanent. It loses all abilities and doesn't untap during its
+/// controller's untap step.
+pub fn flood_the_engine() -> CardDefinition {
+    CardDefinition {
+        name: "Flood the Engine",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))),
+        },
+        equipped_bonus: Some(EquipBonus { remove_abilities: true, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted permanent doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
         ..Default::default()
     }
 }
