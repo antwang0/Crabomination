@@ -1,14 +1,19 @@
-//! Aetherdrift (DFT) gap batch: a max-speed "each player without max speed"
-//! damage enchantment and an attacked-by trigger that debuffs the attackers.
-//! Tests in `crabomination/src/tests/recent175.rs`.
+//! Aetherdrift (DFT) gap batch: batched-discard burn (Magmakin), a max-speed
+//! "each player without max speed" enchantment (Outpace Oblivion), an
+//! attacked-by debuff (Sabotage Strategist), a copy-an-artifact-or-creature
+//! Shapeshifter (Waxen Shapethief), mill+conditional-destroy (Quag Feast), a
+//! modal fight/destroy (Plow Through), a blink+board-wipe (Explosive Getaway),
+//! and a Start-your-engines Aura (Lightwheel Enhancements). Tests in
+//! `crabomination/src/tests/recent175.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EnchantmentSubtype, EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
+    Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
-use crate::mana::{cost, generic, r, u};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Magmakin Artillerist — {2}{R} 1/4 Elemental Pirate. Whenever you discard one
 /// or more cards, deal that much damage to each opponent. Cycling {1}{R}. When
@@ -105,6 +110,128 @@ pub fn sabotage_strategist() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Waxen Shapethief — {3}{U} 0/0 Shapeshifter with flash. Enters as a copy of an
+/// artifact or creature you control (may). Cycling {2}.
+pub fn waxen_shapethief() -> CardDefinition {
+    CardDefinition {
+        name: "Waxen Shapethief",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Cycling(cost(&[generic(2)]))],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
+            extra_creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Quag Feast — {1}{B} Sorcery. Choose target creature, planeswalker, or
+/// Vehicle. Mill two, then destroy it if its mana value ≤ cards in your
+/// graveyard.
+pub fn quag_feast() -> CardDefinition {
+    let target = Selector::TargetFiltered {
+        slot: 0,
+        filter: R::Creature.or(R::Planeswalker).or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+    };
+    CardDefinition {
+        name: "Quag Feast",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ManaValueOf(Box::new(target.clone())),
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                ),
+                then: Box::new(Effect::Destroy { what: target.clone() }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Plow Through — {G} Sorcery. Choose one — your creature fights an opponent's
+/// creature; or destroy target Vehicle.
+pub fn plow_through() -> CardDefinition {
+    CardDefinition {
+        name: "Plow Through",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Explosive Getaway — {3}{R}{W} Sorcery. Exile up to one target artifact or
+/// creature, returning it at the next end step; deal 4 damage to each creature.
+pub fn explosive_getaway() -> CardDefinition {
+    CardDefinition {
+        name: "Explosive Getaway",
+        cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: R::Artifact.or(R::Creature),
+                effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(R::Creature),
+                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(4) }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lightwheel Enhancements — {W} Aura. Start your engines! Enchant creature or
+/// Vehicle; it gets +1/+1 and has vigilance. (Max-speed graveyard-cast dropped.)
+pub fn lightwheel_enhancements() -> CardDefinition {
+    CardDefinition {
+        name: "Lightwheel Enhancements",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::StartYourEngines],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+            },
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Vigilance],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

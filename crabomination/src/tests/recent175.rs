@@ -107,3 +107,101 @@ fn sabotage_strategist_exhaust_grows() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(strat).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
 }
+
+/// Waxen Shapethief enters as a copy of an artifact/creature you control.
+#[test]
+fn waxen_shapethief_copies_your_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // a 2/2 to copy
+    let thief = g.add_card_to_hand(0, catalog::waxen_shapethief());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: thief, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Waxen Shapethief");
+    drain_stack(&mut g);
+    // enters_as_copy resolves on entry; recompute the board.
+    let cp = g.computed_permanent(thief).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "copied the Grizzly Bears");
+}
+
+/// Quag Feast mills two then destroys the target only if its MV fits the
+/// now-larger graveyard.
+#[test]
+fn quag_feast_destroys_when_graveyard_is_big_enough() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    // Seed one card so mill-2 pushes the graveyard to 3 (≥ 2).
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::quag_feast());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(spell, Some(Target::Permanent(foe)), vec![], None, None).expect("cast Quag Feast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "MV 2 ≤ 2 milled cards → destroyed");
+}
+
+/// Plow Through mode 1 destroys a Vehicle.
+#[test]
+fn plow_through_destroys_a_vehicle() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let veh = g.add_card_to_battlefield(1, catalog::skybox_ferry()); // a Vehicle
+    let spell = g.add_card_to_hand(0, catalog::plow_through());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Mode 1 = destroy target Vehicle (slot 0).
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(veh)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Plow Through, destroy mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(veh).is_none(), "Vehicle destroyed");
+}
+
+/// Explosive Getaway blinks a target and deals 4 to each creature.
+#[test]
+fn explosive_getaway_blinks_and_wipes() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let saved = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, exiled → spared
+    let doomed = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, eats 4
+    let spell = g.add_card_to_hand(0, catalog::explosive_getaway());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(spell, Some(Target::Permanent(saved)), vec![], None, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(doomed).is_none(), "unexiled creature took 4 and died");
+    assert!(g.exile.iter().any(|c| c.id == saved) || g.battlefield_find(saved).is_some(),
+        "the blinked creature was spared (in exile or already returned)");
+}
+
+/// Lightwheel Enhancements pumps and grants vigilance, and seeds speed.
+#[test]
+fn lightwheel_enhancements_pumps_and_seeds_speed() {
+    use crate::card::Keyword;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::lightwheel_enhancements());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.cast_spell(aura, Some(Target::Permanent(bear)), vec![], None, None).expect("cast Aura");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert_eq!(g.players[0].speed, 1, "Start your engines! seeded speed 1");
+}

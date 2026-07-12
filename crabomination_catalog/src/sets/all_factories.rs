@@ -6162,10 +6162,16 @@ static DECKS: &[Factory] = &[
     super::decks::slick_imitator,
     super::decks::spire_mechcycle,
     // recent175 — each-player-without-max-speed burn, attacked-by debuff,
-    // batched-discard burn.
+    // batched-discard burn, clone Shapeshifter, mill+conditional-destroy, modal
+    // fight/destroy, blink+board-wipe, Start-your-engines Aura.
     super::decks::outpace_oblivion,
     super::decks::sabotage_strategist,
     super::decks::magmakin_artillerist,
+    super::decks::waxen_shapethief,
+    super::decks::quag_feast,
+    super::decks::plow_through,
+    super::decks::explosive_getaway,
+    super::decks::lightwheel_enhancements,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
