@@ -683,6 +683,15 @@ impl MatchStats {
             .map(Self::turn_bucket_upper_bound)
             .unwrap_or(0)
     }
+    /// Interquartile range of final turn counts (p75 − p25), a spread measure
+    /// that — unlike [`turn_count_stddev`](Self::turn_count_stddev) — ignores
+    /// the blowout tail entirely. A tight IQR next to a wide σ is the signature
+    /// of a mostly-consistent length distribution with a few runaway grinds.
+    /// Returns 0 when no matches have completed. Bucket-quantised like the other
+    /// `turn_*` percentile readouts.
+    pub(crate) fn turn_count_iqr(&self) -> u32 {
+        self.turn_percentile(0.75).saturating_sub(self.turn_percentile(0.25))
+    }
     /// Population standard deviation of final turn counts, computed from
     /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
     /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next
@@ -1085,5 +1094,20 @@ mod tests {
         assert_eq!(s.percentile(1.0), std::time::Duration::from_secs(3600));
         // Empty turn histogram still reads 0 rather than panicking.
         assert_eq!(MatchStats::default().turn_percentile(0.9), 0);
+    }
+
+    #[test]
+    fn turn_count_iqr_is_p75_minus_p25() {
+        let mut s = MatchStats::default();
+        // Turns 2,4,10,25 → buckets 0,1,3,5. p25 → bucket 0 (upper 2),
+        // p75 → bucket 3 (upper 12), so IQR = 12 − 2 = 10.
+        for t in [2u32, 4, 10, 25] {
+            s.observe_turns(t);
+        }
+        assert_eq!(s.turn_percentile(0.25), 2);
+        assert_eq!(s.turn_percentile(0.75), 12);
+        assert_eq!(s.turn_count_iqr(), 10);
+        // Empty histogram reads 0 rather than underflowing.
+        assert_eq!(MatchStats::default().turn_count_iqr(), 0);
     }
 }

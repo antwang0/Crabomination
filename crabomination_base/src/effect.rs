@@ -349,6 +349,9 @@ pub enum Value {
     /// unless the damage was removed mid-turn).
     MarkedDamageOn(Box<Selector>),
     LifeOf(PlayerRef),
+    /// CR 702.179 — `who`'s current speed (0–4). Momentum Breaker's "gain
+    /// life equal to your speed". Backed by `Player.speed`.
+    PlayerSpeed(PlayerRef),
     /// Lowest life total among all players in the game (CR 119.7 — Repay
     /// in Kind: "each player's life total becomes the lowest life total
     /// among all players").
@@ -1657,6 +1660,9 @@ pub enum EventKind {
     AnyCounterAdded,
     /// An ability was activated.
     AbilityActivated,
+    /// CR 702.177 — an exhaust ability was activated ("whenever you activate an
+    /// exhaust ability" — Adrenaline Jockey).
+    ExhaustAbilityActivated,
     /// One or more cards left a player's graveyard (returned to hand /
     /// battlefield, exiled from graveyard, etc.). Used by Strixhaven
     /// "cards leave your graveyard" payoffs (Garrison Excavator, Living

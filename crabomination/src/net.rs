@@ -1934,7 +1934,7 @@ pub enum GameEventWire {
         #[serde(default)]
         face: crate::game::CastFace,
     },
-    AbilityActivated { source: CardId },
+    AbilityActivated { source: CardId, #[serde(default)] exhaust: bool },
     ManaAdded { player: usize, color: Color, #[serde(default)] source: Option<CardId> },
     ColorlessManaAdded { player: usize, #[serde(default)] source: Option<CardId> },
     PermanentEntered { card_id: CardId },
@@ -2075,8 +2075,8 @@ impl From<&GameEvent> for GameEventWire {
                 card_id: *card_id,
                 face: *face,
             },
-            GameEvent::AbilityActivated { source } => {
-                GameEventWire::AbilityActivated { source: *source }
+            GameEvent::AbilityActivated { source, exhaust } => {
+                GameEventWire::AbilityActivated { source: *source, exhaust: *exhaust }
             }
             GameEvent::ManaAdded { player, color, source } => GameEventWire::ManaAdded {
                 player: *player,
@@ -2361,7 +2361,11 @@ impl GameEventWire {
             }
             E::LandPlayed { player, card_id } => format!("{} played {}", pn(*player), name(*card_id)),
             E::SpellCast { player, card_id, .. } => format!("{} cast {}", pn(*player), name(*card_id)),
-            E::AbilityActivated { source } => format!("{} ability activated", name(*source)),
+            E::AbilityActivated { source, exhaust } => format!(
+                "{} {} activated",
+                name(*source),
+                if *exhaust { "exhaust ability" } else { "ability" }
+            ),
             E::ManaAdded { player, color, .. } => format!("{} adds {color:?}", pn(*player)),
             E::ColorlessManaAdded { player, .. } => format!("{} adds colorless", pn(*player)),
             E::PermanentEntered { card_id } => {

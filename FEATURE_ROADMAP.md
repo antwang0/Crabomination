@@ -16,6 +16,15 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Speed / exhaust-matters primitives (recent167 — DFT):**
+  `Value::PlayerSpeed` reads a player's CR 702.179 speed (Momentum Breaker's
+  "gain life equal to your speed"), and `EventKind::ExhaustAbilityActivated`
+  fires "whenever you activate an exhaust ability" — backed by an `exhaust` flag
+  on `GameEvent::AbilityActivated` (Adrenaline Jockey's +1/+1-on-exhaust half).
+  ~22 DFT cards in `decks::recent167` (Surveyor cycle, Speed lands, Marketback
+  Walker, exhaust Vehicles, Ooze Patrol, cycling payoffs, value creatures);
+  tests in `tests/recent167.rs`.
+
 - **Impulse-until-nonland + impulse-cost fix (recent166 — EOE/TLA/DFT):**
   `Effect::ExileTopUntilNonlandMayPlay` exiles from the top of a library until a
   nonland card, then grants a may-play (free or pay-own-cost) with an optional

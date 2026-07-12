@@ -5278,6 +5278,60 @@ fn cr_702_179_start_your_engines_sets_speed_to_one() {
     assert_eq!(g.players[0].speed, 1, "Start your engines! set speed to 1");
 }
 
+/// CR 702.179c/d — once the engine is running, the active player's speed rises
+/// by 1 the first time an opponent loses life on their turn (at most once per
+/// turn), and never past the maximum of 4.
+#[test]
+fn cr_702_179_speed_increments_once_per_turn_capped_at_four() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].speed = 1; // engine already running
+    // First opponent life loss this turn → 1 → 2.
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[0].speed, 2, "first opp life-loss bumps speed");
+    // A second loss the same turn does nothing (once per turn).
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[0].speed, 2, "only once per turn");
+    // From speed 4 it never rises further, even on a fresh turn.
+    g.players[0].speed = 4;
+    g.players[0].speed_increased_this_turn = false;
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[0].speed, 4, "capped at maximum speed 4");
+    // The active player's *own* life loss never bumps their speed.
+    g.players[0].speed = 1;
+    g.players[0].speed_increased_this_turn = false;
+    g.adjust_life(0, -3);
+    assert_eq!(g.players[0].speed, 1, "your own life loss doesn't advance your engine");
+}
+
+/// CR 702.177b — an exhaust ability can be activated only once per game. A
+/// second activation of Boommobile's exhaust ability is rejected.
+#[test]
+fn cr_702_177_exhaust_ability_only_once_per_game() {
+    let mut g = two_player_game();
+    let boom = g.add_card_to_battlefield(0, catalog::boommobile());
+    g.priority.player_with_priority = 0;
+    let pay = |g: &mut GameState| {
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3); // {X=1}{2}{R}
+    };
+    pay(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boom, ability_index: 0, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: Vec::new(), x_value: Some(1),
+    })
+    .expect("first exhaust activation succeeds");
+    drain_stack(&mut g);
+    pay(&mut g);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: boom, ability_index: 0, target: Some(crate::game::types::Target::Player(1)),
+            additional_targets: Vec::new(), x_value: Some(1),
+        }).is_err(),
+        "second exhaust activation is rejected (once per game)"
+    );
+}
+
 // ── CR 702.2e / 510.1c — trample + deathtouch over multiple blockers ──────────
 
 /// A trample + deathtouch attacker assigns only 1 (the deathtouch lethal) to

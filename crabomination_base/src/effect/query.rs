@@ -124,7 +124,7 @@ impl Effect {
                 | Value::MarkedDamageOn(s) => sel_has_target(s),
                 Value::CountersOn { what, .. } => sel_has_target(what),
                 Value::LifeOf(p) | Value::HandSizeOf(p) | Value::GraveyardSizeOf(p)
-                | Value::LibrarySizeOf(p) => {
+                | Value::LibrarySizeOf(p) | Value::PlayerSpeed(p) => {
                     player_has_target(p)
                 }
                 Value::Sum(vs) => vs.iter().any(value_has_target),

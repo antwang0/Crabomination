@@ -2,6 +2,31 @@
 
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
+
+**Discovered (recent167):** ETB *triggered abilities* don't receive the cast's
+X value — only `enters_with_counters` threads `x_value` (via `etb_ctx` in
+`stack.rs`). So a trigger whose target filter is `ManaValueAtMostXFromCost`
+(Dune Drifter's "return an artifact/creature card with MV ≤ X from your
+graveyard") evaluates X as 0 and finds no legal target. To ship it, stamp the
+resolved permanent's cast `x_value` onto the `CardInstance` and pass it into the
+ETB trigger's `EffectContext::for_trigger` (currently hard-coded 0). Dune Drifter
+is deferred until then.
+
+**DFT gaps skipped in recent167, each needing one primitive:**
+- **Magmakin Artillerist** — "whenever you discard one or more cards, deal that
+  much damage to each opponent" needs a *batched* discard event (a single event
+  carrying the count), not the per-card `CardDiscarded`.
+- **Interface Ace** — "crews Vehicles / saddles Mounts using its toughness
+  rather than its power" needs a crew/saddle-by-toughness flag on the creature.
+- **Midnight Mangler** — "during turns other than yours, this Vehicle is an
+  artifact creature" needs a turn-gated `is-a-creature` static (the type-line
+  analogue of `SelfHasKeywordIf`).
+- **Guidelight Matrix** — "{2},{T}: target Mount you control becomes saddled"
+  needs an `Effect::SetSaddled` (the animate-Vehicle half already has
+  `AddCardTypeIndefinitely`).
+- **Hellish Sideswipe** — "if the sacrificed permanent was a Vehicle, draw"
+  needs a `Predicate::SacrificedWasVehicle` (sibling of `SacrificedWasArtifact`).
+
 See `CUBE_FEATURES.md` (cube-card implementation status),
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
 (prioritized engine functionality). **The correctness-audit section below
