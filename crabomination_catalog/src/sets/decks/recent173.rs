@@ -3,12 +3,13 @@
 //! reveal-hand-and-exile disruption spell. Tests in `tests/recent173.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus, Keyword,
-    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
+    Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    Value,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector};
-use crate::mana::{b, cost, generic, u, w};
+use crate::mana::{b, cost, generic, r, u, w};
 
 /// The 1/1 colorless Pilot token with the +2 crew/saddle bonus.
 fn boosted_pilot_token() -> TokenDefinition {
@@ -55,6 +56,35 @@ pub fn roadside_assistance() -> CardDefinition {
             count: Value::ONE,
             definition: boosted_pilot_token(),
         })],
+        ..Default::default()
+    }
+}
+
+/// Cloudspire Coordinator — {R}{W} 3/1 Human Pilot. ETB: scry 2. {T}: create X
+/// 1/1 colorless Pilot tokens, X = the number of Mounts and/or Vehicles that
+/// entered under your control this turn (each token crews/saddles as though its
+/// power were 2 greater).
+pub fn cloudspire_coordinator() -> CardDefinition {
+    CardDefinition {
+        name: "Cloudspire Coordinator",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::MountsVehiclesEnteredThisTurn(PlayerRef::You),
+                definition: boosted_pilot_token(),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

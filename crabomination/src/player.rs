@@ -198,6 +198,11 @@ pub struct Player {
     /// — Armory Mice, Belligerent of the Ball). Reset at cleanup.
     #[serde(default)]
     pub nonland_permanents_entered_this_turn: u32,
+    /// DFT — count of Mounts and/or Vehicles that entered under this player's
+    /// control this turn (`Value::MountsVehiclesEnteredThisTurn` — Cloudspire
+    /// Coordinator's token count). Reset at the active player's turn boundary.
+    #[serde(default)]
+    pub mounts_vehicles_entered_this_turn: u32,
     /// Multicolored spells this player has cast this turn (Zenith
     /// Chronicler's "first multicolored spell each turn"). Reset at cleanup.
     #[serde(default)]
@@ -696,6 +701,7 @@ impl Player {
             creatures_entered_last_turn: Vec::new(),
             artifacts_entered_this_turn: 0,
             nonland_permanents_entered_this_turn: 0,
+            mounts_vehicles_entered_this_turn: 0,
             multicolored_spells_cast_this_turn: 0,
             oil_activity_this_turn: false,
             channel_life_for_mana: false,

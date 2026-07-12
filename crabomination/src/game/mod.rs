@@ -4375,6 +4375,11 @@ impl GameState {
         if !inst.definition.is_land() {
             self.players[ctrl].nonland_permanents_entered_this_turn += 1;
         }
+        if inst.definition.has_creature_type(crate::card::CreatureType::Mount)
+            || inst.definition.is_vehicle()
+        {
+            self.players[ctrl].mounts_vehicles_entered_this_turn += 1;
+        }
         self.battlefield.push(inst);
         // CR 707.2 — a token minted from a clone-y definition (Vizier of
         // Many Faces' embalm token) applies its `enters_as_copy` replacement

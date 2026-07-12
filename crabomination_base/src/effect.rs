@@ -605,6 +605,10 @@ pub enum Value {
     /// Artifacts that entered the battlefield under the player's control this
     /// turn (`Player.artifacts_entered_this_turn`) — Malcator's end-step gate.
     ArtifactsEnteredThisTurn(PlayerRef),
+    /// Mounts and/or Vehicles that entered under the player's control this turn
+    /// (`Player.mounts_vehicles_entered_this_turn`) — Cloudspire Coordinator's
+    /// X token count.
+    MountsVehiclesEnteredThisTurn(PlayerRef),
     /// The player's poison counters (Vraska's −9 "counters equal to the
     /// difference" top-up).
     PoisonCountersOf(PlayerRef),

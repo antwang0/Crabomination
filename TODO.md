@@ -26,8 +26,6 @@ primitive or a heavier build:**
   `EffectContext::for_trigger`).
 - **Skyserpent Seeker** — exhaust "reveal until two land cards, put them onto
   the battlefield tapped, rest to the bottom in a random order."
-- **Cloudspire Coordinator** — token count keyed on "Mounts/Vehicles that
-  entered under your control this turn."
 - **Cursecloth Wrappings / Wickerfolk Indomitable** — grant-embalm-to-a-gy-card
   and graveyard-cast-with-additional-cost respectively.
 - **Boom Scholar's "exhaust abilities of other permanents cost {2} less"**

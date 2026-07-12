@@ -670,6 +670,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].artifacts_entered_this_turn as i32)
                 .unwrap_or(0),
+            Value::MountsVehiclesEnteredThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].mounts_vehicles_entered_this_turn as i32)
+                .unwrap_or(0),
             Value::PoisonCountersOf(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)

@@ -85,3 +85,24 @@ fn aggressive_negotiations_exiles_and_counters() {
     assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Forest"), "land kept");
     assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Cloudspire Coordinator taps to mint one Pilot per Mount/Vehicle that entered
+/// this turn.
+#[test]
+fn cloudspire_coordinator_mints_pilots_per_entered_vehicle() {
+    let mut g = two_player_game();
+    let coord = g.add_card_to_battlefield(0, catalog::cloudspire_coordinator());
+    g.clear_sickness(coord);
+    g.players[0].mounts_vehicles_entered_this_turn = 2;
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coord, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("tap to make Pilots");
+    drain_stack(&mut g);
+    let pilots = g.battlefield.iter().filter(|c| c.definition.name == "Pilot").count();
+    assert_eq!(pilots, 2, "two Mounts/Vehicles entered → two Pilot tokens");
+}

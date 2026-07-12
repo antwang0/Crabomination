@@ -6150,8 +6150,10 @@ static DECKS: &[Factory] = &[
     super::decks::thundering_broodwagon,
     super::decks::tune_up,
     super::decks::unswerving_sloth,
-    // recent173 — Pilot Aura, control swap, affinity draw, hand disruption.
+    // recent173 — Pilot Aura, control swap, affinity draw, hand disruption,
+    // Mounts/Vehicles-entered token maker.
     super::decks::aggressive_negotiations,
+    super::decks::cloudspire_coordinator,
     super::decks::roadside_assistance,
     super::decks::trade_the_helm,
     super::decks::voyage_home,
