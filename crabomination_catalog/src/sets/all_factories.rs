@@ -5995,6 +5995,15 @@ static DECKS: &[Factory] = &[
     super::decks::claws_out,
     super::decks::skyknight_squire,
     super::decks::luminous_rebuke,
+    // recent163 — Foundations: can't-lose, Rat swarm, Goblin lord, death value.
+    super::decks::herald_of_eternal_dawn,
+    super::decks::rune_sealed_wall,
+    super::decks::scrawling_crawler,
+    super::decks::revenge_of_the_rats,
+    super::decks::spinner_of_souls,
+    super::decks::high_society_hunter,
+    super::decks::dropkick_bomber,
+    super::decks::seekers_folly,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
