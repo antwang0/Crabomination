@@ -49,12 +49,12 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     format!(
         "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
          \"avg_turns\":{},\"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\
-         \"median_turns\":{},\"turn_p90\":{},\
+         \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\
          \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
          \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
          \"deckout_wins\":{},\"commander_damage_wins\":{},\"other_wins\":{},\
          \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
-         \"median_win_life_delta\":{},\"win_life_delta_stddev\":{:.2},\
+         \"median_win_life_delta\":{},\"win_life_delta_p90\":{},\"win_life_delta_stddev\":{:.2},\
          \"connections_current\":{},\"connections_peak\":{},\
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
@@ -70,6 +70,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.max_turns.unwrap_or(0),
         st.turn_count_stddev(),
         st.turn_percentile(0.5),
+        st.turn_percentile(0.1),
         st.turn_percentile(0.9),
         st.inconclusive,
         st.inconclusive_pct(),
@@ -84,6 +85,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.first_seat_win_pct(),
         st.avg_win_life_delta(),
         st.win_life_delta_median(),
+        st.win_life_delta_percentile(0.9),
         st.win_life_delta_stddev(),
         sl.current,
         sl.peak,
@@ -131,6 +133,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("max_turns", "gauge", "Most turns in a completed match.", st.max_turns.unwrap_or(0).to_string());
     m("turn_stddev", "gauge", "Standard deviation of final turn counts.", format!("{:.2}", st.turn_count_stddev()));
     m("median_turns", "gauge", "Median (p50) final turn count.", st.turn_percentile(0.5).to_string());
+    m("turn_p10", "gauge", "10th-percentile final turn count (how fast the quickest games end).", st.turn_percentile(0.1).to_string());
     m("turn_p90", "gauge", "90th-percentile final turn count.", st.turn_percentile(0.9).to_string());
     m("inconclusive_total", "counter", "Matches that ended with no declared outcome (stuck / disconnected).", st.inconclusive.to_string());
     m("inconclusive_pct", "gauge", "Percent of completed matches that were inconclusive.", st.inconclusive_pct().to_string());
@@ -156,6 +159,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("first_seat_win_pct", "gauge", "Percent of decided matches won by the first seat.", st.first_seat_win_pct().to_string());
     m("avg_win_life_delta", "gauge", "Average life margin of victory across wins.", st.avg_win_life_delta().to_string());
     m("median_win_life_delta", "gauge", "Median (p50) life margin of victory.", st.win_life_delta_median().to_string());
+    m("win_life_delta_p90", "gauge", "90th-percentile life margin of victory (blowout tail).", st.win_life_delta_percentile(0.9).to_string());
     m("win_life_delta_stddev", "gauge", "Standard deviation of the win-by-life margin.", format!("{:.2}", st.win_life_delta_stddev()));
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
@@ -275,9 +279,10 @@ mod tests {
         for key in ["\"matches\":0", "\"connections_current\":0", "\"refusal_rate_pct\":0",
                     "\"poison_wins\":0", "\"deckout_wins\":0", "\"other_wins\":0",
                     "\"first_seat_win_pct\":50", "\"avg_win_life_delta\":0",
-                    "\"median_win_life_delta\":0", "\"win_life_delta_stddev\":0.00",
+                    "\"median_win_life_delta\":0", "\"win_life_delta_p90\":0",
+                    "\"win_life_delta_stddev\":0.00",
                     "\"min_turns\":0", "\"max_turns\":0", "\"turn_stddev\":0.00",
-                    "\"median_turns\":0", "\"turn_p90\":0",
+                    "\"median_turns\":0", "\"turn_p10\":0", "\"turn_p90\":0",
                     "\"inconclusive\":0", "\"inconclusive_pct\":0",
                     "\"decisive_pct\":0", "\"draw_pct\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",

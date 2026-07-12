@@ -75,6 +75,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         ProtectionFromManaValueParity { odd } => if *odd { "Pro-odd" } else { "Pro-even" },
         ProtectionFromMulticolored => "ProMC",
         ProtectionFromInstants => "ProI",
+        ProtectionFromSpells => "ProS",
+        ProtectionFromColoredSpells => "ProCS",
         ProtectionFromEverything => "Pro★",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
@@ -142,6 +144,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Assigns combat damage equal to its toughness" (Doran) — changes how
         // its combat math reads at a glance.
         AssignsCombatDamageByToughness => "T-dmg",
+        // "Excess trample damage tramples over planeswalkers" (Questing Beast)
+        // — a real combat read when attacking a walker behind a blocker.
+        TrampleOverPlaneswalkers => "Tmp→PW",
         // Status keywords that change what a creature can be targeted/blocked by
         // or how it reads in combat.
         Phasing => "Phs",

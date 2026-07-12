@@ -261,6 +261,29 @@ Remaining known approximations (each noted on its factory doc):
   Sothera / Requiem Monolith not yet added (delayed-exile reanimate, exile-edict,
   damage-triggered granted ability).
 
+## Discovered follow-ups — Marvel's Spider-Man (`decks::spm`)
+
+- **7 remaining EOE cards** still need primitives: Chorale of the Void
+  (attack-reanimate from defender's graveyard + Void end-step sac), Famished
+  Worldsire (Devour land), Lightstall Inquisitor (opponent exile-a-card +
+  may-play w/ +{1} tax), Moonlit Meditation (token-creation replaced by copies
+  of the enchanted permanent), Requiem Monolith (grant "damage → draw+lose"),
+  Sothera the Supervoid (dies-edict + delayed-exile reanimate), The Dominion
+  Bracelet (control an opponent's turn).
+- **SPM DFCs / Sagas** not yet added: Peter Parker // Amazing Spider-Man, Miles
+  Morales, Norman Osborn // Green Goblin, Gwen Stacy // Ghost-Spider (transform
+  DFCs), Origin of Spider-Man (Saga), Spider-Punk (uncounterable + damage-can't-
+  be-prevented team static), Spider-Man 2099 ("can't cast on turns 1–3").
+- **Small SPM approximations shipped** (upgrade later): Pumpkin Bombardment
+  models "discard a card or pay {2}" as a mandatory discard (needs an
+  `AdditionalCastCost` OR-branch); Selfless Police Captain moves a single
+  +1/+1 rather than its live counter count on LTB (needs LKI counter read);
+  Cheering Crowd drops the "add {C} per counter" ramp rider; Spider-Ham drops
+  the Animal May-Ham menagerie anthem.
+- **Connive test harness.** Mob Lookout's targeted connive works in-game but a
+  `cr_rules` conformance test needs the ETB-target vs. discard decision order
+  pinned in a `ScriptedDecider` (dropped this run; replaced with CR 601.2f).
+
 ## Discovered follow-ups — AFR venture batch (`decks::afr`)
 
 - Rooms resolve inline (no stack round-trip); Tomb's two pay-or-lose rooms are

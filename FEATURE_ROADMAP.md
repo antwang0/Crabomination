@@ -122,6 +122,16 @@ exercising each) was elided in a compaction pass; recover it from
   `Effect::ExileSource` (temp tokens exiled at end step — Manaform Hellkite's Dragon
   Illusion via `Value::CastSpellManaSpent` + `TokenDefinition.dynamic_pt`), and
   kicker ETB counters (Untamed Kavu).
+- **Marvel's Spider-Man + faithful Cosmogoyf (modern_decks, this run):**
+  `decks::spm` (26 Standard cards on existing primitives — Spiders-matter,
+  Villain value, LTB tokens, connive, `MayDo` auto-attach, `Value::XFromCost`
+  counters+burn), `CreatureType::Performer`, and `DynamicPt::CardsYouOwnInExile`
+  making Cosmogoyf the faithful EOE card (was a fabricated Tarmogoyf stand-in;
+  the BRG demo now points at the real Tarmogoyf). Server `/status` + `/metrics`
+  gained `turn_p10` and `win_life_delta_p90` (distribution tails). Client HUD:
+  `ProtectionFromSpells`/`ProtectionFromColoredSpells`/`TrampleOverPlaneswalkers`
+  tags. CR conformance: Menace two-blocker (702.111), lifelink on ability damage
+  (702.15), target-conditional cost reduction (601.2f).
 - **Trigger / damage-event primitives (recent90):**
   `StaticEffect::DoubleControllerTriggersOfType` (Harmonic Prodigy —
   "a triggered ability of a Shaman or another Wizard triggers an additional

@@ -47,7 +47,11 @@
 //! protection-from-creatures attacker being unblockable (CR 702.16e), reflexive
 //! "when you do" payoffs gated on the action (CR 603.12 — Bloodcrazed
 //! Socialite), loyalty abilities once-per-turn at sorcery speed (CR 606.3 —
-//! Nissa), and deathtouch making any damage lethal (CR 702.2b).
+//! Nissa), and deathtouch making any damage lethal (CR 702.2b), Menace as a
+//! two-blocker requirement (CR 702.111 — Insatiable Skittermaw), lifelink on
+//! noncombat ability damage (CR 702.15 — Merciless Enforcers), and
+//! target-conditional cost reduction (CR 601.2f — Grow Extra Arms costs {1}
+//! less targeting a Spider).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -8327,4 +8331,74 @@ fn cr_701_42_surveil_routes_declined_card_to_graveyard() {
         .unwrap();
     g.dispatch_triggers_for_events(&events);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "declined surveil card hits the graveyard");
+}
+
+// ── CR 702.111 — Menace (block requires two or more creatures) ────────────────
+
+/// A menace attacker (Insatiable Skittermaw) can't be blocked by a single
+/// creature, but two blockers is legal.
+#[test]
+fn cr_702_111_menace_requires_two_blockers() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::insatiable_skittermaw());
+    g.clear_sickness(atk);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    assert!(g.declare_blockers(vec![(b1, atk)]).is_err(), "one blocker rejected by menace");
+    g.declare_blockers(vec![(b1, atk), (b2, atk)]).expect("two blockers is legal");
+}
+
+// ── CR 702.15 — Lifelink applies to noncombat (ability) damage ────────────────
+
+/// Merciless Enforcers has lifelink; its {3}{B} ping deals 1 damage AND gains
+/// its controller 1 life (lifelink is not combat-restricted).
+#[test]
+fn cr_702_15_lifelink_on_ability_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::merciless_enforcers());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1, "1 damage to opponent");
+    assert_eq!(g.players[0].life, life_before + 1, "lifelink gained 1 life");
+}
+
+// ── CR 601.2f — target-conditional cost reduction ─────────────────────────────
+
+/// Grow Extra Arms ({1}{G}) costs {1} less when it targets a Spider, so a lone
+/// {G} is enough to pump a Spider but not a non-Spider.
+#[test]
+fn cr_601_2f_cost_reduction_when_targeting_spider() {
+    use crate::game::types::Target;
+    // Targeting a Spider: {G} covers the reduced cost.
+    let mut g = two_player_game();
+    let spider = g.add_card_to_battlefield(0, catalog::radioactive_spider());
+    let cast = g.add_card_to_hand(0, catalog::grow_extra_arms());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.cast_spell(cast, Some(Target::Permanent(spider)), vec![], None, None)
+        .expect("{G} pays the Spider-reduced cost");
+
+    // Targeting a non-Spider: {G} alone is short of {1}{G}.
+    let mut g2 = two_player_game();
+    let bear = g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cast2 = g2.add_card_to_hand(0, catalog::grow_extra_arms());
+    g2.players[0].mana_pool.add(Color::Green, 1);
+    g2.priority.player_with_priority = 0;
+    g2.step = TurnStep::PreCombatMain;
+    assert!(
+        g2.cast_spell(cast2, Some(Target::Permanent(bear)), vec![], None, None).is_err(),
+        "no reduction on a non-Spider target — {{G}} is insufficient",
+    );
 }
