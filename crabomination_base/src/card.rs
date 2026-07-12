@@ -91,6 +91,8 @@ pub enum CreatureType {
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
     Siren, Citizen, Leech,
+    // SPM expansion (Marvel's Spider-Man — Mary Jane Watson).
+    Performer,
     // BLB / VOW expansion (Prosperous Innkeeper).
     Halfling,
     // THB expansion (Venomous Hierophant, Pharika's Spawn).
@@ -2779,6 +2781,9 @@ pub enum DynamicPt {
     /// cards in the controller's graveyard, toughness = `base_t` + that count.
     /// Souls of the Lost (*/*+1 → base_p 0, base_t 1).
     PermanentCardsInControllerGraveyard { base_p: i32, base_t: i32 },
+    /// Power = the number of cards the controller owns in exile, toughness =
+    /// that number + `base_t`. Cosmogoyf (*/*+1 → base_t 1).
+    CardsYouOwnInExile { base_t: i32 },
     /// Power = toughness = the number of creatures the controller controls
     /// that have any of `types`. The Mycotyrant (Fungi and/or Saprolings).
     CreaturesYouControlWithTypes { types: Vec<CreatureType> },

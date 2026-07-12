@@ -662,6 +662,9 @@ mod tests_recent165;
 #[path = "../tests/recent166.rs"]
 mod tests_recent166;
 #[cfg(test)]
+#[path = "../tests/spm.rs"]
+mod tests_spm;
+#[cfg(test)]
 #[path = "../tests/recent164.rs"]
 mod tests_recent164;
 #[cfg(test)]
@@ -6458,6 +6461,11 @@ impl GameState {
                     let n = self.players[card.controller].graveyard.iter()
                         .filter(|c| c.definition.is_permanent()).count() as i32;
                     (base_p + n, base_t + n)
+                }
+                crate::card::DynamicPt::CardsYouOwnInExile { base_t } => {
+                    let n = self.exile.iter()
+                        .filter(|c| c.owner == card.controller).count() as i32;
+                    (n, n + base_t)
                 }
                 crate::card::DynamicPt::CreaturesYouControlWithTypes { types } => {
                     let n = self.battlefield.iter().filter(|c| {

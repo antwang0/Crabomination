@@ -206,6 +206,7 @@ mod spells;
 mod survival;
 mod tarkir;
 mod webslinging;
+mod spm;
 
 pub use creatures::*;
 pub use freerunning::*;
@@ -404,3 +405,4 @@ pub use spells::*;
 pub use survival::*;
 pub use tarkir::*;
 pub use webslinging::*;
+pub use spm::*;

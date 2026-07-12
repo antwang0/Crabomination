@@ -55,7 +55,10 @@ pub fn brg_combo_deck() -> &'static [CardFactory] {
         // Creatures (13)
         callous_sell_sword,
         chancellor_of_the_tangle, chancellor_of_the_tangle, chancellor_of_the_tangle, chancellor_of_the_tangle,
-        cosmogoyf, cosmogoyf, cosmogoyf, cosmogoyf,
+        // Tarmogoyf (graveyard-scaled) — the BRG deck wants the
+        // all-graveyards CDA, so the stand-in points at the real Tarmogoyf
+        // (Cosmogoyf is now the faithful EOE exile-scaled card).
+        tarmogoyf, tarmogoyf, tarmogoyf, tarmogoyf,
         devourer_of_destiny, devourer_of_destiny, devourer_of_destiny, devourer_of_destiny,
         // Spells (22)
         pact_of_negation, pact_of_negation, pact_of_negation, pact_of_negation,

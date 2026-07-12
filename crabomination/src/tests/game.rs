@@ -1352,12 +1352,12 @@ fn thud_sacrifices_creature_and_deals_damage_equal_to_its_power() {
 }
 
 #[test]
-fn cosmogoyf_pt_scales_with_card_types_in_graveyards() {
+fn tarmogoyf_pt_scales_with_card_types_in_graveyards() {
     use crate::card::CardType;
     let mut g = two_player_game();
-    let goyf_id = g.add_card_to_battlefield(0, catalog::cosmogoyf());
+    let goyf_id = g.add_card_to_battlefield(0, catalog::tarmogoyf());
 
-    // Empty graveyards → Cosmogoyf is 0/1.
+    // Empty graveyards → Tarmogoyf is 0/1.
     let cp = g.computed_permanent(goyf_id).unwrap();
     assert_eq!(cp.power, 0);
     assert_eq!(cp.toughness, 1);

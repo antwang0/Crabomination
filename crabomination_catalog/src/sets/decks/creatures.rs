@@ -75,25 +75,18 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
     }
 }
 
-/// Cosmogoyf — {2}{G}, *X/X+1* where X = number of different card types
-/// among cards in all graveyards.
-///
-/// Wired via a per-frame layer-7 `SetPowerToughness(N, N+1)` injected in
-/// `compute_battlefield` (where N = `distinct_card_types_in_all_graveyards`).
-/// The base power/toughness on the definition (4/5) only matters until
-/// any layer effect runs, so for any computed view it's overwritten.
+/// Cosmogoyf — {B}{G} Elemental Lhurgoyf, *X/X+1* where X = the number of
+/// cards you own in exile (`DynamicPt::CardsYouOwnInExile`).
 pub fn cosmogoyf() -> CardDefinition {
     CardDefinition {
         name: "Cosmogoyf",
-        dynamic_pt: Some(DynamicPt::DistinctTypesInAllGraveyards),
-        cost: cost(&[generic(1), g()]),
+        dynamic_pt: Some(DynamicPt::CardsYouOwnInExile { base_t: 1 }),
+        cost: cost(&[b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
+            creature_types: vec![CreatureType::Elemental, CreatureType::Lhurgoyf],
             ..Default::default()
         },
-        // Base power/toughness — overridden per-frame by the layer-7 set-PT
-        // effect injected in `compute_battlefield` based on graveyard contents.
         toughness: 1,
         ..Default::default()
     }
