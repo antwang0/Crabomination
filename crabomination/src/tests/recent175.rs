@@ -360,3 +360,23 @@ fn lagorin_saddled_attack_counters_vehicles() {
     assert_eq!(g.battlefield_find(veh1).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(veh2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Riverchurn Monument's base ability mills each opponent two.
+#[test]
+fn riverchurn_monument_mills_each_opponent() {
+    let mut g = two_player_game();
+    let mon = g.add_card_to_battlefield(0, catalog::riverchurn_monument());
+    for _ in 0..5 { g.add_card_to_library(1, catalog::forest()); }
+    let gy_before = g.players[1].graveyard.len();
+    g.clear_sickness(mon);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mon, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("mill ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 2, "opponent milled two");
+}

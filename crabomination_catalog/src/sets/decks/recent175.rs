@@ -8,7 +8,8 @@
 //! team base-6/6-Ooze anthem (March of the World Ooze), a theft Vehicle
 //! (Possession Engine), a coercive discard-then-draw (Oildeep Gearhulk), a
 //! sac-to-tutor-MV+1 artifact (Repurposing Bay), a graveyard-hate Construct
-//! (Wreck Remover), and a saddled Mount (Lagorin, Soul of Alacria). Tests in
+//! (Wreck Remover), a saddled Mount (Lagorin, Soul of Alacria), and a
+//! mill-each-opponent artifact (Riverchurn Monument). Tests in
 //! `crabomination/src/tests/recent175.rs`.
 
 use crate::card::{
@@ -492,6 +493,40 @@ pub fn lagorin_soul_of_alacria() -> CardDefinition {
                 }),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Riverchurn Monument — {1}{U} Artifact. {1}, {T}: each opponent mills two.
+/// Exhaust — {2}{U}{U}, {T}: each opponent mills cards equal to the number of
+/// cards in their graveyard. ("Any number of target players" is modeled as each
+/// opponent — the standard aggressive line; faithful in 1v1.)
+pub fn riverchurn_monument() -> CardDefinition {
+    CardDefinition {
+        name: "Riverchurn Monument",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                exhaust: true,
+                mana_cost: cost(&[generic(2), u(), u()]),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::GraveyardSizeOf(PlayerRef::EachOpponent),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

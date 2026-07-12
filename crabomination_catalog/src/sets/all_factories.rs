@@ -6180,6 +6180,7 @@ static DECKS: &[Factory] = &[
     super::decks::repurposing_bay,
     super::decks::wreck_remover,
     super::decks::lagorin_soul_of_alacria,
+    super::decks::riverchurn_monument,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
