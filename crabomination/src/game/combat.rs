@@ -557,6 +557,10 @@ impl GameState {
                     self.stack.push(
                         TriggerPush::new(src, defender, effect)
                             .target(Some(Target::Player(p)))
+                            // Bind the attacking creature as the trigger source so
+                            // "those creatures get -1/-0" (Sabotage Strategist) can
+                            // address it via `Selector::TriggerSource`.
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                             .build(),
                     );
                 }

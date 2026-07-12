@@ -91,6 +91,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::TurnedFaceUp, GameEvent::TurnedFaceUp { .. }) => true,
         (EventKind::TokenCreated, GameEvent::TokenCreated { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
+        (EventKind::DiscardedOneOrMore, GameEvent::DiscardedBatch { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
         (EventKind::CommittedCrime, GameEvent::CommittedCrime { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
@@ -463,6 +464,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
     match event {
         GameEvent::CardDrawn { player, .. }
         | GameEvent::CardDiscarded { player, .. }
+        | GameEvent::DiscardedBatch { player, .. }
         | GameEvent::LandPlayed { player, .. }
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
@@ -580,6 +582,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }
+        | GameEvent::DiscardedBatch { player, .. }
         | GameEvent::EnergyGained { player, .. }
         | GameEvent::Discovered { player, .. }
         | GameEvent::CoinFlipWon { player }

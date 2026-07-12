@@ -689,6 +689,9 @@ mod tests_recent173;
 #[path = "../tests/recent174.rs"]
 mod tests_recent174;
 #[cfg(test)]
+#[path = "../tests/recent175.rs"]
+mod tests_recent175;
+#[cfg(test)]
 #[path = "../tests/recent164.rs"]
 mod tests_recent164;
 #[cfg(test)]
@@ -13050,6 +13053,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::DamageDealt { amount, .. }
         | GameEvent::PoisonAdded { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,
+        GameEvent::DiscardedBatch { count, .. } => *count,
         GameEvent::CounterAdded { count, .. } => *count,
         GameEvent::Discovered { value, .. } => *value,
         GameEvent::Expended { total, .. } => *total,

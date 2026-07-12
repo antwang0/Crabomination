@@ -1952,6 +1952,8 @@ pub enum GameEventWire {
     Foraged { player: usize },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::DiscardedBatch` (CR 701.9 discard batch).
+    DiscardedBatch { player: usize, count: u32 },
     /// Wire mirror of `GameEvent::CommittedCrime` (CR 700.13).
     CommittedCrime { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
@@ -2122,6 +2124,10 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::EnergyGained { player, amount } => GameEventWire::EnergyGained {
                 player: *player,
                 amount: *amount,
+            },
+            GameEvent::DiscardedBatch { player, count } => GameEventWire::DiscardedBatch {
+                player: *player,
+                count: *count,
             },
             GameEvent::CommittedCrime { player } => {
                 GameEventWire::CommittedCrime { player: *player }
@@ -2399,6 +2405,8 @@ impl GameEventWire {
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
+            // Per-card `CardDiscarded` rows already narrate the discards.
+            E::DiscardedBatch { .. } => String::new(),
             E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
             E::DungeonRoomEntered { player, dungeon, room } => {

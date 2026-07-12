@@ -6159,6 +6159,11 @@ static DECKS: &[Factory] = &[
     super::decks::boom_scholar,
     super::decks::slick_imitator,
     super::decks::spire_mechcycle,
+    // recent175 — each-player-without-max-speed burn, attacked-by debuff,
+    // batched-discard burn.
+    super::decks::outpace_oblivion,
+    super::decks::sabotage_strategist,
+    super::decks::magmakin_artillerist,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -14,9 +14,6 @@ is deferred until then.
 
 **DFT gaps (recent168–174 shipped ~40 cards). Remaining, each needing one
 primitive or a heavier build:**
-- **Magmakin Artillerist** — "whenever you discard one or more cards, deal that
-  much damage to each opponent" needs a *batched* discard event (a single event
-  carrying the count), not the per-card `CardDiscarded`.
 - **Demonic Junker** — ETB "for each player, destroy up to one target creature
   that player controls" needs a per-player multi-target destroy with a
   "creature-you-controlled-was-destroyed" rider.
@@ -24,15 +21,11 @@ primitive or a heavier build:**
   abilities, and keeps it from untapping (needs a doesn't-untap Aura static).
 - **Ancient Vendetta** — name-a-card then exile up to four copies from an
   opponent's graveyard *and* hand *and* library (a cross-zone name-exile).
-- **Push the Limit / Outpace Oblivion "each player without max speed"** — a
-  player filter keyed on `Player.speed < 4`.
 - **Dune Drifter** — ETB *triggered ability* reading the cast X value (the
   recent167 gap: ETB triggers hard-code X=0; needs `x_value` threaded to
   `EffectContext::for_trigger`).
 - **Skyserpent Seeker** — exhaust "reveal until two land cards, put them onto
   the battlefield tapped, rest to the bottom in a random order."
-- **Sabotage Strategist** — "whenever one or more creatures attack you, those
-  creatures get -1/-0" needs a creatures-attack-you batch trigger.
 - **Cloudspire Coordinator** — token count keyed on "Mounts/Vehicles that
   entered under your control this turn."
 - **Cursecloth Wrappings / Wickerfolk Indomitable** — grant-embalm-to-a-gy-card

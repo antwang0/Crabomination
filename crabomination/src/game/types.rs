@@ -1463,6 +1463,12 @@ pub enum GameEvent {
     TurnStarted { player: usize, turn: u32 },
     CardDrawn { player: usize, card_id: CardId },
     CardDiscarded { player: usize, card_id: CardId },
+    /// CR 701.9 batch — a player discarded one or more cards in a single
+    /// effect resolution. Fired once per resolution alongside the per-card
+    /// `CardDiscarded`s, carrying the count for "whenever you discard one or
+    /// more cards, …" payoffs (Magmakin Artillerist) via
+    /// `Value::TriggerEventAmount`.
+    DiscardedBatch { player: usize, count: u32 },
     LandPlayed { player: usize, card_id: CardId },
     /// `face` distinguishes front-face / back-face / flashback casts.
     /// Defaults to `Front` for the typical hand cast; back-face MDFC

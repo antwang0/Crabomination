@@ -33,6 +33,10 @@ pub enum PlayerRef {
     EachOpponent,
     /// Every player in turn order.
     EachPlayer,
+    /// Every player whose CR 702.179 speed is below max (< 4) — "each player
+    /// who doesn't have max speed" (Outpace Oblivion). A player with no speed
+    /// (never started their engines) counts as below max.
+    EachPlayerWithoutMaxSpeed,
     /// The active player (whose turn it is).
     ActivePlayer,
     /// The owner of a selected entity.
@@ -1754,6 +1758,11 @@ pub enum EventKind {
     /// CR 706.6 — the player rolled one or more dice ("Whenever you roll one
     /// or more dice"). Fires once per roll; matched to `GameEvent::DiceRolled`.
     RolledDice,
+    /// CR 701.9 batch — the player discarded one or more cards in a single
+    /// effect resolution ("Whenever you discard one or more cards"). Fires once
+    /// per resolution; the count is exposed via `Value::TriggerEventAmount`. The
+    /// player is the event subject; matched to `GameEvent::DiscardedBatch`.
+    DiscardedOneOrMore,
     /// CR 303.4 — an Aura became attached to a permanent. "Whenever an Aura you
     /// control becomes attached to a creature you control" (`EventScope::
     /// YourControl` requires the attached-to permanent to be a creature you

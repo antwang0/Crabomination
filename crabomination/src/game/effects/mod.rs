@@ -866,6 +866,20 @@ impl GameState {
                 }
             }
         }
+        // CR 701.9 — emit a single "discarded one or more cards" batch per
+        // player who discarded during this resolution (Magmakin Artillerist).
+        if !self.cards_discarded_per_player_this_resolution.is_empty() {
+            let mut batches: Vec<(usize, u32)> = self
+                .cards_discarded_per_player_this_resolution
+                .iter()
+                .filter(|(_, n)| **n > 0)
+                .map(|(p, n)| (*p, *n))
+                .collect();
+            batches.sort_unstable_by_key(|(p, _)| *p);
+            for (player, count) in batches {
+                events.push(GameEvent::DiscardedBatch { player, count });
+            }
+        }
         Ok(events)
     }
 
@@ -15606,6 +15620,11 @@ impl GameState {
                     .filter(|i| self.players[*i].is_alive())
                     .collect(),
             ),
+            PlayerRef::EachPlayerWithoutMaxSpeed => self.apnap_sort(
+                (0..self.players.len())
+                    .filter(|i| self.players[*i].is_alive() && self.players[*i].speed < 4)
+                    .collect(),
+            ),
             PlayerRef::EachPlayerExceptControllerOf(sel) => {
                 let excl = self.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
@@ -15702,6 +15721,8 @@ impl GameState {
                     .find(|i| self.players[*i].is_alive())
             }
             PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
+            PlayerRef::EachPlayerWithoutMaxSpeed => (0..self.players.len())
+                .find(|i| self.players[*i].is_alive() && self.players[*i].speed < 4),
             PlayerRef::EachPlayerExceptControllerOf(_) => {
                 self.resolve_players(pref, ctx).into_iter().next()
             }
