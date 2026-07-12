@@ -8186,3 +8186,68 @@ fn cr_702_2b_deathtouch_one_damage_is_lethal() {
     assert!(g.battlefield_find(attacker).is_none(), "1 deathtouch damage kills the 5/5 (CR 702.2b)");
     assert!(g.battlefield_find(blocker).is_none(), "the 1/1 also dies to 5 damage");
 }
+
+// ── CR 702.21 — Ward with a fixed life cost ──────────────────────────────────
+/// A creature with "Ward—Pay N life" (a fixed `WardCost::Life(n)`, distinct from
+/// the power-scaled variant) counters an opponent's targeting spell unless they
+/// pay exactly N life. Sire of Seven Deaths — Ward—Pay 7 life.
+#[test]
+fn cr_702_21_fixed_ward_life_is_paid() {
+    let mut g = two_player_game();
+    let sire = g.add_card_to_battlefield(0, catalog::sire_of_seven_deaths()); // 7/7, Ward—Pay 7
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(sire)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast bolt at the warded creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 7, "paid the fixed Ward—7 life");
+    assert!(g.battlefield_find(sire).is_some(), "7/7 shrugs off the 3-damage bolt");
+}
+
+// ── CR 502.1 — a "doesn't untap during your untap step" self-static ──────────
+/// A permanent with `StaticEffect::PreventUntap { This }` stays tapped through
+/// its controller's untap step every turn (not a one-shot lock). Slumbering
+/// Cerberus.
+#[test]
+fn cr_502_1_self_static_prevents_untap() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::slumbering_cerberus());
+    g.battlefield_find_mut(dog).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(dog).unwrap().tapped, "stays tapped on the untap step");
+    g.do_untap();
+    assert!(g.battlefield_find(dog).unwrap().tapped, "still tapped — the static is permanent, not one-shot");
+}
+
+// ── CR 509.1b — a granted "can't block" keyword rejects the blocker ──────────
+/// A creature granted `Keyword::CantBlock` (Sower of Chaos's activated ability)
+/// can't be declared as a blocker.
+#[test]
+fn cr_509_1b_cant_block_keyword_rejects_blocker() {
+    let mut g = two_player_game();
+    let sower = g.add_card_to_battlefield(0, catalog::sower_of_chaos());
+    g.clear_sickness(sower);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Sower grants the opposing blocker "can't block".
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sower, ability_index: 0,
+        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None,
+    })
+    .expect("grant can't-block");
+    drain_stack(&mut g);
+    // Sower attacks; the disabled creature may not block it.
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sower, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.declare_blockers(vec![(foe, sower)]).is_err(), "a can't-block creature can't be declared as a blocker");
+}
