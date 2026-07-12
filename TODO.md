@@ -3414,7 +3414,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   .damage_fully_prevented` + a client "🛡 immune" chip. Your-creatures noncombat
   immunity ✅ — `StaticEffect::PreventNoncombatDamageToYourCreatures` (Mark of
   Asylum; noncombat-only because combat damage to creatures is marked off the
-  shared funnel).
+  shared funnel). Turn-scoped incoming-only combat prevention ✅ —
+  `Effect::PreventCombatDamageToTargetThisTurn` + `GameState
+  .combat_damage_prevented_to_this_turn`, consulted at the
+  `combat_damage_prevented_to_self` chokepoint (Fleeting Flight; the creature
+  still deals its own combat damage). Remaining ⏳: outgoing-only combat
+  prevention; per-source combat shields for a single creature.
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Extra **combat-phase** insertion ✅ (CR 505.1b — `AdditionalCombatPhase` at End of Combat + `AdditionalCombatPhaseAfterMain` post-main re-entry, Relentless Assault). Extra **upkeep steps** ✅ (CR 500.9 — `Effect::AdditionalUpkeepStep` + `Predicate::IsFirstUpkeepThisTurn`; Paradox Haze, `cr_500_9_*`). Remaining ⏳: extra draw/main steps (no card yet needs them).
 - ✅ **CR 702.113 — Awaken** — rides `AlternativeCost { target_filter, effect_override }`: awaken cast adds the counters + a permanent-duration `BecomeCreature` on the targeted land (Part the Waterveil).
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail. `LandType::Cave`
@@ -5676,6 +5681,29 @@ sweep, and Karn, Scion of Urza's real text included — earlier ⏳ marks
 were stale). See git history for the per-card details.
 
 ## New TODO suggestions (push modern_decks)
+
+### Foundations (fdn) card gaps — each needs one primitive
+- **Infernal Vessel / Nine-Lives Familiar** — a self-return-on-death that
+  re-enters with counters and a type/loop-guard (Vessel becomes a Demon; the
+  Familiar loses a revival counter). Needs a self-`CreatureDied` → `Move` from
+  graveyard + `AddCreatureTypes`/`AddCounter` on `LastMoved` with a death-LKI
+  check that survives the return (else infinite loop).
+- **Raise the Past / Dewdrop Cure** — mass "return all/each creature card with
+  MV ≤ N from your graveyard to the battlefield" (only per-total-power/MV caps
+  exist today, not a per-card MV filter).
+- **High Fae Trickster** — a flash-granting static already exists
+  (`StaticEffect::ControllerSpellsHaveFlash`); a straightforward add next run
+  (4/2 flash flyer + that static).
+- **Banner of Kinship** — choose-a-type + fellowship-counter-scaled anthem
+  (`AnthemForChosenType` scaled by counters on the source).
+- **Quick-Draw Katana / Celestial Armor** — Equipment with a "during your turn"
+  conditional `EquipBonus`, and flash-Equipment ETB-attach + a temporary
+  hexproof/indestructible grant.
+- **Fiery Annihilation** — damage + exile-attached-Equipment + a per-target
+  "if it would die, exile it instead" death replacement on the *target*.
+- **Consumed by Greed / Dewdrop Cure** — Gift spells with a "if the gift was
+  promised, instead …" enhanced branch (the Gift machinery exists; these want
+  the promised-branch to widen a graveyard return).
 
 ### Client GUI follow-ups
 - ✅ **Graveyard click-to-cast** — badge-bearing tiles in the graveyard browser

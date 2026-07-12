@@ -51,7 +51,9 @@ exercising each) was elided in a compaction pass; recover it from
   token/counter/damage/mana doubling, regeneration, EtbTriggerTax, Maze-of-Ith
   per-source prevention, prevention shields, finality exile-instead, fog
   (CR 615.1) incl. a per-dealer exception (`prevent_combat_damage_except` —
-  Inspire Awe "except enchanted/enchantment creatures"). Counters cease on
+  Inspire Awe "except enchanted/enchantment creatures") and a turn-scoped
+  incoming-only combat-damage prevention (`PreventCombatDamageToTargetThisTurn`
+  — Fleeting Flight). Counters cease on
   zone change (122.2).
 - **Statics (misc):** no-max-hand-size, play-lands-from-graveyard,
   artifact/creature non-mana-ability locks, spell-tax, two-player coin-flip-off
