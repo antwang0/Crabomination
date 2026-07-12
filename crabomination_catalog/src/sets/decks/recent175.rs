@@ -396,3 +396,33 @@ pub fn oildeep_gearhulk() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Repurposing Bay — {2}{U} Artifact. {2}, {T}, Sacrifice another artifact:
+/// Search your library for an artifact card with mana value equal to 1 plus the
+/// sacrificed artifact's mana value, put it onto the battlefield, then shuffle.
+/// Sorcery speed.
+pub fn repurposing_bay() -> CardDefinition {
+    CardDefinition {
+        name: "Repurposing Bay",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: R::Artifact.and(R::OtherThanSource),
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Artifact.and(R::ManaValueEqualsSacrificedPlus(1)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

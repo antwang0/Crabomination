@@ -303,3 +303,27 @@ fn oildeep_gearhulk_coercive_discard_then_draw() {
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
         "the chosen card was discarded");
 }
+
+/// Repurposing Bay sacrifices a MV-1 artifact to fetch a MV-2 artifact.
+#[test]
+fn repurposing_bay_fetches_mana_value_plus_one() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bay = g.add_card_to_battlefield(0, catalog::repurposing_bay());
+    let fodder = g.add_card_to_battlefield(0, catalog::springleaf_drum()); // MV 1 artifact
+    let orni = g.add_card_to_library(0, catalog::ornithopter_of_paradise()); // MV 2 — fetchable
+    g.clear_sickness(bay);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(orni))]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bay, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac + fetch");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == orni && c.controller == 0),
+        "fetched the MV+1 artifact onto the battlefield");
+    assert!(g.battlefield_find(fodder).is_none(), "the MV-1 fodder artifact was sacrificed");
+}
