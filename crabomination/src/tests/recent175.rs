@@ -340,3 +340,23 @@ fn wreck_remover_exiles_graveyard_card_and_gains_life() {
     assert!(g.exile.iter().any(|c| c.id == gy_card), "graveyard card exiled");
     assert_eq!(g.players[0].life, life + 1, "gained 1 life");
 }
+
+/// Lagorin counters up to two Mounts/Vehicles when it attacks while saddled.
+#[test]
+fn lagorin_saddled_attack_counters_vehicles() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let lagorin = g.add_card_to_battlefield(0, catalog::lagorin_soul_of_alacria());
+    let veh1 = g.add_card_to_battlefield(0, catalog::skybox_ferry());
+    let veh2 = g.add_card_to_battlefield(0, catalog::veloheart_bike());
+    g.clear_sickness(lagorin);
+    // Mark Lagorin saddled so the attack trigger fires.
+    g.battlefield_find_mut(lagorin).unwrap().saddled = true;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lagorin, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(veh1).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(veh2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

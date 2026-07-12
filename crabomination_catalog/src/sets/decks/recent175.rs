@@ -6,14 +6,16 @@
 //! a Start-your-engines Aura (Lightwheel Enhancements), a second-draw Thopter
 //! maker (Thopter Fabricator), a temporary-reanimator (Coalstoke Gearhulk), a
 //! team base-6/6-Ooze anthem (March of the World Ooze), a theft Vehicle
-//! (Possession Engine), and a coercive discard-then-draw (Oildeep Gearhulk).
-//! Tests in `crabomination/src/tests/recent175.rs`.
+//! (Possession Engine), a coercive discard-then-draw (Oildeep Gearhulk), a
+//! sac-to-tutor-MV+1 artifact (Repurposing Bay), a graveyard-hate Construct
+//! (Wreck Remover), and a saddled Mount (Lagorin, Soul of Alacria). Tests in
+//! `crabomination/src/tests/recent175.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
-    TriggeredAbility, Value, WardCost,
+    Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
@@ -456,6 +458,40 @@ pub fn wreck_remover() -> CardDefinition {
                 effect: ability(),
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Lagorin, Soul of Alacria — {G}{W} 1/1 Legendary Beast Mount. Flying, Saddle 1.
+/// Whenever Lagorin attacks while saddled, put a +1/+1 counter on each of up to
+/// two target Mounts and/or Vehicles.
+pub fn lagorin_soul_of_alacria() -> CardDefinition {
+    CardDefinition {
+        name: "Lagorin, Soul of Alacria",
+        cost: cost(&[g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Mount],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Saddle(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::SourceSaddled),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: R::HasCreatureType(CreatureType::Mount)
+                    .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                effect: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
         ..Default::default()
     }
 }

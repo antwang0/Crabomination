@@ -609,9 +609,15 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            // CR 115.1c — fill any additional "up to N target" slots (Lagorin's
+            // "put a +1/+1 counter on each of up to two target Mounts and/or
+            // Vehicles"), same as the self-source ETB path.
+            let additional =
+                self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
             self.stack.push(
                 TriggerPush::new(source, controller, effect)
                     .target(auto_target)
+                    .additional_targets(additional)
                     .build(),
             );
         }
