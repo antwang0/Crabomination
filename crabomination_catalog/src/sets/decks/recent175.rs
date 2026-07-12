@@ -10,11 +10,12 @@
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Magmakin Artillerist — {2}{R} 1/4 Elemental Pirate. Whenever you discard one
 /// or more cards, deal that much damage to each opponent. Cycling {1}{R}. When
@@ -301,6 +302,51 @@ pub fn coalstoke_gearhulk() -> CardDefinition {
             grant(Keyword::Haste),
             Effect::AtNextEndStep { body: Box::new(Effect::Exile { what: Selector::Target(0) }) },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// March of the World Ooze — {3}{G}{G}{G} Enchantment. Creatures you control
+/// have base power and toughness 6/6 and are Oozes in addition to their other
+/// types. Whenever an opponent casts a spell during a turn that isn't theirs,
+/// create a 3/3 green Elephant.
+pub fn march_of_the_world_ooze() -> CardDefinition {
+    let mine = || R::Creature.and(R::ControlledByYou);
+    let elephant = TokenDefinition {
+        name: "Elephant".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "March of the World Ooze",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control have base power and toughness 6/6.",
+                effect: StaticEffect::SetBasePtForFilter {
+                    applies_to: Selector::EachPermanent(mine()),
+                    power: 6,
+                    toughness: 6,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control are Oozes in addition to their other types.",
+                effect: StaticEffect::AddCreatureTypeToMatching {
+                    applies_to: Selector::EachPermanent(mine()),
+                    creature_type: CreatureType::Ooze,
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::Triggerer)))),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elephant },
+        }],
         ..Default::default()
     }
 }

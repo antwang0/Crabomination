@@ -248,3 +248,26 @@ fn coalstoke_gearhulk_reanimates_then_exiles() {
     assert!(g.battlefield_find(dead).is_none(), "exiled at the next end step");
     assert!(g.exile.iter().any(|c| c.id == dead), "moved to exile");
 }
+
+/// March of the World Ooze makes your team base 6/6 Oozes and mints an Elephant
+/// when an opponent casts on your turn.
+#[test]
+fn march_of_the_world_ooze_anthem_and_token() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::march_of_the_world_ooze());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "base 6/6");
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Ooze), "now an Ooze");
+    // Opponent casts on your turn → Elephant.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.active_player_idx = 0; // your turn
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.cast_spell(bolt, Some(Target::Player(0)), vec![], None, None).expect("opponent casts on your turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elephant" && c.controller == 0).count(), 1,
+        "minted a 3/3 Elephant");
+}
