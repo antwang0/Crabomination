@@ -13563,6 +13563,8 @@ fn static_effect_to_effects(
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::ActivationCostReduction { .. }
+            // Consulted directly in `activate_ability`, not a layer effect.
+            | StaticEffect::OtherExhaustActivationCostReduction { .. }
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }

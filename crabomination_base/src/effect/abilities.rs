@@ -939,6 +939,11 @@ pub enum StaticEffect {
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
     ActivationCostReduction { amount: u32 },
+    /// DFT — "Exhaust abilities of other permanents you control cost {N} less
+    /// to activate" (Boom Scholar). Generic-only, never below one mana; applies
+    /// only to CR 702.177 exhaust abilities of the controller's *other*
+    /// permanents.
+    OtherExhaustActivationCostReduction { amount: u32 },
     /// CR 702.6 — "You may activate equip abilities any time you could cast an
     /// instant" (Leonin Shikari). Lifts the sorcery-speed gate on the
     /// controller's `GameAction::Equip`.

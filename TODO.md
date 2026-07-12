@@ -28,11 +28,12 @@ primitive or a heavier build:**
   the battlefield tapped, rest to the bottom in a random order."
 - **Cursecloth Wrappings / Wickerfolk Indomitable** — grant-embalm-to-a-gy-card
   and graveyard-cast-with-additional-cost respectively.
-- **Boom Scholar's "exhaust abilities of other permanents cost {2} less"**
-  static (the exhaust half shipped; the ability-cost-reduction static is
-  dropped) — needs an activated-ability cost-reduction static.
 - **Tyrant cycle (Sundial/Tyrox/Kalakscion/Terrian)** — Scryfall oracle text is
   empty in the local cache; re-verify against a live fetch before adding.
+- **Skyseer's Chariot** — name-a-card on ETB + "activated abilities of sources
+  with the chosen name cost {2} more" (an activated-ability *tax* keyed on a
+  chosen name; the `OtherExhaustActivationCostReduction` sibling shipped for
+  Boom Scholar, but the named-tax + name-on-enter halves are still open).
 
 See `CUBE_FEATURES.md` (cube-card implementation status),
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`

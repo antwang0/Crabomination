@@ -4,7 +4,7 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    Keyword, Predicate, SelectionRequirement as R, Subtypes, Value,
+    Keyword, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
@@ -35,10 +35,9 @@ pub fn slick_imitator() -> CardDefinition {
     }
 }
 
-/// Boom Scholar — {1}{R}{G} 3/3 Goblin Advisor. Exhaust — {4}{R}{G}: creatures
-/// and Vehicles you control gain trample until end of turn; put two +1/+1
-/// counters on this. (The "exhaust abilities of other permanents cost {2} less"
-/// static is dropped.)
+/// Boom Scholar — {1}{R}{G} 3/3 Goblin Advisor. Exhaust abilities of your other
+/// permanents cost {2} less. Exhaust — {4}{R}{G}: creatures and Vehicles you
+/// control gain trample until end of turn; put two +1/+1 counters on this.
 pub fn boom_scholar() -> CardDefinition {
     CardDefinition {
         name: "Boom Scholar",
@@ -50,6 +49,10 @@ pub fn boom_scholar() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Exhaust abilities of your other permanents cost {2} less to activate.",
+            effect: StaticEffect::OtherExhaustActivationCostReduction { amount: 2 },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), r(), g()]),
             exhaust: true,

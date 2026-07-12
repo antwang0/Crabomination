@@ -286,3 +286,20 @@ fn possession_engine_steals_a_creature() {
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(victim).unwrap().controller, 1, "control reverts when the Vehicle leaves");
 }
+
+/// Oildeep Gearhulk makes an opponent discard a chosen card, then draw.
+#[test]
+fn oildeep_gearhulk_coercive_discard_then_draw() {
+    let mut g = two_player_game();
+    let hulk = g.add_card_to_battlefield(0, catalog::oildeep_gearhulk());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::forest());
+    let hand_before = g.players[1].hand.len();
+    g.fire_self_etb_triggers(hulk, 0);
+    drain_stack(&mut g);
+    // Discard one, draw one → net hand size unchanged, but a card left the hand
+    // to the graveyard and a fresh card was drawn.
+    assert_eq!(g.players[1].hand.len(), hand_before, "discarded one, drew one");
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the chosen card was discarded");
+}

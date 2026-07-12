@@ -4,14 +4,16 @@
 //! Shapeshifter (Waxen Shapethief), mill+conditional-destroy (Quag Feast), a
 //! modal fight/destroy (Plow Through), a blink+board-wipe (Explosive Getaway),
 //! a Start-your-engines Aura (Lightwheel Enhancements), a second-draw Thopter
-//! maker (Thopter Fabricator), and a temporary-reanimator (Coalstoke Gearhulk).
+//! maker (Thopter Fabricator), a temporary-reanimator (Coalstoke Gearhulk), a
+//! team base-6/6-Ooze anthem (March of the World Ooze), a theft Vehicle
+//! (Possession Engine), and a coercive discard-then-draw (Oildeep Gearhulk).
 //! Tests in `crabomination/src/tests/recent175.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EntersAsCopy, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
     Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
@@ -367,6 +369,30 @@ pub fn possession_engine() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
             what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
         })],
+        ..Default::default()
+    }
+}
+
+/// Oildeep Gearhulk — {U}{U}{B}{B} 4/4 Construct. Lifelink, ward {1}. ETB: look
+/// at an opponent's hand, choose a card; they discard it, then draw a card.
+/// (ETB player-targeting uses the opponent per engine convention.)
+pub fn oildeep_gearhulk() -> CardDefinition {
+    CardDefinition {
+        name: "Oildeep Gearhulk",
+        cost: cost(&[u(), u(), b(), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Any,
+            },
+            Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        ]))],
         ..Default::default()
     }
 }

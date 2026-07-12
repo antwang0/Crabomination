@@ -81,3 +81,26 @@ fn slick_imitator_copies_spell_at_max_speed() {
     assert_eq!(g.players[1].life, opp_life - 6, "two Bolts resolved (original + copy)");
     assert!(g.battlefield_find(imitator).is_none(), "sacrificed to copy");
 }
+
+/// Boom Scholar discounts another permanent's exhaust ability by {2}.
+#[test]
+fn boom_scholar_discounts_other_exhaust_abilities() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::boom_scholar());
+    // Sabotage Strategist's exhaust is {5}{U}{U}; with Boom Scholar it costs
+    // {3}{U}{U} = 5 mana total.
+    let strat = g.add_card_to_battlefield(0, catalog::sabotage_strategist());
+    g.clear_sickness(strat);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3); // only 3 generic — the {5} would need 5
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: strat, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("discounted exhaust is affordable at {3}{U}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(strat).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 3);
+}
