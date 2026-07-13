@@ -2552,9 +2552,13 @@ impl GameState {
             // permanent must be attached to *this* source) happens in the
             // sac-cost path, which knows the source id.
             R::AttachedToSource => card.attached_to.is_some(),
+            // `self.attacking` keys by card id, so a card not on the battlefield
+            // is never listed — this stays false there (Static Snare's affinity
+            // "for each attacking creature" reads it from the affinity counter).
+            R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
-            | R::IsAttacking | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
+            | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled

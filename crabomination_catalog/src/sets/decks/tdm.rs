@@ -314,9 +314,9 @@ pub fn riverwalk_technique() -> CardDefinition {
     }
 }
 
-/// Static Snare — {4}{W} Enchantment, Flash. When it enters, exile target
-/// artifact or creature an opponent controls until this enchantment leaves.
-/// (The "costs {1} less per attacking creature" reduction is dropped.)
+/// Static Snare — {4}{W} Enchantment, Flash. Costs {1} less per attacking
+/// creature. When it enters, exile target artifact or creature an opponent
+/// controls until this enchantment leaves.
 pub fn static_snare() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
@@ -324,6 +324,7 @@ pub fn static_snare() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Enchantment],
         keywords: vec![Keyword::Flash],
+        affinity_filter: Some(R::Creature.and(R::IsAttacking)),
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered((R::Artifact.or(R::Creature)).and(R::ControlledByOpponent)),
             return_to: ExileReturnZone::Battlefield,
@@ -2106,6 +2107,25 @@ pub fn windcrag_siege() -> CardDefinition {
                 ..Default::default()
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// United Battlefront — {3}{W} Sorcery. Look at the top seven cards; put up to
+/// two noncreature, nonland permanent cards with mana value 3 or less onto the
+/// battlefield, rest to the bottom in a random order.
+pub fn united_battlefront() -> CardDefinition {
+    CardDefinition {
+        name: "United Battlefront",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookTopPutMatchingOntoBattlefield {
+            count: Value::Const(7),
+            filter: R::PermanentCard.and(R::Noncreature).and(R::Nonland).and(R::ManaValueAtMost(3)),
+            then: None,
+            max: Some(2),
+            tapped: false,
+        },
         ..Default::default()
     }
 }

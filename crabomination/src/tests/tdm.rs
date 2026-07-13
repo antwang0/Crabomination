@@ -1761,6 +1761,59 @@ fn flamehold_grappler_copies_next_spell() {
     assert!(g.battlefield_find(foe).is_none(), "bolt was copied — bear took 6");
 }
 
+/// Static Snare costs {1} less per attacking creature (both players' count).
+#[test]
+fn static_snare_reduced_by_attackers() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    let snare = crate::card::CardInstance::new(g.next_id(), catalog::static_snare(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &snare, None), 0, "no attackers → no discount");
+    // Move to the opponent's declare-attackers and swing with both bears.
+    while !(g.step == TurnStep::DeclareAttackers && g.active_player_idx == 1) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &snare, None), 2, "two attackers → {{2}} off");
+}
+
+/// United Battlefront deploys up to two cheap noncreature-nonland permanents
+/// from the top seven; creatures/lands are left behind.
+#[test]
+fn united_battlefront_deploys_two_permanents() {
+    let mut g = two_player_game();
+    // Library: two MV-2 artifacts (match) + three bears (creatures, no match).
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::prophetic_prism());
+    }
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::united_battlefront());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast United Battlefront");
+    drain_stack(&mut g);
+    let prisms = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Prophetic Prism")
+        .count();
+    assert_eq!(prisms, 2, "deployed both artifacts");
+}
+
 /// A creature with an on-attack trigger. Gains 1 life whenever it attacks.
 fn attack_lifegainer() -> crate::card::CardDefinition {
     use crate::card::{CardDefinition, CardType};
