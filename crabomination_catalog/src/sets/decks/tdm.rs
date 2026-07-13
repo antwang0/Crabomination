@@ -1,8 +1,12 @@
-//! Tarkir: Dragonstorm (TDM) gap batch — simple commons/uncommons on existing
-//! primitives: a deathtouch+indestructible combat trick (Alesha's Legacy), a
-//! flash pump Aura granting first strike (Fire-Rim Form), a graveyard-hate
-//! bottoming Construct (Jade-Cast Sentinel), and a dig-3-keep-top-rest-mill
-//! body (Gurmag Nightwatch). Tests in `crabomination/src/tests/tdm.rs`.
+//! Tarkir: Dragonstorm (TDM) gap batch — commons/uncommons on existing
+//! primitives: combat tricks (Alesha's Legacy), flash Auras (Fire-Rim Form,
+//! Fresh Start, Wingspan Stride, Ringing Strike Mastery), graveyard hate
+//! (Jade-Cast Sentinel), a dig-and-mill body (Gurmag Nightwatch), MV-gated
+//! removal (Kin-Tree Severance), counter distribution (Armament Dragon), a
+//! graveyard-return + power-sling (Lie in Wait), a Dragon enter-counter rock
+//! (Dragonstorm Globe), modal spells (Riverwalk Technique, Seize Opportunity,
+//! Rally the Monastery), and an O-Ring (Static Snare). Tests in
+//! `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
