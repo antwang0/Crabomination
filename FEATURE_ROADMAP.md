@@ -16,6 +16,16 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Trigger-doubler + cast/damage primitives (TDM/FDN batch):**
+  `StaticEffect::DoubleControllerAttackTriggers` (Isshin-style attack-caused
+  trigger doubler — Windcrag Siege), `StaticEffect::
+  DoubleDamageFromCreaturesEnteredThisTurn` (Neriv, in `scale_damage_to`),
+  `SpendRestriction::DragonOrOmenSpell` + `SpellKind.omen` threaded through
+  `cast_omen` (Maelstrom of the Spirit Dragon), `CardInstance.entered_by_cast`
+  + `Predicate::TriggerSourceEnteredByCast` ("if you cast it" ETB gate — The
+  Sibsig Ceremony), and `R::IsAttacking` now evaluable in `affinity_filter`
+  (Static Snare's "{1} less per attacking creature").
+
 - **Speed / exhaust-matters primitives (recent167 — DFT):**
   `Value::PlayerSpeed` reads a player's CR 702.179 speed (Momentum Breaker's
   "gain life equal to your speed"), and `EventKind::ExhaustAbilityActivated`

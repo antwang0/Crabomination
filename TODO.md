@@ -113,6 +113,21 @@ skipped this run, each needing one primitive:
   opponent's spell/ability"** (Cactarantula).
 - **Delirium widens a modal to choose-one-or-more** (Let's Play a Game).
 
+`decks::recent177-178` shipped ~14 FDN/BLB/DSK cards (Exemplar of Light,
+Ashroot Animist, Arahbo, Bumbleflower's Sharepot, Celestial Armor, Strix
+Lookout, Vanguard Seraph, Vampire Soulcaller, Turn Inside Out, Huskburster
+Swarm, Marching Duodrone, Fiendish Panda, Quick-Draw Katana, Salvation Swan).
+Documented per-card approximations: Huskburster's affinity drops the exiled-
+creature half; Quick-Draw Katana's +2/+0 is always-on (only first strike is
+turn-gated); Salvation Swan drops the returned creature's flying counter and
+models "up to one target" as a single target. Skipped, each needing a primitive:
+- **Soul-Shackled Zombie** — "if a creature card was exiled this way" rider on a
+  multi-card graveyard-exile (no "an exiled card was a creature" predicate yet).
+- **Coordinated Clobbering** — tap 1–2 of your creatures, each deals its power to
+  one shared opponent's creature (needs a two-independent-slot fight).
+- **Possessed Goat** — once-per-game activation that *adds* a color + creature
+  type (`AddCreatureTypes` exists; no add-color, no once-per-game flag).
+
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
 Every single-faced FIN card is implemented (`python3 scripts/fin_gaps.py`
