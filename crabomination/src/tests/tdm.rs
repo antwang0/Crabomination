@@ -287,3 +287,45 @@ fn riverwalk_technique_counters_noncreature_spell() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered to graveyard");
     assert_eq!(g.players[0].life, 20, "Bolt never resolved");
 }
+
+/// Static Snare's ETB exiles an opponent's creature until it leaves; it returns
+/// when the Snare does.
+#[test]
+fn static_snare_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let snare = g.add_card_to_battlefield(0, catalog::static_snare());
+    g.fire_self_etb_triggers(snare, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature exiled");
+    // Destroy the Snare → the exiled creature returns to the battlefield.
+    g.remove_from_battlefield_to_graveyard_raw(snare);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "creature returned when Snare left");
+}
+
+/// Seize Opportunity's pump mode buffs up to two creatures.
+#[test]
+fn seize_opportunity_pumps_two_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::seize_opportunity());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: Some(1), // pump mode
+        x_value: None,
+    })
+    .expect("cast Seize Opportunity (pump)");
+    drain_stack(&mut g);
+    let ca = g.computed_permanent(a).unwrap();
+    let cb = g.computed_permanent(b).unwrap();
+    assert_eq!((ca.power, ca.toughness), (4, 3), "+2/+1 on the first");
+    assert_eq!((cb.power, cb.toughness), (4, 3), "+2/+1 on the second");
+}

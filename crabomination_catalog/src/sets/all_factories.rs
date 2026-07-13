@@ -6198,6 +6198,8 @@ static DECKS: &[Factory] = &[
     super::decks::dragonstorm_globe,
     super::decks::wingspan_stride,
     super::decks::riverwalk_technique,
+    super::decks::static_snare,
+    super::decks::seize_opportunity,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

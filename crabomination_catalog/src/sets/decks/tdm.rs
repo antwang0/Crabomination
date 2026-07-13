@@ -285,3 +285,53 @@ pub fn riverwalk_technique() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Static Snare — {4}{W} Enchantment, Flash. When it enters, exile target
+/// artifact or creature an opponent controls until this enchantment leaves.
+/// (The "costs {1} less per attacking creature" reduction is dropped.)
+pub fn static_snare() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Static Snare",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered((R::Artifact.or(R::Creature)).and(R::ControlledByOpponent)),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Seize Opportunity — {2}{R} Instant. Choose one — exile the top two cards of
+/// your library and play them until the end of your next turn; or up to two
+/// target creatures each get +2/+1 until end of turn.
+pub fn seize_opportunity() -> CardDefinition {
+    CardDefinition {
+        name: "Seize Opportunity",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: R::Creature,
+                effect: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
