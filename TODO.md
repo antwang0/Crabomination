@@ -125,6 +125,15 @@ models "up to one target" as a single target. Skipped, each needing a primitive:
 - **Coordinated Clobbering** — tap 1–2 of your creatures, each deals its power to
   one shared opponent's creature (needs a two-independent-slot fight).
 
+`decks::recent183-184` shipped ~7 OTJ cards (Ferocification, Freestrider Lookout,
+Fleeting Reflection, Full Steam Ahead, Hellspur Posse Boss, Kraum, At Knifepoint)
+on existing primitives (begin-combat modal, crime dig, become-a-copy trick, team
+pump, outlaw-haste/first-strike lords via `StaticEffect::GrantKeyword` + `R::IsOutlaw`,
+Flurry). Approximations: Fleeting Reflection's copy target modeled as required;
+At Knifepoint's first strike always-on (not "during your turn"). Still-open OTJ:
+Boom Box (three independent up-to-one destroy slots), Emergent Haunting (spell-gated
+self-animate), Hollow Marauder (per-opponent-discard conditional draw).
+
 `decks::recent179-182` shipped ~22 FDN/DSK/BLB/TDM cards (Songcrafter Mage,
 Twinblade Blessing, Tragic Banshee, Midnight Snack, Uncharted Voyage, Raise the
 Past, Sylvan Scavenging, Ravenous Amulet, Zul Ashur, Twinflame Tyrant, High Fae
