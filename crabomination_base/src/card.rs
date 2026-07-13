@@ -3723,6 +3723,13 @@ pub struct CardInstance {
     /// cast time. Drives the CR 608.2b resolution-time legality re-check
     /// (a zone-loose filter targeting a graveyard card never fizzles).
     pub cast_target_was_battlefield: bool,
+    /// True if this permanent's current battlefield entry was caused by
+    /// resolving the spell you cast (not a token, reanimation, or blink).
+    /// Set when a permanent spell resolves; cleared at the CR 400.7 new-object
+    /// reset on any other entry. Read by `Predicate::EnteredByCast` for
+    /// "whenever a creature you control enters, if you cast it, …" (The Sibsig
+    /// Ceremony). Not serialized — a fresh object reconstructs it as `false`.
+    pub entered_by_cast: bool,
     /// True if this card was cast from a graveyard via its Flashback
     /// cost. On resolution the resolver routes the card to exile instead
     /// of the owner's graveyard. Replaces an earlier overload of the
@@ -4096,6 +4103,7 @@ impl CardInstance {
             impending_counters: 0,
             cast_from_hand: false,
             cast_target_was_battlefield: false,
+            entered_by_cast: false,
             cast_via_flashback: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,

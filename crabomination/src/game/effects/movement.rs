@@ -1043,6 +1043,9 @@ impl GameState {
                 card.perm_power_bonus = 0;
                 card.perm_toughness_bonus = 0;
                 card.attached_to = None;
+                // Not a cast: reanimation / blink / put-onto-battlefield clears
+                // the "if you cast it" flag (CR 400.7 new object).
+                card.entered_by_cast = false;
                 // CR 702.29 — a fresh battlefield object owes echo again.
                 card.echo_paid = false;
                 // CR 122.2 cleared the counters above; re-seed a

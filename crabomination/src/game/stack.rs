@@ -941,6 +941,9 @@ impl GameState {
                     // `Effect::CopySpellWithRiders` — the copy's stamped
                     // riders apply as it resolves into a permanent.
                     let resolve_riders = card.resolve_riders.take();
+                    // This permanent entered because its spell was cast (CR
+                    // 400.7 new object) — powers "if you cast it" ETB gates.
+                    card.entered_by_cast = true;
                     self.battlefield.push(card);
                     if let Some((grant_haste, sacrifice_eot)) = resolve_riders {
                         if grant_haste {

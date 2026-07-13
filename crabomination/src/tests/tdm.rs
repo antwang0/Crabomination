@@ -1761,6 +1761,43 @@ fn flamehold_grappler_copies_next_spell() {
     assert!(g.battlefield_find(foe).is_none(), "bolt was copied — bear took 6");
 }
 
+/// The Sibsig Ceremony reduces creature-spell costs and, when you cast a
+/// creature, destroys it and makes a 2/2 Zombie Druid.
+#[test]
+fn sibsig_ceremony_converts_cast_creatures() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_sibsig_ceremony());
+    // Grizzly Bears ({1}{G}) costs {2} less → just {G}.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast bears for {G} (cost reduced)");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bears), "cast creature was destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Zombie)),
+        "made a Zombie Druid token"
+    );
+}
+
+/// A creature that enters WITHOUT being cast (reanimation) isn't converted.
+#[test]
+fn sibsig_ceremony_ignores_noncast_entries() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_sibsig_ceremony());
+    // Reanimate from the graveyard (Move path clears entered_by_cast), then
+    // force the ETB dispatch: the "if you cast it" gate must reject it.
+    let reanimated = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: reanimated }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(reanimated).is_some(), "reanimated creature survives");
+}
+
 /// Neriv doubles damage from a creature you control that entered this turn,
 /// but not from one that entered earlier.
 #[test]

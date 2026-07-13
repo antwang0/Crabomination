@@ -1210,6 +1210,10 @@ pub enum Predicate {
     /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).
     /// Breathless Knight.
     TriggerSourceEnteredFromGraveyard,
+    /// The entering permanent bound to `ctx.trigger_source` entered because its
+    /// spell was cast (reads `CardInstance.entered_by_cast`). Gates "whenever a
+    /// creature you control enters, if you cast it, …" (The Sibsig Ceremony).
+    TriggerSourceEnteredByCast,
     /// CR 702.85 — Heroic. True when the just-cast spell (the trigger source,
     /// an `EntityRef::Card` on the stack) targets the trigger's own source
     /// permanent (`ctx.source`). Gates "Whenever you cast a spell that targets

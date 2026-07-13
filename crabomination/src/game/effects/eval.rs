@@ -1483,6 +1483,13 @@ impl GameState {
                 self.entered_from_graveyard_this_turn.contains(&cid)
                     || self.battlefield_find(cid).is_some_and(|c| !c.cast_from_hand)
             }
+            Predicate::TriggerSourceEnteredByCast => {
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.battlefield_find(cid).is_some_and(|c| c.entered_by_cast)
+            }
             Predicate::SpellWasKicked => {
                 // CR 702.32 — true iff the kicker cost was paid at cast
                 // time. Stamped onto `ctx.kicked` from the resolving

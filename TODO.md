@@ -71,8 +71,9 @@ Storm** (new `StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn` in
 - **Glacial Dragonhunt** — needs a filtered reflexive discard ("when you discard
   a *nonland* card this way, …"); `Effect::MayDiscard` has no filter field yet.
 - **Songcrafter Mage** — grant Harmonize to a target graveyard card.
-- **Sidisi / The Sibsig Ceremony** — a sacrificed-MV → target-MV+1 reanimate
-  link; and a "the creature entered because you cast it" ETB predicate.
+- **Sidisi, Regent of the Mire** — a sacrificed-MV → target-MV+1 reanimate link.
+  (The Sibsig Ceremony shipped via new `Predicate::TriggerSourceEnteredByCast`
+  + `CardInstance.entered_by_cast`.)
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 

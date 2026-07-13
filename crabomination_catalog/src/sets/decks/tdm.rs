@@ -2111,6 +2111,52 @@ pub fn windcrag_siege() -> CardDefinition {
     }
 }
 
+/// The Sibsig Ceremony — {B}{B}{B} Legendary Enchantment. Creature spells you
+/// cast cost {2} less. Whenever a creature you control enters, if you cast it,
+/// destroy it, then create a 2/2 black Zombie Druid token.
+pub fn the_sibsig_ceremony() -> CardDefinition {
+    CardDefinition {
+        name: "The Sibsig Ceremony",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        static_abilities: vec![StaticAbility {
+            description: "Creature spells you cast cost {2} less to cast.",
+            effect: StaticEffect::CostReduction { filter: R::Creature, amount: 2 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature,
+                    },
+                    Predicate::TriggerSourceEnteredByCast,
+                ])),
+            effect: Effect::Seq(vec![
+                Effect::Destroy { what: Selector::TriggerSource },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Zombie Druid".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie, CreatureType::Druid],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Neriv, Heart of the Storm — {1}{R}{W}{B} 4/5 Legendary Spirit Dragon with
 /// flying. If a creature you control that entered this turn would deal damage,
 /// it deals twice that much instead.
