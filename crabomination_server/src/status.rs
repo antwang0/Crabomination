@@ -1,8 +1,9 @@
 //! Optional HTTP status endpoint: set `CRAB_STATUS_BIND` (e.g. `0.0.0.0:7778`)
 //! to serve `GET /healthz` → `ok` (load-balancer probe), `/status.json` → a
-//! machine-readable metric object (for scrapers), and any other path → a
-//! plaintext operator snapshot (uptime, rolling match stats, slot accounting).
-//! Unset = disabled. One thread, HTTP/1.0, connection-per-request.
+//! machine-readable metric object (for scrapers), `/metrics` → Prometheus text,
+//! `/dashboard` → a self-contained HTML stat page for a browser, and any other
+//! path → a plaintext operator snapshot (uptime, rolling match stats, slot
+//! accounting). Unset = disabled. One thread, HTTP/1.0, connection-per-request.
 
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -209,6 +210,78 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     out
 }
 
+/// Render a self-contained HTML operator dashboard: the same numbers as
+/// `/status` and `/metrics`, laid out as stat tiles for a browser instead of a
+/// scraper. Inline CSS only (no external fetches), a `<meta refresh>` for a
+/// hands-off wall display, and theme-aware colors. Split for testing.
+fn render_dashboard(started: Instant, slots: &SlotManager) -> String {
+    let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
+    let sl = slots.snapshot();
+    // One "tile" = a big number with a caption.
+    let tile = |label: &str, value: String| {
+        format!(
+            "<div class=t><div class=v>{}</div><div class=l>{}</div></div>",
+            html_escape(&value),
+            html_escape(label),
+        )
+    };
+    let mut tiles = String::new();
+    tiles.push_str(&tile("uptime", format_duration(started.elapsed())));
+    tiles.push_str(&tile("matches", st.total_matches().to_string()));
+    tiles.push_str(&tile("connections", format!("{} / {} peak", sl.current, sl.peak)));
+    tiles.push_str(&tile("avg turns", format!("{}", st.avg_turns())));
+    tiles.push_str(&tile("median turns", st.turn_percentile(0.5).to_string()));
+    tiles.push_str(&tile("decisive %", format!("{}%", st.decisive_pct())));
+    tiles.push_str(&tile("draw %", format!("{}%", st.draw_pct())));
+    tiles.push_str(&tile("first-seat win %", format!("{}%", st.first_seat_win_pct())));
+    tiles.push_str(&tile("median duration", format_duration(st.percentile(0.5))));
+    tiles.push_str(&tile("catalog cards", catalog_card_count().to_string()));
+    // Win-kind mix, only the nonzero kinds so the row stays readable.
+    let wins = [
+        ("damage", st.damage_wins),
+        ("poison", st.poison_wins),
+        ("deck-out", st.deck_wins),
+        ("cmdr dmg", st.commander_damage_wins),
+        ("other", st.other_wins),
+    ];
+    let mut win_rows = String::new();
+    for (kind, n) in wins.iter().filter(|(_, n)| *n > 0) {
+        win_rows.push_str(&format!(
+            "<tr><td>{}</td><td class=n>{}</td></tr>",
+            html_escape(kind), n
+        ));
+    }
+    if win_rows.is_empty() {
+        win_rows.push_str("<tr><td colspan=2 class=muted>no decided matches yet</td></tr>");
+    }
+    format!(
+        "<!doctype html><html lang=en><head><meta charset=utf-8>\
+<meta name=viewport content=\"width=device-width,initial-scale=1\">\
+<meta http-equiv=refresh content=5><title>crabomination status</title><style>\
+:root{{color-scheme:light dark}}\
+body{{font:14px/1.5 system-ui,sans-serif;margin:0;padding:24px;\
+background:#0b0b10;color:#e8e4d8}}\
+@media(prefers-color-scheme:light){{body{{background:#f5f3ec;color:#1a1a20}}}}\
+h1{{font-size:18px;margin:0 0 16px;font-weight:600}}\
+.grid{{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}\
+.t{{border:1px solid #8884;border-radius:8px;padding:12px 14px}}\
+.v{{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}}\
+.l{{font-size:12px;opacity:.65;margin-top:2px;text-transform:uppercase;letter-spacing:.04em}}\
+table{{margin-top:20px;border-collapse:collapse;min-width:240px}}\
+td{{padding:4px 12px 4px 0}}.n{{text-align:right;font-variant-numeric:tabular-nums}}\
+.muted{{opacity:.55}}h2{{font-size:13px;opacity:.7;margin:24px 0 4px;font-weight:600}}\
+</style></head><body><h1>crabomination_server</h1><div class=grid>{tiles}</div>\
+<h2>wins by kind</h2><table>{win_rows}</table></body></html>\n"
+    )
+}
+
+/// Minimal HTML-escaping for the few dynamic strings the dashboard emits
+/// (durations, labels). Everything interpolated is server-controlled today, but
+/// escaping keeps the page injection-proof if a label ever grows dynamic.
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
 /// Route one request to `(status_line, content_type, body)`. Only GET/HEAD are
 /// served; unknown paths 404 and other methods 405 so scrapers and probes read
 /// correct semantics instead of a 200 status page for everything.
@@ -220,6 +293,7 @@ fn route(method: &str, path: &str, started: Instant, slots: &SlotManager) -> (&'
         "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
         "/status.json" | "/metrics.json" => ("200 OK", "application/json", render_status_json(started, slots)),
         "/metrics" => ("200 OK", "text/plain; version=0.0.4", render_metrics(started, slots)),
+        "/dashboard" => ("200 OK", "text/html; charset=utf-8", render_dashboard(started, slots)),
         "/status" | "/" => ("200 OK", "text/plain", render_status(started, slots)),
         _ => ("404 Not Found", "text/plain", "not found\n".to_string()),
     }
@@ -314,6 +388,25 @@ mod tests {
         assert_eq!(route("GET", "/bogus", now, &slots).0, "404 Not Found");
         assert_eq!(route("POST", "/status", now, &slots).0, "405 Method Not Allowed");
         assert_eq!(route("HEAD", "/healthz", now, &slots).0, "200 OK");
+        assert_eq!(route("GET", "/dashboard", now, &slots).1, "text/html; charset=utf-8");
+    }
+
+    #[test]
+    fn render_dashboard_is_self_contained_html() {
+        let slots = SlotManager::new(10, 5);
+        let body = render_dashboard(Instant::now(), &slots);
+        assert!(body.starts_with("<!doctype html>"), "html document");
+        assert!(body.contains("<title>crabomination status</title>"));
+        assert!(body.contains("uptime") && body.contains("matches"), "stat tiles present");
+        assert!(body.contains("no decided matches yet"), "empty win table on a fresh server");
+        // No external references — a strict CSP / offline viewer must render it.
+        assert!(!body.contains("http://") && !body.contains("https://"), "no external URLs");
+        assert!(!body.contains("src=") && !body.contains("href="), "no external assets");
+    }
+
+    #[test]
+    fn html_escape_neutralizes_markup() {
+        assert_eq!(html_escape("<b>&</b>"), "&lt;b&gt;&amp;&lt;/b&gt;");
     }
 
     #[test]

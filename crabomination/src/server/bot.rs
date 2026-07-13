@@ -961,8 +961,9 @@ fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId) -> i32 {
 /// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
 /// removal). Prefer destroying/exiling an opponent's **most** valuable
 /// permanent; if every legal permanent is our own (a "sacrifice/vote your own"
-/// choice), give up the **least** valuable. Player targets fall back to an
-/// opponent, then to the first legal option.
+/// choice), give up the **least** valuable. Player targets fall back to the
+/// **lowest-life** opponent (most progress toward a kill), then to the first
+/// legal option.
 fn decide_choose_target(
     state: &GameState,
     seat: usize,
@@ -994,9 +995,17 @@ fn decide_choose_target(
     if let Some(id) = worst_own {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
-    // Player targets: prefer an opponent.
-    if let Some(t) = legal.iter().find(|t| matches!(t, Target::Player(p) if *p != seat)) {
-        return DecisionAnswer::Target(t.clone());
+    // Player targets: prefer the lowest-life opponent (closest to death, so a
+    // "deal damage / lose life" effect makes the most progress toward a kill).
+    let best_player = legal
+        .iter()
+        .filter_map(|t| match t {
+            Target::Player(p) if *p != seat => Some(*p),
+            _ => None,
+        })
+        .min_by_key(|p| state.players[*p].life);
+    if let Some(p) = best_player {
+        return DecisionAnswer::Target(Target::Player(p));
     }
     DecisionAnswer::Target(legal[0].clone())
 }
@@ -6032,6 +6041,23 @@ mod tests {
                 assert_eq!(id, big, "bot targets the 6/6 over the 2/2");
             }
             other => panic!("expected a permanent target, got {other:?}"),
+        }
+    }
+
+    /// Among player targets the bot picks the lowest-life opponent.
+    #[test]
+    fn bot_choose_target_hits_lowest_life_opponent() {
+        use crate::decision::DecisionAnswer;
+        use crate::game::types::Target;
+        let mut g = crate::game::multi_player_game(3);
+        g.players[1].life = 15;
+        g.players[2].life = 6;
+        let legal = vec![Target::Player(1), Target::Player(2)];
+        match decide_choose_target(&g, 0, &legal) {
+            DecisionAnswer::Target(Target::Player(p)) => {
+                assert_eq!(p, 2, "targets the 6-life opponent over the 15-life one");
+            }
+            other => panic!("expected a player target, got {other:?}"),
         }
     }
 
