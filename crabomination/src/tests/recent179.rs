@@ -244,3 +244,105 @@ fn zul_ashur_grants_graveyard_zombie_cast() {
         .unwrap_or(false);
     assert!(granted, "the Zombie may now be cast from the graveyard");
 }
+
+/// Twinflame Tyrant doubles damage your sources deal to opponents.
+#[test]
+fn twinflame_tyrant_doubles_damage_to_opponents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::twinflame_tyrant());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // 3 to any target
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Lightning Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 6, "3 damage doubled to 6");
+}
+
+/// High Fae Trickster lets you cast a sorcery at instant speed.
+#[test]
+fn high_fae_trickster_grants_flash_to_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::high_fae_trickster());
+    let sorc = g.add_card_to_hand(0, catalog::divination());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // It's the opponent's turn (instant speed only) — the sorcery is castable.
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    let ok = g
+        .perform_action(GameAction::CastSpell {
+            card_id: sorc,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_ok();
+    assert!(ok, "sorcery cast at instant speed via granted flash");
+}
+
+/// Electroduplicate makes a haste token copy of your creature.
+#[test]
+fn electroduplicate_copies_your_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::electroduplicate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Electroduplicate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.len(), before + 1, "made a token copy");
+    let token_id = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .map(|c| c.id)
+        .expect("token copy exists");
+    assert!(
+        g.computed_permanent(token_id).unwrap().keywords.contains(&Keyword::Haste),
+        "copy has haste"
+    );
+}
+
+/// Fear of Falling shrinks and grounds a blocker when it attacks.
+#[test]
+fn fear_of_falling_debuffs_on_attack() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(0, catalog::fear_of_falling());
+    g.clear_sickness(flyer);
+    let mut blocker = catalog::grizzly_bears();
+    blocker.keywords.push(Keyword::Flying);
+    let foe = g.add_card_to_battlefield(1, blocker); // 2/2 flyer
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: flyer,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!(cp.power, 0, "-2/-0 applied");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "lost flying");
+}

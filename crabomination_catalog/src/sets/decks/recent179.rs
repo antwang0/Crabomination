@@ -4,20 +4,23 @@
 //! Uncharted Voyage (owner-choice tuck + surveil), Raise the Past (mass
 //! reanimate MV≤2), Sylvan Scavenging (end-step modal), Ravenous Amulet
 //! (sac-to-draw charge storage), and Zul Ashur (Ward + graveyard Zombie
-//! caster). Tests in `crabomination/src/tests/recent179.rs`.
+//! caster). Wave 2 adds Twinflame Tyrant (Gisela-style opponent damage doubler),
+//! High Fae Trickster (cast-as-flash static), Electroduplicate (haste-sac token
+//! copy + Flashback), and Fear of Falling (DSK — attack debuff). Tests in
+//! `crabomination/src/tests/recent179.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    MayPlayDuration, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility, Value,
-    WardCost,
+    MayPlayDuration, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
     Duration, Effect, LibraryPosition, PlayerRef, Predicate, Selector, ZoneDest, ZoneRef,
 };
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Twinblade Blessing — {1}{W}{W} Aura with flash. Enchanted creature has
 /// double strike.
@@ -256,6 +259,97 @@ pub fn zul_ashur_lich_lord() -> CardDefinition {
                 any_color: false,
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Twinflame Tyrant — {3}{R}{R} 3/5 Dragon with flying. If a source you control
+/// would deal damage to an opponent or a permanent an opponent controls, it
+/// deals double that damage instead. (Shares Gisela's `DoubleDamageToOpponents`.)
+pub fn twinflame_tyrant() -> CardDefinition {
+    CardDefinition {
+        name: "Twinflame Tyrant",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If a source you control would deal damage to an opponent, double it.",
+            effect: StaticEffect::DoubleDamageToOpponents,
+        }],
+        ..Default::default()
+    }
+}
+
+/// High Fae Trickster — {3}{U} 4/2 Faerie Wizard with flash and flying. You may
+/// cast spells as though they had flash.
+pub fn high_fae_trickster() -> CardDefinition {
+    CardDefinition {
+        name: "High Fae Trickster",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash { filter: R::Any },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Electroduplicate — {2}{R} Sorcery. Create a token that's a copy of target
+/// creature you control with haste, sacrificed at the next end step. Flashback
+/// {2}{R}{R}.
+pub fn electroduplicate() -> CardDefinition {
+    CardDefinition {
+        name: "Electroduplicate",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), r(), r()]))],
+        effect: Effect::CreateTokenCopiesHasteSac {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            source: target_filtered(R::Creature.and(R::ControlledByYou)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fear of Falling — {3}{U}{U} 4/4 Nightmare Enchantment Creature with flying.
+/// Whenever it attacks, target creature the defending player controls gets -2/-0
+/// and loses flying until your next turn. (Duration modeled until end of turn.)
+pub fn fear_of_falling() -> CardDefinition {
+    CardDefinition {
+        name: "Fear of Falling",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(0),
+                    duration: Duration::UntilNextTurn,
+                },
+                Effect::LoseKeywordThisTurn {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Flying,
+                },
+            ]),
         }],
         ..Default::default()
     }
