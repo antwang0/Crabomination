@@ -2680,6 +2680,84 @@ fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
     assert_block(catalog::nezumi_cutthroat(), true, "black creature can block Fear");
 }
 
+/// CR 702.13 — Intimidate: an attacker with Intimidate can be blocked only by
+/// artifact creatures and creatures sharing a color with it.
+#[test]
+fn cr_702_13_intimidate_blockable_only_by_artifact_or_shared_color() {
+    use crate::card::Keyword;
+    let attacker_kws = [Keyword::Intimidate];
+    let attacker_colors = [Color::Red];
+    let assert_block = |def: crate::card::CardDefinition, expect: bool, why: &str| {
+        let mut g = two_player_game();
+        let blk = g.add_card_to_battlefield(1, def);
+        let inst = g.battlefield_find(blk).unwrap().clone();
+        let cp = g.computed_permanent(blk).unwrap();
+        assert_eq!(
+            crate::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, &attacker_colors, 2),
+            expect, "{why}"
+        );
+    };
+    assert_block(catalog::grizzly_bears(), false, "green shares no color with a red attacker");
+    assert_block(catalog::goblin_guide(), true, "red creature shares color");
+    assert_block(catalog::ornithopter(), true, "artifact creature can block Intimidate");
+}
+
+/// CR 702.72a — Skulk: an attacker can't be blocked by a creature with greater
+/// power (computed, so anthem-pumped power counts).
+#[test]
+fn cr_702_72_skulk_blocked_only_by_equal_or_lesser_power() {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    let vanilla = |power: i32, toughness: i32| CardDefinition {
+        name: "Vanilla",
+        card_types: vec![CardType::Creature],
+        power,
+        toughness,
+        ..Default::default()
+    };
+    let attacker_kws = [Keyword::Skulk];
+    let assert_block = |def: CardDefinition, expect: bool, why: &str| {
+        let mut g = two_player_game();
+        let blk = g.add_card_to_battlefield(1, def);
+        let inst = g.battlefield_find(blk).unwrap().clone();
+        let cp = g.computed_permanent(blk).unwrap();
+        assert_eq!(
+            crate::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, &[], 2),
+            expect, "{why}"
+        );
+    };
+    assert_block(vanilla(1, 1), true, "lesser power may block a Skulk 2-power attacker");
+    assert_block(vanilla(2, 2), true, "equal power may block");
+    assert_block(vanilla(3, 3), false, "greater power can't block");
+}
+
+/// CR 509.1b — a fixed-threshold block restriction: "can't be blocked by
+/// creatures with power 3 or greater" (Squeak By keyword).
+#[test]
+fn cr_509_1b_cant_be_blocked_by_power_at_least() {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    let vanilla = |power: i32| CardDefinition {
+        name: "Vanilla",
+        card_types: vec![CardType::Creature],
+        power,
+        toughness: power.max(1),
+        ..Default::default()
+    };
+    let attacker_kws = [Keyword::CantBeBlockedByPowerAtLeast(3)];
+    let assert_block = |def: CardDefinition, expect: bool, why: &str| {
+        let mut g = two_player_game();
+        let blk = g.add_card_to_battlefield(1, def);
+        let inst = g.battlefield_find(blk).unwrap().clone();
+        let cp = g.computed_permanent(blk).unwrap();
+        assert_eq!(
+            crate::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, &[], 5),
+            expect, "{why}"
+        );
+    };
+    assert_block(vanilla(2), true, "power 2 may block");
+    assert_block(vanilla(3), false, "power 3 (≥ threshold) can't block");
+    assert_block(vanilla(4), false, "power 4 can't block");
+}
+
 // ── CR 712.4 — a transformed DFC reverts to its front face off-battlefield ────
 
 /// A transformed double-faced permanent that dies is its front face in the
