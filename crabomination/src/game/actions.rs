@@ -875,14 +875,21 @@ pub(crate) fn apply_spell_cost_floor(
 /// True if `player` controls a permanent granting Omniscience-style free
 /// casting of hand spells (`StaticEffect::CastHandSpellsFree`).
 impl crate::game::GameState {
-    pub(crate) fn player_casts_hand_spells_free(&self, player: usize) -> bool {
+    pub(crate) fn player_casts_hand_spells_free(
+        &self,
+        player: usize,
+        card: &crate::card::CardInstance,
+    ) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
             c.controller == player
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::CastHandSpellsFree))
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::CastHandSpellsFree => true,
+                    StaticEffect::CastFilteredSpellsFree { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, player)
+                    }
+                    _ => false,
+                })
         })
     }
 
@@ -6985,7 +6992,7 @@ impl GameState {
             None => {
                 let from_own_hand = zone == crate::card::Zone::Hand
                     && self.players[p].hand.iter().any(|c| c.id == card_id);
-                if from_own_hand && self.player_casts_hand_spells_free(p) {
+                if from_own_hand && self.player_casts_hand_spells_free(p, &card_ref) {
                     // Omniscience path — no timing relaxation.
                 } else if from_own_hand && self.player_casts_cheap_creature_free(&card_ref.definition) {
                     aluren_flash = true;

@@ -1186,6 +1186,10 @@ pub enum StaticEffect {
     /// `GameState::player_casts_hand_spells_free`, which lets
     /// `CastFromZoneWithoutPaying` resolve a hand spell free of charge.
     CastHandSpellsFree,
+    /// Like `CastHandSpellsFree` but restricted to hand spells matching
+    /// `filter` — "You may cast Dragon spells without paying their mana costs"
+    /// (Dracogenesis). Consulted by `player_casts_hand_spells_free`.
+    CastFilteredSpellsFree { filter: crate::card::SelectionRequirement },
     /// Aluren (CR 601 alt-timing) — "Any player may cast creature spells
     /// with mana value `max_mv` or less without paying their mana cost and
     /// as though they had flash." Read by

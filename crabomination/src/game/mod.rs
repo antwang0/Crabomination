@@ -13541,6 +13541,7 @@ fn static_effect_to_effects(
             // CastHandSpellsFree (Omniscience) — read by the free-cast
             // action via `player_casts_hand_spells_free`; no layer effect.
             | StaticEffect::CastHandSpellsFree
+            | StaticEffect::CastFilteredSpellsFree { .. }
             // AnyoneCastsCheapCreaturesFree (Aluren) — read by the free-cast
             // action via `player_casts_cheap_creature_free`; no layer effect.
             | StaticEffect::AnyoneCastsCheapCreaturesFree { .. }

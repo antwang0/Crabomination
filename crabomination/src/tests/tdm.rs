@@ -1481,3 +1481,36 @@ fn kishla_village_enters_tapped_and_taps_for_green() {
     .expect("tap for green");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added green mana");
 }
+
+/// Dracogenesis free-casts Dragon spells but not other spells.
+#[test]
+fn dracogenesis_free_casts_dragon_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dracogenesis());
+    let dragon = g.add_card_to_hand(0, catalog::jeskai_shrinekeeper());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: dragon,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Dracogenesis free-casts a Dragon");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_some(), "Dragon entered for free");
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: bears,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a non-Dragon spell can't be free-cast",
+    );
+}

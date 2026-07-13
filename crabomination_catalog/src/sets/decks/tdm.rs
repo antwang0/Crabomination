@@ -1760,3 +1760,20 @@ pub fn kishla_village() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dracogenesis — {6}{R}{R} Enchantment. You may cast Dragon spells without
+/// paying their mana costs.
+pub fn dracogenesis() -> CardDefinition {
+    CardDefinition {
+        name: "Dracogenesis",
+        cost: cost(&[generic(6), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast Dragon spells without paying their mana costs.",
+            effect: StaticEffect::CastFilteredSpellsFree {
+                filter: R::HasCreatureType(CreatureType::Dragon),
+            },
+        }],
+        ..Default::default()
+    }
+}
