@@ -6992,7 +6992,7 @@ impl GameState {
             None => {
                 let from_own_hand = zone == crate::card::Zone::Hand
                     && self.players[p].hand.iter().any(|c| c.id == card_id);
-                if from_own_hand && self.player_casts_hand_spells_free(p, &card_ref) {
+                if from_own_hand && self.player_casts_hand_spells_free(p, card_ref) {
                     // Omniscience path — no timing relaxation.
                 } else if from_own_hand && self.player_casts_cheap_creature_free(&card_ref.definition) {
                     aluren_flash = true;

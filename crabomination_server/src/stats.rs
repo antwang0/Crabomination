@@ -1149,9 +1149,8 @@ mod tests {
 
     #[test]
     fn turn_count_cv_is_stddev_over_mean_percent() {
-        let mut s = MatchStats::default();
         // Two matches, 10 and 20 turns → mean 15, σ 5 → cv 33%.
-        s.bot_matches = 2;
+        let mut s = MatchStats { bot_matches: 2, ..Default::default() };
         s.observe_turns(10);
         s.observe_turns(20);
         assert_eq!(s.turn_count_stddev().round() as u64, 5);
