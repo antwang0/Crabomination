@@ -1777,3 +1777,72 @@ pub fn dracogenesis() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Death Begets Life — {5}{B}{G}{U} Sorcery. Destroy all creatures and
+/// enchantments, then draw a card for each permanent destroyed this way.
+/// (Draw count is the pre-destruction match count.)
+pub fn death_begets_life() -> CardDefinition {
+    let matching = || R::Creature.or(R::Enchantment);
+    CardDefinition {
+        name: "Death Begets Life",
+        cost: cost(&[generic(5), b(), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(matching())),
+            },
+            Effect::Destroy { what: Selector::EachPermanent(matching()) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Herd Heirloom — {1}{G} Artifact. {T}: Add one mana of any color, spend only
+/// on a creature spell. {T}: until end of turn, target creature you control with
+/// power 4+ gains trample and "when it deals combat damage to a player, draw."
+pub fn herd_heirloom() -> CardDefinition {
+    CardDefinition {
+        name: "Herd Heirloom",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                        crate::mana::SpendRestriction::CreatureOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: target_filtered(
+                            R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)),
+                        ),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantTriggeredAbility {
+                        what: Selector::Target(0),
+                        trigger: Box::new(TriggeredAbility {
+                            event: EventSpec::new(
+                                EventKind::DealsCombatDamageToPlayer,
+                                EventScope::SelfSource,
+                            ),
+                            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        }),
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

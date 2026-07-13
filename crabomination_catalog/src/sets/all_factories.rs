@@ -6240,6 +6240,8 @@ static DECKS: &[Factory] = &[
     super::decks::revival_of_the_ancestors,
     super::decks::kishla_village,
     super::decks::dracogenesis,
+    super::decks::death_begets_life,
+    super::decks::herd_heirloom,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

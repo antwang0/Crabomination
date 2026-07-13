@@ -1514,3 +1514,78 @@ fn dracogenesis_free_casts_dragon_spells() {
         "a non-Dragon spell can't be free-cast",
     );
 }
+
+/// Death Begets Life destroys all creatures and enchantments and draws per one.
+#[test]
+fn death_begets_life_wraths_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::dracogenesis()); // an enchantment
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::death_begets_life());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len(); // spell will leave hand
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Death Begets Life");
+    drain_stack(&mut g);
+    // Three permanents (2 creatures + 1 enchantment) destroyed → draw 3.
+    let creatures = g.battlefield.iter().filter(|c| c.definition.is_creature()).count();
+    assert_eq!(creatures, 0, "all creatures destroyed");
+    // hand: -1 (cast the sorcery) +3 (drawn) = +2 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3, "drew one per destroyed permanent");
+}
+
+/// Herd Heirloom's second ability grants trample + a draw-on-combat-damage
+/// trigger to a power-4 creature until end of turn.
+#[test]
+fn herd_heirloom_grants_trample_and_draw_on_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let heirloom = g.add_card_to_battlefield(0, catalog::herd_heirloom());
+    let beast = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(beast).unwrap().counters.insert(CounterType::PlusOnePlusOne, 2); // 4/4
+    g.clear_sickness(beast);
+    g.add_card_to_library(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: heirloom,
+        ability_index: 1,
+        target: Some(Target::Permanent(beast)),
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("grant trample + draw trigger");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Trample),
+        "gained trample",
+    );
+    let hand = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: beast,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on combat damage to a player");
+}
