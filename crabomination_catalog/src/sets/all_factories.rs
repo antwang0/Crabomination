@@ -6217,6 +6217,8 @@ static DECKS: &[Factory] = &[
     super::decks::clarion_conqueror,
     super::decks::ambling_stormshell,
     super::decks::furious_forebear,
+    super::decks::bewilder,
+    super::decks::sarkhan_dragon_ascendant,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

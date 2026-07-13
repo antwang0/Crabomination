@@ -11,7 +11,12 @@
 //! Anchor (surveil rock gated on a graveyard departure), Stormbeacon Blade
 //! (equip + mass-attack draw), plus the five gap completions (Krumar Initiate,
 //! Zurgo's Vanguard, War Effort, Dragon's Prey, Ringing Strike Mastery's granted
-//! untap). Tests in `crabomination/src/tests/tdm.rs`.
+//! untap). Batch 3 adds two Dragons (Jeskai Shrinekeeper, Kheru Goldkeeper),
+//! Encroaching Dragonstorm (basic ramp + Dragon bounce) and Dragonclaw Strike
+//! (double-P/T fight). Batch 4 adds Clarion Conqueror (activation lock),
+//! Ambling Stormshell (Ward Turtle) and Furious Forebear (graveyard recursion).
+//! Batch 5 adds Bewilder and Sarkhan, Dragon Ascendant. Tests in
+//! `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -899,6 +904,88 @@ pub fn furious_forebear() -> CardDefinition {
                 else_: None,
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 5: tempo instant, untap engine, behold-Dragon commander ──────
+
+/// Bewilder — {2}{U} Instant. Target creature gets −3/−0 until end of turn.
+/// Draw a card.
+pub fn bewilder() -> CardDefinition {
+    CardDefinition {
+        name: "Bewilder",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sarkhan, Dragon Ascendant — {1}{R} 2/2 Human Druid. ETB: if you control a
+/// Dragon (our "behold" proxy), create a Treasure. Whenever a Dragon you
+/// control enters, put a +1/+1 counter on Sarkhan; until end of turn it becomes
+/// a Dragon in addition to its other types and gains flying.
+pub fn sarkhan_dragon_ascendant() -> CardDefinition {
+    CardDefinition {
+        name: "Sarkhan, Dragon Ascendant",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Dragon).and(R::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Dragon),
+                    }),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::AddCreatureTypes {
+                        what: Selector::This,
+                        creature_types: vec![CreatureType::Dragon],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            },
+        ],
         ..Default::default()
     }
 }

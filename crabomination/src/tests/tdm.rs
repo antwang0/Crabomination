@@ -862,3 +862,49 @@ fn furious_forebear_returns_on_creature_death() {
         "paid the cost to return Furious Forebear to hand"
     );
 }
+
+/// Bewilder weakens a creature and cantrips.
+#[test]
+fn bewilder_shrinks_power_and_draws() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::bewilder());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(foe)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Bewilder");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(foe).unwrap().power, -1, "2 − 3 = −1 power");
+    assert_eq!(g.players[0].hand.len(), hand, "cantrip nets even (drew 1, spent 1)");
+}
+
+/// Sarkhan grows and turns into a flying Dragon when a Dragon enters.
+#[test]
+fn sarkhan_grows_when_a_dragon_enters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let sarkhan = g.add_card_to_battlefield(0, catalog::sarkhan_dragon_ascendant());
+    // Behold ETB: with no Dragon yet, no Treasure.
+    let dragon = g.add_card_to_battlefield(0, catalog::jeskai_shrinekeeper());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: dragon }]);
+    drain_stack(&mut g);
+    let counters = g.battlefield_find(sarkhan).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 1, "+1/+1 counter");
+    let cp = g.computed_permanent(sarkhan).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+    assert!(
+        cp.subtypes.creature_types.contains(&crate::card::CreatureType::Dragon),
+        "became a Dragon"
+    );
+}
