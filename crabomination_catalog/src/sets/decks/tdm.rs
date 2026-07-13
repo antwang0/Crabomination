@@ -2023,3 +2023,57 @@ pub fn roar_of_endless_song() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zurgo, Thunder's Decree — {R}{W}{B} 2/4 Orc Warrior with Mobilize 2.
+/// (The "Warrior tokens can't be sacrificed during your end step" persistence
+/// rider is approximated away — the Mobilize tokens sacrifice as normal.)
+pub fn zurgo_thunders_decree() -> CardDefinition {
+    CardDefinition {
+        name: "Zurgo, Thunder's Decree",
+        cost: cost(&[r(), w(), b()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Orc, CreatureType::Warrior], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![mobilize(2)],
+        ..Default::default()
+    }
+}
+
+/// Rot-Curse Rakshasa — {1}{B} 5/5 Demon with trample and decayed.
+/// (Its graveyard Renew ability — exile from the graveyard to distribute decayed
+/// counters — is approximated away; graveyard-activated abilities want a primitive.)
+pub fn rot_curse_rakshasa() -> CardDefinition {
+    CardDefinition {
+        name: "Rot-Curse Rakshasa",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Decayed],
+        ..Default::default()
+    }
+}
+
+/// Flamehold Grappler — {U}{R}{W} 3/3 Human Monk with first strike. When it
+/// enters, copy the next spell you cast this turn (you may choose new targets).
+pub fn flamehold_grappler() -> CardDefinition {
+    CardDefinition {
+        name: "Flamehold Grappler",
+        cost: cost(&[u(), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Monk], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![etb(Effect::OnYourNextSpellCastThisTurn {
+            body: Box::new(Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::ONE,
+            }),
+        })],
+        ..Default::default()
+    }
+}

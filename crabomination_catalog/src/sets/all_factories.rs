@@ -6247,6 +6247,9 @@ static DECKS: &[Factory] = &[
     super::decks::natures_rhythm,
     super::decks::smile_at_death,
     super::decks::roar_of_endless_song,
+    super::decks::zurgo_thunders_decree,
+    super::decks::rot_curse_rakshasa,
+    super::decks::flamehold_grappler,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

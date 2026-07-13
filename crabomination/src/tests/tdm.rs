@@ -1714,3 +1714,49 @@ fn roar_of_endless_song_elephant_then_double() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "2/2 doubled to 4/4");
 }
+
+/// Zurgo mobilizes two tapped attacking Warriors when it attacks.
+#[test]
+fn zurgo_mobilizes_two() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let zurgo = g.add_card_to_battlefield(0, catalog::zurgo_thunders_decree());
+    g.clear_sickness(zurgo);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: zurgo, target: AttackTarget::Player(1),
+    }])).expect("Zurgo attacks");
+    drain_stack(&mut g);
+    let warriors = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Warrior))
+        .count();
+    assert_eq!(warriors, 2, "Mobilize 2 made two Warrior tokens");
+}
+
+/// Rot-Curse Rakshasa is a 5/5 with trample and decayed.
+#[test]
+fn rot_curse_rakshasa_stats() {
+    let r = catalog::rot_curse_rakshasa();
+    assert_eq!((r.power, r.toughness), (5, 5));
+    assert!(r.keywords.contains(&Keyword::Trample) && r.keywords.contains(&Keyword::Decayed));
+}
+
+/// Flamehold Grappler copies the next spell you cast after it enters.
+#[test]
+fn flamehold_grappler_copies_next_spell() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::flamehold_grappler());
+    drain_stack(&mut g);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Cast Lightning Bolt at the bear — the delayed trigger copies it → 6 to the bear.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    // 3 (original) + 3 (copy) = 6 damage → the 2/2 is dead.
+    assert!(g.battlefield_find(foe).is_none(), "bolt was copied — bear took 6");
+}
