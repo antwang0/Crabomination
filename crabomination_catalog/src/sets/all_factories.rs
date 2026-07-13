@@ -6267,6 +6267,8 @@ static DECKS: &[Factory] = &[
     super::decks::fiendish_panda,
     super::decks::quick_draw_katana,
     super::decks::salvation_swan,
+    super::decks::bushwhack,
+    super::decks::cheeky_house_mouse,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
