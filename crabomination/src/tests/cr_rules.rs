@@ -58,7 +58,10 @@
 //! tokens (CR 702.169 — Zurgo's Vanguard), Undying returning only without a
 //! +1/+1 counter (CR 702.93), Toxic N poison on combat damage (CR 702.180),
 //! and Wither dealing creature damage as -1/-1 counters but player damage as
-//! life (CR 702.71).
+//! life (CR 702.71), Harmonize tapping a creature to reduce the cost by its
+//! power (CR 702.180b), "until end of turn" grants ending at cleanup (CR 514.2
+//! — a granted harmonize), and a one-sided damage doubler sparing the
+//! controller's own side (CR 614.5).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -8905,4 +8908,89 @@ fn cr_702_71_wither_creatures_as_counters_players_as_life() {
     );
     assert_eq!(g.players[1].life, life - 3, "unblocked wither is normal life loss");
     assert_eq!(g.players[1].poison_counters, 0, "wither gives players no poison");
+}
+
+// ── CR 702.180b — Harmonize: tap a creature to reduce the cost ────────────────
+
+/// Tapping a creature reduces a Harmonize cost by that creature's power in
+/// generic mana (CR 702.180b). Wild Ride's harmonize {4}{R} shrinks to {R}
+/// when a 4-power creature is tapped.
+#[test]
+fn cr_702_180b_harmonize_tap_reduces_cost() {
+    let mut g = two_player_game();
+    let ride = g.add_card_to_graveyard(0, catalog::wild_ride());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tapper = g.add_card_to_battlefield(0, catalog::hill_giant()); // power 3
+    g.clear_sickness(tapper);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // {4}{R} harmonize − 3 (tapped power) = {1}{R}. Pay exactly that.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastHarmonize {
+        card_id: ride,
+        tap_creature: Some(tapper),
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Wild Ride via harmonize, reduced by the tapped 4-power creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tapper).unwrap().tapped, "the creature was tapped for the reduction");
+    assert_eq!(g.computed_permanent(target).unwrap().power, 5, "resolved: +3/+0 on the 2/2");
+}
+
+// ── CR 514.2 — "until end of turn" grants end at cleanup ──────────────────────
+
+/// A granted-harmonize (Songcrafter Mage) is an until-end-of-turn effect; it
+/// expires during the cleanup step (CR 514.2), even on a graveyard card.
+#[test]
+fn cr_514_2_granted_harmonize_expires_at_cleanup() {
+    let mut g = two_player_game();
+    let div = g.add_card_to_graveyard(0, catalog::divination());
+    g.move_card_to_battlefield_for_test(0, catalog::songcrafter_mage());
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().find(|c| c.id == div).unwrap().effective_harmonize().is_some(),
+        "harmonize granted this turn"
+    );
+    // Advance into the opponent's turn — this turn's cleanup runs in between.
+    while g.active_player_idx == 0 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(
+        g.players[0].graveyard.iter().find(|c| c.id == div).unwrap().effective_harmonize().is_none(),
+        "the grant ended at cleanup (CR 514.2)",
+    );
+}
+
+// ── CR 614.5 — one-sided damage doubler spares the controller's own side ──────
+
+/// Twinflame Tyrant / Gisela's doubler applies only to damage dealt to
+/// opponents; damage to your own permanents is not doubled (CR 614.5 scoping).
+#[test]
+fn cr_614_5_one_sided_doubler_spares_own_side() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::twinflame_tyrant());
+    let own = g.add_card_to_battlefield(0, catalog::hill_giant()); // your 3/3
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Bolt your own creature — the opponent-only doubler must NOT apply.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(own)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt own creature");
+    drain_stack(&mut g);
+    // 3 damage (not 6) to a 3/3 → it dies exactly, having taken 3.
+    assert!(g.battlefield_find(own).is_none(), "took lethal 3 (undoubled) and died");
+    // Opponent unaffected.
+    assert_eq!(g.players[1].life, 20, "no damage leaked to the opponent");
 }
