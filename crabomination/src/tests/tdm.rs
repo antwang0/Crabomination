@@ -908,3 +908,68 @@ fn sarkhan_grows_when_a_dragon_enters() {
         "became a Dragon"
     );
 }
+
+/// Jeskai Brushmaster is a 2/4 with double strike and prowess.
+#[test]
+fn jeskai_brushmaster_has_double_strike_and_prowess() {
+    let mut g = two_player_game();
+    let bm = g.add_card_to_battlefield(0, catalog::jeskai_brushmaster());
+    let cp = g.computed_permanent(bm).unwrap();
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "double strike");
+    assert!(cp.keywords.contains(&Keyword::Prowess), "prowess");
+    assert_eq!((cp.power, cp.toughness), (2, 4), "2/4 body");
+}
+
+/// Riverwheel Sweep taps a creature and puts three stun counters on it.
+#[test]
+fn riverwheel_sweep_taps_and_stuns() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::riverwheel_sweep());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(foe)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Riverwheel Sweep");
+    drain_stack(&mut g);
+    let inst = g.battlefield_find(foe).unwrap();
+    assert!(inst.tapped, "target tapped");
+    assert_eq!(inst.counter_count(CounterType::Stun), 3, "three stun counters");
+}
+
+/// Flowstone Slide gives every creature +X/-X, killing X-toughness bodies.
+#[test]
+fn flowstone_slide_shrinks_all_creatures() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::flowstone_slide());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4); // {2}{R}{R} + X=2
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast Flowstone Slide X=2");
+    drain_stack(&mut g);
+    // +2/-2: the 2/2 dies (0 toughness), the 3/3 becomes 5/1.
+    assert!(g.battlefield_find(foe).is_none(), "2/2 died to -2 toughness");
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 1), "3/3 → 5/1");
+}

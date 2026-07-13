@@ -6219,6 +6219,9 @@ static DECKS: &[Factory] = &[
     super::decks::furious_forebear,
     super::decks::bewilder,
     super::decks::sarkhan_dragon_ascendant,
+    super::decks::jeskai_brushmaster,
+    super::decks::riverwheel_sweep,
+    super::decks::flowstone_slide,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -989,3 +989,73 @@ pub fn sarkhan_dragon_ascendant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM batch 6: keyword beater, stun+impulse, mass shrink ─────────────────
+
+/// Jeskai Brushmaster — {1}{U}{R}{W} 2/4 Orc Monk with double strike and prowess.
+pub fn jeskai_brushmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Brushmaster",
+        cost: cost(&[generic(1), u(), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::DoubleStrike, Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
+/// Riverwheel Sweep — {2/U}{2/R}{2/W} Sorcery. Tap target creature and put three
+/// stun counters on it. Then exile the top two cards of your library; until the
+/// end of your next turn you may play them.
+pub fn riverwheel_sweep() -> CardDefinition {
+    CardDefinition {
+        name: "Riverwheel Sweep",
+        cost: cost(&[
+            mono_hybrid(2, Color::Blue),
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::White),
+        ]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(3),
+            },
+            // "Choose one of them" collapses to a may-play grant on both — a
+            // strictly-better approximation matching the Tectonic Giant impulse.
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flowstone Slide — {X}{2}{R}{R} Sorcery. All creatures get +X/−X until end of
+/// turn.
+pub fn flowstone_slide() -> CardDefinition {
+    CardDefinition {
+        name: "Flowstone Slide",
+        cost: cost(&[x(), generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature),
+            power: Value::XFromCost,
+            toughness: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost)),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
