@@ -186,6 +186,12 @@ pub struct OurSeat(pub usize);
 /// `maybe_reconnect` opens a fresh connection to `server_addr` and re-claims
 /// the seat with `Resume { token }`. `None` token ⇒ not a reconnectable match
 /// (in-process / spectate), so a drop is treated as a normal end.
+/// Storage key holding the last reconnectable match as
+/// `addr\ntoken\nformat` — written when the server issues a `ResumeToken`,
+/// cleared on match end / intentional leave. Survives a crash or force-quit
+/// so the menu can offer "Rejoin Last Match".
+pub const RESUME_STORAGE_KEY: &str = "resume_last";
+
 #[derive(Resource, Default)]
 pub struct ResumeInfo {
     pub token: Option<String>,
@@ -278,6 +284,7 @@ pub fn poll_net(
     mut rope: ResMut<RopeClock>,
     mut chess: ResMut<ChessClock>,
     mut chat: ResMut<ChatInbox>,
+    active_format: Option<Res<crate::systems::game_over::ActiveMatchFormat>>,
     time: Res<Time>,
 ) {
     let Some(inbox) = inbox else { return };
@@ -369,9 +376,24 @@ pub fn poll_net(
                 ended.0 = Some(winner);
                 // Game's over — don't try to reconnect when the socket closes.
                 resume.token = None;
+                crate::storage::remove(RESUME_STORAGE_KEY);
             }
-            // Reconnect: stash the token so a mid-match drop can re-claim the seat.
-            ServerMsg::ResumeToken { token } => resume.token = Some(token),
+            // Reconnect: stash the token so a mid-match drop can re-claim the
+            // seat — and persist it so a crashed client can rejoin from the
+            // menu after a relaunch.
+            ServerMsg::ResumeToken { token } => {
+                if let Some(addr) = &resume.server_addr {
+                    let format = active_format
+                        .as_ref()
+                        .map(|f| format!("{:?}", f.0))
+                        .unwrap_or_default();
+                    crate::storage::save(
+                        RESUME_STORAGE_KEY,
+                        &format!("{addr}\n{token}\n{format}"),
+                    );
+                }
+                resume.token = Some(token);
+            }
             // ── Lobby protocol → client-side mirror (rendered by the lobby
             //    browser UI) ────────────────────────────────────────────────
             ServerMsg::LobbyList { lobbies } => {
@@ -443,6 +465,9 @@ pub fn teardown_net_session(
     pending_cast.0 = None;
     *lobby = LobbyState::default();
     *resume = ResumeInfo::default();
+    // Leaving on purpose (or after game over) — the persisted rejoin entry
+    // only exists to survive a crash, so clear it on a clean exit.
+    crate::storage::remove(RESUME_STORAGE_KEY);
 }
 
 /// How long to wait between reconnect attempts, and how many to make before
@@ -479,6 +504,7 @@ pub fn maybe_reconnect(world: &mut World) {
             r.lost = false;
             r.token = None;
         }
+        crate::storage::remove(RESUME_STORAGE_KEY);
         if let Some(mut ns) = world.get_resource_mut::<NextState<crate::menu::AppState>>() {
             ns.set(crate::menu::AppState::Menu);
         }

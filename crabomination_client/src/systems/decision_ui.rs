@@ -167,6 +167,14 @@ pub enum DecisionKey {
     DivideDamage(CardId, u32, Vec<Target>),
     /// `Decision::ChooseCreatureType` — keyed by the asking source.
     ChooseCreatureType(CardId),
+    /// `Decision::CoinFlip` (CR 705) — keyed by the flipping player.
+    CoinFlip(usize),
+    /// `Decision::DieRoll` (CR 706) — keyed by player + die size.
+    DieRoll(usize, u8),
+    /// `Decision::CommanderRedirect` (CR 903.9b) — keyed by the commander.
+    CommanderRedirect(CardId),
+    /// `Decision::ChooseLegendToKeep` (CR 704.5j) — keyed by the duplicates.
+    ChooseLegendToKeep(Vec<CardId>),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -234,7 +242,18 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         DecisionWire::ChooseCreatureType { source, .. } => {
             Some(DecisionKey::ChooseCreatureType(*source))
         }
-        _ => None,
+        DecisionWire::CoinFlip { player } => Some(DecisionKey::CoinFlip(*player)),
+        DecisionWire::DieRoll { player, sides } => {
+            Some(DecisionKey::DieRoll(*player, *sides))
+        }
+        DecisionWire::CommanderRedirect { commander, .. } => {
+            Some(DecisionKey::CommanderRedirect(*commander))
+        }
+        DecisionWire::ChooseLegendToKeep { duplicates, .. } => Some(
+            DecisionKey::ChooseLegendToKeep(duplicates.iter().map(|(id, _)| *id).collect()),
+        ),
+        // No wildcard: adding a DecisionWire variant must extend this match
+        // (an unhandled decision freezes the game for a human seat).
     }
 }
 
@@ -537,6 +556,40 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_creature_type_modal(&mut commands, &ui_fonts, suggestions);
         }
+        DecisionWire::CoinFlip { .. } => {
+            state.spawned_for = Some(key);
+            spawn_randomizer_modal(&mut commands, &ui_fonts, "Flip a coin", "Flip", 2);
+        }
+        DecisionWire::DieRoll { sides, .. } => {
+            state.spawned_for = Some(key);
+            spawn_randomizer_modal(
+                &mut commands,
+                &ui_fonts,
+                &format!("Roll a d{sides}"),
+                &format!("Roll d{sides}"),
+                *sides,
+            );
+        }
+        DecisionWire::CommanderRedirect { commander, would_be } => {
+            state.spawned_for = Some(key);
+            let name = view_card_name(cv, *commander, "Your commander");
+            let zone = match would_be {
+                crabomination::card::Zone::Graveyard => "your graveyard",
+                crabomination::card::Zone::Exile => "exile",
+                crabomination::card::Zone::Hand => "your hand",
+                crabomination::card::Zone::Library => "your library",
+                _ => "that zone",
+            };
+            spawn_optional_modal(
+                &mut commands,
+                &ui_fonts,
+                &format!("Send {name} to the command zone instead of {zone}?"),
+            );
+        }
+        DecisionWire::ChooseLegendToKeep { name, duplicates, .. } => {
+            state.spawned_for = Some(key);
+            spawn_legend_keep_modal(&mut commands, &ui_fonts, name, duplicates);
+        }
         DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
             // Flipping `pending_decision_target` flags `handle_game_input`
@@ -566,7 +619,6 @@ pub fn spawn_decision_ui(
             legal_targets.source_name = source_name.clone();
             legal_targets.description = description.clone();
         }
-        _ => {}
     }
 }
 
@@ -2328,8 +2380,9 @@ fn spawn_optional_modal(commands: &mut Commands, ui_fonts: &UiFonts, description
     });
 }
 
-/// Submit the `Bool` answer for a pending `OptionalTrigger` when its Yes/No
-/// button is clicked.
+/// Submit the `Bool` answer for a pending `OptionalTrigger` or
+/// `CommanderRedirect` (CR 903.9b — both are yes/no asks sharing the same
+/// modal) when its Yes/No button is clicked.
 pub fn handle_optional_buttons(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
@@ -2339,7 +2392,7 @@ pub fn handle_optional_buttons(
     let Some(cv) = &view.0 else { return };
     if !matches!(
         cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
-        Some(DecisionWire::OptionalTrigger { .. })
+        Some(DecisionWire::OptionalTrigger { .. } | DecisionWire::CommanderRedirect { .. })
     ) {
         return;
     }
@@ -2347,6 +2400,167 @@ pub fn handle_optional_buttons(
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed {
             outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(btn.0)));
+            state.spawned_for = None;
+            return;
+        }
+    }
+}
+
+/// "Flip" / "Roll dN" button for a pending CoinFlip or DieRoll. The engine
+/// delegates the randomness to the decider (CR 705/706), so the client rolls
+/// locally when clicked; `sides == 2` means a coin (answered as `Bool`).
+#[derive(Component)]
+pub struct RandomizerButton {
+    pub sides: u8,
+}
+
+/// Pick-one button for the ChooseLegendToKeep modal (CR 704.5j).
+#[derive(Component)]
+pub struct LegendKeepButton(pub CardId);
+
+/// One-button modal for the randomness decisions: the player clicks
+/// Flip/Roll and the client submits a locally generated result. No
+/// heads-or-1s picking — the button IS the randomizer.
+fn spawn_randomizer_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    title: &str,
+    button_label: &str,
+    sides: u8,
+) {
+    let panel = spawn_modal_panel(commands, 260.0);
+    let title = title.to_string();
+    let button_label = button_label.to_string();
+    let fonts18 = ui_fonts.tf(18.0);
+    commands.entity(panel).with_children(|p| {
+        p.spawn((
+            Text::new(title),
+            fonts18.clone(),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+        p.spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(24.0), Val::Px(10.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                ..default()
+            },
+            BackgroundColor(theme::BUTTON_PRIMARY_BG),
+            HoverTint::new(theme::BUTTON_PRIMARY_BG),
+            RandomizerButton { sides },
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new(button_label),
+                fonts18,
+                TextColor(theme::TEXT_PRIMARY),
+                bevy::picking::Pickable::IGNORE,
+            ));
+        });
+    });
+}
+
+/// Roll/flip on click and submit the result. The outcome lands in the game
+/// log via the CoinFlipWon/Lost / DiceRolled events, so no local reveal step.
+pub fn handle_randomizer_buttons(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &RandomizerButton), Changed<Interaction>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let is_coin = match cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()) {
+        Some(DecisionWire::CoinFlip { .. }) => true,
+        Some(DecisionWire::DieRoll { .. }) => false,
+        _ => return,
+    };
+    let Some(outbox) = outbox else { return };
+    for (interaction, btn) in &buttons {
+        if *interaction == Interaction::Pressed {
+            let answer = if is_coin {
+                DecisionAnswer::Bool(rand::random::<bool>())
+            } else {
+                let sides = btn.sides.max(2);
+                DecisionAnswer::DieRoll(rand::random_range(1..=sides))
+            };
+            outbox.submit(GameAction::SubmitDecision(answer));
+            state.spawned_for = None;
+            return;
+        }
+    }
+}
+
+/// CR 704.5j — pick which of several same-named legends survives the
+/// legend-rule SBA. One button per duplicate; click submits immediately.
+fn spawn_legend_keep_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    name: &str,
+    duplicates: &[(CardId, String)],
+) {
+    let panel = spawn_modal_panel(commands, 360.0);
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts14 = ui_fonts.tf(14.0);
+    let title = format!("Legend rule: choose which \"{name}\" to keep");
+    let dups: Vec<(CardId, String)> = duplicates.to_vec();
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new(title), fonts18, TextColor(theme::TEXT_PRIMARY)));
+        p.spawn((
+            Text::new("The others will be put into your graveyard."),
+            fonts14.clone(),
+            TextColor(theme::TEXT_MUTED),
+        ));
+        p.spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(8.0),
+            align_items: AlignItems::Stretch,
+            ..default()
+        })
+        .with_children(|col| {
+            for (i, (id, label)) in dups.into_iter().enumerate() {
+                col.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    LegendKeepButton(id),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(format!("#{} — {}", i + 1, label)),
+                        fonts14.clone(),
+                        TextColor(theme::TEXT_PRIMARY),
+                        bevy::picking::Pickable::IGNORE,
+                    ));
+                });
+            }
+        });
+    });
+}
+
+/// Submit the kept legend the moment its button is clicked.
+pub fn handle_legend_keep_buttons(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &LegendKeepButton), Changed<Interaction>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if !matches!(
+        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
+        Some(DecisionWire::ChooseLegendToKeep { .. })
+    ) {
+        return;
+    }
+    let Some(outbox) = outbox else { return };
+    for (interaction, btn) in &buttons {
+        if *interaction == Interaction::Pressed {
+            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::KeptLegend(btn.0)));
             state.spawned_for = None;
             return;
         }

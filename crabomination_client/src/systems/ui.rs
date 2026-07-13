@@ -19,8 +19,13 @@ pub struct RevealPopupState {
 }
 use crate::scryfall;
 
+/// Alt-held centered card peek. Stores the front-texture path currently
+/// shown so the popup rebuilds when the hovered card changes under a held
+/// Alt (instead of showing the first card until Alt is released).
 #[derive(Component)]
-pub struct PeekPopup;
+pub struct PeekPopup {
+    path: String,
+}
 
 #[derive(Component)]
 pub struct GraveyardBrowser;
@@ -661,53 +666,128 @@ const POPUP_HEIGHT: f32 = POPUP_WIDTH * CARD_ASPECT_RATIO;
 pub fn peek_popup(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
-    hovered_cards: Query<&CardFrontTexture, (With<Card>, With<CardHovered>)>,
-    existing_popup: Query<Entity, With<PeekPopup>>,
+    hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
+    card_names: Res<crate::game::CardNames>,
+    existing_popup: Query<(Entity, &PeekPopup)>,
     asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
-    let should_show = alt_held && !hovered_cards.is_empty();
+    let hovered = hovered_cards.iter().next();
+    let should_show = alt_held && hovered.is_some();
 
-    if should_show && existing_popup.is_empty() {
-        if let Some(front_texture) = hovered_cards.iter().next() {
-            let texture: Handle<Image> = asset_server.load(&front_texture.0);
-            // Full-screen overlay, flex-centered, with dim background.
-            commands
-                .spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        top: Val::Px(0.0),
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor(theme::OVERLAY_BG_LIGHT),
-                    Pickable::IGNORE,
-                    PeekPopup,
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        ImageNode {
-                            image: texture,
-                            ..default()
-                        },
-                        Node {
-                            width: Val::Px(POPUP_WIDTH),
-                            height: Val::Px(POPUP_HEIGHT),
-                            ..default()
-                        },
-                        Pickable::IGNORE,
-                    ));
-                });
-        }
-    } else if !should_show {
-        for entity in &existing_popup {
+    if !should_show {
+        for (entity, _) in &existing_popup {
             commands.entity(entity).despawn();
         }
+        return;
     }
+    let Some((front_texture, card_id)) = hovered else { return };
+    // Same card already showing — nothing to do; a different card under a
+    // still-held Alt rebuilds the popup with the new faces.
+    if let Ok((entity, popup)) = existing_popup.single() {
+        if popup.path == front_texture.0 {
+            return;
+        }
+        commands.entity(entity).despawn();
+    }
+
+    // The catalog knows whether this card has a back face (MDFC/TDFC) and
+    // supplies the rules-text lines — both keyed by the card's name.
+    let name = card_id.map(|g| card_names.get(g.0));
+    let def = name.as_deref().and_then(crabomination::catalog::lookup_by_name);
+    let back_path = def
+        .as_ref()
+        .and_then(|d| d.back_face.as_ref())
+        .map(|b| scryfall::card_back_face_asset_path(b.name));
+    let info = name.as_deref().map(hover_info_lines).unwrap_or_default();
+
+    let texture: Handle<Image> = asset_server.load(&front_texture.0);
+    // Full-screen overlay, flex-centered, with dim background.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(16.0),
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG_LIGHT),
+            Pickable::IGNORE,
+            PeekPopup { path: front_texture.0.clone() },
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                ImageNode {
+                    image: texture,
+                    ..default()
+                },
+                Node {
+                    width: Val::Px(POPUP_WIDTH),
+                    height: Val::Px(POPUP_HEIGHT),
+                    ..default()
+                },
+                Pickable::IGNORE,
+            ));
+            // Double-faced card: show the other face alongside, so the
+            // battlefield/opponent side of a DFC is finally readable.
+            if let Some(back_path) = back_path {
+                let back_texture: Handle<Image> = asset_server.load(&back_path);
+                parent.spawn((
+                    ImageNode {
+                        image: back_texture,
+                        ..default()
+                    },
+                    Node {
+                        width: Val::Px(POPUP_WIDTH),
+                        height: Val::Px(POPUP_HEIGHT),
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ));
+            }
+            // Rules-text panel — the big peek is the one place with room
+            // for the full type line / keyword reminders, and cards render
+            // art-only, so surface them here too (not just on the small
+            // cursor-side preview).
+            if !info.is_empty() {
+                parent
+                    .spawn((
+                        Node {
+                            width: Val::Px(300.0),
+                            max_height: Val::Px(POPUP_HEIGHT),
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect::all(Val::Px(12.0)),
+                            row_gap: Val::Px(4.0),
+                            overflow: Overflow::clip_y(),
+                            border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                            ..default()
+                        },
+                        BackgroundColor(theme::PANEL_BG),
+                        Pickable::IGNORE,
+                    ))
+                    .with_children(|panel| {
+                        for (text, is_reminder) in info {
+                            let color = if is_reminder {
+                                theme::TEXT_SECONDARY
+                            } else {
+                                theme::TEXT_PRIMARY
+                            };
+                            panel.spawn((
+                                Text::new(text),
+                                ui_fonts.tf(13.0),
+                                TextColor(color),
+                                Pickable::IGNORE,
+                            ));
+                        }
+                    });
+            }
+        });
 }
 
 /// Marker for the automatic hover card-zoom preview (Arena-style). Stores
@@ -1016,6 +1096,14 @@ pub fn hover_card_preview(
     let mut info = card_id
         .map(|id| hover_info_lines(&card_names.get(id)))
         .unwrap_or_default();
+    // Double-faced cards: the other face is on the Alt peek — say so here,
+    // since this small preview only shows the front.
+    if let Some(id) = card_id
+        && crabomination::catalog::lookup_by_name(&card_names.get(id))
+            .is_some_and(|d| d.back_face.is_some())
+    {
+        info.push(("Double-faced — hold Alt to see both faces.".to_string(), true));
+    }
     // Append live characteristic-override notes (type-changing / ability-
     // stripping continuous effects) from the current battlefield view.
     if let (Some(id), Some(cv)) = (card_id, view.0.as_ref())

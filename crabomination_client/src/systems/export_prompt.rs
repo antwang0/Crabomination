@@ -50,6 +50,8 @@ pub fn handle_export_prompt_input(
     view: Res<CurrentView>,
     snapshot: Option<Res<crate::menu::LatestSnapshot>>,
     mut log: ResMut<GameLog>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut clipboard: ResMut<bevy::clipboard::Clipboard>,
 ) {
     if !state.active {
         // Drain otherwise-stale events so the next session starts clean.
@@ -103,6 +105,24 @@ pub fn handle_export_prompt_input(
                 state.message.push(' ');
             }
             Key::Character(s) => {
+                let ctrl = keys.pressed(KeyCode::ControlLeft)
+                    || keys.pressed(KeyCode::ControlRight);
+                if ctrl {
+                    // Ctrl+V pastes; other Ctrl chords don't type their letter.
+                    if s.as_str().eq_ignore_ascii_case("v")
+                        && let Some(Ok(text)) = clipboard.fetch_text().poll_result()
+                    {
+                        for ch in text.chars() {
+                            if state.message.len() >= MAX_MESSAGE_LEN {
+                                break;
+                            }
+                            if !ch.is_control() {
+                                state.message.push(ch);
+                            }
+                        }
+                    }
+                    continue;
+                }
                 for ch in s.chars() {
                     if state.message.len() >= MAX_MESSAGE_LEN {
                         break;

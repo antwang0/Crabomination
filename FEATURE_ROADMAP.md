@@ -872,7 +872,9 @@ Each a small targeted feature; sweep batch by batch.
 ## Tier 7 — UI / UX core (the Arena "feel" gap)
 
 1. ✅ **Card-zoom hover preview** — `hover_card_preview` (flips side to avoid
-   covering the card); Alt-hold drives the centered detailed peek.
+   covering the card); Alt-hold drives the centered detailed peek, which shows
+   both faces of a DFC side by side plus the catalog rules-text panel (the
+   small preview flags DFCs with a "hold Alt" hint line).
 2. ✅ **Stops / auto-yield config** — `auto_advance_p0` smart default + per-step
    Stop/Skip overrides on the phase chart (`StopConfig`), separate for your turns
    vs. opponents'.
@@ -893,9 +895,13 @@ Each a small targeted feature; sweep batch by batch.
    right-click "pass until this step".
 9. 🟡 **Resolution-time decisions for humans** — via the stash-and-rerun suspend:
    ✅ ChooseModes, modal triggers, MayDo, DivideDamage, ChooseAmount, creature-type
-   choices, seat-routed yes/no asks (rhystic, Tribute, Browbeat, MayPay).
-   Remaining ⏳: CommanderRedirect, ChooseLegendToKeep (raised inside SBA/damage),
-   modal triggers with targeting modes, non-Bool opponent-owned picks.
+   choices, seat-routed yes/no asks (rhystic, Tribute, Browbeat, MayPay),
+   CommanderRedirect (yes/no modal), ChooseLegendToKeep (pick-one modal),
+   CoinFlip/DieRoll (client-rolled "Flip"/"Roll dN" button) — every
+   `DecisionWire` variant now has a client UI (the match is exhaustive, no
+   wildcard, so new variants are compile errors instead of client freezes).
+   Remaining ⏳: modal triggers with targeting modes, non-Bool
+   opponent-owned picks.
 
 ## Tier 8 — UI / UX quality-of-life
 
@@ -928,7 +934,9 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Lobby / matchmaking** — LAN lobby browser (create/join/spectate, host bot
   add/remove). Remaining ⏳: join-by-code over internet, quick-match.
 - ✅ **Reconnect / resume** — resume tokens + backoff retry + full snapshot
-  restore + a "reconnecting (N/10)…" client banner.
+  restore + a "reconnecting (N/10)…" client banner; tokens persist to disk /
+  localStorage so a crashed client gets a menu "Rejoin Last Match" button
+  (cleared on clean exit / match end).
 - ✅ **Spectator mode** (read-only `ClientView` stream).
 - ✅ **Player identity** — editable display name reaches every seat + log lines,
   persisted across launches.
@@ -958,7 +966,9 @@ Each a small targeted feature; sweep batch by batch.
 - ✅/🟡 **Draft + cube** exist. Extend with:
 - ⏳ **Sealed**, ⏳ **bot drafters** (signal/pick heuristics), ⏳ **draft variants**
   (Winston/Rochester/Grid/…), ⏳ **set-based draft**, ⏳ **draft replay / pick
-  history / pool export**.
+  history**. ✅ **Deck export** — the deckbuilding screen's "Save Deck" writes
+  the staged main+sideboard as importable decklist text to
+  `<config_dir>/crabomination/decks/` (localStorage on wasm).
 
 ## Tier 12 — Deckbuilding & collection
 

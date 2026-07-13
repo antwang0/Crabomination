@@ -144,6 +144,11 @@ pub fn connect_to_lobby_server(world: &mut World) {
         }
         Err(e) => {
             eprintln!("lobby: connect {} failed: {e}", req.addr);
+            // Bounce back to the menu WITH a visible reason — a silent
+            // return reads as the button doing nothing.
+            if let Some(mut status) = world.get_resource_mut::<crate::menu::MenuStatus>() {
+                status.0 = format!("Couldn't connect to {}: {e}", req.addr);
+            }
             if let Some(mut ns) = world.get_resource_mut::<NextState<AppState>>() {
                 ns.set(AppState::Menu);
             }

@@ -130,6 +130,11 @@ pub enum NetMode {
     /// inspection mode (no live server; the HUD is read-only). Used for
     /// reproducing reported bugs from a saved state.
     LoadDebugState { path: std::path::PathBuf },
+    /// Re-claim a seat in a still-running match after a crash/restart,
+    /// using the resume token persisted under
+    /// `net_plugin::RESUME_STORAGE_KEY`. No session is spawned here —
+    /// `maybe_reconnect` drives the connection.
+    Rejoin { addr: String, token: String },
 }
 
 /// Which deck pool the match draws from. Modern uses the BRG / Goryo's
@@ -310,9 +315,11 @@ struct MenuStatusText;
 #[derive(Component)]
 struct DownloadProgressText;
 
-/// Current menu feedback message (import errors, validation results).
+/// Current menu feedback message (import errors, validation results,
+/// connection failures — also set from `lobby_ui` when a connect bounces
+/// the player back to the menu).
 #[derive(Resource, Default)]
-struct MenuStatus(String);
+pub struct MenuStatus(pub String);
 
 /// A successfully imported maindeck, consumed by `spawn_inprocess_bot`
 /// (it outranks the format's stock decks, like `DraftedDecks`).
@@ -336,6 +343,29 @@ struct HostButton;
 
 #[derive(Component)]
 struct JoinButton;
+
+/// "Rejoin Last Match" — shown only when a persisted resume token survived
+/// a crash (see `net_plugin::RESUME_STORAGE_KEY`).
+#[derive(Component)]
+struct RejoinButton;
+
+/// Parse the persisted `addr\ntoken\nformat` rejoin entry, if any.
+fn load_persisted_resume() -> Option<(String, String, MatchFormat)> {
+    let raw = crate::storage::load(crate::net_plugin::RESUME_STORAGE_KEY)?;
+    let mut lines = raw.lines();
+    let addr = lines.next()?.trim().to_string();
+    let token = lines.next()?.trim().to_string();
+    if addr.is_empty() || token.is_empty() {
+        return None;
+    }
+    let format = match lines.next().unwrap_or_default().trim() {
+        "Cube" => MatchFormat::Cube,
+        "Sos" => MatchFormat::Sos,
+        "Commander" => MatchFormat::Commander,
+        _ => MatchFormat::Modern,
+    };
+    Some((addr, token, format))
+}
 
 #[derive(Component)]
 struct FieldButton(FocusedField);
@@ -477,6 +507,18 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     });
                 });
 
+                // Rejoin — offered only when a crash left a persisted resume
+                // token behind (a clean exit clears it).
+                if let Some((addr, _, _)) = load_persisted_resume() {
+                    button(
+                        p,
+                        &tf,
+                        &format!("Rejoin Last Match ({addr})"),
+                        BUTTON_WARN_BG,
+                        RejoinButton,
+                    );
+                }
+
                 // Everything driven by an in-process match thread (vs Bot,
                 // Draft, Spectate, Audit) or the local filesystem (debug
                 // state) is native-only: wasm has no threads to run the
@@ -595,7 +637,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 });
 
                 p.spawn((
-                    Text::new("Click a text field to edit. Backspace deletes."),
+                    Text::new("Click a text field to edit. Backspace deletes, Ctrl+V pastes."),
                     tf(11.0),
                     TextColor(theme::TEXT_PLACEHOLDER),
                 ));
@@ -745,10 +787,13 @@ fn handle_field_focus(
 fn handle_text_input(
     mut fields: ResMut<MenuFields>,
     mut events: MessageReader<KeyboardInput>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut clipboard: ResMut<bevy::clipboard::Clipboard>,
 ) {
     if fields.focused == FocusedField::None {
         return;
     }
+    let ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
     let mut next_focused = fields.focused;
     let mut buf = match fields.focused {
         FocusedField::PlayerName => fields.player_name.clone(),
@@ -778,6 +823,28 @@ fn handle_text_input(
                 next_focused = FocusedField::None;
             }
             Key::Character(s) => {
+                // Ctrl+V pastes the clipboard through the same per-field
+                // character filter typing goes through; other Ctrl chords
+                // are swallowed so the shortcut letter isn't typed.
+                if ctrl {
+                    if s.as_str().eq_ignore_ascii_case("v") {
+                        // Desktop reads resolve immediately (wasm text entry
+                        // uses this same path, where a still-pending read is
+                        // simply dropped — retry the paste a moment later).
+                        if let Some(Ok(text)) = clipboard.fetch_text().poll_result() {
+                            for ch in text.trim().chars() {
+                                if buf.len() >= max_len {
+                                    break;
+                                }
+                                if accepts_char(fields.focused, ch) {
+                                    buf.push(ch);
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                    continue;
+                }
                 for ch in s.chars() {
                     if buf.len() >= max_len {
                         break;
@@ -934,7 +1001,18 @@ fn handle_action_buttons(
     draft_q: Query<&Interaction, (Changed<Interaction>, With<DraftButton>)>,
     host_q: Query<&Interaction, (Changed<Interaction>, With<HostButton>)>,
     join_q: Query<&Interaction, (Changed<Interaction>, With<JoinButton>)>,
+    rejoin_q: Query<&Interaction, (Changed<Interaction>, With<RejoinButton>)>,
 ) {
+    if rejoin_q.iter().any(|i| *i == Interaction::Pressed) {
+        match load_persisted_resume() {
+            Some((addr, token, format)) => {
+                pending.0 = Some((NetMode::Rejoin { addr, token }, format));
+                next_state.set(AppState::InGame);
+            }
+            None => status.0 = "Rejoin unavailable: saved match info is gone.".to_string(),
+        }
+        return;
+    }
     if audit_q.iter().any(|i| *i == Interaction::Pressed) {
         next_state.set(AppState::Audit);
         return;
@@ -974,10 +1052,18 @@ fn handle_action_buttons(
                     );
                 } else if let Err(errs) = crabomination::format::validate_deck(
                     &parsed.main.iter().map(|f| f()).collect::<Vec<_>>(),
-                    crabomination::format::Format::Modern,
+                    // Validate against the menu's selected format, not a
+                    // hardcoded one — a Commander list is 100-card
+                    // singleton, and Cube/SoS pools play limited-style
+                    // 40-card rules.
+                    match format {
+                        MatchFormat::Modern => crabomination::format::Format::Modern,
+                        MatchFormat::Commander => crabomination::format::Format::Commander,
+                        MatchFormat::Cube | MatchFormat::Sos => {
+                            crabomination::format::Format::Draft
+                        }
+                    },
                 ) {
-                    // Imported decks face the stock Modern bot deck, so
-                    // enforce Modern construction rules (size, 4-copy cap).
                     status.0 = errs
                         .iter()
                         .take(3)
@@ -1005,7 +1091,7 @@ fn handle_action_buttons(
                 pending.0 = Some((NetMode::LoadDebugState { path }, format));
                 next_state.set(AppState::InGame);
             }
-            None => eprintln!("menu: no debug state files found in <repo>/debug/"),
+            None => status.0 = "No debug state files found in <repo>/debug/.".to_string(),
         }
         return;
     }
@@ -1014,13 +1100,15 @@ fn handle_action_buttons(
             pending.0 = Some((NetMode::HostLan { port }, format));
             next_state.set(AppState::InGame);
         } else {
-            eprintln!("menu: invalid host port `{}`", fields.host_port);
+            status.0 = format!("Invalid host port `{}` — use 1-65535.", fields.host_port);
         }
         return;
     }
     if join_q.iter().any(|i| *i == Interaction::Pressed) {
         let addr = fields.join_addr.trim().to_string();
-        if !addr.is_empty() {
+        if addr.is_empty() {
+            status.0 = "Enter a server address (host:port) to join.".to_string();
+        } else {
             // Connect, then browse lobbies on the server (which picks the
             // gamemode per lobby). The actual connect happens on entry to
             // `AppState::Lobby`.
@@ -1114,6 +1202,17 @@ pub fn start_net_session_from_menu(world: &mut World) {
         #[cfg(target_arch = "wasm32")]
         NetMode::HostLan { .. } => {
             eprintln!("net: hosting isn't available in the browser build");
+        }
+        // No session to spawn — arm the reconnect loop with the persisted
+        // token and let `maybe_reconnect` (run_if lost) claim the seat.
+        NetMode::Rejoin { addr, token } => {
+            let mut resume = world.resource_mut::<crate::net_plugin::ResumeInfo>();
+            resume.server_addr = Some(addr);
+            resume.token = Some(token);
+            resume.attempts = 0;
+            resume.last_attempt = None;
+            resume.lost = true;
+            eprintln!("net: rejoining previous match…");
         }
     }
 }

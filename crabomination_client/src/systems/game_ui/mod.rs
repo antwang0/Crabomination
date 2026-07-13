@@ -3617,11 +3617,22 @@ pub fn handle_game_input(
             if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
                 // Esc / right-click during a decision-driven target
                 // pick can't "cancel" — the engine is blocked waiting
-                // for an answer. Swallow the press silently so the
-                // user can still keep clicking targets. Spell / ability
-                // targeting can still cancel back to normal mode.
+                // for an answer. Tell the player why nothing happened
+                // (a swallowed Esc otherwise reads as a bug) and keep
+                // the pick armed. Spell / ability targeting can still
+                // cancel back to normal mode.
                 if !targeting.pending_decision_target {
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                } else {
+                    let source = if legal_targets.source_name.is_empty() {
+                        "the game".to_string()
+                    } else {
+                        legal_targets.source_name.clone()
+                    };
+                    log.push_event(
+                        format!("{source} needs a target — this choice can't be cancelled."),
+                        crate::theme::ACCENT_ORANGE,
+                    );
                 }
                 return;
             }

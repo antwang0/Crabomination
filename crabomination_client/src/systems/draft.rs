@@ -169,6 +169,10 @@ pub struct DraftSession {
 
     // Opponent select
     pub chosen_opponent: Option<usize>,
+
+    /// Outcome line of the last "Save Deck" click ("Saved to …" / error),
+    /// shown under the deckbuilding buttons. `None` until a save is tried.
+    pub save_status: Option<String>,
 }
 
 impl DraftSession {
@@ -199,7 +203,43 @@ impl DraftSession {
             basics: HashMap::new(),
             player_colors: [ManaColor::White, ManaColor::Blue],
             chosen_opponent: None,
+            save_status: None,
         }
+    }
+
+    /// Render the staged deck as importable decklist text ("N Name" lines,
+    /// basics included, then a Sideboard section) — the same shape
+    /// `decklist::parse_decklist` reads, so a saved draft deck can be
+    /// replayed via the menu's deck-path field.
+    pub fn decklist_text(&self) -> String {
+        fn counted(cards: &[CardFactory]) -> Vec<(String, u32)> {
+            let mut order: Vec<String> = Vec::new();
+            let mut counts: HashMap<String, u32> = HashMap::new();
+            for f in cards {
+                let name = f().name.to_string();
+                if !counts.contains_key(&name) {
+                    order.push(name.clone());
+                }
+                *counts.entry(name).or_insert(0) += 1;
+            }
+            order.into_iter().map(|n| { let c = counts[&n]; (n, c) }).collect()
+        }
+        let mut text = String::from("Deck\n");
+        for (name, count) in counted(&self.main) {
+            text.push_str(&format!("{count} {name}\n"));
+        }
+        for (&color, &count) in &self.basics {
+            if count > 0 {
+                text.push_str(&format!("{count} {}\n", basic_land_factory(color)().name));
+            }
+        }
+        if !self.sideboard.is_empty() {
+            text.push_str("\nSideboard\n");
+            for (name, count) in counted(&self.sideboard) {
+                text.push_str(&format!("{count} {name}\n"));
+            }
+        }
+        text
     }
 
     pub fn user_pack(&self) -> &[CardFactory] {
@@ -394,6 +434,11 @@ struct OpponentChoiceButton {
 #[derive(Component)]
 struct ConfirmDeckButton;
 
+/// "Save Deck" on the deckbuilding screen — writes the staged main +
+/// sideboard as decklist text a later "Play Deck vs Bot" can re-import.
+#[derive(Component)]
+struct SaveDeckButton;
+
 #[derive(Component)]
 struct PlayMatchButton;
 
@@ -440,6 +485,7 @@ impl Plugin for DraftPlugin {
                     handle_deckbuild_clicks,
                     handle_basic_buttons,
                     handle_confirm_deck,
+                    handle_save_deck,
                     handle_opponent_clicks,
                     handle_play_match,
                     handle_back_to_menu,
@@ -1502,6 +1548,37 @@ fn spawn_deckbuilding_screen(
                             Pickable::IGNORE,
                         ));
                     });
+
+                    // Save-deck button — writes the staged list as importable
+                    // decklist text so the draft survives past this session.
+                    right
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::axes(Val::Px(20.0), Val::Px(8.0)),
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            BackgroundColor(theme::BUTTON_INFO_BG),
+                            theme::HoverTint::new(theme::BUTTON_INFO_BG),
+                            SaveDeckButton,
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new("Save Deck"),
+                                ui_fonts.tf(14.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                Pickable::IGNORE,
+                            ));
+                        });
+                    if let Some(status) = &session.save_status {
+                        right.spawn((
+                            Text::new(status.clone()),
+                            ui_fonts.tf(12.0),
+                            TextColor(theme::TEXT_BODY),
+                            Pickable::IGNORE,
+                        ));
+                    }
                 });
             });
         });
@@ -1877,6 +1954,59 @@ fn handle_basic_buttons(
             session.adjust_basics(btn.color, btn.delta);
             return;
         }
+    }
+}
+
+/// Write the staged deck to `<config_dir>/crabomination/decks/` (native) or
+/// localStorage (wasm) and surface the result on the deckbuilding screen.
+fn handle_save_deck(
+    mut session: Option<ResMut<DraftSession>>,
+    buttons: Query<&Interaction, (Changed<Interaction>, With<SaveDeckButton>)>,
+) {
+    let Some(session) = session.as_mut() else { return };
+    if !matches!(session.phase, DraftPhase::Deckbuilding) {
+        return;
+    }
+    for interaction in &buttons {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let text = session.decklist_text();
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let format = format!("{:?}", session.format).to_lowercase();
+        session.save_status = Some(save_decklist(&format, stamp, &text));
+        return;
+    }
+}
+
+/// Native: a real .txt file the menu's deck-path field can point at.
+#[cfg(not(target_arch = "wasm32"))]
+fn save_decklist(format: &str, stamp: u64, text: &str) -> String {
+    let dir = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("crabomination")
+        .join("decks");
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        return format!("Save failed: {e}");
+    }
+    let path = dir.join(format!("draft-{format}-{stamp}.txt"));
+    match std::fs::write(&path, text) {
+        Ok(()) => format!("Saved to {}", path.display()),
+        Err(e) => format!("Save failed: {e}"),
+    }
+}
+
+/// Browser: localStorage via the shared key-value backend.
+#[cfg(target_arch = "wasm32")]
+fn save_decklist(format: &str, stamp: u64, text: &str) -> String {
+    let key = format!("decks/draft-{format}-{stamp}");
+    if crate::storage::save(&key, text) {
+        format!("Saved to browser storage ({key})")
+    } else {
+        "Save failed: browser storage unavailable".to_string()
     }
 }
 
