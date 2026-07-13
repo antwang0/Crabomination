@@ -973,3 +973,47 @@ fn flowstone_slide_shrinks_all_creatures() {
     let cp = g.computed_permanent(mine).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 1), "3/3 → 5/1");
 }
+
+/// Dragonbroods' Relic sacrifices for a 4/4 all-color Reliquary Dragon.
+#[test]
+fn dragonbroods_relic_makes_reliquary_dragon() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(0, catalog::dragonbroods_relic());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, ETB 3 kills it
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic,
+        ability_index: 1, // the sac ability
+        target: None, // sac ability has no target; the token's ETB auto-targets
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("sacrifice for a Reliquary Dragon");
+    drain_stack(&mut g);
+    let dragon_id = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Reliquary Dragon")
+        .expect("minted Reliquary Dragon")
+        .id;
+    let cp = g.computed_permanent(dragon_id).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "flying");
+    assert!(cp.keywords.contains(&Keyword::Lifelink), "lifelink");
+    assert_eq!(cp.colors.len(), 5, "all five colors");
+    assert!(g.battlefield_find(relic).is_none(), "relic sacrificed");
+    // The token's ETB deals 3 to an auto-chosen "any target" — the 2/2 dies or
+    // the opponent takes 3 to the face; either way 3 damage landed.
+    assert!(
+        g.battlefield_find(victim).is_none() || g.players[1].life == opp_life - 3,
+        "ETB dealt 3 damage somewhere"
+    );
+}

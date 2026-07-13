@@ -23,7 +23,7 @@ use crate::card::{
     DynamicPt, EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{drain, etb, mobilize, target_filtered};
+use crate::effect::shortcut::{drain, etb, mobilize, target_any, target_filtered};
 use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
     ManaPayload, PlayerRef, Predicate, Selector, ZoneDest,
@@ -1056,6 +1056,58 @@ pub fn flowstone_slide() -> CardDefinition {
             toughness: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost)),
             duration: Duration::EndOfTurn,
         },
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 7: five-color relic ──────────────────────────────────────────
+
+/// Dragonbroods' Relic — {1}{G} Artifact. {T}, Tap an untapped creature you
+/// control: Add one mana of any color. {3}{W}{U}{B}{R}{G}, Sacrifice this:
+/// Create a 4/4 all-color Dragon token named Reliquary Dragon with flying,
+/// lifelink, and "When this token enters, it deals 3 damage to any target."
+/// Sorcery speed.
+pub fn dragonbroods_relic() -> CardDefinition {
+    let reliquary_dragon = TokenDefinition {
+        name: "Reliquary Dragon".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(3),
+        })],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dragonbroods' Relic",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                tap_other_filter: Some(R::Creature.and(R::ControlledByYou)),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), w(), u(), b(), r(), g()]),
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: reliquary_dragon,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
