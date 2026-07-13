@@ -6187,6 +6187,10 @@ static DECKS: &[Factory] = &[
     super::decks::zahur_glorys_past,
     super::decks::the_last_ride,
     super::decks::the_speed_demon,
+    super::decks::aleshas_legacy,
+    super::decks::fire_rim_form,
+    super::decks::jade_cast_sentinel,
+    super::decks::gurmag_nightwatch,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -1,0 +1,123 @@
+//! Tarkir: Dragonstorm (TDM) gap batch — simple commons/uncommons on existing
+//! primitives: a deathtouch+indestructible combat trick (Alesha's Legacy), a
+//! flash pump Aura granting first strike (Fire-Rim Form), a graveyard-hate
+//! bottoming Construct (Jade-Cast Sentinel), and a dig-3-keep-top-rest-mill
+//! body (Gurmag Nightwatch). Tests in `crabomination/src/tests/tdm.rs`.
+
+use crate::card::{
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, Keyword,
+    SelectionRequirement as R, Subtypes, Value,
+};
+use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
+use crate::mana::{b, cost, generic, mono_hybrid, r, Color};
+
+/// Alesha's Legacy — {1}{B} Instant. Target creature you control gains
+/// deathtouch and indestructible until end of turn.
+pub fn aleshas_legacy() -> CardDefinition {
+    CardDefinition {
+        name: "Alesha's Legacy",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fire-Rim Form — {1}{R} Aura, Flash. Enchant creature. When it enters,
+/// enchanted creature gains first strike until end of turn. Enchanted creature
+/// gets +2/+0.
+pub fn fire_rim_form() -> CardDefinition {
+    CardDefinition {
+        name: "Fire-Rim Form",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 2, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+            keyword: Keyword::FirstStrike,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jade-Cast Sentinel — {4} Artifact Creature — Ape Snake 1/5, Reach. {2}, {T}:
+/// Put target card from a graveyard on the bottom of its owner's library.
+pub fn jade_cast_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Jade-Cast Sentinel",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Move {
+                what: target_filtered(R::InGraveyard),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Bottom,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gurmag Nightwatch — {2/B}{2/G}{2/U} 3/3 Human Ranger. When it enters, look at
+/// the top three cards of your library, put one back on top, the rest into your
+/// graveyard.
+pub fn gurmag_nightwatch() -> CardDefinition {
+    CardDefinition {
+        name: "Gurmag Nightwatch",
+        cost: cost(&[
+            mono_hybrid(2, Color::Black),
+            mono_hybrid(2, Color::Green),
+            mono_hybrid(2, Color::Blue),
+        ]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::LookTopKeepOneRestToGraveyard {
+            count: Value::Const(3),
+            who: None,
+            exile_rest: false,
+        })],
+        ..Default::default()
+    }
+}
