@@ -452,6 +452,7 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
             ("[  ]  \\", "Animation: slower · faster · reset"),
             ("`", "Debug console"),
             ("X", "Export game state"),
+            ("G", "Browse your graveyard (click a pile for others')"),
             ("V", "Browse the exile zone"),
             ("Click phase chart", "Cycle stop / skip for that step"),
         ],
@@ -1220,9 +1221,28 @@ pub fn graveyard_browser(
     existing: Query<Entity, With<GraveyardBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<GraveyardBrowser>, With<Button>)>,
+    chat: Res<crate::systems::chat::ChatInputState>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) && state.open {
         state.open = false;
+    }
+    // `G` toggles the viewer's own graveyard (clicking a pile still browses
+    // any player's). Suppressed while chat has the keyboard and while a
+    // decision modal is up — ChooseColor binds G to green mana.
+    if keyboard.just_pressed(KeyCode::KeyG)
+        && !chat.open
+        && view
+            .0
+            .as_ref()
+            .is_some_and(|cv| cv.pending_decision.is_none())
+    {
+        let your_seat = view.0.as_ref().map(|cv| cv.your_seat).unwrap_or(0);
+        if state.open && state.owner == your_seat {
+            state.open = false;
+        } else {
+            state.open = true;
+            state.owner = your_seat;
+        }
     }
 
     // Close when the dim overlay (outside the panel) is clicked.

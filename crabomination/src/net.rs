@@ -218,10 +218,21 @@ pub enum ServerMsg {
     /// seat: act within `seconds` or the server auto-acts for you. Sent
     /// once per arming; every accepted action re-arms (and re-sends).
     Rope { seconds: u32 },
-    /// The per-game chess clock (`CRAB_CHESS_CLOCK_SECS`): *your* seat is now
-    /// on the clock with `seconds` of match time left. Sent each time the
-    /// clock starts running for your seat; a flag fall concedes for you.
-    Clock { seconds: u32 },
+    /// The per-game chess clock (`CRAB_CHESS_CLOCK_SECS`): `seconds` is the
+    /// *receiving* seat's remaining match time. Broadcast to every human
+    /// seat whenever the clocked actor changes, so clients can render both
+    /// players' clocks at all times; a flag fall concedes for the flagged
+    /// seat. `seats[i]` is seat i's remaining time (`None` = unclocked bot)
+    /// and `running` is the seat currently burning time — both default
+    /// empty/None for messages from older servers, where the message meant
+    /// "your seat just went on the clock".
+    Clock {
+        seconds: u32,
+        #[serde(default)]
+        seats: Vec<Option<u32>>,
+        #[serde(default)]
+        running: Option<usize>,
+    },
     /// In-match chat from `seat` (display name `name`), already sanitized
     /// by the server. Relayed to every human seat and spectator.
     Chat { seat: usize, name: String, text: String },

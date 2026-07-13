@@ -327,10 +327,14 @@ pub fn poll_net(
             ServerMsg::Rope { seconds } => {
                 rope.deadline = Some(time.elapsed_secs_f64() + seconds as f64);
             }
-            // Our seat went on the per-game chess clock with this much match
-            // time left — arm the persistent countdown chip.
-            ServerMsg::Clock { seconds } => {
+            // Chess-clock update: arm our own countdown deadline, and mirror
+            // the per-seat remaining times (when the server sends them) so
+            // both players' clocks can render at all times.
+            ServerMsg::Clock { seconds, seats: clock_seats, running } => {
                 chess.deadline = Some(time.elapsed_secs_f64() + seconds as f64);
+                chess.seats = clock_seats.iter().map(|s| s.map(|v| v as f64)).collect();
+                chess.running = running;
+                chess.armed_at = time.elapsed_secs_f64();
             }
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
@@ -1024,20 +1028,29 @@ fn update_rope_banner(
 
 /// Local mirror of the per-game chess clock (`ServerMsg::Clock`): the
 /// absolute `Time::elapsed_secs_f64` instant our remaining match budget
-/// runs out. Re-armed each time our seat goes on the clock; the chip only
-/// renders while the view says we're the seat expected to act.
+/// runs out, plus (from newer servers) every seat's remaining time so both
+/// players' clocks render at all times — including the opponent's while
+/// they stall, and our own while we wait.
 #[derive(Resource, Default)]
 pub struct ChessClock {
     pub deadline: Option<f64>,
+    /// Remaining seconds per seat as of `armed_at` (`None` = unclocked bot).
+    /// Empty when the server predates per-seat clock broadcasts.
+    pub seats: Vec<Option<f64>>,
+    /// Seat currently burning time (its displayed value ticks down locally).
+    pub running: Option<usize>,
+    /// `Time::elapsed_secs_f64` when `seats` was captured.
+    pub armed_at: f64,
 }
 
-/// Marker for the chess-clock chip.
+/// Marker for the chess-clock chip container.
 #[derive(Component)]
 struct ChessClockChip;
 
-/// Marker for the chip's text node (updated in place each tick).
+/// Marker for a chip text node (updated in place each tick). The payload is
+/// the seat the line shows; `usize::MAX` for the legacy own-seat-only chip.
 #[derive(Component)]
-struct ChessClockChipText;
+struct ChessClockChipText(usize);
 
 /// Persistent match-clock chip: shows "♟ m:ss" while our seat is on the
 /// per-game chess clock, switching to the danger palette under 30s. The
@@ -1050,71 +1063,120 @@ fn update_chess_clock_chip(
     time: Res<Time>,
     fonts: Option<Res<crate::theme::UiFonts>>,
     existing: Query<Entity, With<ChessClockChip>>,
-    mut text_q: Query<(&mut Text, &mut TextColor), With<ChessClockChipText>>,
+    mut text_q: Query<(&mut Text, &mut TextColor, &ChessClockChipText)>,
 ) {
     let now = time.elapsed_secs_f64();
-    let our_turn = view
-        .0
-        .as_ref()
-        .is_some_and(|v| v.priority == v.your_seat || v.pending_decision.is_some());
-    let remaining = chess
-        .deadline
-        .filter(|_| our_turn)
-        .map(|d| (d - now).max(0.0));
-    let label = remaining.map(|rem| {
+    // Desired chip lines: (stable marker, label, danger-palette flag).
+    let mut lines: Vec<(usize, String, bool)> = Vec::new();
+    let fmt = |rem: f64| {
         let secs = rem.ceil() as u64;
-        format!("♟ {}:{:02}", secs / 60, secs % 60)
-    });
-    let low = remaining.is_some_and(|rem| rem <= 30.0);
-    match (label, existing.iter().next()) {
-        (Some(label), None) => {
-            let Some(fonts) = fonts else { return };
-            commands
-                .spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(52.0),
-                        right: Val::Px(12.0),
-                        ..default()
-                    },
-                    ChessClockChip,
-                    crate::systems::game_ui::InGameRoot,
-                    Pickable::IGNORE,
-                    GlobalZIndex(45),
-                ))
-                .with_children(|row| {
-                    row.spawn((
-                        Text::new(label),
-                        ChessClockChipText,
-                        fonts.tf(15.0),
-                        TextColor(crate::theme::TEXT_PRIMARY),
-                        BackgroundColor(crate::theme::HUD_BG),
-                        Node {
-                            padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
-                            border_radius: BorderRadius::all(Val::Px(6.0)),
-                            ..default()
-                        },
-                        Pickable::IGNORE,
-                    ));
-                });
+        format!("{}:{:02}", secs / 60, secs % 60)
+    };
+    if !chess.seats.is_empty() {
+        // Per-seat broadcast (newer servers): every clocked seat renders at
+        // all times, the running seat's value ticking down locally.
+        if let Some(cv) = view.0.as_ref() {
+            for (seat, left) in chess.seats.iter().enumerate() {
+                let Some(left) = left else { continue };
+                let elapsed = if chess.running == Some(seat) {
+                    now - chess.armed_at
+                } else {
+                    0.0
+                };
+                let rem = (left - elapsed).max(0.0);
+                let name = if seat == cv.your_seat {
+                    "You".to_string()
+                } else {
+                    cv.players
+                        .iter()
+                        .find(|p| p.seat == seat)
+                        .map(|p| p.name.clone())
+                        .unwrap_or_else(|| format!("P{seat}"))
+                };
+                let running = if chess.running == Some(seat) { "♟ " } else { "" };
+                lines.push((seat, format!("{running}{name} {}", fmt(rem)), rem <= 30.0));
+            }
         }
-        (Some(label), Some(_)) => {
-            for (mut text, mut color) in &mut text_q {
-                if text.0 != label {
+    } else {
+        // Legacy server (own-seat message only): countdown while we act.
+        let our_turn = view
+            .0
+            .as_ref()
+            .is_some_and(|v| v.priority == v.your_seat || v.pending_decision.is_some());
+        if let Some(rem) = chess.deadline.filter(|_| our_turn).map(|d| (d - now).max(0.0)) {
+            lines.push((usize::MAX, format!("♟ {}", fmt(rem)), rem <= 30.0));
+        }
+    }
+
+    if lines.is_empty() {
+        for e in &existing {
+            commands.entity(e).despawn();
+        }
+        return;
+    }
+    // The marker set only changes on server generation / seat-count changes,
+    // so a mismatch (or first spawn) rebuilds and everything else updates
+    // text in place.
+    let markers_match = text_q.iter().count() == lines.len()
+        && lines
+            .iter()
+            .all(|(m, _, _)| text_q.iter().any(|(_, _, t)| t.0 == *m));
+    if markers_match && !existing.is_empty() {
+        for (mut text, mut color, marker) in &mut text_q {
+            if let Some((_, label, low)) = lines.iter().find(|(m, _, _)| *m == marker.0) {
+                if text.0 != *label {
                     text.0 = label.clone();
                 }
-                color.0 = if low {
+                color.0 = if *low {
                     crate::theme::ACCENT_ORANGE
                 } else {
                     crate::theme::TEXT_PRIMARY
                 };
             }
         }
-        (None, Some(e)) => {
-            commands.entity(e).despawn();
-        }
-        _ => {}
+        return;
     }
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    let Some(fonts) = fonts else { return };
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(52.0),
+                right: Val::Px(12.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::End,
+                row_gap: Val::Px(4.0),
+                ..default()
+            },
+            ChessClockChip,
+            crate::systems::game_ui::InGameRoot,
+            Pickable::IGNORE,
+            GlobalZIndex(45),
+        ))
+        .with_children(|col| {
+            for (marker, label, low) in lines {
+                col.spawn((
+                    Text::new(label),
+                    ChessClockChipText(marker),
+                    fonts.tf(15.0),
+                    TextColor(if low {
+                        crate::theme::ACCENT_ORANGE
+                    } else {
+                        crate::theme::TEXT_PRIMARY
+                    }),
+                    BackgroundColor(crate::theme::HUD_BG),
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                        border_radius: BorderRadius::all(Val::Px(6.0)),
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ));
+            }
+        });
 }
 
 /// The card id a cast action targets, for tracking whether a pending cast

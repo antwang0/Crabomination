@@ -317,7 +317,16 @@ pub fn sync_keyword_labels(
             if !p.is_creature() {
                 continue;
             }
-            let strip = keyword_strip(&p.keywords);
+            let mut strip = keyword_strip(&p.keywords);
+            // Summoning sickness gets a board-visible "Zzz" tag (previously
+            // tooltip-only) — skipped when Haste lifts the restriction.
+            if p.summoning_sick && !p.keywords.contains(&Keyword::Haste) {
+                strip = if strip.is_empty() {
+                    "Zzz".to_string()
+                } else {
+                    format!("Zzz {strip}")
+                };
+            }
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
             }

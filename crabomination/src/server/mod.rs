@@ -691,12 +691,28 @@ fn run_match_inner(
                 let actor = expected_actor(&state, &GameAction::PassPriority);
                 if actor < n && clock_left[actor].is_some() {
                     clock_since = Some((actor, now));
-                    if prev != Some(actor)
-                        && let Some(tx) = seat_tx.get(actor).and_then(|s| s.as_ref())
-                    {
-                        let _ = tx.send(ServerMsg::Clock {
-                            seconds: clock_left[actor].unwrap_or_default().as_secs() as u32,
-                        });
+                    if prev != Some(actor) {
+                        // Broadcast every seat's remaining time so clients
+                        // can render both clocks (and see who's burning
+                        // time), not just their own countdown.
+                        let seats: Vec<Option<u32>> = clock_left
+                            .iter()
+                            .map(|l| l.map(|d| d.as_secs() as u32))
+                            .collect();
+                        for (i, tx) in seat_tx.iter().enumerate() {
+                            if let Some(tx) = tx.as_ref() {
+                                let _ = tx.send(ServerMsg::Clock {
+                                    seconds: clock_left
+                                        .get(i)
+                                        .copied()
+                                        .flatten()
+                                        .unwrap_or_default()
+                                        .as_secs() as u32,
+                                    seats: seats.clone(),
+                                    running: Some(actor),
+                                });
+                            }
+                        }
                     }
                 }
             }
