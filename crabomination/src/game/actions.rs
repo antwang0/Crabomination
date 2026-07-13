@@ -9916,6 +9916,12 @@ impl GameState {
         if ability.life_cost > 0 && self.players[p].life < ability.life_cost as i32 {
             return Err(GameError::InsufficientLife);
         }
+        // Pre-flight variable life-cost gate ("Pay X life", CR 107.16): the
+        // spend equals the activation's chosen `x_value`. Reject cleanly when
+        // short so tap/mana aren't burned (Krumar Initiate).
+        if ability.x_life_cost && self.players[p].life < x_value.unwrap_or(0) as i32 {
+            return Err(GameError::InsufficientLife);
+        }
 
         // Pre-flight {E} gate (CR 107.16): reject cleanly when the controller
         // lacks the energy. Mirrors the mana/life pre-pay checks; the spend
@@ -10329,6 +10335,7 @@ impl GameState {
             || ability.exile_other_x
             || ability.remove_counter_x.is_some()
             || ability.energy_x_cost
+            || ability.x_life_cost
         {
             x_value.unwrap_or(0)
         } else {
@@ -10538,6 +10545,16 @@ impl GameState {
         // observers see the cost.
         if ability.life_cost > 0 {
             let applied = self.adjust_life_applied(p, -(ability.life_cost as i32));
+            if applied < 0 {
+                auto_mana_events.push(GameEvent::LifeLost {
+                    player: p,
+                    amount: (-applied) as u32,
+                });
+            }
+        }
+        if ability.x_life_cost {
+            let paid = x_value.unwrap_or(0) as i32;
+            let applied = self.adjust_life_applied(p, -paid);
             if applied < 0 {
                 auto_mana_events.push(GameEvent::LifeLost {
                     player: p,

@@ -1595,6 +1595,13 @@ pub struct ActivatedAbility {
     /// initialisations pick up the new field automatically.
     #[serde(default)]
     pub life_cost: u32,
+    /// "Pay X life" as a variable additional cost, where X is the activation's
+    /// chosen `x_value` (CR 107.16). The body reads the same X via
+    /// `Value::XFromCost`. Mirrors `energy_x_cost` but drains life. Powers
+    /// Krumar Initiate's `{X}{B}, {T}, Pay X life: This creature endures X.`
+    /// Mutually independent from the fixed `life_cost`. Defaults to false.
+    #[serde(default)]
+    pub x_life_cost: bool,
     /// True if this ability is activated from the controller's graveyard
     /// rather than the battlefield. The activation walker searches the
     /// graveyard for the source instead of the battlefield. Used by

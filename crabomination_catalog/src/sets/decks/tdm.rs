@@ -9,13 +9,16 @@
 //! `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
-    Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
+    EnchantmentSubtype, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
+use crate::effect::shortcut::{etb, mobilize, target_filtered};
+use crate::effect::{
+    AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
+    ManaPayload, PlayerRef, Selector, ZoneDest,
+};
+use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, x, Color};
 
 /// Alesha's Legacy — {1}{B} Instant. Target creature you control gains
 /// deathtouch and indestructible until end of turn.
@@ -357,12 +360,121 @@ pub fn ringing_strike_mastery() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Tap {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature doesn't untap during its controller's untap step.",
+                effect: StaticEffect::PreventUntap {
+                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature has \"{5}: Untap this creature.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                    ability: ActivatedAbility {
+                        mana_cost: cost(&[generic(5)]),
+                        effect: Effect::Untap { what: Selector::This, up_to: None },
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Krumar Initiate — {1}{B} 2/2 Human Cleric. {X}{B}, {T}, Pay X life:
+/// This creature endures X. Activate only as a sorcery.
+pub fn krumar_initiate() -> CardDefinition {
+    CardDefinition {
+        name: "Krumar Initiate",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), b()]),
+            tap_cost: true,
+            x_life_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Endure { target: Selector::This, n: Value::XFromCost },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zurgo's Vanguard — {2}{R} */3 Dog Soldier with Mobilize 1. Its power
+/// equals the number of creatures you control.
+pub fn zurgos_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Zurgo's Vanguard",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Soldier],
+            ..Default::default()
+        },
+        toughness: 3,
+        dynamic_pt: Some(DynamicPt::CreaturesControlledPower { base_p: 0, base_t: 3 }),
+        triggered_abilities: vec![mobilize(1)],
+        ..Default::default()
+    }
+}
+
+/// War Effort — {3}{R} Enchantment. Creatures you control get +1/+0. Whenever
+/// you attack, create a 1/1 red Warrior token that's tapped and attacking,
+/// sacrificed at end of combat (Mobilize).
+pub fn war_effort() -> CardDefinition {
+    CardDefinition {
+        name: "War Effort",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Enchanted creature doesn't untap during its controller's untap step.",
-            effect: StaticEffect::PreventUntap {
-                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            description: "Creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 1,
+                toughness: 0,
             },
         }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Warrior".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Warrior],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragon's Prey — {2}{B} Instant. Costs {2} more to cast if it targets a
+/// Dragon. Destroy target creature.
+pub fn dragons_prey() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon's Prey",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        cost_increase_if_targets: Some((R::HasCreatureType(CreatureType::Dragon), 2)),
+        effect: Effect::Destroy { what: target_filtered(R::Creature) },
         ..Default::default()
     }
 }

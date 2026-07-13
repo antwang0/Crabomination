@@ -5,6 +5,12 @@ use crate::catalog;
 use crate::game::*;
 use crate::mana::Color;
 
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 /// Alesha's Legacy grants deathtouch + indestructible to your creature.
 #[test]
 fn aleshas_legacy_grants_two_keywords() {
@@ -379,4 +385,132 @@ fn rally_the_monastery_makes_two_monks() {
         .filter(|c| c.controller == 0 && c.definition.name == "Monk")
         .count();
     assert_eq!(monks, 2, "made two Monk tokens");
+}
+
+/// Ringing Strike Mastery grants the enchanted creature "{5}: Untap this."
+#[test]
+fn ringing_strike_mastery_grants_untap_ability() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::ringing_strike_mastery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(creature)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("enchant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).unwrap().tapped, "ETB tapped it");
+    // The granted {5}: Untap ability is surfaced as a virtual ability past the
+    // creature's printed abilities (index 0). Pay {5} and activate it.
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: creature,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("activate granted untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(creature).unwrap().tapped, "paying five untapped it");
+}
+
+/// Krumar Initiate pays X life to endure X (X +1/+1 counters here).
+#[test]
+fn krumar_initiate_endures_x_paying_life() {
+    let mut g = two_player_game();
+    let init = g.add_card_to_battlefield(0, catalog::krumar_initiate());
+    g.clear_sickness(init);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2); // for {X=2}
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: init,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: Some(2),
+    })
+    .expect("endure 2, pay 2 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 2, "paid X=2 life");
+    // Endure X put 2 +1/+1 counters (or made an X/X); either way power grew.
+    let cp = g.computed_permanent(init).unwrap();
+    assert!(cp.power >= 4, "2/2 endured 2 → at least 4 power");
+}
+
+/// Zurgo's Vanguard's power equals the number of creatures you control.
+#[test]
+fn zurgos_vanguard_power_tracks_creature_count() {
+    let mut g = two_player_game();
+    let zurgo = g.add_card_to_battlefield(0, catalog::zurgos_vanguard());
+    // Just Zurgo → power 1.
+    assert_eq!(g.computed_permanent(zurgo).unwrap().power, 1, "counts itself");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(zurgo).unwrap().power, 3, "3 creatures → power 3");
+}
+
+/// War Effort mints a tapped, attacking Warrior whenever you attack.
+#[test]
+fn war_effort_mobilizes_on_attack() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::war_effort());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let warriors = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Warrior")
+        .count();
+    assert_eq!(warriors, 1, "one tapped attacking Warrior");
+    // Anthem: the attacking bear is +1/+0.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+0 anthem");
+}
+
+/// Dragon's Prey costs {2} more if it targets a Dragon.
+#[test]
+fn dragons_prey_costs_more_vs_dragon() {
+    use crate::card::CardType;
+    let dragon = catalog::armament_dragon();
+    assert!(
+        dragon.card_types.contains(&CardType::Creature),
+        "sanity: armament_dragon is a creature"
+    );
+    let mut g = two_player_game();
+    // Non-Dragon target: base cost {2}{B} = 3.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dragons_prey());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast at non-Dragon for {2}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
 }

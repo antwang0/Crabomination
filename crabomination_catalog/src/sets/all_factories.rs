@@ -6202,6 +6202,10 @@ static DECKS: &[Factory] = &[
     super::decks::seize_opportunity,
     super::decks::ringing_strike_mastery,
     super::decks::rally_the_monastery,
+    super::decks::krumar_initiate,
+    super::decks::zurgos_vanguard,
+    super::decks::war_effort,
+    super::decks::dragons_prey,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
