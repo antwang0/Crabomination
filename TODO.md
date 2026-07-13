@@ -49,13 +49,26 @@ state-corrupting in ordinary play.
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
-`decks::tdm` shipped 20 commons/uncommons. Still open:
-- **Static Snare** cost rider — "costs {N} less per attacking creature" (a
-  per-attacker scaling reduction). Rally the Monastery's "{2} less if you've
-  cast another spell this turn" now ships (`self_cost_reduction_if_cast_spell`);
-  `cost_increase_if_targets` covers the increase case (Dragon's Prey).
+`decks::tdm` shipped ~34 commons/uncommons across seven batches. Still open,
+each needing a new primitive:
+- **The Siege cycle** (Barrensteppe/Frostcliff/Glacierwood/Hollowmurk Siege) —
+  "as this enters, choose mode A or B," a persistent per-permanent chosen mode
+  that gates which triggered/static abilities are active. Needs a
+  `CardInstance.chosen_mode` + an as-enters `ChooseMode` decision + mode-gated
+  abilities. Unblocks the whole 2-mode-enchantment cycle at once.
+- **Abzan Monument** — sac payoff mints an X/X token where X = greatest
+  toughness among your creatures. Needs a `CreateToken` variant taking `Value`
+  P/T (`Value::GreatestToughnessYouControl` already exists).
+- **Traveling Botanist** — "becomes tapped → look at top; if a land, may reveal
+  to hand, else may bin it." Needs a small `LookTopLandToHandElseMayBin` effect.
+- **Static Snare** cost rider — "costs {N} less per attacking creature."
 - **Reverberating Summons / the Dragonstorm cycle** — spell-count animate +
-  Dragon-enter self-bounce riders.
+  Dragon-enter self-bounce riders (the bounce half ships via `AnotherOfYours`
+  Dragon-enter triggers on the Corroding/Encroaching Dragonstorms).
+- **Breaching Dragonstorm** — impulse-exile-until-nonland + free-cast-if-MV≤8.
+- **Hundred-Battle Veteran** — "+2/+4 while 3+ kinds of counters among your
+  creatures" (a counter-kind-diversity predicate) + cast-from-gy-with-finality.
+- **Dragonstorm Forecaster** — tutor by exact card name (needs a name filter).
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 
