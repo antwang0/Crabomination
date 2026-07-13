@@ -6283,6 +6283,10 @@ static DECKS: &[Factory] = &[
     super::decks::possessed_goat,
     super::decks::hired_claw,
     super::decks::mistbreath_elder,
+    super::decks::plumecreed_mentor,
+    super::decks::azure_beastbinder,
+    super::decks::byrke_long_ear_of_the_law,
+    super::decks::dreamdew_entrancer,
     super::decks::bushwhack,
     super::decks::cheeky_house_mouse,
 ];
