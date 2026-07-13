@@ -1615,3 +1615,40 @@ pub fn eshki_dragonclaw() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Narset, Jeskai Waymaster — {U}{R}{W} 3/4 Human Monk. At your end step, you
+/// may discard your hand; if you do, draw cards equal to the number of spells
+/// you've cast this turn.
+pub fn narset_jeskai_waymaster() -> CardDefinition {
+    CardDefinition {
+        name: "Narset, Jeskai Waymaster",
+        cost: cost(&[u(), r(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::MayDo {
+                description: "Discard your hand to draw cards equal to spells cast this turn?"
+                    .into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::HandSizeOf(PlayerRef::You),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::SpellsCastThisTurn(PlayerRef::You),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}

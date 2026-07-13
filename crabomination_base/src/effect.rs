@@ -393,6 +393,10 @@ pub enum Value {
     /// "damage equal to the number of noncreature spells they've cast this
     /// turn" (the count includes the spell that triggered it).
     NoncreatureSpellsCastThisTurn(PlayerRef),
+    /// Total spells `who` has cast so far this turn (max over resolved
+    /// players). Backed by `Player.spells_cast_this_turn` — Narset, Jeskai
+    /// Waymaster draws this many after discarding her hand.
+    SpellsCastThisTurn(PlayerRef),
     /// Creatures `who` declared as attackers this turn (max over resolved
     /// players). Creatures *put onto the battlefield attacking* don't count,
     /// matching the Windbrisk Heights ruling on "attacked with N creatures".

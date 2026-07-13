@@ -245,6 +245,12 @@ impl GameState {
                 .map(|&p| self.players[p].noncreature_spells_cast_this_game_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::SpellsCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].spells_cast_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::OpponentsAttackedThisCombat => {
                 use crate::game::types::AttackTarget;
                 let mut seats = std::collections::HashSet::new();

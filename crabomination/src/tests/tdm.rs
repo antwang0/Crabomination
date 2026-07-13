@@ -1407,3 +1407,25 @@ fn eshki_draws_after_creature_and_noncreature_spell() {
         "two +1/+1 counters",
     );
 }
+
+/// Narset discards your hand and draws cards equal to spells cast this turn.
+#[test]
+fn narset_discards_hand_draws_per_spells() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::narset_jeskai_waymaster());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].spells_cast_this_turn = 2;
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "discarded 2, drew 2 (spells cast)");
+    assert!(g.players[0].graveyard.len() >= 2, "the whole hand was discarded");
+}
