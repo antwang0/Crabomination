@@ -1761,6 +1761,36 @@ fn flamehold_grappler_copies_next_spell() {
     assert!(g.battlefield_find(foe).is_none(), "bolt was copied — bear took 6");
 }
 
+/// Maelstrom of the Spirit Dragon taps for {C} and can tutor a Dragon.
+#[test]
+fn maelstrom_taps_for_colorless_and_tutors_dragon() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::maelstrom_of_the_spirit_dragon());
+    // {T}: Add {C}.
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("tap for C");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
+
+    // {4},{T},Sacrifice: tutor a Dragon to hand (untap after the first tap).
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    let dragon = g.add_card_to_library(0, catalog::jeskai_shrinekeeper());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("tutor Dragon");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dragon), "Dragon went to hand");
+    assert!(g.battlefield_find(land).is_none(), "land sacrificed");
+}
+
 /// Static Snare costs {1} less per attacking creature (both players' count).
 #[test]
 fn static_snare_reduced_by_attackers() {

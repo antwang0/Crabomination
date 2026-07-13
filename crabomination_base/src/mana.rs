@@ -435,6 +435,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast spells with mana value 5 or greater or
     /// spells with {X} in their mana costs." (Troyan, Gutsy Explorer.)
     HighMvOrX,
+    /// "Spend this mana only to cast a Dragon spell or an Omen spell."
+    /// (Maelstrom of the Spirit Dragon.)
+    DragonOrOmenSpell,
 }
 
 impl SpendRestriction {
@@ -462,6 +465,11 @@ impl SpendRestriction {
                 kind.colorless || kind.activating_ability
             }
             SpendRestriction::HighMvOrX => kind.mana_value >= 5 || kind.has_x,
+            SpendRestriction::DragonOrOmenSpell => {
+                kind.omen
+                    || kind.changeling
+                    || kind.creature_types.contains(&crate::card::CreatureType::Dragon)
+            }
         }
     }
 }
@@ -505,6 +513,10 @@ pub struct SpellKind {
     pub mana_value: u32,
     /// The spell being cast has `{X}` in its mana cost (Troyan's restriction).
     pub has_x: bool,
+    /// The spell is being cast as an Omen (CR 702.183 — Maelstrom of the Spirit
+    /// Dragon's "Dragon spell or an Omen spell" restriction). Set only on the
+    /// Omen-cast path; `spell_kind()` leaves it false.
+    pub omen: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

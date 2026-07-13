@@ -3215,6 +3215,7 @@ impl CardDefinition {
             colorless: self.printed_colors().is_empty(),
             mana_value: self.cost.cmc(),
             has_x: self.cost.has_x(),
+            omen: false,
         }
     }
 

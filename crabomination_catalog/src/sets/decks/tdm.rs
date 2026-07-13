@@ -2111,6 +2111,46 @@ pub fn windcrag_siege() -> CardDefinition {
     }
 }
 
+/// Maelstrom of the Spirit Dragon — Land. {T}: Add {C}. {T}: Add one mana of
+/// any color, spend only on a Dragon or Omen spell. {4},{T},Sacrifice: search
+/// your library for a Dragon card, reveal it, put it into your hand, shuffle.
+pub fn maelstrom_of_the_spirit_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Maelstrom of the Spirit Dragon",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                        crate::mana::SpendRestriction::DragonOrOmenSpell,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasCreatureType(CreatureType::Dragon),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// United Battlefront — {3}{W} Sorcery. Look at the top seven cards; put up to
 /// two noncreature, nonland permanent cards with mana value 3 or less onto the
 /// battlefield, rest to the bottom in a random order.

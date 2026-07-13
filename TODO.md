@@ -57,8 +57,14 @@ Arashin City among them). Shipped since: **Nature's Rhythm** (X-search-to-
 battlefield + Harmonize, which is already a keyword), **Smile at Death** (upkeep
 up-to-two graveyard reanimate via `ApplyToTargets`), **Roar of Endless Song**
 (Saga — Elephants then a team P/T double via `ForEach` + `Value::PowerOf/
-ToughnessOf`). Still open, each needing a new primitive:
-- **Static Snare** cost rider — "costs {N} less per attacking creature."
+ToughnessOf`). Shipped since: **Windcrag Siege** (Mardu = new
+`StaticEffect::DoubleControllerAttackTriggers` Isshin-style doubler; Jeskai =
+upkeep Goblin), **United Battlefront** (existing `LookTopPutMatchingOntoBattlefield`,
+max 2), **Static Snare** cost rider (`affinity_filter` now counts attacking
+creatures — `evaluate_requirement_on_card` learned `R::IsAttacking`), and
+**Maelstrom of the Spirit Dragon** (new `SpendRestriction::DragonOrOmenSpell`
++ `SpellKind.omen`, threaded through `cast_omen`). Still open, each needing a
+new primitive:
 - **Reverberating Summons** — spell-count self-animate (3/3 Monk EOT) + the
   discard-hand+sac activated ability (`discard_hand_cost` exists).
 - **Neriv, Heart of the Storm** — damage-doubling replacement filtered to
@@ -66,12 +72,8 @@ ToughnessOf`). Still open, each needing a new primitive:
 - **Glacial Dragonhunt** — needs a filtered reflexive discard ("when you discard
   a *nonland* card this way, …"); `Effect::MayDiscard` has no filter field yet.
 - **Songcrafter Mage** — grant Harmonize to a target graveyard card.
-- **Windcrag Siege (Mardu) / United Battlefront / Sidisi / The Sibsig Ceremony**
-  — Isshin-style attack-caused-trigger doubler; a top-N filtered permanent
-  deploy-rest-to-bottom; a sacrificed-MV → target-MV+1 reanimate link; and a
-  "the creature entered because you cast it" ETB predicate, respectively.
-- **Maelstrom of the Spirit Dragon** — Dragon/Omen-only restricted mana (the
-  `SpendRestriction` set has no "Dragon or Omen spell" variant yet).
+- **Sidisi / The Sibsig Ceremony** — a sacrificed-MV → target-MV+1 reanimate
+  link; and a "the creature entered because you cast it" ETB predicate.
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 

@@ -395,3 +395,26 @@ fn restricted_pay_is_atomic_on_failure() {
     assert_eq!(pool.amount(Color::Blue), 1);
     assert_eq!(pool.restricted_total(), 1);
 }
+
+#[test]
+fn dragon_or_omen_mana_funds_a_dragon_but_not_a_bear() {
+    use crate::card::CreatureType;
+    // "Add one mana of any color, spend only on a Dragon or Omen spell."
+    let dragon_kind = SpellKind {
+        creature: true,
+        creature_types: vec![CreatureType::Dragon],
+        ..Default::default()
+    };
+    let bear_kind = SpellKind { creature: true, ..Default::default() };
+    let omen_kind = SpellKind { instant_or_sorcery: true, omen: true, ..Default::default() };
+
+    assert!(SpendRestriction::DragonOrOmenSpell.allows(&dragon_kind), "funds a Dragon spell");
+    assert!(SpendRestriction::DragonOrOmenSpell.allows(&omen_kind), "funds an Omen spell");
+    assert!(!SpendRestriction::DragonOrOmenSpell.allows(&bear_kind), "not a plain creature");
+
+    // A pool of one Dragon/Omen-restricted red pays a {R} Dragon, not a {R} bear.
+    let mut pool = ManaPool::new();
+    pool.add_restricted(Color::Red, 1, SpendRestriction::DragonOrOmenSpell);
+    assert!(pool.clone().pay_for_spell(&cost(&[r()]), &dragon_kind).is_ok());
+    assert!(pool.pay_for_spell(&cost(&[r()]), &bear_kind).is_err());
+}

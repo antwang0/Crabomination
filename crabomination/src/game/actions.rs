@@ -3761,7 +3761,15 @@ impl GameState {
         };
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        // The Omen half is a noncreature instant/sorcery cast; flag it so
+        // Omen-restricted mana (Maelstrom of the Spirit Dragon) may fund it.
+        let kind = crate::mana::SpellKind {
+            instant_or_sorcery: true,
+            casting_nonartifact_spell: true,
+            omen: true,
+            ..Default::default()
+        };
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -8255,12 +8263,22 @@ impl GameState {
         cost: &crate::mana::ManaCost,
         forced_only: bool,
     ) -> Result<PaymentReceipt, GameError> {
+        self.try_pay_with_auto_tap_kind(payer, cost, forced_only, &crate::mana::SpellKind::default())
+    }
+
+    /// `try_pay_with_auto_tap_mode` with an explicit `SpellKind`, so a cast
+    /// path that isn't the plain `cast_spell` (Omen halves) can still let
+    /// spend-restricted mana recognize what it's funding.
+    pub(crate) fn try_pay_with_auto_tap_kind(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        forced_only: bool,
+        kind: &crate::mana::SpellKind,
+    ) -> Result<PaymentReceipt, GameError> {
         let snapshot = self.snapshot_payment_state(payer);
-        // The auto-tap wrappers fund non-spell costs (cycling, equip,
-        // ability activations, engine-driven pays). Restricted "cast only"
-        // mana never applies to these, so pay as `Other`. These paths don't
-        // pose the float-spend confirmation, so pass `None`.
-        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, &crate::mana::SpellKind::default(), None)
+        // These paths don't pose the float-spend confirmation, so pass `None`.
+        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, kind, None)
     }
 
     /// CR 601.2g — the pre-existing floating mana that paying `cost` would sweep
