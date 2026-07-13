@@ -4023,6 +4023,21 @@ impl GameState {
         {
             d += 1;
         }
+        // Neriv, Heart of the Storm — a creature you control that entered this
+        // turn deals double damage (combat and noncombat alike).
+        if let Some(src) = source
+            && let Some(sc) = self.battlefield_find(src)
+            && sc.definition.is_creature()
+            && sc.entered_turn == Some(self.turn_number)
+        {
+            d += self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == sc.controller)
+                .flat_map(|c| &c.definition.static_abilities)
+                .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn))
+                .count() as u32;
+        }
         amount.saturating_mul(1 << d.min(16)) >> h.min(16)
     }
 
@@ -13497,6 +13512,7 @@ fn static_effect_to_effects(
             | StaticEffect::HalveDamageDealt
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::DoubleDamageToOpponents
+            | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou

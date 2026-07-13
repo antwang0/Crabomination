@@ -1761,6 +1761,21 @@ fn flamehold_grappler_copies_next_spell() {
     assert!(g.battlefield_find(foe).is_none(), "bolt was copied — bear took 6");
 }
 
+/// Neriv doubles damage from a creature you control that entered this turn,
+/// but not from one that entered earlier.
+#[test]
+fn neriv_doubles_fresh_creature_damage() {
+    use crate::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::neriv_heart_of_the_storm());
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let old = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(fresh).unwrap().entered_turn = Some(g.turn_number);
+    g.battlefield_find_mut(old).unwrap().entered_turn = Some(g.turn_number.saturating_sub(1));
+    assert_eq!(g.scale_damage_to(Some(fresh), EntityRef::Player(1), 3), 6, "fresh doubled");
+    assert_eq!(g.scale_damage_to(Some(old), EntityRef::Player(1), 3), 3, "old not doubled");
+}
+
 /// Maelstrom of the Spirit Dragon taps for {C} and can tutor a Dragon.
 #[test]
 fn maelstrom_taps_for_colorless_and_tutors_dragon() {

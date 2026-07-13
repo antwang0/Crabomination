@@ -61,14 +61,13 @@ ToughnessOf`). Shipped since: **Windcrag Siege** (Mardu = new
 `StaticEffect::DoubleControllerAttackTriggers` Isshin-style doubler; Jeskai =
 upkeep Goblin), **United Battlefront** (existing `LookTopPutMatchingOntoBattlefield`,
 max 2), **Static Snare** cost rider (`affinity_filter` now counts attacking
-creatures — `evaluate_requirement_on_card` learned `R::IsAttacking`), and
+creatures — `evaluate_requirement_on_card` learned `R::IsAttacking`),
 **Maelstrom of the Spirit Dragon** (new `SpendRestriction::DragonOrOmenSpell`
-+ `SpellKind.omen`, threaded through `cast_omen`). Still open, each needing a
-new primitive:
++ `SpellKind.omen`, threaded through `cast_omen`), and **Neriv, Heart of the
+Storm** (new `StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn` in
+`scale_damage_to`). Still open, each needing a new primitive:
 - **Reverberating Summons** — spell-count self-animate (3/3 Monk EOT) + the
   discard-hand+sac activated ability (`discard_hand_cost` exists).
-- **Neriv, Heart of the Storm** — damage-doubling replacement filtered to
-  creatures you control that entered this turn.
 - **Glacial Dragonhunt** — needs a filtered reflexive discard ("when you discard
   a *nonland* card this way, …"); `Effect::MayDiscard` has no filter field yet.
 - **Songcrafter Mage** — grant Harmonize to a target graveyard card.

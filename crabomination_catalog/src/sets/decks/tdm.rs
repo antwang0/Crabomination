@@ -2111,6 +2111,30 @@ pub fn windcrag_siege() -> CardDefinition {
     }
 }
 
+/// Neriv, Heart of the Storm — {1}{R}{W}{B} 4/5 Legendary Spirit Dragon with
+/// flying. If a creature you control that entered this turn would deal damage,
+/// it deals twice that much instead.
+pub fn neriv_heart_of_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Neriv, Heart of the Storm",
+        cost: cost(&[generic(1), r(), w(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "A creature you control that entered this turn deals double damage.",
+            effect: StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Maelstrom of the Spirit Dragon — Land. {T}: Add {C}. {T}: Add one mana of
 /// any color, spend only on a Dragon or Omen spell. {4},{T},Sacrifice: search
 /// your library for a Dragon card, reveal it, put it into your hand, shuffle.

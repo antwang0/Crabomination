@@ -761,6 +761,10 @@ pub enum StaticEffect {
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's
     /// opponents; consulted by `GameState::scale_damage_to`.
     DoubleDamageToOpponents,
+    /// CR 614.5 — "If a creature you control that entered this turn would deal
+    /// damage, it deals twice that much damage instead." (Neriv, Heart of the
+    /// Storm.) Combat and noncombat alike; consulted by `scale_damage_to`.
+    DoubleDamageFromCreaturesEnteredThisTurn,
     /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
     /// opponent or a permanent an opponent controls, it deals double that
     /// damage instead." (Solphim, Mayhem Dominus.) Noncombat-only and also

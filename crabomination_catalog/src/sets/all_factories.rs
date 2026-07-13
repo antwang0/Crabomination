@@ -6253,6 +6253,7 @@ static DECKS: &[Factory] = &[
     super::decks::windcrag_siege,
     super::decks::united_battlefront,
     super::decks::maelstrom_of_the_spirit_dragon,
+    super::decks::neriv_heart_of_the_storm,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
