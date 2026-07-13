@@ -958,6 +958,9 @@ fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
         if aa.life_cost > 0 {
             cost.push(format!("Pay {} life", aa.life_cost));
         }
+        if aa.x_life_cost {
+            cost.push("Pay X life".into());
+        }
         if aa.sac_cost {
             cost.push("Sacrifice this".into());
         }

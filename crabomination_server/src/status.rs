@@ -60,7 +60,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
          \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
          \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
          \"avg_duration_secs\":{},\"min_duration_secs\":{},\"max_duration_secs\":{},\
-         \"duration_buckets\":[{},{},{},{},{},{}],\
+         \"duration_stddev_secs\":{},\"duration_buckets\":[{},{},{},{},{},{}],\
          \"catalog_cards\":{}}}\n",
         started.elapsed().as_secs(),
         st.total_matches(),
@@ -103,6 +103,7 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
         st.avg_duration().as_secs(),
         st.min_duration.map(|d| d.as_secs()).unwrap_or(0),
         st.max_duration.map(|d| d.as_secs()).unwrap_or(0),
+        st.duration_stddev().as_secs(),
         st.duration_buckets[0],
         st.duration_buckets[1],
         st.duration_buckets[2],
@@ -151,6 +152,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     // match feel snappy?" want the p50, and the p90 flags the slow tail.
     m("median_duration_seconds", "gauge", "Median (p50) match duration in seconds (histogram upper bound).", st.percentile(0.5).as_secs().to_string());
     m("duration_p90_seconds", "gauge", "90th-percentile match duration in seconds (slow-tail bound).", st.percentile(0.9).as_secs().to_string());
+    m("duration_stddev_seconds", "gauge", "Standard deviation of match duration in seconds (spread of game length).", st.duration_stddev().as_secs().to_string());
     m("connections_current", "gauge", "Active connections.", sl.current.to_string());
     m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
@@ -296,6 +298,7 @@ mod tests {
                     "\"inconclusive\":0", "\"inconclusive_pct\":0",
                     "\"decisive_pct\":0", "\"draw_pct\":0",
                     "\"avg_duration_secs\":0", "\"min_duration_secs\":0",
+                    "\"duration_stddev_secs\":0",
                     "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
         }
@@ -331,6 +334,7 @@ mod tests {
         assert!(body.contains("crab_avg_duration_seconds 0"));
         assert!(body.contains("crab_median_duration_seconds 0"));
         assert!(body.contains("crab_duration_p90_seconds 0"));
+        assert!(body.contains("crab_duration_stddev_seconds 0"));
         assert!(body.contains("crab_match_duration_bucket{band=\"<30s\"} 0"));
         // Refusal breakdown by reason + peak-per-ip gauge.
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
