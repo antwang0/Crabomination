@@ -492,15 +492,16 @@ fn white_monk_prowess_token() -> TokenDefinition {
     }
 }
 
-/// Rally the Monastery — {3}{W} Instant. Choose one — create two 1/1 white Monk
-/// tokens with prowess; up to two target creatures you control each get +2/+2
-/// until end of turn; or destroy target creature with power 4 or greater. (The
-/// "costs {2} less if you've cast another spell this turn" reduction is dropped.)
+/// Rally the Monastery — {3}{W} Instant, {2} less if you've cast another spell
+/// this turn. Choose one — create two 1/1 white Monk tokens with prowess; up to
+/// two target creatures you control each get +2/+2 until end of turn; or destroy
+/// target creature with power 4 or greater.
 pub fn rally_the_monastery() -> CardDefinition {
     CardDefinition {
         name: "Rally the Monastery",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
+        self_cost_reduction_if_cast_spell: Some(2),
         effect: Effect::ChooseMode(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,

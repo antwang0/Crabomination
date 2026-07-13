@@ -387,6 +387,35 @@ fn rally_the_monastery_makes_two_monks() {
     assert_eq!(monks, 2, "made two Monk tokens");
 }
 
+/// Rally the Monastery costs {2} less after another spell this turn.
+#[test]
+fn rally_the_monastery_cheaper_after_a_spell() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::rally_the_monastery());
+    // Pretend a prior spell resolved this turn.
+    g.players[0].spells_cast_this_turn = 1;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1); // only {1}{W} = 2 available, not 4
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast for {1}{W} thanks to the reduction");
+    drain_stack(&mut g);
+    let monks = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Monk")
+        .count();
+    assert_eq!(monks, 2, "resolved after the discount");
+}
+
 /// Ringing Strike Mastery grants the enchanted creature "{5}: Untap this."
 #[test]
 fn ringing_strike_mastery_grants_untap_ability() {

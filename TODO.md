@@ -49,22 +49,11 @@ state-corrupting in ordinary play.
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
-`decks::tdm` shipped 15 commons/uncommons (Alesha's Legacy, Fire-Rim Form,
-Jade-Cast Sentinel, Gurmag Nightwatch, Kin-Tree Severance, Armament Dragon,
-Fresh Start, Lie in Wait, Dragonstorm Globe, Wingspan Stride, Riverwalk
-Technique, Static Snare, Seize Opportunity, Ringing Strike Mastery, Rally the
-Monastery). Still open, each needing a new primitive or a heavier build:
-- **Dragon's Prey** / **Static Snare** / **Rally the Monastery** — "costs {N}
-  more/less if it targets X" and "costs {N} less per attacking creature" cost
-  riders (a target-/board-conditional cost delta). The Snare/Rally bodies ship;
-  the cost riders are dropped.
-- **Krumar Initiate** — Endure X where X is an activation cost paid partly as
-  life ("Pay X life"): needs an `x_life_cost` on `ActivatedAbility` (life scaled
-  by the ability's X). `Effect::Endure` already exists.
-- **Ringing Strike Mastery** — grant "{5}: untap this creature" to the enchanted
-  creature (an Aura granting an *activated* ability to its host).
-- **Zurgo's Vanguard** / **War Effort** — Mobilize N (attack trigger mints
-  tapped-and-attacking tokens, sacrificed at the next end step).
+`decks::tdm` shipped 20 commons/uncommons. Still open:
+- **Static Snare** cost rider — "costs {N} less per attacking creature" (a
+  per-attacker scaling reduction). Rally the Monastery's "{2} less if you've
+  cast another spell this turn" now ships (`self_cost_reduction_if_cast_spell`);
+  `cost_increase_if_targets` covers the increase case (Dragon's Prey).
 - **Reverberating Summons / the Dragonstorm cycle** — spell-count animate +
   Dragon-enter self-bounce riders.
 

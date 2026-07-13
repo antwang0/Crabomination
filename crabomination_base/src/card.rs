@@ -2134,6 +2134,12 @@ pub struct CardDefinition {
     /// `Player.cards_drawn_this_turn`. Defaults to `false`.
     #[serde(default)]
     pub self_cost_reduction_per_cards_drawn: bool,
+    /// "This spell costs `{amount}` less to cast if you've cast another spell
+    /// this turn" (Rally the Monastery). Generic-only, clamped by the caller.
+    /// Reads `Player.spells_cast_this_turn`, which does not yet count the
+    /// spell being cast, so `> 0` means a prior spell. `None` by default.
+    #[serde(default)]
+    pub self_cost_reduction_if_cast_spell: Option<u32>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)

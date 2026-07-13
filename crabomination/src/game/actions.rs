@@ -553,6 +553,14 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     if card.definition.self_cost_reduction_per_cards_drawn {
         reduction = reduction.saturating_add(state.players[caster].cards_drawn_this_turn);
     }
+    // Card-intrinsic "costs {amount} less if you've cast another spell this
+    // turn" (Rally the Monastery). `spells_cast_this_turn` excludes the spell
+    // being cast, so `> 0` means a prior spell went off.
+    if let Some(amount) = card.definition.self_cost_reduction_if_cast_spell
+        && state.players[caster].spells_cast_this_turn > 0
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by
