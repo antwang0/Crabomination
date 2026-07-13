@@ -49,13 +49,8 @@ state-corrupting in ordinary play.
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
-`decks::tdm` shipped ~34 commons/uncommons across seven batches. Still open,
-each needing a new primitive:
-- **The Siege cycle** (Barrensteppe/Frostcliff/Glacierwood/Hollowmurk Siege) —
-  "as this enters, choose mode A or B," a persistent per-permanent chosen mode
-  that gates which triggered/static abilities are active. Needs a
-  `CardInstance.chosen_mode` + an as-enters `ChooseMode` decision + mode-gated
-  abilities. Unblocks the whole 2-mode-enchantment cycle at once.
+`decks::tdm` shipped ~38 commons/uncommons. Still open, each needing a new
+primitive:
 - **Abzan Monument** — sac payoff mints an X/X token where X = greatest
   toughness among your creatures. Needs a `CreateToken` variant taking `Value`
   P/T (`Value::GreatestToughnessYouControl` already exists).

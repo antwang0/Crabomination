@@ -1035,3 +1035,113 @@ fn traveling_botanist_digs_on_tap() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "nonland milled");
 }
+
+// ── Siege cycle (CR 614 `enter_modes` persistent mode choice) ────────────────
+
+/// Cast `siege` from player 0's hand, choosing `enter_modes` index `mode_idx`.
+fn cast_siege(
+    g: &mut GameState,
+    siege: crate::card::CardDefinition,
+    mode_idx: usize,
+) -> CardId {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let id = g.add_card_to_hand(0, siege);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(mode_idx)]));
+    // One of each color + generic — enough to pay any Siege's ≤4 cost.
+    g.players[0].mana_pool.add_colorless(2);
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast siege");
+    drain_stack(g);
+    id
+}
+
+/// Barrensteppe Siege (Abzan): at your end step, +1/+1 counter on each creature.
+#[test]
+fn barrensteppe_siege_abzan_end_step_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_siege(&mut g, catalog::barrensteppe_siege(), 0);
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Abzan end step put a +1/+1 counter on my creature",
+    );
+}
+
+/// Frostcliff Siege (Temur): creatures you control get +1/+0, trample, haste.
+#[test]
+fn frostcliff_siege_temur_anthem() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    cast_siege(&mut g, catalog::frostcliff_siege(), 1);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "Temur anthem +1/+0");
+    assert!(cp.keywords.contains(&Keyword::Trample), "Temur grants trample");
+    assert!(cp.keywords.contains(&Keyword::Haste), "Temur grants haste");
+}
+
+/// Glacierwood Siege (Temur): casting an instant mills the opponent four.
+#[test]
+fn glacierwood_siege_temur_mills_on_instant() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    cast_siege(&mut g, catalog::glacierwood_siege(), 0);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 4, "Temur milled opponent four");
+}
+
+/// Hollowmurk Siege (Abzan): when you attack, +1/+1 counter + menace on attacker.
+#[test]
+fn hollowmurk_siege_abzan_pumps_attacker() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    cast_siege(&mut g, catalog::hollowmurk_siege(), 1);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "attacker got a +1/+1 counter",
+    );
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace),
+        "attacker gained menace",
+    );
+}

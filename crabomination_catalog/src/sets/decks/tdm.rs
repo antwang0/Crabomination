@@ -15,15 +15,20 @@
 //! Encroaching Dragonstorm (basic ramp + Dragon bounce) and Dragonclaw Strike
 //! (double-P/T fight). Batch 4 adds Clarion Conqueror (activation lock),
 //! Ambling Stormshell (Ward Turtle) and Furious Forebear (graveyard recursion).
-//! Batch 5 adds Bewilder and Sarkhan, Dragon Ascendant. Tests in
+//! Batch 5 adds Bewilder and Sarkhan, Dragon Ascendant. The Siege cycle
+//! (Barrensteppe / Frostcliff / Glacierwood / Hollowmurk) rides the new
+//! `CardDefinition.enter_modes` persistent as-enters mode choice. Tests in
 //! `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    DynamicPt, EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility,
-    StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    DynamicPt, EnchantmentSubtype, EnterMode, EquipBonus, Keyword, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{drain, etb, mobilize, target_any, target_filtered};
+use crate::effect::shortcut::{
+    cast_is_instant_or_sorcery, drain, etb, mobilize, on_you_attack, target_any, target_filtered,
+};
+use crate::game::TurnStep;
 use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
     ManaPayload, PlayerRef, Predicate, Selector, ZoneDest,
@@ -1132,6 +1137,192 @@ pub fn traveling_botanist() -> CardDefinition {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
             effect: Effect::LookTopLandToHandElseBin { who: PlayerRef::You },
         }],
+        ..Default::default()
+    }
+}
+
+/// "Creatures you control" — the shared anthem/counter selector for the Siege
+/// cycle's mode abilities.
+fn your_creatures() -> Selector {
+    Selector::EachPermanent(R::Creature.and(R::ControlledByYou))
+}
+
+/// Barrensteppe Siege — {2}{W}{B} Enchantment. As it enters, choose Abzan or
+/// Mardu. Abzan: at your end step, +1/+1 counter on each creature you control.
+/// Mardu: at your end step, if a creature died under your control this turn,
+/// each opponent sacrifices a creature.
+pub fn barrensteppe_siege() -> CardDefinition {
+    let end_step = || EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer);
+    CardDefinition {
+        name: "Barrensteppe Siege",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        enter_modes: Some(vec![
+            EnterMode {
+                label: "Abzan",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: end_step(),
+                    effect: Effect::AddCounter {
+                        what: your_creatures(),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                }],
+                ..Default::default()
+            },
+            EnterMode {
+                label: "Mardu",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: end_step(),
+                    effect: Effect::If {
+                        cond: Predicate::CreaturesDiedThisTurnAtLeast {
+                            who: PlayerRef::You,
+                            at_least: Value::ONE,
+                        },
+                        then: Box::new(Effect::Sacrifice {
+                            who: Selector::Player(PlayerRef::EachOpponent),
+                            count: Value::ONE,
+                            filter: R::Creature,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                }],
+                ..Default::default()
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Frostcliff Siege — {1}{U}{R} Enchantment. As it enters, choose Jeskai or
+/// Temur. Jeskai: draw when your creatures deal combat damage to a player.
+/// Temur: creatures you control get +1/+0 and have trample and haste.
+pub fn frostcliff_siege() -> CardDefinition {
+    CardDefinition {
+        name: "Frostcliff Siege",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Enchantment],
+        enter_modes: Some(vec![
+            EnterMode {
+                label: "Jeskai",
+                // `once_per_turn` approximates "one or more creatures … deal
+                // combat damage" — the per-creature dealer event would over-draw.
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::DealsCombatDamageToPlayer,
+                        EventScope::YourControl,
+                    )
+                    .once_per_turn(),
+                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                }],
+                ..Default::default()
+            },
+            EnterMode {
+                label: "Temur",
+                static_abilities: vec![
+                    StaticAbility {
+                        description: "Creatures you control get +1/+0.",
+                        effect: StaticEffect::PumpPT {
+                            applies_to: your_creatures(),
+                            power: 1,
+                            toughness: 0,
+                        },
+                    },
+                    StaticAbility {
+                        description: "Creatures you control have trample.",
+                        effect: StaticEffect::GrantKeyword {
+                            applies_to: your_creatures(),
+                            keyword: Keyword::Trample,
+                        },
+                    },
+                    StaticAbility {
+                        description: "Creatures you control have haste.",
+                        effect: StaticEffect::GrantKeyword {
+                            applies_to: your_creatures(),
+                            keyword: Keyword::Haste,
+                        },
+                    },
+                ],
+                ..Default::default()
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Glacierwood Siege — {1}{G}{U} Enchantment. As it enters, choose Temur or
+/// Sultai. Temur: target player mills four when you cast an instant/sorcery.
+/// Sultai: you may play lands from your graveyard.
+pub fn glacierwood_siege() -> CardDefinition {
+    CardDefinition {
+        name: "Glacierwood Siege",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Enchantment],
+        enter_modes: Some(vec![
+            EnterMode {
+                label: "Temur",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                        .with_filter(cast_is_instant_or_sorcery()),
+                    effect: Effect::Mill {
+                        who: target_filtered(R::Player),
+                        amount: Value::Const(4),
+                    },
+                }],
+                ..Default::default()
+            },
+            EnterMode {
+                label: "Sultai",
+                static_abilities: vec![StaticAbility {
+                    description: "You may play lands from your graveyard.",
+                    effect: StaticEffect::MayPlayLandsFromGraveyard,
+                }],
+                ..Default::default()
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hollowmurk Siege — {B}{G} Enchantment. As it enters, choose Sultai or Abzan.
+/// Sultai: draw the first time each turn a counter is put on a creature you
+/// control. Abzan: when you attack, +1/+1 counter on target attacker + menace.
+pub fn hollowmurk_siege() -> CardDefinition {
+    CardDefinition {
+        name: "Hollowmurk Siege",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        enter_modes: Some(vec![
+            EnterMode {
+                label: "Sultai",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YourControl)
+                        .with_filter(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: R::Creature,
+                        })
+                        .once_per_turn(),
+                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                }],
+                ..Default::default()
+            },
+            EnterMode {
+                label: "Abzan",
+                triggered_abilities: vec![on_you_attack(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(R::Creature.and(R::IsAttacking)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Menace,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]))],
+                ..Default::default()
+            },
+        ]),
         ..Default::default()
     }
 }

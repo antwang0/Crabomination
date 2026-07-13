@@ -2000,6 +2000,16 @@ pub struct CardDefinition {
     /// decision at ETB. Corrupted Shapeshifter.
     #[serde(default)]
     pub enters_as_choice: Option<Vec<EntersChoiceMode>>,
+    /// CR 614 — "As this enters, choose [mode A] or [mode B]." A *persistent*
+    /// mode choice (unlike `enters_as_choice`, which only sets P/T): the
+    /// controller picks one mode as the permanent enters and that mode's
+    /// triggered/static abilities and keywords are baked onto this permanent
+    /// for as long as it stays on the battlefield. The Tarkir: Dragonstorm
+    /// Siege cycle (Barrensteppe / Frostcliff / Glacierwood / Hollowmurk
+    /// Siege). `CardInstance.chosen_mode` records the pick so a snapshot
+    /// round-trip re-bakes the same mode.
+    #[serde(default)]
+    pub enter_modes: Option<Vec<EnterMode>>,
     /// CR 122.4 — "This permanent can't have more than N counters of
     /// `kind` on it." When this card has more than `max` counters of
     /// `kind` on it, the state-based-action sweep removes the excess
@@ -2506,6 +2516,21 @@ pub struct EntersAsCopy {
 pub struct EntersChoiceMode {
     pub power: i32,
     pub toughness: i32,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
+}
+
+/// CR 614 — one arm of a `CardDefinition.enter_modes` persistent mode choice.
+/// The chosen arm's abilities are baked onto the permanent when it enters
+/// (Tarkir Siege cycle). `label` is the printed mode name ("Abzan", "Mardu").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct EnterMode {
+    #[serde(with = "crate::static_str_serde")]
+    pub label: crate::static_str_serde::StaticStr,
+    #[serde(default)]
+    pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
+    #[serde(default)]
+    pub static_abilities: Vec<crate::effect::StaticAbility>,
     #[serde(default)]
     pub keywords: Vec<Keyword>,
 }
@@ -3318,6 +3343,22 @@ impl CardDefinition {
         def.toughness = proto.toughness;
         Some(def)
     }
+    /// CR 614 — this definition with mode `idx` of `enter_modes` baked in: its
+    /// triggered/static abilities and keywords are appended. Returns `None`
+    /// when the card has no such mode. Used both at ETB and on snapshot load
+    /// (re-baking the recorded `chosen_mode`).
+    pub fn with_mode_applied(&self, idx: usize) -> Option<CardDefinition> {
+        let mode = self.enter_modes.as_ref()?.get(idx)?;
+        let mut def = self.clone();
+        def.triggered_abilities.extend(mode.triggered_abilities.iter().cloned());
+        def.static_abilities.extend(mode.static_abilities.iter().cloned());
+        for kw in &mode.keywords {
+            if !def.keywords.contains(kw) {
+                def.keywords.push(kw.clone());
+            }
+        }
+        Some(def)
+    }
     /// CR 709 — the split definition, if this is a split card.
     pub fn has_split(&self) -> Option<&SplitCard> {
         self.split.as_deref()
@@ -3717,6 +3758,11 @@ pub struct CardInstance {
     /// A number chosen as this permanent entered (Sanctum Prelate — "choose a
     /// number"). Read by `noncreature_spell_cast_locked` for the chosen-MV lock.
     pub chosen_number: Option<u32>,
+    /// CR 614 — the `enter_modes` index chosen as this permanent entered (the
+    /// Tarkir Siege cycle). Recorded so a snapshot round-trip re-bakes the same
+    /// mode's abilities onto the freshly-resolved definition. `None` for cards
+    /// without a persistent mode choice.
+    pub chosen_mode: Option<u8>,
     /// A card type chosen as this permanent entered (Serra's Emissary).
     /// Read by the chosen-card-type protection static.
     pub chosen_card_type: Option<CardType>,
@@ -4048,6 +4094,7 @@ impl CardInstance {
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_number: None,
+            chosen_mode: None,
             chosen_card_type: None,
             echo_paid: false,
             granted_suspend: false,
@@ -4559,6 +4606,8 @@ struct CardInstanceWire {
     #[serde(default)]
     chosen_number: Option<u32>,
     #[serde(default)]
+    chosen_mode: Option<u8>,
+    #[serde(default)]
     chosen_card_type: Option<CardType>,
     #[serde(default)]
     echo_paid: bool,
@@ -4763,6 +4812,7 @@ impl serde::Serialize for CardInstance {
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             chosen_number: self.chosen_number,
+            chosen_mode: self.chosen_mode,
             chosen_card_type: self.chosen_card_type.clone(),
             echo_paid: self.echo_paid,
             granted_suspend: self.granted_suspend,
@@ -4893,6 +4943,14 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_number = wire.chosen_number;
+        c.chosen_mode = wire.chosen_mode;
+        // CR 614 — re-bake the recorded Siege mode onto the freshly-resolved
+        // definition (the name→factory lookup returns the printed card).
+        if let Some(idx) = wire.chosen_mode
+            && let Some(def) = c.definition.with_mode_applied(idx as usize)
+        {
+            c.definition = Arc::new(def);
+        }
         c.chosen_card_type = wire.chosen_card_type;
         c.echo_paid = wire.echo_paid;
         c.granted_suspend = wire.granted_suspend;

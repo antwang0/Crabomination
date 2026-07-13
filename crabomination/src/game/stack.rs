@@ -1080,6 +1080,10 @@ impl GameState {
                     // (Corrupted Shapeshifter). Applied before SBA so a
                     // printed */* body never dies as a 0/0.
                     self.apply_enters_as_choice(card_id);
+                    // CR 614 — "As this enters, choose [mode A] or [mode B]"
+                    // (the Tarkir Siege cycle). Bakes the chosen mode's
+                    // abilities onto the permanent as it enters.
+                    self.apply_enters_mode_choice(card_id);
                     // CR 707 — "enters as a copy of [filter]" replacement.
                     // Applied here, before the first SBA sweep, so a 0/0
                     // copier (Clone, Phantasmal Image) never dies as a 0/0.

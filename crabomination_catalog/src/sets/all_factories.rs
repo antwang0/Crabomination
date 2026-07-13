@@ -6224,6 +6224,10 @@ static DECKS: &[Factory] = &[
     super::decks::flowstone_slide,
     super::decks::dragonbroods_relic,
     super::decks::traveling_botanist,
+    super::decks::barrensteppe_siege,
+    super::decks::frostcliff_siege,
+    super::decks::glacierwood_siege,
+    super::decks::hollowmurk_siege,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

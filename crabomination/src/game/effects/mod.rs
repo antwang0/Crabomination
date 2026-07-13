@@ -686,6 +686,41 @@ impl GameState {
         true
     }
 
+    /// CR 614 — apply a permanent's `enter_modes` persistent mode choice as it
+    /// enters. The controller picks a mode via a `ChooseMode` decision; that
+    /// mode's triggered/static abilities and keywords are baked onto the
+    /// permanent's definition (surviving as long as it stays on the
+    /// battlefield) and the pick is recorded in `chosen_mode`. No-op when the
+    /// card has no such spec. The Tarkir Siege cycle.
+    pub(crate) fn apply_enters_mode_choice(&mut self, card_id: CardId) -> bool {
+        let modes = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.enter_modes.clone());
+        let Some(modes) = modes else { return false };
+        if modes.is_empty() {
+            return false;
+        }
+        use crate::decision::{Decision, DecisionAnswer};
+        let answer = self.decider.decide(&Decision::ChooseMode {
+            source: card_id,
+            num_modes: modes.len(),
+            mode_texts: modes.iter().map(|m| m.label.to_string()).collect(),
+        });
+        let idx = match answer {
+            DecisionAnswer::Mode(i) => i.min(modes.len() - 1),
+            _ => 0,
+        };
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(def) = c.definition.with_mode_applied(idx)
+        {
+            c.definition = std::sync::Arc::new(def);
+            c.chosen_mode = Some(idx as u8);
+        }
+        true
+    }
+
     // ── Entry points ─────────────────────────────────────────────────────────
 
     /// Heuristic for `Effect::Punisher`: would the chooser (`ctx.controller`)
