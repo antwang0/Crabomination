@@ -1046,6 +1046,11 @@ pub enum Predicate {
     /// turn. Backed by `Player.creatures_cast_this_turn`. Reserved for
     /// future "if you've cast a creature spell this turn, …" payoffs.
     CreaturesCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// `who` has cast at least `at_least` noncreature spells on the current
+    /// turn. Backed by `Player.noncreature_spells_cast_this_game_turn` — the
+    /// noncreature half of "if you've cast both a creature and a noncreature
+    /// spell this turn" (Eshki Dragonclaw).
+    NoncreatureSpellsCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// True if the spell pointed to by `Selector::TriggerSource` (typically
     /// the just-cast spell during a `SpellCast` trigger evaluation) has at
     /// least one chosen target matching `filter`. Used by Strixhaven's

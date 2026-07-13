@@ -1202,6 +1202,12 @@ impl GameState {
                     .map(|p| self.players[p].creatures_cast_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::NoncreatureSpellsCastThisTurnAtLeast { who, at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                self.resolve_player(who, ctx)
+                    .map(|p| self.players[p].noncreature_spells_cast_this_game_turn >= n)
+                    .unwrap_or(false)
+            }
             Predicate::CastSpellTargetsMatch(filter) => {
                 // Find the cast spell on the stack via the trigger source.
                 // `fire_spell_cast_triggers` sets `ctx.trigger_source` to

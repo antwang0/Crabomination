@@ -6235,6 +6235,7 @@ static DECKS: &[Factory] = &[
     super::decks::anafenza_unyielding_lineage,
     super::decks::felothar_dawn_of_the_abzan,
     super::decks::lotuslight_dancers,
+    super::decks::eshki_dragonclaw,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -1566,3 +1566,52 @@ pub fn lotuslight_dancers() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Eshki Dragonclaw — {1}{G}{U}{R} 4/4 Human Warrior, vigilance, trample, ward
+/// {1}. At the beginning of combat on your turn, if you've cast both a creature
+/// and a noncreature spell this turn, draw a card and put two +1/+1 counters on
+/// Eshki.
+pub fn eshki_dragonclaw() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Eshki Dragonclaw",
+        cost: cost(&[generic(1), g(), u(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Ward(WardCost::generic(1))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::CreaturesCastThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::ONE,
+                    },
+                    Predicate::NoncreatureSpellsCastThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::ONE,
+                    },
+                ]),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}

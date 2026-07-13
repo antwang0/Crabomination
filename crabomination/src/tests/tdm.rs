@@ -1386,3 +1386,24 @@ fn lotuslight_dancers_mills_three_colors() {
         assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "{color} card milled to graveyard");
     }
 }
+
+/// Eshki draws + grows at begin-combat once you've cast a creature and a
+/// noncreature spell this turn.
+#[test]
+fn eshki_draws_after_creature_and_noncreature_spell() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let eshki = g.add_card_to_battlefield(0, catalog::eshki_dragonclaw());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    g.players[0].creatures_cast_this_turn = 1;
+    g.players[0].noncreature_spells_cast_this_game_turn = 1;
+    let hand = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew at begin-combat");
+    assert_eq!(
+        g.battlefield_find(eshki).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "two +1/+1 counters",
+    );
+}
