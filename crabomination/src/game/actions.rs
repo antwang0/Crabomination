@@ -9748,7 +9748,7 @@ impl GameState {
         // CR 702.177 — Exhaust: an exhaust ability can be activated only once
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.
-        if !source_in_gy && !source_in_hand && !source_in_exile && ability.exhaust {
+        if !source_in_gy && !source_in_hand && !source_in_exile && (ability.exhaust || ability.activate_once) {
             let perm = self
                 .battlefield
                 .iter()
@@ -10642,7 +10642,7 @@ impl GameState {
             self.triggered_once_per_turn_used.insert((card_id, ability_index));
         }
         // CR 702.177 — record the exhaust activation (never cleared this game).
-        if ability.exhaust
+        if (ability.exhaust || ability.activate_once)
             && !source_in_gy
             && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {

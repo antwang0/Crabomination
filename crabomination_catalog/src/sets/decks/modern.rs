@@ -16271,6 +16271,7 @@ pub fn turn_to_frog() -> CardDefinition {
                 what: creature(),
                 colors: vec![Color::Blue],
                 duration: Duration::EndOfTurn,
+                additive: false,
             },
             Effect::BecomeCreatureType {
                 what: creature(),
@@ -16392,6 +16393,7 @@ pub fn snakeform() -> CardDefinition {
                 what: creature(),
                 colors: vec![Color::Green],
                 duration: Duration::EndOfTurn,
+                additive: false,
             },
             Effect::BecomeCreatureType {
                 what: creature(),
@@ -16429,6 +16431,7 @@ pub fn polymorphists_jest() -> CardDefinition {
                 what: theirs(),
                 colors: vec![Color::Blue],
                 duration: Duration::EndOfTurn,
+                additive: false,
             },
             Effect::BecomeCreatureType {
                 what: theirs(),
@@ -28109,6 +28112,7 @@ pub fn crimson_wisps() -> CardDefinition {
                 what: Selector::Target(0),
                 colors: vec![Color::Red],
                 duration: Duration::EndOfTurn,
+                additive: false,
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
@@ -52098,6 +52102,7 @@ pub fn turn_burn() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
                 colors: vec![Color::Red],
                 duration: Duration::EndOfTurn,
+                additive: false,
             },
         ]),
         split: Some(Box::new(SplitCard {

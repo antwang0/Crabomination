@@ -216,6 +216,7 @@ pub fn mercurial_transformation() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Nonland),
                 colors: vec![Color::Blue],
                 duration: Duration::EndOfTurn,
+                additive: false,
             },
         ])
     }

@@ -593,6 +593,7 @@ pub fn grand_architect() -> CardDefinition {
                     },
                     colors: vec![Color::Blue],
                     duration: Duration::EndOfTurn,
+                    additive: false,
                 },
                 ..Default::default()
             },

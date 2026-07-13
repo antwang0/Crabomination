@@ -3416,7 +3416,16 @@ pub enum Effect {
     /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
     /// red"), Crimson Wisps-style color set without a player choice.
-    BecomeColor { what: Selector, colors: Vec<crate::mana::Color>, duration: Duration },
+    BecomeColor {
+        what: Selector,
+        colors: Vec<crate::mana::Color>,
+        duration: Duration,
+        /// When true, `colors` are *added* to the permanent's own colors
+        /// (layer-5 `AddColor`) rather than replacing them — "becomes black in
+        /// addition to its other colors" (Possessed Goat). Defaults to false.
+        #[serde(default)]
+        additive: bool,
+    },
     /// Each permanent picked by `what` has its creature types set to exactly
     /// `creature_types` for `duration` (CR 305.7 / layer-4 `SetCreatureTypes`).
     /// The type-line half of "becomes a [color] [type]" cards — pair with

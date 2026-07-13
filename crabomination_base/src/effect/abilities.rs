@@ -1867,6 +1867,12 @@ pub struct ActivatedAbility {
     /// — is never cleared at turn start. Defaults to false.
     #[serde(default)]
     pub exhaust: bool,
+    /// "Activate only once." A plain once-per-game gate (Possessed Goat) that
+    /// reuses `exhausted_abilities` bookkeeping like `exhaust` but is *not* the
+    /// Exhaust keyword — it fires no `ExhaustAbilityActivated` event. Defaults
+    /// to false.
+    #[serde(default)]
+    pub activate_once: bool,
     /// Craft (CR 702.169) — exile `count` *other* objects matching this
     /// filter from among permanents you control and/or cards in your
     /// graveyard, as an additional cost. Pairs with

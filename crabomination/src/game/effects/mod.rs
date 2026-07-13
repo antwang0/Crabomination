@@ -6913,21 +6913,29 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::BecomeColor { what, colors, duration } => {
+            Effect::BecomeColor { what, colors, duration, additive } => {
                 let duration_kind = map_effect_duration(*duration);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let ts = self.next_timestamp();
-                    self.add_continuous_effect(ContinuousEffect {
-                        timestamp: ts,
-                        source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
-                        layer: Layer::L5Color,
-                        sublayer: None,
-                        duration: duration_kind.clone(),
-                        modification: Modification::SetColors(colors.clone()),
-                    });
+                    // Additive: one AddColor per color; else a single SetColors.
+                    let mods: Vec<Modification> = if *additive {
+                        colors.iter().map(|c| Modification::AddColor(*c)).collect()
+                    } else {
+                        vec![Modification::SetColors(colors.clone())]
+                    };
+                    for modification in mods {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L5Color,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification,
+                        });
+                    }
                 }
                 Ok(())
             }
