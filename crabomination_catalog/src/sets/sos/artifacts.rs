@@ -92,6 +92,10 @@ pub fn diary_of_dreams() -> CardDefinition {
         name: "Diary of Dreams",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -136,9 +140,11 @@ pub fn diary_of_dreams() -> CardDefinition {
 /// Push (modern_decks): the "you may play that card this turn" rider is
 /// **now wired** via `Effect::GrantMayPlay` + `Selector::LastMoved`
 /// (which reads the freshly-milled card's id from the resolution-scoped
-/// scratch). The controller invokes
-/// `GameAction::CastFromZoneWithoutPaying` during a later sorcery-speed
-/// window to recur the milled card for free.
+/// scratch). Printed text is a normal play — the permission carries
+/// `pay_own_cost: true`, so the controller pays the card's real cost to
+/// recur it. Approximation: the play happens at a sorcery-speed window
+/// (instants aren't playable at instant speed through this path, and
+/// land plays aren't supported).
 ///
 /// Both mana abilities are wired: `{T}: Add {R}` is a plain adder, and
 /// `{T}: Add {R}{R}` produces spend-restricted mana via
@@ -209,7 +215,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: true, any_color: false,
                 },
             ]),
         }],
@@ -346,9 +352,11 @@ pub fn resonating_lute() -> CardDefinition {
 ///
 /// Push (modern_decks): the {T}: Mill's "you may play that card this
 /// turn" rider is **now wired** via `Effect::GrantMayPlay` +
-/// `Selector::LastMoved`. After the mill, the controller can free-cast
-/// the milled card during a later sorcery-speed window via
-/// `GameAction::CastFromZoneWithoutPaying`.
+/// `Selector::LastMoved`. Printed text is a normal play, so the
+/// permission carries `pay_own_cost: true` — the controller pays the
+/// milled card's real cost to play it. Approximation: the play happens
+/// at a sorcery-speed window (no instant-speed instants, no land plays
+/// through this path).
 pub fn ark_of_hunger() -> CardDefinition {
     use crate::mana::{r, w};
     CardDefinition {
@@ -370,7 +378,7 @@ pub fn ark_of_hunger() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: true, any_color: false,
                 },
             ]),
             once_per_turn: false,
@@ -414,15 +422,16 @@ pub fn ark_of_hunger() -> CardDefinition {
 /// Hand(You) }`. The Vehicle stays a non-creature artifact until crewed,
 /// then animates to a 3/2 flier for the turn.
 pub fn strixhaven_skycoach() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, CreatureType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
+    use crate::card::{ArtifactSubtype, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
     use crate::effect::{PlayerRef as PR, ZoneDest as ZD};
     CardDefinition {
         name: "Strixhaven Skycoach",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
+            // Type line is just "Artifact — Vehicle" — no creature type
+            // even while crewed.
             artifact_subtypes: vec![ArtifactSubtype::Vehicle],
-            creature_types: vec![CreatureType::Construct],
             ..Default::default()
         },
         power: 3,

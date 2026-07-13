@@ -40,7 +40,7 @@ use crate::card::{
 };
 use crate::card::Zone;
 use crate::effect::shortcut::{
-    cards_in_graveyard_at_least, etb, mint_lorehold_spirits, mint_treasures, on_attack,
+    cards_in_graveyard_at_least, etb, mint_treasures, on_attack,
     pump_target, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
@@ -1161,6 +1161,10 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
 ///
 /// Prepare spell: sorcery — search your library for an instant or
 /// sorcery card, reveal it, put it into your hand, then shuffle.
+///
+/// Approximation: the printed "reveal it" step is omitted —
+/// `Effect::Search` has no reveal, which is knowledge-only and has no
+/// gameplay impact in this engine.
 pub fn sanar_unfinished_genius() -> CardDefinition {
     let spell = spell_back(
         "Wild Idea",
@@ -1421,13 +1425,20 @@ pub fn campus_composer() -> CardDefinition {
 ///
 /// Prepare spell: instant — Ancestral Recall: target player draws 3
 /// cards.
+///
+/// Approximation: the attack trigger's exile auto-picks eight cards
+/// from your graveyard — the player chooses whether to exile, but not
+/// which eight cards are exiled.
 pub fn emeritus_of_ideation() -> CardDefinition {
     let spell = spell_back(
         "Ancestral Recall",
         cost(&[u()]),
         CardType::Instant,
         Effect::Draw {
-            who: Selector::Player(PlayerRef::Target(0)),
+            // Slot 0 carries the printed "target player" filter — a bare
+            // `Target(0)` had no filter, so any object was a legal target
+            // and the draw silently fizzled on a non-player pick.
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(3),
         },
     );
@@ -1537,11 +1548,23 @@ pub fn grave_researcher() -> CardDefinition {
 /// Prepare spell: sorcery — create two 2/2 red and white Spirit
 /// creature tokens.
 pub fn strife_scholar() -> CardDefinition {
+    // The spell's tokens are plain 2/2 R/W Spirits — the shared
+    // `lorehold_spirit_token()` carries flying, which this card doesn't
+    // print, so strip it.
+    let spirit = {
+        let mut t = crabomination_base::tokens::lorehold_spirit_token();
+        t.keywords.clear();
+        t
+    };
     let spell = spell_back(
         "Awaken the Ages",
         cost(&[generic(5), r()]),
         CardType::Sorcery,
-        mint_lorehold_spirits(2),
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: spirit,
+        },
     );
     enters_prepared(vanilla_front(
         "Strife Scholar",

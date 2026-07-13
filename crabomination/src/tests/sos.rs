@@ -1855,10 +1855,11 @@ fn mind_into_matter_draws_x_cards() {
 
 #[test]
 fn mind_into_matter_optional_permanent_lands_with_scripted_yes() {
-    // Promoted in modern_decks batch 43: the "may put a permanent ≤ X
-    // from hand onto the battlefield tapped" half now wires via MayDo +
-    // ForEach + ValueAtMost(ManaValueOf, XFromCost). Scripted "yes"
-    // exercises the paid path; the auto-decider declines.
+    // The "may put a permanent ≤ X from hand onto the battlefield
+    // tapped" half rides `Effect::PutFromHandOntoBattlefield` — the
+    // controller picks the card via a ChooseCards decision (min 0, so
+    // the auto-decider declines). Scripted card pick exercises the
+    // paid path.
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::island());
@@ -1868,8 +1869,8 @@ fn mind_into_matter_optional_permanent_lands_with_scripted_yes() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
-    // ScriptedDecider says yes to the MayDo prompt.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // ScriptedDecider picks the Bear at the ChooseCards prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
     })
@@ -11454,8 +11455,10 @@ fn flashback_instant_grants_flashback_on_gy_is_card() {
     let fb = g.add_card_to_hand(0, catalog::sos_flashback_instant());
     g.players[0].mana_pool.add(Color::Red, 1);
 
+    // "Target instant or sorcery card in your graveyard" — the card is a
+    // real target now, so the caster picks it explicitly.
     g.perform_action(GameAction::CastSpell {
-        card_id: fb, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: fb, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Flashback (instant) castable for {R}");
     drain_stack(&mut g);
@@ -12204,10 +12207,9 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
 
 #[test]
 fn cast_from_zone_without_paying_recurs_practiced_scrollsmiths_exiled_card() {
-    // End-to-end: ETB exiles Pox Plague + stamps may_play; controller
-    // then invokes `GameAction::CastFromZoneWithoutPaying` to free-cast
-    // it without paying mana. Pox is a 5-black-pip sorcery — under
-    // normal cost it'd cost {B}{B}{B}{B}{B}; free-cast pays nothing.
+    // End-to-end: ETB exiles Pox Plague + stamps may_play; the printed
+    // "you may cast that card" is a normal cast (`pay_own_cost: true`),
+    // so recasting it from exile charges Pox's real {B}{B}{B}{B}{B}.
     let mut g = two_player_game();
     let pox_id = g.next_id();
     let mut pox = crate::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
@@ -12223,20 +12225,21 @@ fn cast_from_zone_without_paying_recurs_practiced_scrollsmiths_exiled_card() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == pox_id), "Pox exiled after ETB");
 
-    // Now free-cast Pox Plague from exile. No mana payment.
+    // Recast Pox Plague from exile, paying its own cost.
+    g.players[0].mana_pool.add(Color::Black, 5);
     let p0_mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::CastFromZoneWithoutPaying {
         card_id: pox_id, target: None, additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Pox free-castable via may_play permission");
+    }).expect("Pox recastable via may_play permission, paying its cost");
     drain_stack(&mut g);
-    // Mana untouched (no cost paid).
-    assert_eq!(g.players[0].mana_pool.total(), p0_mana_before,
-        "free cast doesn't deduct mana");
+    // The {B}{B}{B}{B}{B} cost was deducted.
+    assert_eq!(g.players[0].mana_pool.total(), p0_mana_before - 5,
+        "pay-own-cost recast deducts Pox's mana cost");
     // Pox resolved → it landed in graveyard (it's a sorcery, exile_after
     // = false in the permission).
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pox_id),
-        "Pox went to graveyard after free-cast resolve");
+        "Pox went to graveyard after recast resolve");
     // No more permission outstanding (consumed by cast).
     assert!(g.players[0].graveyard.iter().find(|c| c.id == pox_id)
         .unwrap().may_play_until.is_none(),

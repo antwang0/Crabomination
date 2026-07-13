@@ -6,6 +6,10 @@ followed by a `name: "Card Name"` literal OR a helper-function call with
 "Card Name" as the first string argument. Outputs the (card name → factory
 fn name) mapping grouped by section, suitable for hand-pasting into a Rust
 module.
+
+WARNING — HISTORICAL ARTIFACT: STRIXHAVEN2.md no longer contains the
+per-card status tables this script parses, so all table-derived output
+will be empty. Retained for history only.
 """
 
 import re
@@ -15,9 +19,16 @@ from collections import defaultdict
 
 REPO = Path(__file__).resolve().parent.parent
 DOC = REPO / "STRIXHAVEN2.md"
-SOS_DIR = REPO / "crabomination" / "src" / "catalog" / "sets" / "sos"
+SOS_DIR = REPO / "crabomination_catalog" / "src" / "sets" / "sos"
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+print(
+    "WARNING: STRIXHAVEN2.md no longer contains the status tables this "
+    "script parses; table-derived output will be empty. Retained for "
+    "history only.",
+    file=sys.stderr,
+)
 
 # Build (factory_fn_name, card_name_string) pairs from each .rs file.
 FN_RE = re.compile(r"pub\s+fn\s+(\w+)\s*\(\s*\)\s*->\s*CardDefinition")

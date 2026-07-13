@@ -27,8 +27,9 @@ share Kasmina's loyalty abilities" static
 "No partials remain" is true only in the narrow tracker sense (no card is marked
 🟡/⏳ in the status tables). In practice:
 
-- **~190 cards ship with documented approximations** (≈59 SOS, ≈129 STX —
-  grep the catalogs for `Approximation` / `omitted` / `dropped`). Most capture
+- **Documented approximations remain** (as of 2026-07-12, a case-insensitive
+  grep for `Approximation` / `omitted` / `dropped` matches 51 lines in the SOS
+  catalog and 44 in STX). Most capture
   the headline play pattern. Possibility Storm (cast-trigger exile-and-dig via
   `Effect::PossibilityStorm`) and Hindering Light (target-restricted counter)
   are now fully wired. Arclight Phoenix (gy-return on 3+ I/S spells) and
@@ -52,3 +53,12 @@ share Kasmina's loyalty abilities" static
   real-name STX cards".
 
 Full per-card history: `git log -- crabomination_catalog/src/sets/{stx,sos}/`.
+
+## Removed status tables (2026-07-12)
+
+The per-card status tables formerly in this file were removed. The three
+scripts `scripts/audit_strixhaven2.py`, `scripts/list_sos_ok.py`, and
+`scripts/sos_ok_factory_map.py` parsed those tables and are retained only as
+historical artifacts. A 2026-07-12 audit fixed 15 gameplay bugs and backfilled
+the sos_mode pools (elders Quandrix the Proof + Silverquill the Disputant and
+all other implemented-but-unpooled cards).

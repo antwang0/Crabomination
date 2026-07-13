@@ -47,6 +47,9 @@ pub fn erode() -> CardDefinition {
 /// Inkling creature token with flying." The token goes to the dead
 /// creature's owner via `PlayerRef::OwnerOf` (resolved off LKI;
 /// `place_card_in_dest` walks graveyards if the destroy already moved it).
+/// Accepted approximation: printed text says "its controller creates" —
+/// for a stolen creature (owner ≠ controller) the token goes to the
+/// wrong player here.
 pub fn harsh_annotation() -> CardDefinition {
     CardDefinition {
         name: "Harsh Annotation",
@@ -513,11 +516,14 @@ pub fn impractical_joke() -> CardDefinition {
 /// card from your graveyard. If you do, Heated Argument also deals 2
 /// damage to that creature's controller."
 ///
-/// The optional rider is wired faithfully: an `Effect::MayDo` gates a
-/// `Move` of exactly one graveyard card to exile (via
-/// `Selector::take(CardsInZone, 1)`) followed by 2 damage to the
-/// target creature's controller. Declining the may skips both the
-/// exile and the bonus damage.
+/// The optional rider: an `Effect::MayDo` gates a `Move` of exactly
+/// one graveyard card to exile (via `Selector::take(CardsInZone, 1)`)
+/// followed by 2 damage to the target creature's controller. Declining
+/// the may skips both the exile and the bonus damage.
+///
+/// Approximation: only the yes/no of the `MayDo` is player-facing —
+/// `Selector::take(..., 1)` auto-picks an arbitrary graveyard card
+/// rather than letting the caster choose which card to exile.
 pub fn heated_argument() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
@@ -1168,10 +1174,11 @@ pub fn silverquill_charm() -> CardDefinition {
 ///
 /// Wired in two stages via `Effect::Seq`:
 /// 1. Conditional pump: gated on
-///    `Predicate::SpellsCastThisTurnAtLeast { who: You, at_least: 2 }`
+///    `Predicate::InstantsOrSorceriesCastThisTurnAtLeast { who: You, at_least: 2 }`
 ///    (≥2 because Burrog Barrage itself counts as one cast — we want
-///    "another instant or sorcery"). Pumps the chosen target friendly
-///    creature +1/+0 EOT.
+///    "another instant or sorcery"; the I/S-restricted predicate keeps a
+///    creature spell cast earlier in the turn from enabling the pump).
+///    Pumps the chosen target friendly creature +1/+0 EOT.
 /// 2. Power-as-damage: deal `Value::PowerOf(target)` damage to the
 ///    chosen opp creature target (slot 1). The optional opp-creature
 ///    slot uses `Selector::TargetFiltered { slot: 1, ... }` so when
@@ -1182,6 +1189,11 @@ pub fn silverquill_charm() -> CardDefinition {
 /// the friendly creature to pump; slot 1 = the opp creature to take
 /// the power-as-damage. AutoDecider currently fills slot 0 only; the
 /// scripted tests can supply slot 1.
+///
+/// Approximation: printed text has the pumped creature itself deal the
+/// damage ("it deals damage equal to its power"), so its deathtouch/
+/// lifelink would apply; here a plain `Effect::DealDamage` attributes
+/// the damage to the spell, losing that source attribution.
 pub fn burrog_barrage() -> CardDefinition {
     use crate::card::Predicate;
     use crate::mana::g;
@@ -1191,7 +1203,7 @@ pub fn burrog_barrage() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::SpellsCastThisTurnAtLeast {
+                cond: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
                     who: PlayerRef::You,
                     at_least: Value::Const(2),
                 },
@@ -1307,9 +1319,9 @@ pub fn wilt_in_the_heat() -> CardDefinition {
 /// just-exiled card ids from the resolution-scoped scratch. Both exiled
 /// cards (the targeted permanent and the caster's top-of-library card)
 /// get a permission stamped to their respective owners (`to_owner =
-/// true`) for `EndOfControllersNextTurn`. The recipients then invoke
-/// `GameAction::CastFromZoneWithoutPaying` at a later sorcery-speed
-/// window to recur the card without paying its mana cost.
+/// true`) for `EndOfControllersNextTurn`. Printed text says "may play
+/// it" — a normal play paying the card's own cost — so the permission
+/// carries `pay_own_cost: true` (not a free cast).
 pub fn suspend_aggression() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{r, w};
@@ -1339,7 +1351,7 @@ pub fn suspend_aggression() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                 to_owner: true,
                 exile_after: false,
-                pay_own_cost: false, any_color: false,
+                pay_own_cost: true, any_color: false,
             },
         ]),
         ..Default::default()
@@ -1666,10 +1678,11 @@ pub fn muses_encouragement() -> CardDefinition {
 /// deals 1 damage to each of one or two targets. / • Return target
 /// nonland permanent to its owner's hand."
 ///
-/// Wired as a 3-mode `ChooseMode`: Surveil 2 + draw / 1 dmg to target
-/// creature-or-PW / bounce nonland to owner's hand. The "1 or 2 targets"
-/// fan-out on mode 1 is collapsed to a single target (multi-target
-/// prompt gap — TODO.md). Standard primitives throughout.
+/// Wired as a 3-mode `ChooseMode`: Surveil 2 + draw / 1 dmg to any
+/// target (creature/player/planeswalker) / bounce nonland to owner's
+/// hand. The "1 or 2 targets" fan-out on mode 1 is collapsed to a
+/// single target (multi-target prompt gap — TODO.md). Standard
+/// primitives throughout.
 pub fn prismari_charm() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{r, u};
@@ -1689,11 +1702,13 @@ pub fn prismari_charm() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             ]),
-            // Mode 1: 1 damage to a target creature/planeswalker
+            // Mode 1: 1 damage to any target — the printed text has no
+            // type restriction, so players are legal targets too
             // (single-target collapse of the printed "one or two targets").
             Effect::DealDamage {
                 to: target_filtered(
                     SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
                         .or(SelectionRequirement::Planeswalker),
                 ),
                 amount: Value::Const(1),
@@ -1723,11 +1738,13 @@ pub fn prismari_charm() -> CardDefinition {
 /// copies a target creature spell on the stack — the engine's
 /// `CopySpell` already handles permanent spells (the resulting
 /// permanent enters as a token via CR 608.3f, since `is_token = true`
-/// is stamped on the copy at push-time). The printed "the copy gains
-/// haste and sacrifice at end of step" rider is approximated by relying
-/// on the token-cleanup SBA (the token will leave the battlefield once
-/// it hits the graveyard, matching the spirit of the printed sacrifice
-/// rider). The "this spell can't be copied" rider is now wired via the
+/// is stamped on the copy at push-time). Approximation: the printed
+/// "the copy gains haste and 'sacrifice this token at the end step'"
+/// rider is **dropped** — `Effect::CopySpell` has no way to attach
+/// riders to the copy's resulting permanent, so the token neither has
+/// haste nor is sacrificed at end of step (it merely ceases to exist
+/// via the token-cleanup SBA if it ever leaves the battlefield).
+/// The "this spell can't be copied" rider is now wired via the
 /// `CardDefinition.cant_be_copied` flag, which `Effect::CopySpell` honors
 /// by skipping it as a copy target. The "choose one or both" multi-mode
 /// rider collapses to
@@ -1778,26 +1795,23 @@ pub fn choreographed_sparks() -> CardDefinition {
 /// Now wired faithfully via `Effect::GrantFlashbackThisTurn`: the target
 /// instant/sorcery card in your graveyard gains an until-end-of-turn
 /// flashback grant whose cost equals its own mana cost (stored in
-/// `CardInstance::granted_flashback_eot`). The controller recasts it this
-/// turn through the regular `GameAction::CastFlashback` path — paying the
-/// printed mana cost and exiling on resolve (CR 702.34d) — rather than the
-/// earlier free-cast approximation.
+/// `CardInstance::granted_flashback_eot`). The card is a real target
+/// (slot 0, I/S-in-your-graveyard filter) so the caster chooses which
+/// card gains flashback. The controller recasts it this turn through the
+/// regular `GameAction::CastFlashback` path — paying the printed mana
+/// cost and exiling on resolve (CR 702.34d) — rather than the earlier
+/// free-cast approximation.
 pub fn sos_flashback_instant() -> CardDefinition {
-    use crate::card::Zone;
     use crate::mana::r;
     CardDefinition {
         name: "Flashback",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::GrantFlashbackThisTurn {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                },
-                Value::Const(1),
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .and(SelectionRequirement::InYourGraveyard),
             ),
         },
         ..Default::default()

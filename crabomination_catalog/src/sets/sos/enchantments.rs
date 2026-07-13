@@ -141,9 +141,10 @@ pub fn comforting_counsel() -> CardDefinition {
 /// this turn, draw a card."
 ///
 /// Both abilities are wireable on existing primitives:
-/// - ETB: `Effect::Move` from graveyard with a `Nonland & ManaValueAtMost(3)`
-///   target filter, destination `Battlefield(You)` — auto-target picker
-///   prefers the highest-impact eligible card.
+/// - ETB: `Effect::Move` from graveyard with a
+///   `Permanent & Nonland & ManaValueAtMost(3)` target filter,
+///   destination `Battlefield(You)` — auto-target picker prefers the
+///   highest-impact eligible card.
 /// - End-step draw: gated on `Predicate::CardsLeftGraveyardThisTurnAtLeast`
 ///   (the same per-turn tally used by Living History / Hardened Academic).
 ///   Triggers on `EventKind::StepBegins(TurnStep::End)` scoped to the
@@ -162,7 +163,11 @@ pub fn primary_research() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::Nonland
+                        // Printed "nonland permanent card" — the Permanent
+                        // clause keeps instant/sorcery cards in the
+                        // graveyard from being reanimated.
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Nonland)
                             .and(SelectionRequirement::ManaValueAtMost(3))
                             // Printed "from your graveyard" — without the
                             // zone scope this could reanimate out of an

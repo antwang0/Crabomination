@@ -9254,7 +9254,9 @@ impl GameState {
                         .map(|c| c.counter_count(kind))
                         .unwrap_or(0)
                 };
-                let filter = filter.resolve_source_counters(&src_counts);
+                // Concretize X-relative MV gates (Mind into Matter's
+                // "permanent card with mana value X or less").
+                let filter = filter.resolve_source_counters(&src_counts).resolve_x(ctx.x_value);
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .hand
                     .iter()

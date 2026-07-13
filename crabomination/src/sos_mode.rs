@@ -5,20 +5,22 @@
 //! Deck recipe (mirrors `cube_deck`):
 //!
 //! - 22 basic lands (11 of each college color)
-//! - 4 "colorless" picks from the college's school land
+//! - 4 "colorless" picks from the college's school land + the colorless
+//!   SoS cards (Mage Tower Referee, the big Archaics, Petrified Hamlet)
 //! - 17 cards drawn from college color A's pool
 //! - 17 cards drawn from college color B's pool
 //!
 //! Each color pool contains:
 //!
-//! - Mono-color SoS cards in that color (✅-status only)
-//! - The college's multi-color SoS cards (also ✅-status only)
+//! - Mono-color SoS cards in that color
+//! - The college's multi-color SoS cards
 //! - The college's school land
 //!
-//! Only fully-implemented (✅) SoS cards are included — see
-//! `STRIXHAVEN2.md` for status tracking. The card list here is generated
-//! from that file's ✅ rows by `scripts/list_sos_ok.py` /
-//! `scripts/sos_ok_factory_map.py`.
+//! The pools are hand-maintained lists (they were originally generated
+//! from STRIXHAVEN2.md's status tables by `scripts/list_sos_ok.py` /
+//! `scripts/sos_ok_factory_map.py`, but those tables no longer exist and
+//! the scripts are stale). The 2026-07 audit backfilled the implemented-
+//! but-unpooled cards, including the Quandrix and Silverquill elders.
 //!
 //! Pool sizes are smaller than the cube's, especially for Prismari
 //! (12 unique cards). `sample_with_cap` may run out of legal picks
@@ -106,6 +108,10 @@ impl College {
                 wilt_in_the_heat,
                 improvisation_capstone,
                 molten_note,
+                // 2026-07 audit backfill (implemented but never pooled):
+                aziza_mage_tower_captain,
+                practiced_scrollsmith,
+                suspend_aggression,
             ],
             // ↑ Fields of Strife is the school land, included via school_land();
             //   keep it out of the multi pool to avoid double-counting at cap time.
@@ -122,6 +128,10 @@ impl College {
                 traumatic_critique,
                 // Batch 2 additions:
                 prismari_the_inspiration,
+                // 2026-07 audit backfill (implemented but never pooled):
+                colorstorm_stallion,
+                elemental_mascot,
+                zaffai_and_the_tempests,
             ],
             // ↑ Spectacle Summit is the school land.
 
@@ -135,6 +145,11 @@ impl College {
                 growth_curve,
                 paradox_surveyor,
                 proctors_gaze,
+                // 2026-07 audit backfill — including the college elder,
+                // which every other college already had pooled.
+                applied_geometry,
+                geometers_arthropod,
+                quandrix_the_proof,
             ],
             // ↑ Paradox Gardens is the school land.
 
@@ -148,6 +163,10 @@ impl College {
                 // Batch 2 additions:
                 social_snub,
                 fix_whats_broken,
+                // 2026-07 audit backfill — including the college elder,
+                // which every other college already had pooled.
+                nita_forum_conciliator,
+                silverquill_the_disputant,
             ],
             // ↑ Forum of Amity is the school land.
 
@@ -231,10 +250,17 @@ pub fn sos_deck<R: Rng>(college: College, rng: &mut R) -> Vec<CardFactory> {
         }
     }
 
-    // 4 "colorless" slots filled with the college's school land. The school
-    // land is colorless for cost-purposes (no mana cost) so it slots into
-    // the cube's colorless bucket.
-    let school_pool = vec![college.school_land()];
+    // 4 "colorless" slots drawn from the college's school land plus the
+    // colorless SoS cards (2026-07 audit backfill — Mage Tower Referee,
+    // the two big Archaics, and the Petrified Hamlet utility land were
+    // implemented but never pooled).
+    let school_pool = vec![
+        college.school_land(),
+        mage_tower_referee,
+        sundering_archaic,
+        transcendent_archaic,
+        petrified_hamlet,
+    ];
     sample_with_cap(
         &mut deck,
         &mut counts,
@@ -390,6 +416,8 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             // Ward-unlocked MDFCs:
             campus_composer,
             emeritus_of_ideation,
+            // 2026-07 audit backfill (implemented but never pooled):
+            echocasting_symposium,
         ],
         // Black — added Rabid Attack (+1/+0 friendly pump),
         // Decorum Dissertation (Lesson: draw 2 lose 2),
@@ -439,6 +467,9 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             mica_reader_of_ruins,
             // Ward-unlocked MDFCs:
             strife_scholar,
+            // 2026-07 audit backfill (implemented but never pooled):
+            archaics_agony,
+            choreographed_sparks,
         ],
         // Green — added Burrog Barrage (conditional pump + power damage),
         // Chelonian Tackle (+0/+10 + power damage), Snarl Song (Converge
@@ -572,6 +603,16 @@ mod tests {
             }
             allowed.insert(college.school_land() as usize);
             for &f in &[plains, island, swamp, mountain, forest] {
+                allowed.insert(f as usize);
+            }
+            // The colorless bucket (school land + colorless SoS cards) is
+            // shared by every college.
+            for &f in &[
+                mage_tower_referee,
+                sundering_archaic,
+                transcendent_archaic,
+                petrified_hamlet,
+            ] {
                 allowed.insert(f as usize);
             }
 

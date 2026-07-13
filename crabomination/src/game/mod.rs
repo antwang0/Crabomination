@@ -1326,7 +1326,7 @@ pub struct GameState {
     /// SOS Prepare — copies materialized by `cast_prepare_spell` whose cast
     /// hasn't finished yet, as `(copy_id, source_creature_id)`. Registered
     /// before the copy enters the cast pipeline and settled by
-    /// `settle_prepare_copy_cast` once the copy reaches the stack (flag it
+    /// `settle_prepare_after_cast` once the copy reaches the stack (flag it
     /// `is_token`, unprepare the creature) or the cast fails
     /// (unmaterialize the copy). Unlike its transient `pending_cast_*`
     /// siblings this must survive a snapshot: a mid-cast suspension

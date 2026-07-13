@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""List all SOS cards with ✅ status from STRIXHAVEN2.md, grouped by section."""
+"""List all SOS cards with ✅ status from STRIXHAVEN2.md, grouped by section.
+
+WARNING — HISTORICAL ARTIFACT: STRIXHAVEN2.md no longer contains the
+per-card status tables this script parses, so all table-derived output
+will be empty. Retained for history only.
+"""
 
 import re
 import sys
@@ -7,6 +12,13 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 DOC = REPO / "STRIXHAVEN2.md"
+
+print(
+    "WARNING: STRIXHAVEN2.md no longer contains the status tables this "
+    "script parses; table-derived output will be empty. Retained for "
+    "history only.",
+    file=sys.stderr,
+)
 
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$")
 ROW_RE = re.compile(

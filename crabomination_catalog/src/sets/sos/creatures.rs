@@ -408,8 +408,7 @@ pub fn mindful_biomancer() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // Dryad isn't in CreatureType yet; bridge through Druid which is.
-            creature_types: vec![CreatureType::Druid],
+            creature_types: vec![CreatureType::Dryad, CreatureType::Druid],
             ..Default::default()
         },
         power: 2,
@@ -711,8 +710,7 @@ pub fn shattered_acolyte() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // No "Dwarf" subtype yet — Warlock alone is the gameplay-relevant one.
-            creature_types: vec![CreatureType::Warlock],
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,
@@ -761,7 +759,7 @@ pub fn summoned_dromedary() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Camel],
             ..Default::default()
         },
         power: 4,
@@ -818,8 +816,7 @@ pub fn stirring_honormancer() -> CardDefinition {
         cost: cost(&[generic(2), w(), hybrid(Color::White, Color::Black), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // No "Rhino" subtype yet — bridge through Bard alone.
-            creature_types: vec![CreatureType::Bard],
+            creature_types: vec![CreatureType::Rhino, CreatureType::Bard],
             ..Default::default()
         },
         power: 4,
@@ -858,6 +855,11 @@ pub fn stirring_honormancer() -> CardDefinition {
 /// cast spell's target off the stack and stashes it so the next-end-
 /// step body's `Selector::Target(0)` resolves back to the exiled
 /// creature.
+///
+/// Approximation: printed "exile up to one target creature" is a free,
+/// optional choice of any creature, but the code force-exiles exactly
+/// the cast spell's own target (`Selector::CastSpellTarget(0)`) —
+/// removing both the free target choice and the opt-out.
 pub fn conciliators_duelist() -> CardDefinition {
     use crate::effect::{shortcut::repartee, DelayedTriggerKind, ZoneDest};
     CardDefinition {
@@ -865,9 +867,7 @@ pub fn conciliators_duelist() -> CardDefinition {
         cost: cost(&[w(), w(), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // No "Kor" subtype yet — Warlock alone covers the gameplay-
-            // relevant interactions (Witherbloom payoffs, etc.).
-            creature_types: vec![CreatureType::Warlock],
+            creature_types: vec![CreatureType::Kor, CreatureType::Warlock],
             ..Default::default()
         },
         power: 4,
@@ -1173,8 +1173,7 @@ pub fn pestbrood_sloth() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // No "Sloth" type yet — bridge through Plant alone.
-            creature_types: vec![CreatureType::Plant],
+            creature_types: vec![CreatureType::Plant, CreatureType::Sloth],
             ..Default::default()
         },
         power: 4,
@@ -1299,7 +1298,8 @@ pub fn teachers_pest() -> CardDefinition {
 /// itself) filtered by the dying creature's P or T being ≤ 1 via
 /// `Predicate::EntityMatches { what: TriggerSource, filter: PowerAtMost
 /// (1).or(ToughnessAtMost(1)) }`. The drain uses `Effect::Drain` from
-/// each opponent to the controller.
+/// a target opponent (printed "target opponent loses 2 life") to the
+/// controller.
 pub fn arnyn_deathbloom_botanist() -> CardDefinition {
     use crate::card::SelectionRequirement;
     use crate::effect::Predicate;
@@ -1323,7 +1323,9 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
                         .or(SelectionRequirement::ToughnessAtMost(1)),
                 }),
             effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::OpponentPlayer,
+                ),
                 to: Selector::You,
                 amount: Value::Const(2),
             },
@@ -1404,8 +1406,7 @@ pub fn startled_relic_sloth() -> CardDefinition {
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // No "Sloth" creature subtype yet — bridge through Beast.
-            creature_types: vec![CreatureType::Beast],
+            creature_types: vec![CreatureType::Sloth, CreatureType::Beast],
             ..Default::default()
         },
         power: 4,
@@ -1460,21 +1461,16 @@ pub fn hardened_academic() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
-            discard_cost: None,
+            // Printed "Discard a card:" is an activation COST — paid up
+            // front, so the ability can't be activated with an empty hand.
+            discard_cost: Some((SelectionRequirement::Any, 1)),
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::This,
-                    keyword: Keyword::Lifelink,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -1772,20 +1768,15 @@ pub fn charging_strifeknight() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
-            discard_cost: None,
+            // Printed "Discard a card:" is an activation COST — paid up
+            // front, so no free draw off an empty hand.
+            discard_cost: Some((SelectionRequirement::Any, 1)),
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -1841,7 +1832,10 @@ pub fn cuboid_colony() -> CardDefinition {
 /// step, if it gained a counter this turn, mint a 0/0 G/U Fractal with
 /// three +1/+1 counters. Fully wired: Increment via
 /// `increment_self_plus_one()`, the payoff via
-/// `Predicate::SourceGainedCounterThisTurn`.
+/// `Predicate::SourceGainedCounterThisTurn`. Approximation: printed
+/// "if *you* put a counter on this creature this turn", but
+/// `SourceGainedCounterThisTurn` doesn't check who put the counter —
+/// a counter placed by an opponent also satisfies the gate.
 pub fn fractal_tender() -> CardDefinition {
     use crate::card::Predicate;
     use crate::catalog::sets::sos::sorceries::fractal_token;
@@ -2470,15 +2464,15 @@ pub fn spirit_mascot() -> CardDefinition {
 /// spells you cast have affinity for creatures."
 ///
 /// Body wired faithfully (Flying, Deathtouch, 5/5 Legendary Elder
-/// Dragon). The two "affinity for creatures" cost-reduction clauses
-/// are omitted — the engine has no per-cast cost reduction whose
-/// discount scales off the caster's permanent count. Tracked in
-/// TODO.md under "Affinity / Self-Permanent-Scaled Cost Reduction".
+/// Dragon). Both "affinity for creatures" cost-reduction clauses are
+/// wired: the card's own self-cast discount via the intrinsic
+/// `affinity_filter` (creatures you control), and the grant to instant
+/// and sorcery spells you cast via
+/// `StaticEffect::GrantAffinityToISSpells` with the same
+/// creature-you-control `permanent_filter`.
 ///
 /// Even at the printed {6}{B}{G} the dragon is a high-impact finisher
 /// in Witherbloom's late game and slots into the school's deathtouch
-/// + lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
-///   Mascot's lifegain → +1/+1 counters, etc.).
 /// and lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
 /// Mascot's lifegain into +1/+1 counters, etc.).
 pub fn witherbloom_the_balancer() -> CardDefinition {
@@ -2701,9 +2695,10 @@ pub fn topiary_lecturer() -> CardDefinition {
 /// spell. If you draw one or more cards this way, discard two cards."
 ///
 /// `Effect::Draw` with `Value::ConvergedValue` + a follow-up
-/// conditional `Discard 2` gated on `ConvergedValue ≥ 1`. The "you
-/// may" optionality is collapsed to always-draw-when-X-≥-1 (no may-do
-/// primitive yet); at X=0 the draw and discard both no-op. ConvergedValue
+/// conditional `Discard 2` gated on `ConvergedValue ≥ 1`, all wrapped
+/// in `Effect::MayDo` so the printed "you may" optionality is honored
+/// (AutoDecider declines by default; ScriptedDecider can opt in). At
+/// X=0 the draw and discard both no-op. ConvergedValue
 /// rides on the `StackItem::Trigger.converged_value` plumbing already in
 /// place for Rancorous Archaic.
 pub fn transcendent_archaic() -> CardDefinition {
@@ -3114,9 +3109,9 @@ pub fn abstract_paintmage() -> CardDefinition {
 /// "look X, pick 1, rest to bottom" shape with `RevealUntilFind { find:
 /// Any, cap: XFromCost, to: Hand }`. The trigger inherits the cast
 /// spell's X via `StackItem::Trigger.x_value`, so the cap reflects the
-/// real X paid. Misses go to graveyard (engine default for
-/// `RevealUntilFind`); the printed "rest to bottom random" rider is an
-/// approximation since the engine has no random-bottom primitive yet.
+/// real X paid. Misses go to the bottom of the library in a random
+/// order (`miss_dest: RevealMissDest::BottomRandom`), matching the
+/// printed "rest on the bottom of your library in a random order".
 pub fn geometers_arthropod() -> CardDefinition {
     use crate::effect::shortcut::cast_has_x_trigger;
     use crate::effect::ZoneDest;
@@ -3154,7 +3149,10 @@ pub fn geometers_arthropod() -> CardDefinition {
 ///
 /// Now wired (push XVI): both abilities. ETB bounce wired faithfully
 /// (target a creature other than this one; the auto-target picker
-/// prefers another creature when one exists). The X-cost spell-cast
+/// prefers another creature when one exists). Approximation: printed
+/// "up to one other target creature" makes the bounce optional, but the
+/// target here is mandatory — there is no decline path when a legal
+/// target exists. The X-cost spell-cast
 /// trigger uses the new `Predicate::CastSpellHasX` primitive + grants
 /// `Keyword::Unblockable` (EOT) to the Mage itself via
 /// `Selector::This`.
@@ -3200,12 +3198,10 @@ pub fn matterbending_mage() -> CardDefinition {
 /// "This spell costs {3} less to cast if creatures you control have
 /// total toughness 10 or greater. / When Orysa enters, draw two cards."
 ///
-/// Approximation: the conditional "{3} less if total toughness ≥ 10"
-/// alternative cost is omitted — the engine has no
-/// "alt-cost-with-board-state-predicate" primitive (tracked in TODO.md
-/// alongside Mavinda, Killian, and Ajani's Response). The ETB draw 2
-/// is wired faithfully and the printed full cost is paid
-/// unconditionally.
+/// The conditional "{3} less if total toughness ≥ 10" rider is wired
+/// as an `alternative_cost` of {1}{U} gated on a `condition` predicate
+/// summing the toughness of creatures you control (`ValueAtLeast(…,
+/// 10)`), evaluated at cast time. The ETB draw 2 is wired faithfully.
 pub fn orysa_tide_choreographer() -> CardDefinition {
     use crate::card::{AlternativeCost, Supertype};
     use crate::effect::Predicate;
@@ -3270,9 +3266,9 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
 /// player mills three cards. If five or more mana was spent to cast
 /// that spell, that player mills ten cards instead."
 ///
-/// Wired via `shortcut::opus_trigger`. Auto-target picks an opponent
-/// for the mill via `Selector::Player(PlayerRef::EachOpponent)` — the
-/// engine's auto-target walker picks the first opponent. Small body
+/// Wired via `shortcut::opus_trigger`. The mill targets a player via
+/// `Selector::Player(PlayerRef::Target(0))` — the auto-targeter fills
+/// the slot at trigger time, falling back to an opponent. Small body
 /// mills 3, big body (≥5 mana) mills 10.
 pub fn exhibition_tidecaller() -> CardDefinition {
     use crate::effect::Selector as Sel;
@@ -3312,24 +3308,21 @@ pub fn exhibition_tidecaller() -> CardDefinition {
 /// Push (modern_decks): the "until end of your next turn, you may cast"
 /// rider is **now wired** via the new `Effect::GrantMayPlay` primitive.
 /// ETB body is `Seq([Move(target → Exile), GrantMayPlay(...,
-/// EndOfControllersNextTurn)])`. The same `Selector::Take(_, 1)` selects
-/// the lifted card so the permission targets exactly the card that just
-/// went to exile. The controller then invokes
-/// `GameAction::CastFromZoneWithoutPaying` during a later sorcery-speed
-/// window to recur the card for free. The `{R/W}` pip is a real
-/// `ManaSymbol::Hybrid(Red, White)`, payable with either red or white.
+/// EndOfControllersNextTurn)])`. The exiled card is a real target (slot
+/// 0 with the noncreature/nonland/your-graveyard filter — printed
+/// "exile target … card"), and `Selector::LastMoved` hands the same
+/// card to the permission. Printed "you may cast that card" is a normal
+/// cast, so the permission carries `pay_own_cost: true`. The `{R/W}`
+/// pip is a real `ManaSymbol::Hybrid(Red, White)`, payable with either
+/// red or white.
 pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::effect::ZoneDest;
+    use crate::effect::shortcut::target_filtered;
     use crate::mana::r;
-    let nonperm_in_gy = SelectionRequirement::Nonland
-        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)));
-    let target_card = Selector::take(
-        Selector::CardsInZone {
-            who: PlayerRef::You,
-            zone: crate::card::Zone::Graveyard,
-            filter: nonperm_in_gy,
-        },
-        Value::Const(1),
+    let target_card = target_filtered(
+        SelectionRequirement::Nonland
+            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)))
+            .and(SelectionRequirement::InYourGraveyard),
     );
     CardDefinition {
         name: "Practiced Scrollsmith",
@@ -3357,7 +3350,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: true, any_color: false,
                 },
             ]),
         }],
@@ -3433,17 +3426,20 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
 /// Push (modern_decks): the alt additional cost (exile two cards from
 /// your graveyard) is **now wired** via the new
 /// `AlternativeCost.exile_from_graveyard_count: u32` field. The
-/// printed cost is modeled as **{3}{W}** (base {2}{W} + the {1}{W}
-/// mana fork — auto-decider's default path). The alt cost path
-/// {2}{W} with `exile_from_graveyard_count: 2` is available when the
-/// caster's graveyard has at least 2 cards. Auto-picker takes the
-/// lowest-CMC cards. Body (4/3 Flying + Vigilance) unchanged.
+/// pay-mana fork of the additional cost is folded into the default
+/// cost, modeled as **{3}{W}** — base {2}{W} + the {1}{W} additional
+/// cost with the second white pip relaxed to generic (an exact fold
+/// would be {3}{W}{W}; {3}{W} keeps the mana-value distortion
+/// smaller). The alt cost path {2}{W} with
+/// `exile_from_graveyard_count: 2` is available when the caster's
+/// graveyard has at least 2 cards. Auto-picker takes the lowest-CMC
+/// cards. Body (4/3 Flying + Vigilance) unchanged.
 pub fn soaring_stoneglider() -> CardDefinition {
     use crate::card::AlternativeCost;
     use crate::mana::w;
     CardDefinition {
         name: "Soaring Stoneglider",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
@@ -3623,10 +3619,13 @@ pub fn elemental_mascot() -> CardDefinition {
                     toughness: Value::Const(0),
                     duration: Duration::EndOfTurn,
                 },
+                // Printed "you may play that card" is a plain impulse —
+                // the card's real cost is paid (`pay_own_cost: true`),
+                // not a free cast.
                 Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: false,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: true,
                     uncast_penalty: None,
                 },
             ]),
@@ -3830,11 +3829,17 @@ pub fn mage_tower_referee() -> CardDefinition {
 ///   friendly utility creature with a useful ETB) and schedules a
 ///   delayed return at next end step. Uses the same
 ///   `Exile + DelayUntil(NextEndStep, Move(Target → Battlefield(OwnerOf)))`
-///   pattern as Restoration Angel-style flickers.
+///   pattern as Restoration Angel-style flickers. Approximation:
+///   printed "up to one other target creature" makes the flicker
+///   optional, but the target here is mandatory — there is no decline
+///   path when a legal target exists.
 /// - End-step counter: gated on the exact-printed
 ///   `Predicate::CardsExiledThisTurnAtLeast` (backed by
 ///   `Player.cards_exiled_this_turn`), so exile-from-hand and
 ///   exile-from-library events count too — no graveyard-leave proxy.
+///   Printed wording is player-agnostic ("cards were put into exile"),
+///   so `who: EachPlayer` sums every player's tally — an opponent's
+///   exile satisfies the gate too.
 pub fn ennis_debate_moderator() -> CardDefinition {
     use crate::card::{CounterType, Predicate, Supertype};
     use crate::effect::{DelayedTriggerKind, ZoneDest};
@@ -3893,7 +3898,7 @@ pub fn ennis_debate_moderator() -> CardDefinition {
                 ),
                 effect: Effect::If {
                     cond: Predicate::CardsExiledThisTurnAtLeast {
-                        who: PlayerRef::You,
+                        who: PlayerRef::EachPlayer,
                         at_least: Value::Const(1),
                     },
                     then: Box::new(Effect::AddCounter {
@@ -4095,8 +4100,9 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
 ///
 /// Now wired (push XVI): the "land OR card with {X}" filter uses the
 /// new `SelectionRequirement::HasXInCost` predicate ORed with `Land`.
-/// Misses go to graveyard (engine default for `RevealUntilFind`); the
-/// printed "rest on bottom random order" rider is approximated. The
+/// Misses go to the bottom of the library in a random order
+/// (`miss_dest: RevealMissDest::BottomRandom`), matching the printed
+/// "rest on the bottom of your library in a random order" rider. The
 /// `{G/U}` pip is a real `ManaSymbol::Hybrid(Green, Blue)`, payable with
 /// either green or blue.
 pub fn paradox_surveyor() -> CardDefinition {
@@ -4261,6 +4267,9 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 /// `Value::CountersOn(This) >= 1` mints a Fractal token and copies the
 /// counter count onto it (counters persist on the CardInstance across
 /// the bf → gy zone change, so the read is accurate at resolve time).
+/// Approximation: printed "counters" means counters of any kind, but
+/// the gate and the transfer both look only at +1/+1 counters — other
+/// counter types are ignored.
 pub fn ambitious_augmenter() -> CardDefinition {
     use crate::card::CounterType;
     use crate::catalog::sets::sos::sorceries::fractal_token;
@@ -4404,7 +4413,9 @@ pub fn rubble_rouser() -> CardDefinition {
 /// All four abilities wired: `+2 gain 3`, `0 draw 1 / lose 1`, `-3
 /// destroy creature`, and the ultimate emblem ("whenever you gain life,
 /// each opponent loses that much life" — a triggered emblem via
-/// `Effect::CreateEmblem`).
+/// `Effect::CreateEmblem`). Approximation: the printed emblem says
+/// "*target opponent* loses that much life", but the wiring drains
+/// each opponent — a multiplayer-only difference (identical in 1v1).
 pub fn professor_dellian_fel() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
     use crate::effect::shortcut::target_filtered;
@@ -4487,7 +4498,9 @@ pub fn professor_dellian_fel() -> CardDefinition {
 /// target collapse of the printed "any number of target players"),
 /// -2 (return ≤3-MV creature card from your gy → bf), and -7 (flip five
 /// coins; each opponent skips a turn per head, via `FlipCoin` +
-/// `SkipTurns`). Note the printed cost is `{1}{B}{B}` despite the Ral
+/// `SkipTurns` — an each-opponent collapse of the printed "target
+/// opponent skips their next X turns", a multiplayer-only difference
+/// like the -1's). Note the printed cost is `{1}{B}{B}` despite the Ral
 /// subtype, matching this Witherbloom-flavoured Ral variant.
 pub fn ral_zarek_guest_lecturer() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
@@ -4793,21 +4806,20 @@ pub fn stone_docent() -> CardDefinition {
 ///
 /// Body wired (0/2 Legendary Construct) + the printed `{T}: Add {C}`
 /// mana ability via the shared `tap_add_colorless()` helper. The
-/// Grandeur ability (discard-named-this for impulsive draw) is omitted
-/// — Grandeur is a singleton-set-discount mechanic with no engine
-/// equivalent yet (no card-name-as-cost activation). The mana-rock body
-/// still slots into colorless utility pools.
+/// Grandeur ability is wired too, as a second `ActivatedAbility` gated
+/// on another card named Page, Loose Leaf in hand — see the push
+/// comment inside for the cost approximation details.
 pub fn page_loose_leaf() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::{ActivatedAbility, Predicate, Supertype, Zone};
     use crate::effect::{RevealMissDest, ZoneDest};
     // Push (modern_decks, batch 92): Grandeur "Discard another card
-    // named Page, Loose Leaf: reveal until creature → bf, rest →
-    // bottom random" wired as an activated ability with zero mana
-    // cost, gated on `Predicate::SameNamedInZoneAtLeast { who: You,
-    // zone: Hand, at_least: 1 }` (≥ 1 other Page in hand), and body
-    // = `Seq(Discard 1, RevealUntilFind(Creature, → bf,
-    // miss=BottomRandom))`. The "discard another Page" cost is
+    // named Page, Loose Leaf: reveal until an instant or sorcery →
+    // hand, rest → bottom random" wired as an activated ability with
+    // zero mana cost, gated on `Predicate::SameNamedInZoneAtLeast {
+    // who: You, zone: Hand, at_least: 1 }` (≥ 1 other Page in hand),
+    // and body = `Seq(Discard 1, RevealUntilFind(Instant ∨ Sorcery,
+    // → Hand, miss=BottomRandom))`. The "discard another Page" cost is
     // approximated by gating on another Page in hand + auto-discarding
     // 1 card — the auto-decider picks the first hand card, which in a
     // tested deck with multiple Pages will frequently be the other
@@ -5023,7 +5035,11 @@ pub fn the_dawning_archaic() -> CardDefinition {
             effect: Effect::CastWithoutPayingImmediate {
                 what: target_filtered(
                     SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        // Printed "from your graveyard" — without the zone
+                        // scope the targeting walker falls through to
+                        // opponents' graveyards.
+                        .and(SelectionRequirement::InYourGraveyard),
                 ),
                 source_zone: Zone::Graveyard,
                 exile_after: true,
@@ -5102,12 +5118,15 @@ pub fn silverquill_the_disputant() -> CardDefinition {
 ///
 /// Push (modern_decks): the `{2}, Sacrifice another creature` activation
 /// is **now wired** via the new cast-from-exile primitives. The activation
-/// exiles a target IS card from an opponent's graveyard and grants
-/// `may_play_until: EndOfThisTurn` with `exile_after: true` (so the
-/// resolved spell routes to exile, matching "if that spell would be put
-/// into a graveyard, exile it instead"). Sorcery-speed gate via
+/// exiles an IS card from an opponent's graveyard and grants
+/// `may_play_until: EndOfThisTurn`. Sorcery-speed gate via
 /// `sorcery_speed: true`; sacrifice-another-creature cost via
-/// `sac_cost: true`.
+/// `sac_cost: true`. Two approximations: (1) the printed "exile
+/// *target* instant or sorcery card" is not a real target — the card
+/// is auto-picked via a non-targeted `Selector::take(CardsInZone(opp
+/// graveyards, IS filter), 1)`; (2) the grant carries `exile_after:
+/// true`, so the cast card routes to exile on resolution rather than
+/// its owner's graveyard — a rider the printed text doesn't include.
 ///
 /// Push (modern_decks, batch 72): the "Whenever you cast a spell you
 /// don't own" trigger is **now wired** via the new

@@ -159,7 +159,9 @@ pub fn daydream() -> CardDefinition {
             Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
+                    // Printed "under its owner's control" — matters when
+                    // the exiled creature was a stolen opponent-owned one.
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     tapped: false,
                 },
             },
@@ -570,10 +572,12 @@ pub fn end_of_the_hunt() -> CardDefinition {
 ///
 /// Approximation: the engine has no per-cast "pay X life" additional
 /// cost primitive yet, so X is read off the spell's cost (`{X}` slot)
-/// rather than a separate life payment, and the caster doesn't lose
-/// X life on cast. Net: a flexible mass removal that scales with X
-/// — Wrath shape at higher X, Pyroclasm-on-artifacts shape at lower
-/// X. Tracked under TODO.md "X-life additional cost primitive".
+/// and the life loss is applied as the first resolution step
+/// (`Effect::LoseLife { amount: XFromCost }`) rather than as a
+/// cast-time cost — the caster still loses X life, just at resolution.
+/// Net: a flexible mass removal that scales with X — Wrath shape at
+/// higher X, Pyroclasm-on-artifacts shape at lower X. Tracked under
+/// TODO.md "X-life additional cost primitive".
 pub fn vicious_rivalry() -> CardDefinition {
     use crate::mana::{ManaSymbol, g};
     let mut spell_cost = cost(&[generic(2), b(), g()]);
@@ -744,7 +748,7 @@ pub fn render_speechless() -> CardDefinition {
         effect: Effect::Seq(vec![
             // Slot 0: target opponent reveals + chosen-discard.
             Effect::DiscardChosen {
-                from: target_filtered(SelectionRequirement::Player),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
@@ -768,15 +772,11 @@ pub fn render_speechless() -> CardDefinition {
 /// • Return target nonland permanent card from your graveyard to the
 ///   battlefield."
 ///
-/// Approximation: the printed card lets the controller pick the same
-/// mode more than once and target up to four different permanents.
-/// The engine's `ChooseMode` only picks one mode and one target per
-/// resolution, so we collapse to a single-target two-mode picker that
-/// runs *both* halves at full power: the first mode destroys a target
-/// nonland permanent (auto-targets an opponent's), and the second mode
-/// returns a nonland permanent card from your graveyard. Net play: the
-/// card swings the board exactly the way a 1×destroy / 1×return play
-/// would in a real game, just without the optional 3rd/4th invocation.
+/// Approximation: the printed card lets the controller pick up to four
+/// modes, repeats allowed. The engine's `ChooseMode` picks exactly one
+/// mode per resolution, so we collapse to a plain two-mode picker: each
+/// cast either destroys a target nonland permanent or returns a nonland
+/// permanent card from your graveyard — one effect, not up to four.
 pub fn moment_of_reckoning() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {
@@ -1100,17 +1100,14 @@ pub fn mind_roots() -> CardDefinition {
 /// "Draw X cards. Then you may put a permanent card with mana value X
 /// or less from your hand onto the battlefield tapped."
 ///
-/// Push (modern_decks batch 43, 🟡 → ✅): the "may put a permanent ≤ X
-/// from hand onto the battlefield tapped" half **now lands** via
-/// `Effect::MayDo` wrapping a `Selector::take(EachMatching(Hand,
-/// Permanent), 1)` walk gated by `Predicate::ValueAtMost(ManaValueOf,
-/// XFromCost)`. The Permanent filter excludes Instant + Sorcery from
-/// the hand pool (matching the printed "permanent card" wording).
-/// AutoDecider declines by default; `ScriptedDecider::new([Bool(true)])`
-/// exercises the paid path.
+/// The "may put a permanent ≤ X from hand onto the battlefield tapped"
+/// half rides `Effect::PutFromHandOntoBattlefield` — the controller
+/// picks the card via `ChooseCards` (min 0, so the "may" is native) from
+/// the hand cards matching `Permanent ∧ ManaValueAtMostXFromCost` (the
+/// X gate is concretized at resolution via `resolve_x(ctx.x_value)`).
+/// The Permanent filter excludes Instant + Sorcery from the hand pool
+/// (matching the printed "permanent card" wording).
 pub fn mind_into_matter() -> CardDefinition {
-    use crate::card::Predicate;
-    use crate::effect::{ZoneDest, ZoneRef};
     use crate::mana::{ManaSymbol, g, u};
     let mut spell_cost = cost(&[g(), u()]);
     spell_cost.symbols.insert(0, ManaSymbol::X);
@@ -1123,31 +1120,14 @@ pub fn mind_into_matter() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::XFromCost,
             },
-            Effect::MayDo {
-                description: "put a permanent with mana value X or less from your hand onto the battlefield tapped".to_string(),
-                body: Box::new(Effect::ForEach {
-                    selector: Selector::take(
-                        Selector::EachMatching {
-                            zone: ZoneRef::Hand(PlayerRef::You),
-                            filter: SelectionRequirement::Permanent,
-                        },
-                        Value::Const(1),
-                    ),
-                    body: Box::new(Effect::If {
-                        cond: Predicate::ValueAtMost(
-                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                            Value::XFromCost,
-                        ),
-                        then: Box::new(Effect::Move {
-                            what: Selector::TriggerSource,
-                            to: ZoneDest::Battlefield {
-                                controller: PlayerRef::You,
-                                tapped: true,
-                            },
-                        }),
-                        else_: Box::new(Effect::Noop),
-                    }),
-                }),
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Permanent
+                    .and(SelectionRequirement::ManaValueAtMostXFromCost),
+                count: Value::Const(1),
+                tapped: true,
+                haste: false,
+                sacrifice_eot: false,
             },
         ]),
         ..Default::default()
@@ -1633,22 +1613,6 @@ pub fn wild_hypothesis() -> CardDefinition {
 
 
 
-/// Zimone's Experiment — {3}{G} Sorcery.
-/// "Look at the top five cards of your library. You may reveal up to two
-/// creature and/or land cards from among them, then put the rest on the
-/// bottom of your library in a random order. Put all land cards revealed
-/// this way onto the battlefield tapped and put all creature cards
-/// revealed this way into your hand."
-///
-/// Approximation: the engine has no "look at top N, choose ≤K matching
-/// among them" primitive that splits hits between two destinations
-/// (hand vs. tapped battlefield). We collapse to the most common play
-/// pattern: a single `RevealUntilFind` for a creature to hand (cap 5),
-/// then a `Search` for a basic land into play tapped — the cards-not-
-/// chosen-on-the-reveal half lands on the bottom of the library
-/// implicitly. The "reveal up to two" cap is approximated as "find
-/// one of each" (typical pull is 1 creature + 1 land); the random-
-/// bottom sort happens via the natural reveal-rest-go-to-bottom path.
 /// Artistic Process — {3}{R}{R} Sorcery.
 /// "Choose one — / • Artistic Process deals 6 damage to target creature.
 /// / • Artistic Process deals 2 damage to each creature you don't
@@ -1714,11 +1678,16 @@ pub fn artistic_process() -> CardDefinition {
 /// wired via `Effect::RegisterParadigm` + `exile_on_resolve: true`.
 /// Each of the controller's pre-combat main phases offers a free copy.
 pub fn decorum_dissertation() -> CardDefinition {
+    use crate::card::SpellSubtype;
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Decorum Dissertation",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: target_filtered(SelectionRequirement::Player),
@@ -1749,6 +1718,10 @@ pub fn germination_practicum() -> CardDefinition {
         name: "Germination Practicum",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -1780,6 +1753,10 @@ pub fn restoration_seminar() -> CardDefinition {
         name: "Restoration Seminar",
         cost: cost(&[generic(5), w(), w()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
@@ -1797,6 +1774,21 @@ pub fn restoration_seminar() -> CardDefinition {
     }
 }
 
+/// Zimone's Experiment — {3}{G} Sorcery.
+/// "Look at the top five cards of your library. You may reveal up to two
+/// creature and/or land cards from among them, then put the rest on the
+/// bottom of your library in a random order. Put all land cards revealed
+/// this way onto the battlefield tapped and put all creature cards
+/// revealed this way into your hand."
+///
+/// Approximation: wired as two sequential `Effect::RevealUntilFind`
+/// walks over the top of the library, each capped at 5 cards — first a
+/// creature to hand, then a land onto the battlefield tapped, with
+/// misses going to the bottom of the library in random order. This
+/// captures the dual-destination harvest (up to one creature to hand
+/// AND one land into play), but doesn't perfectly model the printed
+/// "look at five cards once" semantic: the second walk sees the library
+/// state left behind by the first.
 pub fn zimones_experiment() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::g;
@@ -2200,9 +2192,6 @@ pub fn archaics_agony() -> CardDefinition {
 ///    in exile so it stays reachable for the recurrence.
 ///
 /// Approximations vs. printed Oracle:
-/// - Exile count is fixed at 4 (no "until total MV ≥ 4" primitive).
-///   For very-high-cost libraries this undercounts; for very-low-cost
-///   libraries it overcounts.
 /// - Multi-cast loop iterates each exiled card sequentially; the
 ///   controller is asked one yes/no per card (no "cast in any order"
 ///   prompt — the engine has no batched same-zone cast prompt).
@@ -2246,10 +2235,10 @@ pub fn improvisation_capstone() -> CardDefinition {
 }
 
 /// Applied Geometry — {2}{G}{U}, Sorcery. "Create a token that's a copy
-/// of target permanent you control, except it's a 0/0 Fractal creature
-/// in addition to its other types. Put six +1/+1 counters on it."
-/// Wired via `Effect::CreateTokenCopyOf` plus six +1/+1 counters on
-/// the new token.
+/// of target non-Aura permanent you control, except it's a 0/0 Fractal
+/// creature in addition to its other types. Put six +1/+1 counters on
+/// it." Wired via `Effect::CreateTokenCopyOf` plus six +1/+1 counters
+/// on the new token.
 pub fn applied_geometry() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::{g, u};
@@ -2271,8 +2260,15 @@ pub fn applied_geometry() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 source: crate::effect::shortcut::target_filtered(
+                    // Printed "non-Aura permanent you control" — a copied
+                    // Aura token would enter unattached and die to SBA.
                     SelectionRequirement::Permanent
-                        .and(SelectionRequirement::ControlledByYou),
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasEnchantmentSubtype(
+                                crate::card::EnchantmentSubtype::Aura,
+                            ),
+                        ))),
                 ),
                 extra_creature_types: vec![crate::card::CreatureType::Fractal],
                 extra_card_types: vec![],

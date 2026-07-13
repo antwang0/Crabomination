@@ -1163,9 +1163,18 @@ impl GameState {
             }
             Predicate::CardsExiledThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
-                self.resolve_player(who, ctx)
-                    .map(|p| self.players[p].cards_exiled_this_turn >= n)
-                    .unwrap_or(false)
+                // `EachPlayer` = the player-agnostic printed wording ("if
+                // one or more cards were put into exile this turn" — Ennis,
+                // Debate Moderator): sum the per-player tallies.
+                if matches!(who, crate::effect::PlayerRef::EachPlayer) {
+                    let total: u32 =
+                        self.players.iter().map(|p| p.cards_exiled_this_turn).sum();
+                    total >= n
+                } else {
+                    self.resolve_player(who, ctx)
+                        .map(|p| self.players[p].cards_exiled_this_turn >= n)
+                        .unwrap_or(false)
+                }
             }
             Predicate::InstantsOrSorceriesCastThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
@@ -1740,8 +1749,14 @@ impl GameState {
                 } else {
                     ctx.mana_spent
                 };
-                let p = source_card.power();
-                let t = source_card.toughness();
+                // Use the fully-computed stats so continuous effects
+                // (anthems, static pumps from other permanents) are
+                // reflected — `CardInstance::power()` only sees counters
+                // and self-pumps.
+                let (p, t) = self
+                    .computed_permanent(source_id)
+                    .map(|cp| (cp.power, cp.toughness))
+                    .unwrap_or_else(|| (source_card.power(), source_card.toughness()));
                 (mana_spent as i32 > p) || (mana_spent as i32 > t)
             }
         }

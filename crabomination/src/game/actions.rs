@@ -2183,7 +2183,7 @@ impl GameState {
         // Register the copy before entering the cast pipeline — the cast may
         // suspend mid-way (float-spend confirm, additional-cost pick) and
         // resume via a plain `CastSpell` replay, so the bookkeeping (token
-        // flag + unprepare) is settled by `settle_prepare_copy_cast` wherever
+        // flag + unprepare) is settled by `settle_prepare_after_cast` wherever
         // the cast actually completes, not here.
         self.pending_prepare_copies.push((copy_id, creature_id));
         let result = self.cast_spell(copy_id, target, additional_targets, mode, x_value);

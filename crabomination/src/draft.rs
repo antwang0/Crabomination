@@ -651,7 +651,7 @@ pub fn sos_draft_pool() -> Vec<CardFactory> {
 }
 
 /// Which set of cards a draft draws from. Cube is the existing 309-card
-/// curated cube pool; Sos is the 255-card Secrets of Strixhaven set
+/// curated cube pool; Sos is the pooled Secrets of Strixhaven cards
 /// (`sos_mode::all_sos_cards`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DraftPool {
