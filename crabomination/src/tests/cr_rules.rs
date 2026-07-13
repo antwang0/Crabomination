@@ -8583,3 +8583,57 @@ fn cr_115_1c_attack_trigger_fills_all_target_slots() {
     assert_eq!(g.battlefield_find(v1).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(v2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 601.2b — a permanent's ETB *triggered* ability reads the cast's X. Casting
+/// Dune Drifter for X=4 lets its ETB return an MV-4 card from the graveyard;
+/// before this run the trigger evaluated X as 0.
+#[test]
+fn cr_601_2b_etb_trigger_reads_cast_x() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::hill_giant()); // {3}{R} = MV 4
+    let spell = g.add_card_to_hand(0, catalog::dune_drifter());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4); // X=4
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("cast Dune Drifter X=4");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dead), "MV-4 card returned by X=4 ETB");
+}
+
+/// CR 121.2a — a draw-count replacement can be gated on a condition. Vnwxt's
+/// "max speed — draw two instead" doubles only while its controller is at speed 4.
+#[test]
+fn cr_121_2a_conditional_draw_replacement() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vnwxt_verbose_host());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let mut events = Vec::new();
+    g.players[0].speed = 2;
+    let n = g.players[0].hand.len();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), n + 1, "below max: single draw");
+    g.players[0].speed = 4;
+    let n = g.players[0].hand.len();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), n + 2, "max speed: doubled draw");
+}
+
+/// CR 702.179f — a player with no speed has speed 0 for effects that refer to
+/// speed. The Speed Demon's end step draws/loses X=0 before any engine starts.
+#[test]
+fn cr_702_179f_no_speed_counts_as_zero() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_speed_demon());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].speed = 0; // never started engines
+    g.active_player_idx = 0;
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "speed 0 → no life lost");
+    assert_eq!(g.players[0].hand.len(), hand, "speed 0 → no cards drawn");
+}
