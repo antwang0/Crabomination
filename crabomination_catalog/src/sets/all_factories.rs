@@ -6292,6 +6292,10 @@ static DECKS: &[Factory] = &[
     super::decks::ferocification,
     super::decks::freestrider_lookout,
     super::decks::fleeting_reflection,
+    super::decks::full_steam_ahead,
+    super::decks::hellspur_posse_boss,
+    super::decks::kraum_violent_cacophony,
+    super::decks::at_knifepoint,
     super::decks::bushwhack,
     super::decks::cheeky_house_mouse,
 ];
