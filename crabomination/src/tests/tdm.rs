@@ -1688,3 +1688,29 @@ fn smile_at_death_reanimates_small_creature() {
     let b = g.battlefield_find(bear).expect("bear reanimated");
     assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "with a +1/+1 counter");
 }
+
+/// Roar of Endless Song makes a 5/5 Elephant on chapter I and doubles the team.
+#[test]
+fn roar_of_endless_song_elephant_then_double() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::roar_of_endless_song());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roar");
+    drain_stack(&mut g);
+    // Chapter I on ETB: a 5/5 Elephant.
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Elephant"), "made an Elephant");
+    // Advance to chapter III → doubles P/T.
+    g.saga_advance(id);
+    g.saga_advance(id);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "2/2 doubled to 4/4");
+}

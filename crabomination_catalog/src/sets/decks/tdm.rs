@@ -17,8 +17,11 @@
 //! Ambling Stormshell (Ward Turtle) and Furious Forebear (graveyard recursion).
 //! Batch 5 adds Bewilder and Sarkhan, Dragon Ascendant. The Siege cycle
 //! (Barrensteppe / Frostcliff / Glacierwood / Hollowmurk) rides the new
-//! `CardDefinition.enter_modes` persistent as-enters mode choice. Tests in
-//! `crabomination/src/tests/tdm.rs`.
+//! `CardDefinition.enter_modes` persistent as-enters mode choice. A later batch
+//! adds Nature's Rhythm (X-search-to-battlefield + Harmonize), Smile at Death
+//! (upkeep up-to-two graveyard reanimate via `ApplyToTargets`), and Roar of
+//! Endless Song (Saga — Elephants then a team P/T double via `ForEach`). Tests
+//! in `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -1974,6 +1977,49 @@ pub fn smile_at_death() -> CardDefinition {
                 ])),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Roar of Endless Song — {2}{G}{U}{R} Enchantment — Saga. I, II: create a 5/5
+/// green Elephant. III: double the power and toughness of each creature you
+/// control until end of turn.
+pub fn roar_of_endless_song() -> CardDefinition {
+    let elephant = TokenDefinition {
+        name: "Elephant".into(),
+        power: 5,
+        toughness: 5,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        ..Default::default()
+    };
+    let make_elephant = Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elephant };
+    CardDefinition {
+        name: "Roar of Endless Song",
+        cost: cost(&[generic(2), g(), u(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, make_elephant.clone()),
+            (2, make_elephant),
+            (
+                3,
+                // Double each creature's P/T by adding its own current P/T.
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    body: Box::new(Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                        toughness: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                        duration: Duration::EndOfTurn,
+                    }),
+                },
+            ),
+        ],
         ..Default::default()
     }
 }

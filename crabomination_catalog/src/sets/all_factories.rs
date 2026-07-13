@@ -6246,6 +6246,7 @@ static DECKS: &[Factory] = &[
     super::decks::great_arashin_city,
     super::decks::natures_rhythm,
     super::decks::smile_at_death,
+    super::decks::roar_of_endless_song,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
