@@ -159,6 +159,8 @@ pub fn sync_export_prompt_ui(
                     align_items: AlignItems::Center,
                     ..default()
                 },
+                // Above the game-over modal, which can now open this prompt.
+                bevy::ui::GlobalZIndex(60),
                 BackgroundColor(theme::OVERLAY_BG_HEAVY),
                 ExportPromptRoot,
             ))

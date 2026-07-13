@@ -35,6 +35,11 @@ pub struct RematchButton;
 #[derive(Component)]
 pub struct NewGameButton;
 
+/// "Export State" on the game-over modal — opens the same annotated export
+/// prompt as the mid-game X key.
+#[derive(Component)]
+pub struct ExportStateButton;
+
 #[derive(Component)]
 pub struct AutoRematchSetButton;
 
@@ -267,6 +272,28 @@ pub fn sync_game_over_modal(
                             Pickable::IGNORE,
                         ));
                     });
+                    // Export the final state — game over is exactly when a
+                    // player wants to file a bug or archive the game, and
+                    // the mid-game X-key flow was never offered here.
+                    row.spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)),
+                            border_radius: BorderRadius::all(RADIUS_BUTTON),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_TERTIARY_BG),
+                        HoverTint::new(theme::BUTTON_TERTIARY_BG),
+                        ExportStateButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Export State"),
+                            tf(18.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            Pickable::IGNORE,
+                        ));
+                    });
                 });
 
                 // Spectate-only: auto-rematch counter.
@@ -349,6 +376,20 @@ pub fn refresh_auto_rematch_text(
     }
     for mut t in &mut q {
         t.0 = format_auto_input(&auto);
+    }
+}
+
+/// Open the annotated export prompt from the game-over modal — same flow
+/// as the mid-game X key.
+pub fn handle_export_state_button(
+    button_q: Query<&Interaction, (Changed<Interaction>, With<ExportStateButton>)>,
+    mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
+) {
+    if state.active {
+        return;
+    }
+    if button_q.iter().any(|i| *i == Interaction::Pressed) {
+        crate::systems::export_prompt::open_export_prompt(&mut state);
     }
 }
 

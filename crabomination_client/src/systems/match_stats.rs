@@ -18,20 +18,40 @@ pub struct MatchStats {
     pub damage_taken: HashMap<usize, u32>,
     pub life_gained: HashMap<usize, u32>,
     pub lands_played: HashMap<usize, u32>,
+    pub discarded: HashMap<usize, u32>,
+    pub milled: HashMap<usize, u32>,
+    pub sacrificed: HashMap<usize, u32>,
+    pub poison: HashMap<usize, u32>,
 }
 
 impl MatchStats {
     /// One compact line per seat, e.g.
     /// "Alice — 12 drawn · 9 spells · 6 lands · 15 dmg taken · 4 life gained".
+    /// The five core counters always render; situational ones (discards,
+    /// mills, sacrifices, poison) are appended only when nonzero so the
+    /// common case stays one readable line.
     pub fn seat_line(&self, seat: usize, label: &str) -> String {
-        format!(
+        let get = |m: &HashMap<usize, u32>| m.get(&seat).copied().unwrap_or(0);
+        let mut line = format!(
             "{label} — {} drawn · {} spells · {} lands · {} dmg taken · {} life gained",
-            self.drawn.get(&seat).copied().unwrap_or(0),
-            self.spells.get(&seat).copied().unwrap_or(0),
-            self.lands_played.get(&seat).copied().unwrap_or(0),
-            self.damage_taken.get(&seat).copied().unwrap_or(0),
-            self.life_gained.get(&seat).copied().unwrap_or(0),
-        )
+            get(&self.drawn),
+            get(&self.spells),
+            get(&self.lands_played),
+            get(&self.damage_taken),
+            get(&self.life_gained),
+        );
+        for (map, noun) in [
+            (&self.discarded, "discarded"),
+            (&self.milled, "milled"),
+            (&self.sacrificed, "sacrificed"),
+            (&self.poison, "poison"),
+        ] {
+            let n = get(map);
+            if n > 0 {
+                line.push_str(&format!(" · {n} {noun}"));
+            }
+        }
+        line
     }
 }
 
@@ -63,6 +83,19 @@ pub fn track_match_stats(events: Res<LatestServerEvents>, mut stats: ResMut<Matc
             GameEventWire::LandPlayed { player, .. } => {
                 *stats.lands_played.entry(*player).or_default() += 1;
             }
+            GameEventWire::CardDiscarded { player, .. } => {
+                *stats.discarded.entry(*player).or_default() += 1;
+            }
+            GameEventWire::CardMilled { player, .. } => {
+                *stats.milled.entry(*player).or_default() += 1;
+            }
+            GameEventWire::CreatureSacrificed { who, .. }
+            | GameEventWire::PermanentSacrificed { who, .. } => {
+                *stats.sacrificed.entry(*who).or_default() += 1;
+            }
+            GameEventWire::PoisonAdded { player, amount } => {
+                *stats.poison.entry(*player).or_default() += amount;
+            }
             _ => {}
         }
     }
@@ -83,6 +116,17 @@ mod tests {
         assert_eq!(
             s.seat_line(0, "P0"),
             "P0 — 3 drawn · 2 spells · 4 lands · 5 dmg taken · 6 life gained",
+        );
+    }
+
+    #[test]
+    fn situational_counters_append_only_when_nonzero() {
+        let mut s = MatchStats::default();
+        *s.discarded.entry(1).or_default() += 2;
+        *s.poison.entry(1).or_default() += 3;
+        assert_eq!(
+            s.seat_line(1, "P1"),
+            "P1 — 0 drawn · 0 spells · 0 lands · 0 dmg taken · 0 life gained · 2 discarded · 3 poison",
         );
     }
 }

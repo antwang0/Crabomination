@@ -774,6 +774,7 @@ fn main() {
                 systems::game_over::refresh_auto_rematch_text,
                 systems::game_over::handle_rematch_button,
                 systems::game_over::handle_new_game_button,
+                systems::game_over::handle_export_state_button,
                 systems::game_over::apply_auto_rematch_on_game_over,
             )
                 .chain()

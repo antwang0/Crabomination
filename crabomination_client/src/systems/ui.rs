@@ -1484,8 +1484,8 @@ pub fn exile_browser(
     }
     let Some(cv) = view.0.as_ref() else { return };
 
-    // (display name, badge, face_down) per exiled card.
-    let entries: Vec<(String, Option<String>, bool)> = cv
+    // (owner, display name, badge, face_down) per exiled card.
+    let entries: Vec<(usize, String, Option<String>, bool)> = cv
         .exile
         .iter()
         .map(|c| {
@@ -1508,9 +1508,27 @@ pub fn exile_browser(
                 badges.push("Returns when exiler leaves".to_string());
             }
             let badge = (!badges.is_empty()).then(|| badges.join(" · "));
-            (c.name.clone(), badge, c.face_down)
+            (c.owner, c.name.clone(), badge, c.face_down)
         })
         .collect();
+    // Owner sections: the viewer first, then the remaining seats in order —
+    // mirrors the graveyard browser's per-owner split instead of one
+    // merged pile.
+    let mut owners: Vec<usize> = entries.iter().map(|(o, ..)| *o).collect();
+    owners.sort_unstable();
+    owners.dedup();
+    owners.sort_by_key(|&o| (o != cv.your_seat, o));
+    let owner_label = |seat: usize| -> String {
+        if seat == cv.your_seat {
+            "You".to_string()
+        } else {
+            cv.players
+                .iter()
+                .find(|p| p.seat == seat)
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| format!("P{seat}"))
+        }
+    };
     let count = entries.len();
     let panel_width = BROWSER_CARD_WIDTH * BROWSER_COLS as f32 + 80.0;
 
@@ -1563,19 +1581,28 @@ pub fn exile_browser(
                 Pickable::IGNORE,
             ));
         } else {
-            panel
-                .spawn((
-                    Node {
-                        flex_direction: FlexDirection::Row,
-                        flex_wrap: FlexWrap::Wrap,
-                        column_gap: Val::Px(8.0),
-                        row_gap: Val::Px(8.0),
-                        ..default()
-                    },
+            for owner in owners {
+                let section: Vec<_> =
+                    entries.iter().filter(|(o, ..)| *o == owner).collect();
+                panel.spawn((
+                    Text::new(format!("{} ({})", owner_label(owner), section.len())),
+                    ui_fonts.tf(14.0),
+                    TextColor(theme::TEXT_BODY),
                     Pickable::IGNORE,
-                ))
-                .with_children(|grid| {
-                    for (name, badge, face_down) in &entries {
+                ));
+                panel
+                    .spawn((
+                        Node {
+                            flex_direction: FlexDirection::Row,
+                            flex_wrap: FlexWrap::Wrap,
+                            column_gap: Val::Px(8.0),
+                            row_gap: Val::Px(8.0),
+                            ..default()
+                        },
+                        Pickable::IGNORE,
+                    ))
+                    .with_children(|grid| {
+                        for (_, name, badge, face_down) in section {
                         let tile_children = |tile: &mut ChildSpawnerCommands| {
                             if !face_down {
                                 let texture: Handle<Image> =
@@ -1633,6 +1660,7 @@ pub fn exile_browser(
                         .with_children(tile_children);
                     }
                 });
+            }
         }
         panel.spawn((
             Text::new("Press V or Esc, or click outside to close"),
