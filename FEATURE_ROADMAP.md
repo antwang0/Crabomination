@@ -16,6 +16,15 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Harmonize-grant + once-per-game + additive-color primitives
+  (recent179–182 — TDM/FDN/DSK/BLB):** `Effect::GrantHarmonizeThisTurn` +
+  `CardInstance.granted_harmonize_eot` / `effective_harmonize` (Songcrafter Mage —
+  a granted Harmonize mirroring the flashback grant, exercised by CR 702.180b /
+  514.2 tests), `ActivatedAbility.activate_once` (a plain "Activate only once"
+  once-per-game gate reusing `exhausted_abilities` without firing exhaust events —
+  Possessed Goat), and `Effect::BecomeColor.additive` (layer-5 `AddColor` for
+  "becomes [color] in addition to its other colors" — Possessed Goat).
+
 - **Trigger-doubler + cast/damage primitives (TDM/FDN batch):**
   `StaticEffect::DoubleControllerAttackTriggers` (Isshin-style attack-caused
   trigger doubler — Windcrag Siege), `StaticEffect::

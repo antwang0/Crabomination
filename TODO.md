@@ -70,7 +70,6 @@ Storm** (new `StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn` in
   discard-hand+sac activated ability (`discard_hand_cost` exists).
 - **Glacial Dragonhunt** — needs a filtered reflexive discard ("when you discard
   a *nonland* card this way, …"); `Effect::MayDiscard` has no filter field yet.
-- **Songcrafter Mage** — grant Harmonize to a target graveyard card.
 - **Sidisi, Regent of the Mire** — a sacrificed-MV → target-MV+1 reanimate link.
   (The Sibsig Ceremony shipped via new `Predicate::TriggerSourceEnteredByCast`
   + `CardInstance.entered_by_cast`.)
@@ -125,8 +124,25 @@ models "up to one target" as a single target. Skipped, each needing a primitive:
   multi-card graveyard-exile (no "an exiled card was a creature" predicate yet).
 - **Coordinated Clobbering** — tap 1–2 of your creatures, each deals its power to
   one shared opponent's creature (needs a two-independent-slot fight).
-- **Possessed Goat** — once-per-game activation that *adds* a color + creature
-  type (`AddCreatureTypes` exists; no add-color, no once-per-game flag).
+
+`decks::recent179-182` shipped ~22 FDN/DSK/BLB/TDM cards (Songcrafter Mage,
+Twinblade Blessing, Tragic Banshee, Midnight Snack, Uncharted Voyage, Raise the
+Past, Sylvan Scavenging, Ravenous Amulet, Zul Ashur, Twinflame Tyrant, High Fae
+Trickster, Electroduplicate, Fear of Falling, Possessed Goat, Hired Claw,
+Mistbreath Elder, Plumecreed Mentor, Azure Beastbinder, Byrke, Dreamdew Entrancer,
+Finneas, Gev) on the new `GrantHarmonizeThisTurn` / `activate_once` /
+`BecomeColor.additive` primitives plus existing ones. Documented approximations:
+Fear of Falling's debuff modeled until-end-of-turn (not "until your next turn");
+Mistbreath Elder drops the "otherwise return this" fallback; Gev omits the
+enters-with-extra-counters static (no primitive yet). Still open, each needing a
+primitive:
+- **Jackdaw Savior / Clement, the Worrywort** — "creature with lesser mana value"
+  than the *trigger source* (dying/entering creature); no MV-less-than-trigger-
+  source filter yet.
+- **Soul-Shackled Zombie** — "if a creature card was exiled this way" rider on a
+  multi-card graveyard-exile (an "a creature was among LastMoved" conditional).
+- **Gev's enters-with-extra-counters** — a static granting your creatures extra
+  ETB +1/+1 counters scaled by a `Value` (opponents who lost life this turn).
 
 ## Final Fantasy (`sets::fin`) — COMPLETE
 
