@@ -173,6 +173,12 @@ pub struct DraftSession {
     /// Outcome line of the last "Save Deck" click ("Saved to …" / error),
     /// shown under the deckbuilding buttons. `None` until a save is tried.
     pub save_status: Option<String>,
+
+    /// Two-step pick confirmation: the pack index selected by the first
+    /// click, armed to pick on a second click of the same card. A pick is
+    /// irreversible (all 7 bots advance), so a single misclick shouldn't
+    /// burn one. Cleared on pick, tab switch, and every new pack.
+    pub pending_pick: Option<usize>,
 }
 
 impl DraftSession {
@@ -204,6 +210,7 @@ impl DraftSession {
             player_colors: [ManaColor::White, ManaColor::Blue],
             chosen_opponent: None,
             save_status: None,
+            pending_pick: None,
         }
     }
 
@@ -251,6 +258,7 @@ impl DraftSession {
     /// current round's direction. If packs empty out, opens the next
     /// round of packs (or transitions phases on round 4).
     pub fn process_user_pick(&mut self, user_pack_index: usize) {
+        self.pending_pick = None;
         if user_pack_index >= self.packs[self.user_seat].len() {
             return;
         }
@@ -783,8 +791,12 @@ fn spawn_drafting_screen(
             ))
             .with_children(|body| {
                 match session.current_tab {
-                    DraftTab::Pack => spawn_pack_grid(body, asset_server, session, window_size),
-                    DraftTab::Picks => spawn_picks_grid(body, asset_server, ui_fonts, user_picks),
+                    DraftTab::Pack => {
+                        spawn_pack_grid(body, asset_server, ui_fonts, session, window_size)
+                    }
+                    DraftTab::Picks => {
+                        spawn_picks_grid(body, asset_server, ui_fonts, user_picks, session.pack_sort)
+                    }
                 }
             });
 
@@ -796,10 +808,32 @@ fn spawn_drafting_screen(
 fn spawn_pack_grid(
     body: &mut ChildSpawnerCommands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     session: &DraftSession,
     window_size: Vec2,
 ) {
     let pack = session.user_pack();
+    // Armed pick banner — the second half of the two-step confirm.
+    if session.pending_pick.is_some() {
+        body.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(4.0),
+                width: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            Pickable::IGNORE,
+        ))
+        .with_children(|row| {
+            row.spawn((
+                Text::new("Click the highlighted card again to confirm the pick"),
+                ui_fonts.tf(13.0),
+                TextColor(theme::ACCENT_GOLD),
+                Pickable::IGNORE,
+            ));
+        });
+    }
     let card_w = compute_pack_card_width(window_size, pack.len());
     // Build a display order over the *original* pack indices so the
     // PackCardButton.pack_index attached to each tile still maps to
@@ -825,7 +859,7 @@ fn spawn_pack_grid(
         for &i in &order {
             let factory = pack[i];
             let name = factory().name.to_string();
-            spawn_pack_card_tile(grid, asset_server, &name, i, card_w);
+            spawn_pack_card_tile(grid, asset_server, &name, i, card_w, session.pending_pick == Some(i));
         }
     });
 }
@@ -932,6 +966,7 @@ fn spawn_picks_grid(
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
     picks: &[CardFactory],
+    sort: PackSort,
 ) {
     if picks.is_empty() {
         body.spawn((
@@ -967,9 +1002,15 @@ fn spawn_picks_grid(
         Pickable::IGNORE,
     ))
     .with_children(|grid| {
-        // Latest pick first — most useful order for tracking what
-        // just landed in your pile.
-        for factory in picks.iter().rev() {
+        // The toolbar's sort applies here too; its "Pack" mode means
+        // pick order on this tab — latest first, the most useful view
+        // for tracking what just landed in your pile.
+        let order: Vec<usize> = match sort {
+            PackSort::PackOrder => (0..picks.len()).rev().collect(),
+            _ => sorted_pack_indices(picks, sort),
+        };
+        for &i in &order {
+            let factory = picks[i];
             let name = factory().name;
             let path = scryfall::card_asset_path(name);
             let texture: Handle<Image> = asset_server.load(&path);
@@ -1070,18 +1111,23 @@ fn spawn_pack_card_tile(
     card_name: &str,
     pack_index: usize,
     card_w: f32,
+    selected: bool,
 ) {
     let path = scryfall::card_asset_path(card_name);
     let texture: Handle<Image> = asset_server.load(&path);
     let card_h = card_w * CARD_ASPECT_H_OVER_W;
+    // First click of the two-step pick: gold border marks the armed card.
+    let border = if selected { Val::Px(3.0) } else { Val::Px(0.0) };
     parent
         .spawn((
             Button,
             Node {
                 width: Val::Px(card_w),
                 height: Val::Px(card_h),
+                border: UiRect::all(border),
                 ..default()
             },
+            BorderColor::all(theme::ACCENT_GOLD),
             BackgroundColor(theme::FIELD_BG),
             theme::HoverTint::new(theme::FIELD_BG),
             PackCardButton { pack_index },
@@ -1381,6 +1427,28 @@ fn spawn_deckbuilding_screen(
                     TextColor(theme::TEXT_BODY),
                     Pickable::IGNORE,
                 ));
+                // Same sort toolbar as the drafting screen — the main pile
+                // is hardest to scan exactly here, at 23+ cards.
+                h.spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(4.0),
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ))
+                .with_children(|sorts| {
+                    sorts.spawn((
+                        Text::new("Sort:"),
+                        ui_fonts.tf(12.0),
+                        TextColor(theme::TEXT_BODY),
+                        Node { margin: UiRect::right(Val::Px(4.0)), ..default() },
+                        Pickable::IGNORE,
+                    ));
+                    for sort in PackSort::ALL {
+                        spawn_sort_button(sorts, ui_fonts, sort, session.pack_sort);
+                    }
+                });
             });
 
             // Body: main + sideboard side by side.
@@ -1429,7 +1497,10 @@ fn spawn_deckbuilding_screen(
                         Pickable::IGNORE,
                     ))
                     .with_children(|grid| {
-                        for (i, factory) in session.main.iter().enumerate() {
+                        // Display-sorted; `i` stays the original index so
+                        // move-to-sideboard clicks hit the right card.
+                        for &i in &sorted_pack_indices(&session.main, session.pack_sort) {
+                            let factory = session.main[i];
                             spawn_deckbuild_tile(grid, asset_server, ui_fonts, factory().name, true, i);
                         }
                     });
@@ -1504,7 +1575,8 @@ fn spawn_deckbuilding_screen(
                             Pickable::IGNORE,
                         ))
                         .with_children(|grid| {
-                            for (i, factory) in session.sideboard.iter().enumerate() {
+                            for &i in &sorted_pack_indices(&session.sideboard, session.pack_sort) {
+                                let factory = session.sideboard[i];
                                 spawn_deckbuild_tile(grid, asset_server, ui_fonts, factory().name, false, i);
                             }
                         });
@@ -1881,8 +1953,15 @@ fn handle_pack_clicks(
     }
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed {
-            session.process_user_pick(btn.pack_index);
-            // One pick per click — bail to avoid double-consuming.
+            // Two-step confirm: first click selects (gold border + hint),
+            // clicking the same card again commits the pick. A click on a
+            // different card just moves the selection.
+            if session.pending_pick == Some(btn.pack_index) {
+                session.process_user_pick(btn.pack_index);
+            } else {
+                session.pending_pick = Some(btn.pack_index);
+            }
+            // One selection change per click — bail to avoid double-consuming.
             return;
         }
     }
@@ -1898,6 +1977,7 @@ fn handle_tab_clicks(
     }
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed && session.current_tab != btn.0 {
+            session.pending_pick = None;
             session.current_tab = btn.0;
             return;
         }
@@ -1909,7 +1989,8 @@ fn handle_sort_clicks(
     buttons: Query<(&Interaction, &PackSortButton), Changed<Interaction>>,
 ) {
     let Some(session) = session.as_mut() else { return };
-    if !matches!(session.phase, DraftPhase::Drafting) {
+    // The toolbar renders on both the drafting and deckbuilding screens.
+    if !matches!(session.phase, DraftPhase::Drafting | DraftPhase::Deckbuilding) {
         return;
     }
     for (interaction, btn) in &buttons {
