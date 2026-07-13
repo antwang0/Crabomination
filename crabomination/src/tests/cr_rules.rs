@@ -55,7 +55,10 @@
 //! (CR 603.10 — Furious Forebear's graveyard trigger reads LKI so it fires
 //! only for your creatures), variable "Pay X life" activation costs
 //! (CR 107.16 — Krumar Initiate), and Mobilize's tapped-attacking transient
-//! tokens (CR 702.169 — Zurgo's Vanguard).
+//! tokens (CR 702.169 — Zurgo's Vanguard), Undying returning only without a
+//! +1/+1 counter (CR 702.93), Toxic N poison on combat damage (CR 702.180),
+//! and Wither dealing creature damage as -1/-1 counters but player damage as
+//! life (CR 702.71).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -8742,4 +8745,86 @@ fn cr_702_169_mobilize_token_is_tapped_attacking_and_sacrificed() {
         !g.battlefield.iter().any(|c| c.definition.name == "Warrior"),
         "Warrior sacrificed at end of combat"
     );
+}
+
+/// CR 702.93 — Undying: a creature that dies with no +1/+1 counter returns with
+/// one; a creature that already had a +1/+1 counter stays dead.
+#[test]
+fn cr_702_93_undying_returns_only_without_counter() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let ghoul = g.add_card_to_battlefield(0, kw_creature("Ghoul", 2, 2, &[Keyword::Undying]));
+    g.battlefield_find_mut(ghoul).unwrap().damage = 2; // lethal
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let back = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Ghoul")
+        .expect("returned via Undying");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 1, "returns with a +1/+1 counter");
+
+    let ghoul2 = g.add_card_to_battlefield(0, kw_creature("Ghoul2", 2, 2, &[Keyword::Undying]));
+    g.battlefield_find_mut(ghoul2).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(ghoul2).unwrap().damage = 3; // lethal (3/3 with counter)
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == ghoul2),
+        "already had a +1/+1 counter → stays in the graveyard",
+    );
+}
+
+/// CR 702.180 — Toxic N adds N poison counters when a creature deals combat
+/// damage to a player, on top of the normal life loss.
+#[test]
+fn cr_702_180_toxic_adds_poison_on_combat_damage() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, kw_creature("Stinger", 2, 2, &[Keyword::Toxic(2)]));
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    let life = g.players[1].life;
+    g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].poison_counters, 2, "Toxic 2 → 2 poison");
+    assert_eq!(g.players[1].life, life - 2, "and still deals its 2 combat damage");
+}
+
+/// CR 702.71 — Wither: combat damage to a creature is dealt as -1/-1 counters,
+/// but combat damage to a player is normal life loss (no poison, unlike Infect).
+#[test]
+fn cr_702_71_wither_creatures_as_counters_players_as_life() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let blocked = g.add_card_to_battlefield(0, kw_creature("Rotfang", 3, 3, &[Keyword::Wither]));
+    let unblocked = g.add_card_to_battlefield(0, kw_creature("Rotmaw", 3, 3, &[Keyword::Wither]));
+    g.clear_sickness(blocked);
+    g.clear_sickness(unblocked);
+    let wall = g.add_card_to_battlefield(1, kw_creature("Wall", 0, 5, &[]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: blocked, target: AttackTarget::Player(1) },
+        Attack { attacker: unblocked, target: AttackTarget::Player(1) },
+    ]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, blocked)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    let life = g.players[1].life;
+    g.resolve_combat().unwrap();
+    assert_eq!(
+        g.battlefield_find(wall).unwrap().counter_count(CounterType::MinusOneMinusOne),
+        3,
+        "wither → -1/-1 counters on the blocking creature",
+    );
+    assert_eq!(g.players[1].life, life - 3, "unblocked wither is normal life loss");
+    assert_eq!(g.players[1].poison_counters, 0, "wither gives players no poison");
 }
