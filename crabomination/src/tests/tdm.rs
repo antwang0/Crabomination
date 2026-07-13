@@ -675,3 +675,115 @@ fn stormbeacon_blade_pumps_and_draws_on_mass_attack() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on 3+ attackers");
 }
+
+/// Jeskai Shrinekeeper gains life and draws on combat damage to a player.
+#[test]
+fn jeskai_shrinekeeper_gains_and_draws_on_connect() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::jeskai_shrinekeeper());
+    g.clear_sickness(dragon);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dragon,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 on connect");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on connect");
+}
+
+/// Encroaching Dragonstorm ramps two basics and bounces on a Dragon ETB.
+#[test]
+fn encroaching_dragonstorm_ramps_and_bounces() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    let storm = g.add_card_to_hand(0, catalog::encroaching_dragonstorm());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: storm,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Encroaching Dragonstorm");
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 2, "ramped two basics onto battlefield");
+    // Dragon enters → bounce.
+    let dragon = g.add_card_to_battlefield(0, catalog::jeskai_shrinekeeper());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: dragon }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == storm), "bounced on Dragon ETB");
+}
+
+/// Kheru Goldkeeper's Renew puts +1/+1 and flying counters on a creature.
+#[test]
+fn kheru_goldkeeper_renew_grants_counters() {
+    let mut g = two_player_game();
+    let kheru = g.add_card_to_graveyard(0, catalog::kheru_goldkeeper());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kheru,
+        ability_index: 0,
+        target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("Renew from graveyard");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(target).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "two +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Flying), "flying counter");
+    assert!(g.exile.iter().any(|c| c.id == kheru), "Kheru exiled by Renew cost");
+}
+
+/// Dragonclaw Strike doubles your creature's P/T then fights.
+#[test]
+fn dragonclaw_strike_doubles_and_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::dragonclaw_strike());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(foe)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Dragonclaw Strike");
+    drain_stack(&mut g);
+    // 2/2 doubled to 4/4 deals 4 to the 2/2 foe → foe dies; foe deals 2 back.
+    assert!(g.battlefield_find(foe).is_none(), "foe died to the fight");
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!(cp.power, 4, "doubled to 4 power");
+}

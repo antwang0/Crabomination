@@ -668,3 +668,137 @@ pub fn stormbeacon_blade() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM batch 3: Dragons / dragonstorm ramp / wedge sorceries ──────────────
+
+/// Jeskai Shrinekeeper — {2}{U}{R}{W} 3/3 Dragon with flying and haste.
+/// Whenever it deals combat damage to a player, you gain 1 life and draw a card.
+pub fn jeskai_shrinekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Shrinekeeper",
+        cost: cost(&[generic(2), u(), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Encroaching Dragonstorm — {3}{G} Enchantment. ETB: search up to two basic
+/// lands onto the battlefield tapped. When a Dragon you control enters, return
+/// this to its owner's hand.
+pub fn encroaching_dragonstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Encroaching Dragonstorm",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::Const(2),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Dragon),
+                    }),
+                effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kheru Goldkeeper — {1}{B}{G}{U} 3/3 Dragon with flying. Whenever one or more
+/// cards leave your graveyard during your turn, create a Treasure. Renew —
+/// {2}{B}{G}{U}, Exile this from your graveyard: put two +1/+1 counters and a
+/// flying counter on target creature. Sorcery speed.
+pub fn kheru_goldkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Kheru Goldkeeper",
+        cost: cost(&[generic(1), b(), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::CardLeftGraveyard,
+                scope: EventScope::YourControl,
+                filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
+                once_per_turn: true,
+                per_subject_cap: None,
+                actor_is_opponent: false,
+            },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b(), g(), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Flying,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragonclaw Strike — {2/G}{2/U}{2/R} Sorcery. Double target creature you
+/// control's power and toughness until end of turn, then it fights up to one
+/// target creature an opponent controls.
+pub fn dragonclaw_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonclaw Strike",
+        cost: cost(&[
+            mono_hybrid(2, Color::Green),
+            mono_hybrid(2, Color::Blue),
+            mono_hybrid(2, Color::Red),
+        ]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                power: Value::PowerOf(Box::new(Selector::Target(0))),
+                toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}

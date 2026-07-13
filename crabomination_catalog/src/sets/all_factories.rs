@@ -6210,6 +6210,10 @@ static DECKS: &[Factory] = &[
     super::decks::corroding_dragonstorm,
     super::decks::essence_anchor,
     super::decks::stormbeacon_blade,
+    super::decks::jeskai_shrinekeeper,
+    super::decks::encroaching_dragonstorm,
+    super::decks::kheru_goldkeeper,
+    super::decks::dragonclaw_strike,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
