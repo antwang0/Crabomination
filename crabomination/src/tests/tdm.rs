@@ -1760,3 +1760,76 @@ fn flamehold_grappler_copies_next_spell() {
     // 3 (original) + 3 (copy) = 6 damage → the 2/2 is dead.
     assert!(g.battlefield_find(foe).is_none(), "bolt was copied — bear took 6");
 }
+
+/// A creature with an on-attack trigger. Gains 1 life whenever it attacks.
+fn attack_lifegainer() -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::{shortcut::on_attack, Effect, Selector, Value};
+    CardDefinition {
+        name: "Attack Lifegainer",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::GainLife { who: Selector::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Windcrag Siege (Mardu) doubles an attack-caused trigger of a permanent you
+/// control: an on-attack "gain 1 life" fires twice → +2 life.
+#[test]
+fn windcrag_siege_mardu_doubles_attack_trigger() {
+    let mut g = two_player_game();
+    let mardu = catalog::windcrag_siege().with_mode_applied(0).expect("Mardu mode");
+    g.add_card_to_battlefield(0, mardu);
+    let atk = g.add_card_to_battlefield(0, attack_lifegainer());
+    g.clear_sickness(atk);
+    let life = g.players[0].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "attack trigger fired twice");
+}
+
+/// Without the doubler the same trigger fires once → +1 life (control).
+#[test]
+fn windcrag_siege_control_single_fire() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, attack_lifegainer());
+    g.clear_sickness(atk);
+    let life = g.players[0].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "trigger fired once");
+}
+
+/// Windcrag Siege (Jeskai) makes a 1/1 red Goblin with lifelink+haste each upkeep.
+#[test]
+fn windcrag_siege_jeskai_makes_goblin() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let jeskai = catalog::windcrag_siege().with_mode_applied(1).expect("Jeskai mode");
+    g.add_card_to_battlefield(0, jeskai);
+    let before = g.battlefield.len();
+    // Advance to *player 0's* next upkeep (skip the opponent's).
+    while !(g.step == TurnStep::Upkeep && g.active_player_idx == 0) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let goblin = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Goblin))
+        .expect("made a Goblin");
+    assert!(goblin.definition.keywords.contains(&Keyword::Haste), "Goblin has haste");
+    assert!(g.battlefield.len() > before, "battlefield grew");
+}

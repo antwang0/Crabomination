@@ -2058,6 +2058,58 @@ pub fn rot_curse_rakshasa() -> CardDefinition {
     }
 }
 
+/// Windcrag Siege — {1}{R}{W} Enchantment. As it enters, choose Mardu or Jeskai.
+/// Mardu: an attack-caused trigger of a permanent you control fires an extra
+/// time. Jeskai: upkeep create a 1/1 red Goblin with lifelink and haste.
+pub fn windcrag_siege() -> CardDefinition {
+    CardDefinition {
+        name: "Windcrag Siege",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        enter_modes: Some(vec![
+            EnterMode {
+                label: "Mardu",
+                static_abilities: vec![StaticAbility {
+                    description: "If a creature attacking causes a triggered ability of a \
+                                  permanent you control to trigger, it triggers an extra time.",
+                    effect: StaticEffect::DoubleControllerAttackTriggers,
+                }],
+                ..Default::default()
+            },
+            EnterMode {
+                label: "Jeskai",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(TurnStep::Upkeep),
+                        EventScope::ActivePlayer,
+                    ),
+                    effect: Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        // lifelink/haste are printed "until end of turn"; baked on
+                        // the token (negligible for a 1/1 that rarely survives).
+                        definition: TokenDefinition {
+                            name: "Goblin".into(),
+                            power: 1,
+                            toughness: 1,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Red],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Goblin],
+                                ..Default::default()
+                            },
+                            keywords: vec![Keyword::Lifelink, Keyword::Haste],
+                            ..Default::default()
+                        },
+                    },
+                }],
+                ..Default::default()
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Flamehold Grappler — {U}{R}{W} 3/3 Human Monk with first strike. When it
 /// enters, copy the next spell you cast this turn (you may choose new targets).
 pub fn flamehold_grappler() -> CardDefinition {

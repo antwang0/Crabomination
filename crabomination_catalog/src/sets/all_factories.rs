@@ -6250,6 +6250,7 @@ static DECKS: &[Factory] = &[
     super::decks::zurgo_thunders_decree,
     super::decks::rot_curse_rakshasa,
     super::decks::flamehold_grappler,
+    super::decks::windcrag_siege,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

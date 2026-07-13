@@ -833,6 +833,12 @@ pub enum StaticEffect {
     /// an additional time." Read at trigger dispatch off the
     /// `triggered_by_death` candidate flag.
     DoubleControllerDeathTriggers,
+    /// Isshin, Two Heavens as One / Windcrag Siege (Mardu) — "If a creature
+    /// attacking causes a triggered ability of a permanent you control to
+    /// trigger, that ability triggers an additional time." Read at trigger
+    /// dispatch off the `triggered_by_attack` candidate flag (and the
+    /// self-source attack path in `combat.rs`).
+    DoubleControllerAttackTriggers,
     DoubleControllerTriggersOfType {
         types: Vec<crate::card::CreatureType>,
         #[serde(default)]

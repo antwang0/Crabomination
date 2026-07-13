@@ -614,12 +614,17 @@ impl GameState {
             // Vehicles"), same as the self-source ETB path.
             let additional =
                 self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
-            self.stack.push(
-                TriggerPush::new(source, controller, effect)
-                    .target(auto_target)
-                    .additional_targets(additional)
-                    .build(),
-            );
+            // Isshin / Windcrag Siege (Mardu): a self-source attack trigger of a
+            // permanent you control fires an additional time per doubler.
+            let fires = 1 + self.attack_trigger_extra_fires(controller);
+            for _ in 0..fires {
+                self.stack.push(
+                    TriggerPush::new(source, controller, effect.clone())
+                        .target(auto_target.clone())
+                        .additional_targets(additional.clone())
+                        .build(),
+                );
+            }
         }
 
         // CR 508 — "Whenever you attack" fires once for the attacking player

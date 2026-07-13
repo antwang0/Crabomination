@@ -821,6 +821,11 @@ pub(crate) struct TriggerCandidate {
     /// "a creature dying causes … triggers an additional time" doubler.
     #[serde(default)]
     pub triggered_by_death: bool,
+    /// True if the originating event was a creature attacking — Isshin /
+    /// Windcrag Siege (Mardu) "a creature attacking causes … triggers an
+    /// additional time" doubler.
+    #[serde(default)]
+    pub triggered_by_attack: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

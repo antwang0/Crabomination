@@ -9866,6 +9866,7 @@ impl GameState {
                                 GameEvent::CreatureDied { .. }
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
+                            triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                         });
                         if ta.event.once_per_turn && trig_idx < n_printed {
                             once_fired_this_batch.insert(once_key);
@@ -9920,6 +9921,7 @@ impl GameState {
                             event_amount: self.event_amount_for(ev),
                             triggered_by_etb: false,
                             triggered_by_death: false,
+                            triggered_by_attack: false,
                         });
                     }
                 }
@@ -9981,6 +9983,7 @@ impl GameState {
                                 GameEvent::CreatureDied { .. }
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
+                            triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                             });
                             break;
                         }
@@ -10017,6 +10020,7 @@ impl GameState {
                                 event_amount: self.event_amount_for(ev),
                                 triggered_by_etb: false,
                             triggered_by_death: false,
+                            triggered_by_attack: false,
                             });
                         }
                     }
@@ -10097,6 +10101,7 @@ impl GameState {
                             event_amount: 0,
                             triggered_by_etb: false,
                             triggered_by_death: false,
+                            triggered_by_attack: false,
                         });
                     }
                 }
@@ -10138,6 +10143,7 @@ impl GameState {
                                 event_amount: 0,
                                 triggered_by_etb: false,
                             triggered_by_death: false,
+                            triggered_by_attack: false,
                             });
                         }
                     }
@@ -10160,6 +10166,7 @@ impl GameState {
                                 event_amount: 0,
                                 triggered_by_etb: false,
                             triggered_by_death: false,
+                            triggered_by_attack: false,
                             });
                         }
                     }
@@ -10190,6 +10197,23 @@ impl GameState {
     /// resulting queue onto the stack. Split from
     /// `dispatch_triggers_for_events` so the `OrderTriggers` resume path
     /// can re-enter after a networked controller picks their order.
+    /// Count active Isshin-style attack-trigger doublers a player controls
+    /// (`StaticEffect::DoubleControllerAttackTriggers` — Windcrag Siege's Mardu
+    /// mode). Each adds one extra fire to a permanent's attack-caused trigger.
+    pub(crate) fn attack_trigger_extra_fires(&self, controller: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::DoubleControllerAttackTriggers
+                )
+            })
+            .count()
+    }
+
     pub(crate) fn push_ordered_trigger_candidates(
         &mut self,
         candidates: Vec<TriggerCandidate>,
@@ -10217,6 +10241,7 @@ impl GameState {
                 event_amount,
                 triggered_by_etb,
                 triggered_by_death,
+                triggered_by_attack,
             } = candidate;
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
@@ -10302,9 +10327,17 @@ impl GameState {
                 } else {
                     0
                 };
+                // Isshin / Windcrag Siege (Mardu): an attack-caused trigger of a
+                // permanent you control fires an additional time per doubler.
+                let attack_extra = if triggered_by_attack {
+                    self.attack_trigger_extra_fires(controller)
+                } else {
+                    0
+                };
                 let fires = 1
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
-                    + death_extra;
+                    + death_extra
+                    + attack_extra;
                 for _ in 0..fires {
                     queue.push(PendingTriggerPush {
                         source,
@@ -13486,6 +13519,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerAllyTriggers
             | StaticEffect::DoubleControllerTriggersOfType { .. }
             | StaticEffect::DoubleControllerDeathTriggers
+            | StaticEffect::DoubleControllerAttackTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).
