@@ -6405,8 +6405,7 @@ impl GameState {
             return Err(GameError::CardNotInHand(card_id));
         }
         let harmonize_cost = card
-            .definition
-            .harmonize_cost()
+            .effective_harmonize()
             .ok_or(GameError::SorcerySpeedOnly)?
             .clone();
 

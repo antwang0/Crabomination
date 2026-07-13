@@ -3900,6 +3900,12 @@ pub struct CardInstance {
     /// cards). Transient grant, so it shares `granted_keywords_eot`'s
     /// lifetime; serialized for mid-turn snapshot consistency.
     pub granted_flashback_eot: Option<crate::mana::ManaCost>,
+    /// Until-end-of-turn Harmonize (CR 702.180) granted to this card while it
+    /// sits in a graveyard — "target instant/sorcery card in your graveyard
+    /// gains harmonize until end of turn; its harmonize cost equals its mana
+    /// cost" (Songcrafter Mage). Read by `cast_harmonize` via
+    /// [`effective_harmonize`]; cleared at cleanup.
+    pub granted_harmonize_eot: Option<crate::mana::ManaCost>,
     /// Alternative cost the controller may pay to cast this card via its
     /// `may_play_until` permission instead of casting it for free — the
     /// "miracle {N}" cost granted by Lorehold, the Historian. Read by
@@ -4137,6 +4143,7 @@ impl CardInstance {
             exiled_with: None,
             encoded_on: None,
             granted_flashback_eot: None,
+            granted_harmonize_eot: None,
             granted_alt_cast_cost_eot: None,
             named_card: None,
             chosen_color: None,
@@ -4462,6 +4469,7 @@ impl CardInstance {
         self.granted_keywords_eot_ts.clear();
         self.removed_keywords_eot.clear();
         self.granted_flashback_eot = None;
+        self.granted_harmonize_eot = None;
         self.granted_alt_cast_cost_eot = None;
         self.dealt_deathtouch_damage = false;
         self.dealt_damage_this_turn = false;
@@ -4479,6 +4487,15 @@ impl CardInstance {
         self.definition
             .has_flashback()
             .or(self.granted_flashback_eot.as_ref())
+    }
+
+    /// The Harmonize cost this card can currently be cast with from a
+    /// graveyard — its printed `Keyword::Harmonize`, or an until-end-of-turn
+    /// grant (Songcrafter Mage). `None` if neither applies.
+    pub fn effective_harmonize(&self) -> Option<&ManaCost> {
+        self.definition
+            .harmonize_cost()
+            .or(self.granted_harmonize_eot.as_ref())
     }
 }
 
@@ -4669,6 +4686,8 @@ struct CardInstanceWire {
     /// mid-turn snapshot restores it. `#[serde(default)]` for back-compat.
     #[serde(default)]
     granted_flashback_eot: Option<crate::mana::ManaCost>,
+    #[serde(default)]
+    granted_harmonize_eot: Option<crate::mana::ManaCost>,
     /// Until-end-of-turn alternative cast cost (Lorehold's miracle {N}).
     /// Shares `may_play_until`'s lifetime. `#[serde(default)]` for
     /// back-compat.
@@ -4853,6 +4872,7 @@ impl serde::Serialize for CardInstance {
             granted_keywords_eot_ts: self.granted_keywords_eot_ts.clone(),
             removed_keywords_eot: self.removed_keywords_eot.clone(),
             granted_flashback_eot: self.granted_flashback_eot.clone(),
+            granted_harmonize_eot: self.granted_harmonize_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             named_card: self.named_card.clone(),
             chosen_color: self.chosen_color,
@@ -4988,6 +5008,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_keywords_eot_ts = wire.granted_keywords_eot_ts;
         c.removed_keywords_eot = wire.removed_keywords_eot;
         c.granted_flashback_eot = wire.granted_flashback_eot;
+        c.granted_harmonize_eot = wire.granted_harmonize_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.named_card = wire.named_card;
         c.chosen_color = wire.chosen_color;

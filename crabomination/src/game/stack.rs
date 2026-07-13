@@ -2216,6 +2216,7 @@ impl GameState {
         for player in &mut self.players {
             for card in &mut player.graveyard {
                 card.granted_flashback_eot = None;
+                card.granted_harmonize_eot = None;
             }
             // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
             player.turn_spell_discounts.clear();

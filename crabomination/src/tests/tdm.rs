@@ -1968,3 +1968,43 @@ fn windcrag_siege_jeskai_makes_goblin() {
     assert!(goblin.definition.keywords.contains(&Keyword::Haste), "Goblin has haste");
     assert!(g.battlefield.len() > before, "battlefield grew");
 }
+
+/// Songcrafter Mage grants harmonize (= mana cost) to a graveyard I/S card,
+/// castable this turn from the graveyard via the Harmonize path.
+#[test]
+fn songcrafter_mage_grants_harmonize_to_graveyard_card() {
+    let mut g = two_player_game();
+    let div = g.add_card_to_graveyard(0, catalog::divination());
+    // Enter through the real ETB funnel so the self-source trigger fires.
+    g.move_card_to_battlefield_for_test(0, catalog::songcrafter_mage());
+    drain_stack(&mut g);
+    // The graveyard card now carries an until-end-of-turn harmonize grant.
+    let granted = g.players[0]
+        .graveyard
+        .iter()
+        .find(|c| c.id == div)
+        .map(|c| c.effective_harmonize().is_some())
+        .unwrap_or(false);
+    assert!(granted, "Divination gained harmonize");
+    // Cast it from the graveyard for its harmonize (= mana) cost {2}{U}.
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastHarmonize {
+        card_id: div,
+        tap_creature: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Divination via harmonize");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Divination drew two");
+    assert!(g.exile.iter().any(|c| c.id == div), "harmonize exiles on resolve");
+}

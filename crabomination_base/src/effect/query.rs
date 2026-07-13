@@ -524,6 +524,7 @@ impl Effect {
             | Effect::Regenerate { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
             | Effect::ExileWithSource { what }
@@ -850,6 +851,7 @@ impl Effect {
             | Effect::Regenerate { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
             | Effect::ExileWithSource { what }
@@ -1169,7 +1171,8 @@ impl Effect {
             }
             // Granting flashback to a card always targets one in a graveyard
             // (Snapcaster Mage, Slickshot Lockpicker).
-            Effect::GrantFlashbackThisTurn { .. } => true,
+            Effect::GrantFlashbackThisTurn { .. }
+            | Effect::GrantHarmonizeThisTurn { .. } => true,
             _ => false,
         }
     }

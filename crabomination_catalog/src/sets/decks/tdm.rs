@@ -2260,3 +2260,29 @@ pub fn flamehold_grappler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Songcrafter Mage — {G}{U}{R} 3/2 Human Bard with flash. When it enters,
+/// target instant or sorcery card in your graveyard gains harmonize (= its
+/// mana cost) until end of turn.
+pub fn songcrafter_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Songcrafter Mage",
+        cost: cost(&[g(), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::GrantHarmonizeThisTurn {
+            what: target_filtered(
+                R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .and(R::InYourGraveyard),
+            ),
+        })],
+        ..Default::default()
+    }
+}

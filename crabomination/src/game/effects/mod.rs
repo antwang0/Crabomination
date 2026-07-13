@@ -5122,6 +5122,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantHarmonizeThisTurn { what } => {
+                // Grant until-end-of-turn Harmonize (cost = the card's own mana
+                // cost) to each resolved graveyard card (Songcrafter Mage), so
+                // it can be cast this turn via the normal Harmonize path.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_card_id()
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        let hm_cost = card.definition.cost.clone();
+                        card.granted_harmonize_eot = Some(hm_cost);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Exile { what } => {
                 // Exile accepts both `EntityRef::Permanent` (battlefield)
                 // and `EntityRef::Card` (any other zone). Battlefield exits

@@ -3133,6 +3133,13 @@ pub enum Effect {
     /// normal flashback path (pay the cost, exile on resolve). Used by the
     /// SOS "Flashback" instant.
     GrantFlashbackThisTurn { what: Selector },
+    /// "Target instant/sorcery card in your graveyard gains harmonize until
+    /// end of turn; its harmonize cost equals its mana cost" (Songcrafter
+    /// Mage). Stamps an until-end-of-turn `granted_harmonize_eot` (= the
+    /// card's own mana cost), castable via the normal Harmonize path (CR
+    /// 702.180 — pay the cost, optionally tap a creature to reduce it, exile
+    /// on resolve). Cleared at cleanup.
+    GrantHarmonizeThisTurn { what: Selector },
     /// "[Each resolved card] gains miracle `cost` until end of turn." Stamps
     /// an until-end-of-turn `may_play_until` permission **plus** a
     /// `granted_alt_cast_cost_eot` of `cost`, so the controller may cast the

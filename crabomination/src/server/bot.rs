@@ -1827,7 +1827,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         // Harmonize (CR 702.180): cast from the graveyard for the harmonize
         // cost. The bot doesn't tap a creature to discount (a value call it
         // can't weigh well); `would_accept` enforces cost / timing.
-        if c.definition.harmonize_cost().is_some() {
+        if c.effective_harmonize().is_some() {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 let (t, extras) =
                     state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
