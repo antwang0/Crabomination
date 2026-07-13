@@ -6,7 +6,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Value,
+    Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
@@ -330,6 +331,78 @@ pub fn seize_opportunity() -> CardDefinition {
                     toughness: Value::Const(1),
                     duration: Duration::EndOfTurn,
                 }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ringing Strike Mastery — {U} Aura. Enchant creature. When it enters, tap the
+/// enchanted creature. Enchanted creature doesn't untap during its controller's
+/// untap step. (The granted "{5}: untap this creature" is dropped.)
+pub fn ringing_strike_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Ringing Strike Mastery",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+fn white_monk_prowess_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Monk".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Monk], ..Default::default() },
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
+/// Rally the Monastery — {3}{W} Instant. Choose one — create two 1/1 white Monk
+/// tokens with prowess; up to two target creatures you control each get +2/+2
+/// until end of turn; or destroy target creature with power 4 or greater. (The
+/// "costs {2} less if you've cast another spell this turn" reduction is dropped.)
+pub fn rally_the_monastery() -> CardDefinition {
+    CardDefinition {
+        name: "Rally the Monastery",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: white_monk_prowess_token(),
+            },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: R::Creature.and(R::ControlledByYou),
+                effect: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::PowerAtLeast(4))),
             },
         ]),
         ..Default::default()

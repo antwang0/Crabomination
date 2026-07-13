@@ -329,3 +329,54 @@ fn seize_opportunity_pumps_two_creatures() {
     assert_eq!((ca.power, ca.toughness), (4, 3), "+2/+1 on the first");
     assert_eq!((cb.power, cb.toughness), (4, 3), "+2/+1 on the second");
 }
+
+/// Ringing Strike Mastery taps the enchanted creature and locks its untap.
+#[test]
+fn ringing_strike_mastery_taps_and_locks_untap() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::ringing_strike_mastery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(creature)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("enchant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).unwrap().tapped, "ETB tapped it");
+    // The untap step doesn't free it.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(creature).unwrap().tapped, "stays tapped through untap");
+}
+
+/// Rally the Monastery's token mode makes two prowess Monks.
+#[test]
+fn rally_the_monastery_makes_two_monks() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::rally_the_monastery());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(0), // token mode
+        x_value: None,
+    })
+    .expect("cast Rally (tokens)");
+    drain_stack(&mut g);
+    let monks = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Monk")
+        .count();
+    assert_eq!(monks, 2, "made two Monk tokens");
+}

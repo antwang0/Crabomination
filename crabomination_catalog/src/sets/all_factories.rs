@@ -6200,6 +6200,8 @@ static DECKS: &[Factory] = &[
     super::decks::riverwalk_technique,
     super::decks::static_snare,
     super::decks::seize_opportunity,
+    super::decks::ringing_strike_mastery,
+    super::decks::rally_the_monastery,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
