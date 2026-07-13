@@ -789,6 +789,7 @@ fn handle_text_input(
     mut events: MessageReader<KeyboardInput>,
     keys: Res<ButtonInput<KeyCode>>,
     mut clipboard: ResMut<bevy::clipboard::Clipboard>,
+    mut status: ResMut<MenuStatus>,
 ) {
     if fields.focused == FocusedField::None {
         return;
@@ -859,6 +860,9 @@ fn handle_text_input(
         }
     }
     if changed {
+        // Editing any field invalidates whatever error the last action
+        // reported (bad path, invalid port…) — don't let it go stale.
+        status.0.clear();
         match fields.focused {
             FocusedField::PlayerName => fields.player_name = buf,
             FocusedField::HostPort => fields.host_port = buf,
@@ -926,11 +930,15 @@ fn refresh_field_text(
 
 fn handle_format_toggle(
     mut fields: ResMut<MenuFields>,
+    mut status: ResMut<MenuStatus>,
     buttons: Query<(&Interaction, &FormatToggleButton), Changed<Interaction>>,
 ) {
     for (interaction, toggle) in &buttons {
-        if *interaction == Interaction::Pressed {
+        if *interaction == Interaction::Pressed && fields.format != toggle.0 {
             fields.format = toggle.0;
+            // Import-validation errors are format-dependent — a stale
+            // "not legal in Modern" line under a new format misleads.
+            status.0.clear();
         }
     }
 }

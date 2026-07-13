@@ -263,11 +263,17 @@ pub fn sync_counter_coins(
             for (col, (kind, count)) in desired.iter().enumerate() {
                 let x = start_x + col as f32 * (COIN_RADIUS * 2.0 + COIN_GAP_X);
                 // Cap the visible stack so a Cosmogoyf with 30 +1/+1's
-                // doesn't tower off the table; a label could be added
-                // later for "stack-of-N" cases.
+                // doesn't tower off the table. The floating label carries
+                // the exact ×N; a truncated tower additionally floats its
+                // top coin a half-step higher — the visible break reads as
+                // "stack continues" instead of silently looking like 8.
+                let capped = *count > 8;
                 let n = (*count).min(8);
                 for i in 0..n {
-                    let y = COIN_STACK_STEP * i as f32;
+                    let mut y = COIN_STACK_STEP * i as f32;
+                    if capped && i == n - 1 {
+                        y += COIN_STACK_STEP * 1.5;
+                    }
                     let coin_rot = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
                     p_builder
                         .spawn((
