@@ -6214,6 +6214,9 @@ static DECKS: &[Factory] = &[
     super::decks::encroaching_dragonstorm,
     super::decks::kheru_goldkeeper,
     super::decks::dragonclaw_strike,
+    super::decks::clarion_conqueror,
+    super::decks::ambling_stormshell,
+    super::decks::furious_forebear,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

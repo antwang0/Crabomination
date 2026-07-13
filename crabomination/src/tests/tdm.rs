@@ -787,3 +787,78 @@ fn dragonclaw_strike_doubles_and_fights() {
     let cp = g.computed_permanent(mine).unwrap();
     assert_eq!(cp.power, 4, "doubled to 4 power");
 }
+
+/// Clarion Conqueror stops creatures' activated abilities from being used.
+#[test]
+fn clarion_conqueror_locks_creature_abilities() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::clarion_conqueror());
+    // Jade-Cast Sentinel has a {2},{T} activated ability — now locked.
+    let sentinel = g.add_card_to_battlefield(1, catalog::jade_cast_sentinel());
+    g.clear_sickness(sentinel);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[1].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sentinel,
+            ability_index: 0,
+            target: Some(Target::Permanent(dead)),
+            additional_targets: Vec::new(),
+            x_value: None,
+        })
+        .is_err(),
+        "activated ability locked by Clarion Conqueror"
+    );
+}
+
+/// Ambling Stormshell stuns itself and draws three when it attacks.
+#[test]
+fn ambling_stormshell_stuns_and_draws_on_attack() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let shell = g.add_card_to_battlefield(0, catalog::ambling_stormshell());
+    g.clear_sickness(shell);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let hand = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shell,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+    let stun = *g.battlefield_find(shell).unwrap().counters.get(&CounterType::Stun).unwrap_or(&0);
+    assert_eq!(stun, 3, "three stun counters");
+}
+
+/// Furious Forebear returns itself from the graveyard when a creature dies.
+#[test]
+fn furious_forebear_returns_on_creature_death() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forebear = g.add_card_to_graveyard(0, catalog::furious_forebear());
+    let doomed = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Kill the creature you control → trigger fires off the graveyard.
+    // Real gameplay's SBA death path stamps the last-known controller into
+    // `died_card_snapshots`; the test helper doesn't, so seed it so the
+    // "a creature you control dies" filter reads the CR 603.10 LKI controller.
+    let snap = g.battlefield_find(doomed).unwrap().clone();
+    let mut evs = g.remove_to_graveyard_with_triggers(doomed);
+    g.died_card_snapshots.insert(doomed, snap);
+    evs.push(GameEvent::CreatureDied { card_id: doomed });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == forebear),
+        "paid the cost to return Furious Forebear to hand"
+    );
+}

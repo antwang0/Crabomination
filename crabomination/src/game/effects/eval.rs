@@ -1804,11 +1804,15 @@ impl GameState {
             R::ControlledByYou => match target {
                 // A `Target::Permanent` can also address a spell on the stack
                 // (a "copy target spell you control" ability); its caster is
-                // its controller.
+                // its controller. When the object has left the battlefield
+                // (a die-trigger reading "a creature you control dies" off a
+                // graveyard source), fall back to the CR 603.10 last-known
+                // controller in `died_card_snapshots`.
                 Target::Permanent(cid) => self
                     .battlefield_find(*cid)
                     .map(|c| c.controller)
                     .or_else(|| self.stack_spell_caster(*cid))
+                    .or_else(|| self.died_card_snapshots.get(cid).map(|c| c.controller))
                     .map(|ctrl| ctrl == controller)
                     .unwrap_or(false),
                 Target::Player(p) => *p == controller,

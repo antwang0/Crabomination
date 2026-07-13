@@ -802,3 +802,103 @@ pub fn dragonclaw_strike() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM batch 4: activation lock, big Turtle, graveyard recursion ──────────
+
+/// Clarion Conqueror — {2}{W} 3/3 Dragon with flying. Activated abilities of
+/// artifacts, creatures, and planeswalkers can't be activated (mana abilities
+/// still work; the planeswalker/loyalty half rides the artifact+creature locks).
+pub fn clarion_conqueror() -> CardDefinition {
+    CardDefinition {
+        name: "Clarion Conqueror",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Activated abilities of artifacts can't be activated.",
+                effect: StaticEffect::ArtifactActivatedAbilitiesLocked,
+            },
+            StaticAbility {
+                description: "Activated abilities of creatures can't be activated.",
+                effect: StaticEffect::CreatureActivatedAbilitiesLocked,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ambling Stormshell — {3}{U}{U} 5/9 Turtle with Ward {2}. Whenever it attacks,
+/// put three stun counters on it and draw three cards. Whenever you cast a
+/// Turtle spell, untap it.
+pub fn ambling_stormshell() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Ambling Stormshell",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        power: 5,
+        toughness: 9,
+        keywords: vec![Keyword::Ward(WardCost::generic(2))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Stun,
+                        amount: Value::Const(3),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Turtle),
+                    },
+                ),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Furious Forebear — {1}{W} 3/1 Spirit Warrior. Whenever a creature you control
+/// dies while this is in your graveyard, you may pay {1}{W} to return it to hand.
+pub fn furious_forebear() -> CardDefinition {
+    CardDefinition {
+        name: "Furious Forebear",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::ControlledByYou),
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {1}{W}: return Furious Forebear from your graveyard to hand".into(),
+                mana_cost: cost(&[generic(1), w()]),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
