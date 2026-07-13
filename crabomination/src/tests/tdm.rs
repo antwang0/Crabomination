@@ -1589,3 +1589,63 @@ fn herd_heirloom_grants_trample_and_draw_on_damage() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew on combat damage to a player");
 }
+
+/// Yathan Roadwatcher mills four on cast, then reanimates a cheap creature.
+#[test]
+fn yathan_roadwatcher_mills_and_reanimates() {
+    let mut g = two_player_game();
+    // A cheap creature to mill into the graveyard as a reanimation target.
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let yathan = g.add_card_to_hand(0, catalog::yathan_roadwatcher());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // AutoDecider picks the only legal reanimation target (the milled Bears).
+    g.perform_action(GameAction::CastSpell {
+        card_id: yathan,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Yathan");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"),
+        "reanimated a milled creature (MV ≤ 3)",
+    );
+}
+
+/// Great Arashin City makes a Spirit by exiling a creature from the graveyard.
+#[test]
+fn great_arashin_city_exiles_for_spirit() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::great_arashin_city());
+    let gy_creature = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 1,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("make a Spirit");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gy_creature), "exiled the graveyard creature as a cost");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit"),
+        "created a Spirit token",
+    );
+}

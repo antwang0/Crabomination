@@ -1846,3 +1846,86 @@ pub fn herd_heirloom() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Yathan Roadwatcher — {1}{W}{B}{G} 3/3 Human Scout. When it enters, if you
+/// cast it, mill four cards; when you do, return a creature card with mana value
+/// 3 or less from your graveyard to the battlefield.
+pub fn yathan_roadwatcher() -> CardDefinition {
+    CardDefinition {
+        name: "Yathan Roadwatcher",
+        cost: cost(&[generic(1), w(), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SourceWasCast,
+            then: Box::new(Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+                Effect::Reflexive {
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3)),
+                        ),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Great Arashin City — Land. Enters tapped unless you control a Forest or a
+/// Plains. {T}: Add {B}. {1}{B}, {T}, Exile a creature card from your graveyard:
+/// Create a 1/1 white Spirit creature token.
+pub fn great_arashin_city() -> CardDefinition {
+    CardDefinition {
+        name: "Great Arashin City",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::HasLandType(LandType::Forest)
+                            .or(R::HasLandType(LandType::Plains))
+                            .and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Black]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), b()]),
+                exile_other_filter: Some((R::Creature, 1)),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: spirit_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

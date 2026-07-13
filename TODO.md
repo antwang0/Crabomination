@@ -49,13 +49,23 @@ state-corrupting in ordinary play.
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
-`decks::tdm` shipped ~46 commons/uncommons (Siege cycle, Abzan Monument,
-Breaching Dragonstorm, Dragonstorm Forecaster, Hundred-Battle Veteran among
-them). Still open, each needing a new primitive:
+`decks::tdm` shipped ~55 cards (Siege cycle, Abzan Monument, Breaching
+Dragonstorm, Dragonstorm Forecaster, Hundred-Battle Veteran, Anafenza, Felothar,
+Lotuslight Dancers, Eshki, Narset, Revival of the Ancestors, Kishla Village,
+Dracogenesis, Death Begets Life, Herd Heirloom, Yathan Roadwatcher, Great
+Arashin City among them). Still open, each needing a new primitive:
 - **Static Snare** cost rider — "costs {N} less per attacking creature."
-- **Reverberating Summons / the Dragonstorm cycle** — spell-count animate +
-  Dragon-enter self-bounce riders (the bounce half ships via `AnotherOfYours`
-  Dragon-enter triggers on the Corroding/Encroaching/Breaching Dragonstorms).
+- **Reverberating Summons** — spell-count self-animate (3/3 Monk EOT) + the
+  discard-hand+sac activated ability (`discard_hand_cost` exists).
+- **Neriv, Heart of the Storm** — damage-doubling replacement filtered to
+  creatures you control that entered this turn.
+- **Songcrafter Mage / Glacial Dragonhunt / Nature's Rhythm** — need the
+  **Harmonize** keyword (graveyard alt-cast with a tap-a-creature-for-its-power
+  cost reduction, then exile).
+- **Sidisi, Regent of the Mire** — sac a creature with MV X, return one with
+  MV X+1 (needs the sacrificed-MV → target-MV link).
+- **Maelstrom of the Spirit Dragon** — Dragon/Omen-only restricted mana (the
+  `SpendRestriction` set has no "Dragon or Omen spell" variant yet).
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 
