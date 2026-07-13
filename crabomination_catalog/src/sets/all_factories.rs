@@ -6237,6 +6237,8 @@ static DECKS: &[Factory] = &[
     super::decks::lotuslight_dancers,
     super::decks::eshki_dragonclaw,
     super::decks::narset_jeskai_waymaster,
+    super::decks::revival_of_the_ancestors,
+    super::decks::kishla_village,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

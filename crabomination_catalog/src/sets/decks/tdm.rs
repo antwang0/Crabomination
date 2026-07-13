@@ -1652,3 +1652,111 @@ pub fn narset_jeskai_waymaster() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 1/1 white Spirit creature token.
+fn spirit_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Revival of the Ancestors — {1}{W}{B}{G} Saga. I: three 1/1 Spirits. II:
+/// distribute three +1/+1 counters among up to three creatures you control.
+/// III: your creatures gain trample and lifelink until end of turn.
+pub fn revival_of_the_ancestors() -> CardDefinition {
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Revival of the Ancestors",
+        cost: cost(&[generic(1), w(), b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: spirit_token(),
+                },
+            ),
+            (
+                2,
+                Effect::DistributeCounters {
+                    total: Value::Const(3),
+                    counter: CounterType::PlusOnePlusOne,
+                    filter: R::Creature.and(R::ControlledByYou),
+                    max_targets: 3,
+                },
+            ),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: team(),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: team(),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kishla Village — Land. Enters tapped unless you control an Island or a Swamp.
+/// {T}: Add {G}. {3}{G}, {T}: Surveil 2.
+pub fn kishla_village() -> CardDefinition {
+    CardDefinition {
+        name: "Kishla Village",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::HasLandType(LandType::Island)
+                            .or(R::HasLandType(LandType::Swamp))
+                            .and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3), g()]),
+                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

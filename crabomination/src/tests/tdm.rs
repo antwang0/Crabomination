@@ -1429,3 +1429,55 @@ fn narset_discards_hand_draws_per_spells() {
     assert_eq!(g.players[0].hand.len(), 2, "discarded 2, drew 2 (spells cast)");
     assert!(g.players[0].graveyard.len() >= 2, "the whole hand was discarded");
 }
+
+/// Revival of the Ancestors' first chapter makes three Spirit tokens.
+#[test]
+fn revival_of_the_ancestors_chapter_one_makes_spirits() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_hand(0, catalog::revival_of_the_ancestors());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: saga,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Revival of the Ancestors");
+    drain_stack(&mut g);
+    let spirits = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Spirit")
+        .count();
+    assert_eq!(spirits, 3, "chapter I made three Spirit tokens");
+}
+
+/// Kishla Village enters tapped without an Island/Swamp and taps for green.
+#[test]
+fn kishla_village_enters_tapped_and_taps_for_green() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::kishla_village());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped with no Island/Swamp");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("tap for green");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added green mana");
+}
