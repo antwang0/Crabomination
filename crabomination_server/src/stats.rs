@@ -713,6 +713,19 @@ impl MatchStats {
     pub(crate) fn turn_count_iqr(&self) -> u32 {
         self.turn_percentile(0.75).saturating_sub(self.turn_percentile(0.25))
     }
+    /// Coefficient of variation of final turn counts (σ / mean, as a percent).
+    /// The turn-count analogue of [`win_life_delta_cv_pct`](Self::
+    /// win_life_delta_cv_pct): a scale-free spread readout that stays comparable
+    /// as the average length drifts, so a rising CV flags a swingier
+    /// fast-vs-grind length distribution even when the mean shifts. Returns 0
+    /// with no matches or a non-positive mean.
+    pub(crate) fn turn_count_cv_pct(&self) -> u64 {
+        let mean = self.avg_turns();
+        if self.total_matches() == 0 || mean == 0 {
+            return 0;
+        }
+        (self.turn_count_stddev() as f64 * 100.0 / mean as f64).round() as u64
+    }
     /// Population standard deviation of final turn counts, computed from
     /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
     /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next
@@ -861,10 +874,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
     // stay tight.
     if n >= 5 {
         out.push_str(&format!(
-            " turns_p50={} p95={} (σ={:.1})",
+            " turns_p50={} p95={} (σ={:.1}, cv={}%)",
             s.turn_percentile(0.5),
             s.turn_percentile(0.95),
             s.turn_count_stddev(),
+            s.turn_count_cv_pct(),
         ));
     }
     // Win/draw split: only render once at least one win or draw is
@@ -1131,5 +1145,18 @@ mod tests {
         assert_eq!(s.turn_count_iqr(), 10);
         // Empty histogram reads 0 rather than underflowing.
         assert_eq!(MatchStats::default().turn_count_iqr(), 0);
+    }
+
+    #[test]
+    fn turn_count_cv_is_stddev_over_mean_percent() {
+        let mut s = MatchStats::default();
+        // Two matches, 10 and 20 turns → mean 15, σ 5 → cv 33%.
+        s.bot_matches = 2;
+        s.observe_turns(10);
+        s.observe_turns(20);
+        assert_eq!(s.turn_count_stddev().round() as u64, 5);
+        assert_eq!(s.turn_count_cv_pct(), 33);
+        // No matches → 0 rather than dividing by zero.
+        assert_eq!(MatchStats::default().turn_count_cv_pct(), 0);
     }
 }

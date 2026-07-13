@@ -1438,6 +1438,13 @@ pub struct PermanentView {
     /// Populated by `project_permanent`.
     #[serde(default)]
     pub chosen_creature_type: Option<String>,
+    /// CR 614 — the persistent mode chosen as this permanent entered (the
+    /// Tarkir Siege cycle's Abzan/Mardu/… pick). Lets the client badge
+    /// "mode: <label>" so which arm of a two-mode enchantment is active is
+    /// legible. `None` for cards without a mode choice. Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub chosen_mode_label: Option<String>,
     /// Names of the Auras / Equipment / Fortifications attached to this
     /// permanent (CR 303 / 301). Lets the client list "Enchanted/Equipped by:
     /// …" in the tooltip without scanning the whole battlefield. Populated by

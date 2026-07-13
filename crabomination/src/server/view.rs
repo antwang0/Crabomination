@@ -1150,6 +1150,15 @@ fn project_permanent(
         named_card: card.named_card.clone(),
         chosen_color: card.chosen_color,
         chosen_creature_type: card.chosen_creature_type.map(|ct| format!("{ct:?}")),
+        // CR 614 — the Siege-cycle mode label, read from the definition's
+        // `enter_modes` by the recorded index.
+        chosen_mode_label: card.chosen_mode.and_then(|i| {
+            card.definition
+                .enter_modes
+                .as_ref()
+                .and_then(|m| m.get(i as usize))
+                .map(|m| m.label.to_string())
+        }),
         // Auras / Equipment / Fortifications attached to this permanent.
         attachments: battlefield
             .iter()

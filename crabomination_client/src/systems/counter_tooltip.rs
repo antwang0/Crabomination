@@ -208,6 +208,12 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Chosen type: {ct}"));
     }
 
+    // CR 614 — persistent mode chosen at ETB (the Tarkir Siege cycle) drives
+    // which arm of the two-mode enchantment is active.
+    if let Some(mode) = &p.chosen_mode_label {
+        lines.push(format!("Mode: {mode}"));
+    }
+
     // Loyalty for planeswalkers (separate from counters list since it's
     // the headline number on every walker).
     if p.card_types.contains(&CardType::Planeswalker) {
@@ -1227,6 +1233,7 @@ mod tests {
             named_card: None,
             chosen_color: None,
             chosen_creature_type: None,
+            chosen_mode_label: None,
             attachments: vec![],
             attached_to_name: None,
             soulbond_partner: None,
