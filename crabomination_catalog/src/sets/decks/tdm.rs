@@ -22,8 +22,9 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    DynamicPt, EnchantmentSubtype, EnterMode, EquipBonus, Keyword, SelectionRequirement as R,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    DynamicPt, EnchantmentSubtype, EnterMode, EquipBonus, Keyword, LandType, MayPlayDuration,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
     cast_is_instant_or_sorcery, drain, etb, mobilize, on_you_attack, target_any, target_filtered,
@@ -1323,6 +1324,112 @@ pub fn hollowmurk_siege() -> CardDefinition {
                 ..Default::default()
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Abzan Monument — {2} Artifact. ETB: search for a basic Plains/Swamp/Forest,
+/// to hand. {1}{W}{B}{G}, {T}, Sac: create an X/X white Spirit, X = greatest
+/// toughness among creatures you control (sorcery speed).
+pub fn abzan_monument() -> CardDefinition {
+    let greatest_toughness =
+        || Value::ToughnessOf(Box::new(Selector::GreatestToughnessYouControl));
+    CardDefinition {
+        name: "Abzan Monument",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand.and(
+                R::HasLandType(LandType::Plains)
+                    .or(R::HasLandType(LandType::Swamp))
+                    .or(R::HasLandType(LandType::Forest)),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            mana_cost: cost(&[generic(1), w(), b(), g()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Spirit".into(),
+                    power: 0,
+                    toughness: 0,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Spirit],
+                        ..Default::default()
+                    },
+                    dynamic_pt: Some((greatest_toughness(), greatest_toughness())),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Breaching Dragonstorm — {4}{R} Enchantment. ETB: exile from the top until a
+/// nonland card; cast it free if its mana value is 8 or less, else it goes to
+/// hand. When a Dragon you control enters, bounce this to hand.
+pub fn breaching_dragonstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Breaching Dragonstorm",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::ExileTopUntilNonlandMayPlay {
+                who: PlayerRef::You,
+                duration: MayPlayDuration::EndOfThisTurn,
+                free: true,
+                hand_unless_mv_below: Some(Value::Const(9)),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Dragon),
+                    }),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dragonstorm Forecaster — {U} 0/3 Human Scout. {2}, {T}: search for a card
+/// named Dragonstorm Globe or Boulderborn Dragon, to hand.
+pub fn dragonstorm_forecaster() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonstorm Forecaster",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasName("Dragonstorm Globe".into())
+                    .or(R::HasName("Boulderborn Dragon".into())),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -49,19 +49,15 @@ state-corrupting in ordinary play.
 
 ## TDM (Tarkir: Dragonstorm) gaps — good easy-card source
 
-`decks::tdm` shipped ~38 commons/uncommons. Still open, each needing a new
-primitive:
-- **Abzan Monument** — sac payoff mints an X/X token where X = greatest
-  toughness among your creatures. Needs a `CreateToken` variant taking `Value`
-  P/T (`Value::GreatestToughnessYouControl` already exists).
+`decks::tdm` shipped ~45 commons/uncommons (Siege cycle, Abzan Monument,
+Breaching Dragonstorm, Dragonstorm Forecaster among them). Still open, each
+needing a new primitive:
 - **Static Snare** cost rider — "costs {N} less per attacking creature."
 - **Reverberating Summons / the Dragonstorm cycle** — spell-count animate +
   Dragon-enter self-bounce riders (the bounce half ships via `AnotherOfYours`
-  Dragon-enter triggers on the Corroding/Encroaching Dragonstorms).
-- **Breaching Dragonstorm** — impulse-exile-until-nonland + free-cast-if-MV≤8.
+  Dragon-enter triggers on the Corroding/Encroaching/Breaching Dragonstorms).
 - **Hundred-Battle Veteran** — "+2/+4 while 3+ kinds of counters among your
   creatures" (a counter-kind-diversity predicate) + cast-from-gy-with-finality.
-- **Dragonstorm Forecaster** — tutor by exact card name (needs a name filter).
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 

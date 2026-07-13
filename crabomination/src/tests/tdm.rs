@@ -1145,3 +1145,114 @@ fn hollowmurk_siege_abzan_pumps_attacker() {
         "attacker gained menace",
     );
 }
+
+/// Abzan Monument's ETB tutors a basic Plains/Swamp/Forest to hand.
+#[test]
+fn abzan_monument_etb_searches_basic() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let plains = g.add_card_to_library(0, catalog::plains());
+    let mon = g.add_card_to_hand(0, catalog::abzan_monument());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(plains))]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mon,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Abzan Monument");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == plains), "searched a basic to hand");
+}
+
+/// Abzan Monument's sac ability mints an X/X Spirit, X = greatest toughness.
+#[test]
+fn abzan_monument_mints_xx_spirit() {
+    let mut g = two_player_game();
+    let monument = g.add_card_to_battlefield(0, catalog::abzan_monument());
+    g.add_card_to_battlefield(0, catalog::jade_cast_sentinel()); // 1/5 → X = 5
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: monument,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("mint Spirit");
+    drain_stack(&mut g);
+    let spirit = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Spirit")
+        .expect("spirit token");
+    assert_eq!(spirit.definition.power, 5, "X = greatest toughness (5)");
+    assert_eq!(spirit.definition.toughness, 5);
+}
+
+/// Breaching Dragonstorm impulses a nonland (free if MV ≤ 8) and bounces itself
+/// when a Dragon you control enters.
+#[test]
+fn breaching_dragonstorm_impulses_and_bounces() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 nonland
+    let storm = g.add_card_to_hand(0, catalog::breaching_dragonstorm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: storm,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Breaching Dragonstorm");
+    drain_stack(&mut g);
+    let s = g.exile.iter().find(|c| c.id == bear).expect("nonland impulsed");
+    assert!(s.may_play_until.is_some(), "MV 2 ≤ 8 → free may-play");
+    // Dragon enters → bounce.
+    let dragon = g.add_card_to_battlefield(0, catalog::jeskai_shrinekeeper());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: dragon }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == storm), "bounced on Dragon ETB");
+}
+
+/// Dragonstorm Forecaster tutors a card by exact name.
+#[test]
+fn dragonstorm_forecaster_tutors_by_name() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forecaster = g.add_card_to_battlefield(0, catalog::dragonstorm_forecaster());
+    g.clear_sickness(forecaster);
+    let globe = g.add_card_to_library(0, catalog::dragonstorm_globe());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // distractor, wrong name
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(globe))]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forecaster,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("tutor by name");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == globe), "found Dragonstorm Globe by name");
+}

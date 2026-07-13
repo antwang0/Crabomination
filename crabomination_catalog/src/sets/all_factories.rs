@@ -6228,6 +6228,9 @@ static DECKS: &[Factory] = &[
     super::decks::frostcliff_siege,
     super::decks::glacierwood_siege,
     super::decks::hollowmurk_siege,
+    super::decks::abzan_monument,
+    super::decks::breaching_dragonstorm,
+    super::decks::dragonstorm_forecaster,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
