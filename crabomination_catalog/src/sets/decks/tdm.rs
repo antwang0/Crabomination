@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, mono_hybrid, r, w, Color};
+use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
 
 /// Alesha's Legacy — {1}{B} Instant. Target creature you control gains
 /// deathtouch and indestructible until end of turn.
@@ -158,6 +158,53 @@ pub fn armament_dragon() -> CardDefinition {
             filter: R::Creature.and(R::ControlledByYou),
             max_targets: 3,
         })],
+        ..Default::default()
+    }
+}
+
+/// Fresh Start — {1}{U} Aura, Flash. Enchant creature. Enchanted creature gets
+/// −5/−0 and loses all abilities.
+pub fn fresh_start() -> CardDefinition {
+    CardDefinition {
+        name: "Fresh Start",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: -5,
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Lie in Wait — {B}{G}{U} Sorcery. Return target creature card from your
+/// graveyard to your hand. It deals damage equal to that card's power to target
+/// creature.
+pub fn lie_in_wait() -> CardDefinition {
+    CardDefinition {
+        name: "Lie in Wait",
+        cost: cost(&[b(), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::InYourGraveyard),
+                },
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
         ..Default::default()
     }
 }

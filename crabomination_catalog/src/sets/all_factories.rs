@@ -6193,6 +6193,8 @@ static DECKS: &[Factory] = &[
     super::decks::gurmag_nightwatch,
     super::decks::kin_tree_severance,
     super::decks::armament_dragon,
+    super::decks::fresh_start,
+    super::decks::lie_in_wait,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

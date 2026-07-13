@@ -135,3 +135,52 @@ fn armament_dragon_distributes_counters() {
     assert_eq!(total, 3, "three +1/+1 counters placed");
     let _ = a;
 }
+
+/// Fresh Start weakens and silences the enchanted creature.
+#[test]
+fn fresh_start_shrinks_and_removes_abilities() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer w/ vigilance
+    let aura = g.add_card_to_hand(0, catalog::fresh_start());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(foe)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("enchant the Angel");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(foe).unwrap();
+    assert_eq!(cp.power, -1, "4 − 5 = −1 power");
+    assert!(cp.keywords.is_empty(), "abilities removed");
+}
+
+/// Lie in Wait returns a creature and slings its power at a target.
+#[test]
+fn lie_in_wait_returns_and_deals_power() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::hill_giant()); // 3/3, power 3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::lie_in_wait());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![Target::Permanent(foe)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Lie in Wait");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
+    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 2/2");
+}
