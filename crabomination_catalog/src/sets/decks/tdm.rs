@@ -5,12 +5,12 @@
 //! body (Gurmag Nightwatch). Tests in `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, Keyword,
-    SelectionRequirement as R, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    Keyword, SelectionRequirement as R, Subtypes, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, generic, mono_hybrid, r, Color};
+use crate::mana::{b, cost, g, generic, mono_hybrid, r, w, Color};
 
 /// Alesha's Legacy — {1}{B} Instant. Target creature you control gains
 /// deathtouch and indestructible until end of turn.
@@ -117,6 +117,46 @@ pub fn gurmag_nightwatch() -> CardDefinition {
             count: Value::Const(3),
             who: None,
             exile_rest: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kin-Tree Severance — {2/W}{2/B}{2/G} Instant. Exile target permanent with
+/// mana value 3 or greater.
+pub fn kin_tree_severance() -> CardDefinition {
+    CardDefinition {
+        name: "Kin-Tree Severance",
+        cost: cost(&[
+            mono_hybrid(2, Color::White),
+            mono_hybrid(2, Color::Black),
+            mono_hybrid(2, Color::Green),
+        ]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(R::Permanent.and(R::ManaValueAtLeast(3))),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Armament Dragon — {3}{W}{B}{G} 3/4 Dragon, Flying. When it enters, distribute
+/// three +1/+1 counters among one, two, or three target creatures you control.
+pub fn armament_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Armament Dragon",
+        cost: cost(&[generic(3), w(), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::DistributeCounters {
+            total: Value::Const(3),
+            counter: CounterType::PlusOnePlusOne,
+            filter: R::Creature.and(R::ControlledByYou),
+            max_targets: 3,
         })],
         ..Default::default()
     }

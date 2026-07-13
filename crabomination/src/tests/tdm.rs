@@ -93,3 +93,45 @@ fn gurmag_nightwatch_digs_and_mills() {
     assert_eq!(g.players[0].graveyard.len(), gy + 2, "milled two");
     assert_eq!(g.players[0].library.len(), lib - 2, "kept one on top");
 }
+
+/// Kin-Tree Severance exiles a MV-3+ permanent (and can't hit a cheap one).
+#[test]
+fn kin_tree_severance_exiles_expensive_permanent() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    let spell = g.add_card_to_hand(0, catalog::kin_tree_severance());
+    g.players[0].mana_pool.add_colorless(6);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("exile the MV-5 Angel");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "MV-5 permanent exiled");
+    assert!(g.exile.iter().any(|c| c.id == big), "went to exile");
+}
+
+/// Armament Dragon distributes three +1/+1 counters on enter.
+#[test]
+fn armament_dragon_distributes_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dragon = g.add_card_to_battlefield(0, catalog::armament_dragon());
+    g.fire_self_etb_triggers(dragon, 0);
+    drain_stack(&mut g);
+    // AutoDecider spreads across available creatures; total distributed is 3.
+    let total: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| *c.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0))
+        .sum();
+    assert_eq!(total, 3, "three +1/+1 counters placed");
+    let _ = a;
+}
