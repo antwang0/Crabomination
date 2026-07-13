@@ -19,9 +19,10 @@
 //! (Barrensteppe / Frostcliff / Glacierwood / Hollowmurk) rides the new
 //! `CardDefinition.enter_modes` persistent as-enters mode choice. A later batch
 //! adds Nature's Rhythm (X-search-to-battlefield + Harmonize), Smile at Death
-//! (upkeep up-to-two graveyard reanimate via `ApplyToTargets`), and Roar of
-//! Endless Song (Saga — Elephants then a team P/T double via `ForEach`). Tests
-//! in `crabomination/src/tests/tdm.rs`.
+//! (upkeep up-to-two graveyard reanimate via `ApplyToTargets`), Roar of
+//! Endless Song (Saga — Elephants then a team P/T double via `ForEach`), Zurgo
+//! (Mobilize 2), Rot-Curse Rakshasa (5/5 trample decayed), and Flamehold
+//! Grappler (ETB copy-next-spell). Tests in `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
