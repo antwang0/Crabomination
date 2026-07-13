@@ -91,6 +91,15 @@ pub struct PutOnLibraryHighlight {
     front: Entity,
 }
 
+/// Standing answers for optional-trigger prompts, set via the modal's
+/// "Always Yes / Always No" buttons (Arena's auto-yes). Keyed by
+/// (source, description) so a permanent with several different optional
+/// triggers tracks each separately. Reset at match start by
+/// `start_net_session_from_menu`; each auto-answer logs a line so the
+/// player can tell why no prompt appeared.
+#[derive(Resource, Default)]
+pub struct AutoOptionalAnswers(pub std::collections::HashMap<(CardId, String), bool>);
+
 /// Local UI state tracked during an in-flight decision. Cleared when the
 /// server's `pending_decision` goes back to `None`.
 #[derive(Resource, Default)]
@@ -281,6 +290,8 @@ pub fn spawn_decision_ui(
     ui_fonts: Res<UiFonts>,
     pending_mana_cast: Res<PendingManaCast>,
     outbox: Option<Res<NetOutbox>>,
+    auto_answers: Res<AutoOptionalAnswers>,
+    mut log: ResMut<GameLog>,
 ) {
     let Some(cv) = &view.0 else {
         // Mulligan / no view yet — tear down any existing modal.
@@ -423,12 +434,27 @@ pub fn spawn_decision_ui(
                 .0
                 .as_ref()
                 .is_some_and(|pc| cast_action_card_id(&pc.action) == *source);
+            // A standing "Always Yes / Always No" for this exact prompt
+            // answers without a modal (with a log line, so the player can
+            // tell why no prompt appeared).
+            let standing = auto_answers.0.get(&(*source, description.clone())).copied();
             if paying_for_this {
                 if let Some(outbox) = &outbox {
                     outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
                 }
+            } else if let Some(answer) = standing {
+                if let Some(outbox) = &outbox {
+                    outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(answer)));
+                    log.push_event(
+                        format!(
+                            "Auto-answered \"{description}\": {} (set via Always)",
+                            if answer { "Yes" } else { "No" },
+                        ),
+                        theme::TEXT_SECONDARY,
+                    );
+                }
             } else {
-                spawn_optional_modal(&mut commands, &ui_fonts, description);
+                spawn_optional_modal(&mut commands, &ui_fonts, description, true);
             }
         }
         DecisionWire::NameCard { source_name, suggestions, .. } => {
@@ -584,6 +610,7 @@ pub fn spawn_decision_ui(
                 &mut commands,
                 &ui_fonts,
                 &format!("Send {name} to the command zone instead of {zone}?"),
+                false,
             );
         }
         DecisionWire::ChooseLegendToKeep { name, duplicates, .. } => {
@@ -2307,7 +2334,17 @@ pub struct OptionalChoiceButton(pub bool);
 /// A yes/no confirmation modal for `Decision::OptionalTrigger` — currently the
 /// "spend your floating mana, or tap lands?" prompt. `description` carries the
 /// specifics; the buttons answer `Bool(true)` / `Bool(false)`.
-fn spawn_optional_modal(commands: &mut Commands, ui_fonts: &UiFonts, description: &str) {
+/// "Always Yes / Always No" on the optional-trigger modal: answers now AND
+/// records a standing answer for this exact (source, description) prompt.
+#[derive(Component)]
+pub struct OptionalAlwaysButton(pub bool);
+
+fn spawn_optional_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    description: &str,
+    show_always: bool,
+) {
     let root = commands
         .spawn((
             Node {
@@ -2377,6 +2414,44 @@ fn spawn_optional_modal(commands: &mut Commands, ui_fonts: &UiFonts, description
                 });
             }
         });
+        // Standing-answer row (optional triggers only — a commander redirect
+        // is a one-off): smaller, tertiary styling, so the one-shot Yes/No
+        // stays the visually primary choice.
+        if show_always {
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(12.0),
+                ..default()
+            })
+            .with_children(|row| {
+                for (answer, label) in [(true, "Always Yes"), (false, "Always No")] {
+                    row.spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                            border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_TERTIARY_BG),
+                        HoverTint::new(theme::BUTTON_TERTIARY_BG),
+                        OptionalAlwaysButton(answer),
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new(label),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            Pickable::IGNORE,
+                        ));
+                    });
+                }
+            });
+            p.spawn((
+                Text::new("Always = auto-answer this prompt for the rest of the game"),
+                ui_fonts.tf(11.0),
+                TextColor(theme::TEXT_MUTED),
+            ));
+        }
     });
 }
 
@@ -2387,11 +2462,14 @@ pub fn handle_optional_buttons(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
     mut state: ResMut<DecisionUiState>,
+    mut auto_answers: ResMut<AutoOptionalAnswers>,
     buttons: Query<(&Interaction, &OptionalChoiceButton), Changed<Interaction>>,
+    always_buttons: Query<(&Interaction, &OptionalAlwaysButton), Changed<Interaction>>,
 ) {
     let Some(cv) = &view.0 else { return };
+    let decision = cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref());
     if !matches!(
-        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
+        decision,
         Some(DecisionWire::OptionalTrigger { .. } | DecisionWire::CommanderRedirect { .. })
     ) {
         return;
@@ -2399,6 +2477,18 @@ pub fn handle_optional_buttons(
     let Some(outbox) = outbox else { return };
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed {
+            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(btn.0)));
+            state.spawned_for = None;
+            return;
+        }
+    }
+    // "Always" answers now and records the standing answer; future
+    // identical prompts auto-answer in `spawn_decision_ui`.
+    for (interaction, btn) in &always_buttons {
+        if *interaction == Interaction::Pressed {
+            if let Some(DecisionWire::OptionalTrigger { source, description }) = decision {
+                auto_answers.0.insert((*source, description.clone()), btn.0);
+            }
             outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(btn.0)));
             state.spawned_for = None;
             return;

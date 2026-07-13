@@ -381,6 +381,7 @@ fn main() {
         .insert_resource(audit::ShowVerifiedCards::default())
         .insert_resource(audit::load_audited_cards())
         .insert_resource(DecisionUiState::default())
+        .init_resource::<systems::decision_ui::AutoOptionalAnswers>()
         .insert_resource(systems::debug_console::DebugConsoleState::default())
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()

@@ -1147,6 +1147,10 @@ pub fn start_net_session_from_menu(world: &mut World) {
         log.entries.clear();
     }
 
+    // Standing "Always Yes/No" trigger answers are per-game — card ids
+    // don't carry across matches.
+    world.insert_resource(crate::systems::decision_ui::AutoOptionalAnswers::default());
+
     let (mode, format) = world
         .get_resource_mut::<PendingNetMode>()
         .and_then(|mut r| r.0.take())
