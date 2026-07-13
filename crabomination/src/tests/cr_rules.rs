@@ -51,7 +51,11 @@
 //! two-blocker requirement (CR 702.111 — Insatiable Skittermaw), lifelink on
 //! noncombat ability damage (CR 702.15 — Merciless Enforcers), and
 //! target-conditional cost reduction (CR 601.2f — Grow Extra Arms costs {1}
-//! less targeting a Spider).
+//! less targeting a Spider), last-known controller of a died creature
+//! (CR 603.10 — Furious Forebear's graveyard trigger reads LKI so it fires
+//! only for your creatures), variable "Pay X life" activation costs
+//! (CR 107.16 — Krumar Initiate), and Mobilize's tapped-attacking transient
+//! tokens (CR 702.169 — Zurgo's Vanguard).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -8636,4 +8640,106 @@ fn cr_702_179f_no_speed_counts_as_zero() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life, "speed 0 → no life lost");
     assert_eq!(g.players[0].hand.len(), hand, "speed 0 → no cards drawn");
+}
+
+// ── CR 603.10 — Last-known information for a died creature's controller ──────
+
+/// A graveyard-scoped "when a creature you control dies" trigger reads the
+/// dead creature's last-known controller (CR 603.10), so it fires only for
+/// your creatures — never an opponent's. Furious Forebear.
+#[test]
+fn cr_603_10_died_creature_controller_read_from_lki() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forebear = g.add_card_to_graveyard(0, catalog::furious_forebear());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // An opponent's creature dying must NOT return Forebear.
+    let snap_t = g.battlefield_find(theirs).unwrap().clone();
+    let mut evs = g.remove_to_graveyard_with_triggers(theirs);
+    g.died_card_snapshots.insert(theirs, snap_t);
+    evs.push(GameEvent::CreatureDied { card_id: theirs });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == forebear),
+        "opponent's creature dying leaves Forebear in the graveyard"
+    );
+    // Your own creature dying returns it.
+    let snap_m = g.battlefield_find(mine).unwrap().clone();
+    let mut evs = g.remove_to_graveyard_with_triggers(mine);
+    g.died_card_snapshots.insert(mine, snap_m);
+    evs.push(GameEvent::CreatureDied { card_id: mine });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == forebear),
+        "your creature dying returns Forebear to hand"
+    );
+}
+
+// ── CR 107.16 — variable "Pay X life" activation cost ───────────────────────
+
+/// An activated ability whose cost includes "Pay X life" (CR 107.16) drains
+/// exactly the chosen X, and the same X flows into resolution. Krumar Initiate.
+#[test]
+fn cr_107_16_pay_x_life_variable_activation_cost() {
+    let mut g = two_player_game();
+    let init = g.add_card_to_battlefield(0, catalog::krumar_initiate());
+    g.clear_sickness(init);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: init,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: Some(3),
+    })
+    .expect("endure 3 for X=3 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 3, "paid exactly X=3 life");
+    // Endure 3 grew the 2/2 by X.
+    assert!(g.computed_permanent(init).unwrap().power >= 5, "endured X=3");
+}
+
+// ── CR 702.169 — Mobilize tokens are tapped, attacking, and transient ───────
+
+/// A Mobilize attack trigger mints a tapped-and-attacking Warrior that is
+/// sacrificed at end of combat (CR 702.169). Zurgo's Vanguard.
+#[test]
+fn cr_702_169_mobilize_token_is_tapped_attacking_and_sacrificed() {
+    let mut g = two_player_game();
+    let zurgo = g.add_card_to_battlefield(0, catalog::zurgos_vanguard());
+    g.clear_sickness(zurgo);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: zurgo,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let warrior = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Warrior")
+        .expect("minted a Warrior");
+    assert!(warrior.tapped, "token is tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == warrior.id), "token is attacking");
+    // End of combat cleanup sacrifices it.
+    g.process_attacking_token_cleanup();
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Warrior"),
+        "Warrior sacrificed at end of combat"
+    );
 }
