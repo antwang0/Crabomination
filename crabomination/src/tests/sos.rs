@@ -11441,6 +11441,27 @@ fn choreographed_sparks_mode_one_copies_target_creature_spell() {
         "The copy should be a token");
     assert_eq!(g.battlefield.len(), bf_before + 2,
         "Bf grew by 2 (original + token copy)");
+
+    // Printed riders (`Effect::CopySpellWithRiders`): the copy has haste,
+    // the original doesn't.
+    let copy_id = g.battlefield.iter()
+        .find(|c| c.definition.name == "Grizzly Bears" && c.is_token)
+        .map(|c| c.id)
+        .expect("token copy on battlefield");
+    let copy = g.computed_permanent(copy_id).unwrap();
+    assert!(copy.keywords.contains(&Keyword::Haste),
+        "the copy gains haste");
+    let orig = g.computed_permanent(bears).unwrap();
+    assert!(!orig.keywords.contains(&Keyword::Haste),
+        "the original bears doesn't gain haste");
+
+    // ...and the copy is sacrificed at the beginning of the next end step.
+    g.fire_step_triggers(crate::game::types::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == copy_id),
+        "the copy is sacrificed at the next end step");
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "the original bears survives the end step");
 }
 
 #[test]

@@ -631,6 +631,7 @@ impl Effect {
             }
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
             Effect::CopySpell { what, count }
+            | Effect::CopySpellWithRiders { what, count, .. }
             | Effect::CopySpellMayChooseTargets { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
@@ -873,6 +874,7 @@ impl Effect {
             | Effect::MakeSpellUncounterable { what }
             | Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CopySpell { what, .. }
+            | Effect::CopySpellWithRiders { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
@@ -1931,6 +1933,7 @@ impl Effect {
                 Effect::CreateTokenAttachedTo { target, .. }
                 | Effect::CreateTokenAttachedToEach { target, .. } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
+                | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
                 | Effect::ChooseNewTargetsForSpell { what } => sel_find(what, slot),

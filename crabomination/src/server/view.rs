@@ -1834,6 +1834,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::PutOnLibraryFromHand { .. } => "Put on library",
         Effect::RevealTopAndDrawIf { .. } => "Reveal top",
         Effect::CopySpell { .. } => "Copy spell",
+        Effect::CopySpellWithRiders { .. } => "Copy spell (haste, sac at end step)",
         Effect::CopySpellMayChooseTargets { .. } => "Copy spell (new targets)",
         Effect::ChooseNewTargetsForSpell { .. } => "Choose new targets",
         Effect::GainControl { .. } => "Gain control",

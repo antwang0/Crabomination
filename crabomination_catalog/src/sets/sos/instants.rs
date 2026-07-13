@@ -1738,12 +1738,12 @@ pub fn prismari_charm() -> CardDefinition {
 /// copies a target creature spell on the stack — the engine's
 /// `CopySpell` already handles permanent spells (the resulting
 /// permanent enters as a token via CR 608.3f, since `is_token = true`
-/// is stamped on the copy at push-time). Approximation: the printed
-/// "the copy gains haste and 'sacrifice this token at the end step'"
-/// rider is **dropped** — `Effect::CopySpell` has no way to attach
-/// riders to the copy's resulting permanent, so the token neither has
-/// haste nor is sacrificed at end of step (it merely ceases to exist
-/// via the token-cleanup SBA if it ever leaves the battlefield).
+/// is stamped on the copy at push-time). The printed "the copy gains
+/// haste and 'At the beginning of the end step, sacrifice this token'"
+/// rider is **now wired** via `Effect::CopySpellWithRiders` — the copy
+/// carries `CardInstance.resolve_riders`, and the permanent-spell
+/// resolution path grants haste EOT + schedules a next-end-step
+/// sacrifice on the resulting token.
 /// The "this spell can't be copied" rider is now wired via the
 /// `CardDefinition.cant_be_copied` flag, which `Effect::CopySpell` honors
 /// by skipping it as a copy target. The "choose one or both" multi-mode
@@ -1762,17 +1762,18 @@ pub fn choreographed_sparks() -> CardDefinition {
         ),
         count: Value::Const(1),
     };
-    let copy_creature_spell = Effect::CopySpell {
-        // Target a creature spell on the stack. The CopySpell resolver
-        // handles permanent spells by stamping `is_token = true` on the
-        // copy (CR 608.3f) so the resulting permanent enters as a token
-        // — token-cleanup SBA removes it when it leaves the battlefield,
-        // approximating the printed "sacrifice at end of step" rider.
+    let copy_creature_spell = Effect::CopySpellWithRiders {
+        // Target a creature spell on the stack. The copy enters as a
+        // token (CR 608.3f) carrying the printed riders: haste until
+        // end of turn + sacrificed at the beginning of the next end
+        // step (`CardInstance.resolve_riders`).
         what: target_filtered(
             SelectionRequirement::IsSpellOnStack
                 .and(SelectionRequirement::HasCardType(CardType::Creature)),
         ),
         count: Value::Const(1),
+        grant_haste: true,
+        sacrifice_eot: true,
     };
     CardDefinition {
         name: "Choreographed Sparks",

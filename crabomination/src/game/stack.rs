@@ -938,7 +938,26 @@ impl GameState {
                     let room_door = card.definition.room.as_ref().map(|_| {
                         usize::from(card.split_cast == Some(1))
                     });
+                    // `Effect::CopySpellWithRiders` — the copy's stamped
+                    // riders apply as it resolves into a permanent.
+                    let resolve_riders = card.resolve_riders.take();
                     self.battlefield.push(card);
+                    if let Some((grant_haste, sacrifice_eot)) = resolve_riders {
+                        if grant_haste {
+                            self.grant_keyword_eot(card_id, crate::card::Keyword::Haste);
+                        }
+                        if sacrifice_eot {
+                            self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                                controller: caster,
+                                source: card_id,
+                                kind: crate::game::types::DelayedKind::NextEndStep,
+                                effect: Effect::SacrificeSource,
+                                target: None,
+                                bound_token: None,
+                                fires_once: true,
+                            });
+                        }
+                    }
                     // CR 310.6 — a cast Siege's controller chooses an opponent
                     // to protect it (the lone opponent in 2-player; multiplayer
                     // choice is a follow-up).

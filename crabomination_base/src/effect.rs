@@ -3992,6 +3992,21 @@ pub enum Effect {
     },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
+    /// As `CopySpell`, but when the copied spell is a permanent spell the
+    /// resulting token permanent carries riders: `grant_haste` gives it
+    /// haste until end of turn, and `sacrifice_eot` schedules a
+    /// next-end-step sacrifice. Choreographed Sparks — "Copy target
+    /// creature spell you control. The copy gains haste and 'At the
+    /// beginning of the end step, sacrifice this token.'" The riders are
+    /// stamped on the copy's `CardInstance.resolve_riders` and applied by
+    /// the permanent-spell resolution path in `stack.rs`; they no-op for
+    /// instant/sorcery copies.
+    CopySpellWithRiders {
+        what: Selector,
+        count: Value,
+        grant_haste: bool,
+        sacrifice_eot: bool,
+    },
     /// Gogo — copy target activated or triggered ability on the stack
     /// `times` times (the selector resolves to the ability's *source*
     /// permanent, mirroring `CounterAbility`). Copies keep the original's

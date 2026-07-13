@@ -411,18 +411,22 @@ impl GameState {
         choose_new_targets: bool,
         events: &mut Vec<GameEvent>,
     ) {
-        self.copy_stack_spell_controlled(cid, n, choose_new_targets, None, events);
+        self.copy_stack_spell_controlled(cid, n, choose_new_targets, None, None, events);
     }
 
     /// As `copy_stack_spell`, but `controller` (when `Some`) controls the
     /// copies and chooses their new targets — CR 702.150 Demonstrate hands a
-    /// copy to an opponent.
+    /// copy to an opponent. `riders` (when `Some`) stamps
+    /// `CardInstance.resolve_riders` = (grant_haste, sacrifice_eot) on each
+    /// copy — `Effect::CopySpellWithRiders` (Choreographed Sparks); the
+    /// permanent-spell resolution path in `stack.rs` applies them.
     pub(crate) fn copy_stack_spell_controlled(
         &mut self,
         cid: CardId,
         n: usize,
         choose_new_targets: bool,
         controller: Option<usize>,
+        riders: Option<(bool, bool)>,
         events: &mut Vec<GameEvent>,
     ) {
         use crate::game::types::StackItem;
@@ -470,6 +474,7 @@ impl GameState {
             let mut copy_inst = crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
             // CR 707.10a — a copy of a spell ceases to exist off the stack.
             copy_inst.is_token = true;
+            copy_inst.resolve_riders = riders;
             self.stack.push(StackItem::Spell {
                 card: Box::new(copy_inst),
                 caster,
@@ -13006,6 +13011,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopySpellWithRiders { what, count, grant_haste, sacrifice_eot } => {
+                // As `CopySpell`, but each copy carries `resolve_riders`
+                // (haste EOT / next-end-step sacrifice) applied when the
+                // permanent-spell copy resolves onto the battlefield —
+                // Choreographed Sparks' creature-spell mode.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let candidate_ids: Vec<CardId> = match what {
+                    Selector::TriggerSource => ctx
+                        .trigger_source
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                    Selector::This => ctx.source.into_iter().collect(),
+                    _ => self
+                        .resolve_selector(what, ctx)
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                for cid in candidate_ids {
+                    self.copy_stack_spell_controlled(
+                        cid,
+                        n,
+                        false,
+                        None,
+                        Some((*grant_haste, *sacrifice_eot)),
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::CopySpellMayChooseTargets { what, count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
@@ -13049,7 +13095,7 @@ impl GameState {
                 // Pick an opponent (the lowest-seat opponent by default; a
                 // single-opponent game has exactly one).
                 if let Some(&opp) = self.opponents_of(ctx.controller).first() {
-                    self.copy_stack_spell_controlled(spell_id, 1, true, Some(opp), events);
+                    self.copy_stack_spell_controlled(spell_id, 1, true, Some(opp), None, events);
                 }
                 Ok(())
             }

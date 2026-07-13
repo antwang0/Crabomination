@@ -4000,6 +4000,14 @@ pub struct CardInstance {
     /// the battle (CR 508.4) and its creatures block them. `None` for
     /// non-battles. Round-trips via `CardInstanceWire` with `#[serde(default)]`.
     pub protected_by: Option<usize>,
+    /// Riders stamped on a permanent-spell copy by
+    /// `Effect::CopySpellWithRiders` (Choreographed Sparks — "the copy
+    /// gains haste and 'At the beginning of the end step, sacrifice this
+    /// token.'"). Applied when the spell resolves onto the battlefield:
+    /// `.0` grants haste until end of turn, `.1` schedules a
+    /// next-end-step sacrifice. `None` for ordinary cards/copies.
+    /// Round-trips via `CardInstanceWire` with `#[serde(default)]`.
+    pub resolve_riders: Option<(bool, bool)>,
 }
 
 impl CardInstance {
@@ -4141,6 +4149,7 @@ impl CardInstance {
             mutate_stack: Vec::new(),
             mutate_onto: None,
             protected_by: None,
+            resolve_riders: None,
         }
     }
 
@@ -4744,6 +4753,10 @@ struct CardInstanceWire {
     /// CR 310.6 Battle protector. `#[serde(default)]` for back-compat.
     #[serde(default)]
     protected_by: Option<usize>,
+    /// Spell-copy riders (haste, sac-at-end-step). `#[serde(default)]`
+    /// for back-compat.
+    #[serde(default)]
+    resolve_riders: Option<(bool, bool)>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -4855,6 +4868,7 @@ impl serde::Serialize for CardInstance {
             mutate_onto: self.mutate_onto,
             untap_locked_by: self.untap_locked_by,
             protected_by: self.protected_by,
+            resolve_riders: self.resolve_riders,
         };
         wire.serialize(ser)
     }
@@ -5001,6 +5015,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         }
         c.untap_locked_by = wire.untap_locked_by;
         c.protected_by = wire.protected_by;
+        c.resolve_riders = wire.resolve_riders;
         Ok(c)
     }
 }

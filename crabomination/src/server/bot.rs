@@ -3866,6 +3866,7 @@ fn effect_uses_x(eff: &Effect) -> bool {
         | Effect::CreateTokenCopyOf { count, .. }
         | Effect::CreateTokenCopiesHasteSac { count, .. }
         | Effect::CopySpell { count, .. }
+        | Effect::CopySpellWithRiders { count, .. }
         | Effect::CopySpellMayChooseTargets { count, .. } => value_uses_x(count),
         Effect::RevealUntilFind { cap, .. } => value_uses_x(cap),
         Effect::AddFirstSpellTax { count, .. } => value_uses_x(count),
