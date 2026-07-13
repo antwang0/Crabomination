@@ -1013,6 +1013,11 @@ pub enum Predicate {
     /// Witherbloom "if a creature died under your control this turn, …"
     /// end-step payoffs (Essenceknit Scholar).
     CreaturesDiedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// CR 122 — at least `at_least` *different kinds* of counters exist among
+    /// the creatures `who` controls (Hundred-Battle Veteran's "three or more
+    /// different kinds of counters among creatures you control"). Counts
+    /// distinct `CounterType`s, not totals.
+    DistinctCounterKindsAmongCreaturesAtLeast { who: PlayerRef, at_least: u32 },
     /// `who` has sacrificed at least `at_least` permanents this turn. Backed
     /// by `Player.permanents_sacrificed_this_turn`. Used by "if you
     /// sacrificed a permanent this turn" payoffs (Sawblade Skinripper).

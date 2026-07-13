@@ -1146,6 +1146,20 @@ impl GameState {
                     .map(|p| self.players[p].creatures_died_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::DistinctCounterKindsAmongCreaturesAtLeast { who, at_least } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let mut kinds = std::collections::HashSet::new();
+                for c in self.battlefield.iter().filter(|c| {
+                    c.controller == p && c.definition.card_types.contains(&crate::card::CardType::Creature)
+                }) {
+                    for (kind, n) in &c.counters {
+                        if *n > 0 {
+                            kinds.insert(*kind);
+                        }
+                    }
+                }
+                kinds.len() as u32 >= *at_least
+            }
             Predicate::PermanentsSacrificedThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

@@ -1433,3 +1433,42 @@ pub fn dragonstorm_forecaster() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hundred-Battle Veteran — {3}{B} 4/2 Zombie Warrior. +2/+4 while three or more
+/// kinds of counters are among your creatures. You may cast it from your
+/// graveyard; if you do, it enters with a finality counter.
+pub fn hundred_battle_veteran() -> CardDefinition {
+    CardDefinition {
+        name: "Hundred-Battle Veteran",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as there are three or more different kinds of counters among creatures you control, this creature gets +2/+4.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::DistinctCounterKindsAmongCreaturesAtLeast {
+                        who: PlayerRef::You,
+                        at_least: 3,
+                    },
+                    power: 2,
+                    toughness: 4,
+                    keywords: vec![],
+                },
+            },
+            StaticAbility {
+                description: "You may cast this card from your graveyard. If you do, it enters with a finality counter on it.",
+                effect: StaticEffect::GraveyardCastWithLifeSurcharge {
+                    filter: R::HasName("Hundred-Battle Veteran".into()),
+                    life: 0,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

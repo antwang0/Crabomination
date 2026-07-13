@@ -1256,3 +1256,46 @@ fn dragonstorm_forecaster_tutors_by_name() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == globe), "found Dragonstorm Globe by name");
 }
+
+/// Hundred-Battle Veteran gets +2/+4 only with 3+ kinds of counters among your
+/// creatures.
+#[test]
+fn hundred_battle_veteran_pumps_with_counter_diversity() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let vet = g.add_card_to_battlefield(0, catalog::hundred_battle_veteran());
+    g.battlefield_find_mut(vet).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(ally).unwrap().counters.insert(CounterType::Charge, 1);
+    // Two kinds (+1/+1, charge) → static off; only the +1/+1 counter pumps.
+    assert_eq!(g.computed_permanent(vet).unwrap().power, 5, "2 kinds → static off");
+    // Third kind → +2/+4 on top of the +1/+1 counter → 7/7.
+    g.battlefield_find_mut(ally).unwrap().counters.insert(CounterType::Shield, 1);
+    let cp = g.computed_permanent(vet).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "3 kinds → +2/+4");
+}
+
+/// Hundred-Battle Veteran can be cast from the graveyard, entering with a
+/// finality counter.
+#[test]
+fn hundred_battle_veteran_casts_from_graveyard_with_finality() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let vet = g.add_card_to_graveyard(0, catalog::hundred_battle_veteran());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: vet,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from graveyard");
+    drain_stack(&mut g);
+    let inst = g.battlefield_find(vet).expect("entered battlefield");
+    assert_eq!(inst.counter_count(CounterType::Finality), 1, "entered with a finality counter");
+}

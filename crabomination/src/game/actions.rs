@@ -2573,10 +2573,14 @@ impl GameState {
     pub(crate) fn graveyard_cast_life_surcharge(&self, p: usize, card_id: CardId) -> Option<u32> {
         use crate::effect::StaticEffect;
         let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        // The permission can come from a permanent you control (Noctis) or from
+        // the graveyard card's own static (Hundred-Battle Veteran — "you may
+        // cast this card from your graveyard"), so include the card itself.
         self.battlefield
             .iter()
             .filter(|c| c.controller == p)
             .flat_map(|c| c.definition.static_abilities.iter())
+            .chain(card.definition.static_abilities.iter())
             .find_map(|sa| match &sa.effect {
                 StaticEffect::GraveyardCastWithLifeSurcharge { filter, life }
                     if self.evaluate_requirement_on_card(filter, card, p)

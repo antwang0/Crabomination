@@ -6231,6 +6231,7 @@ static DECKS: &[Factory] = &[
     super::decks::abzan_monument,
     super::decks::breaching_dragonstorm,
     super::decks::dragonstorm_forecaster,
+    super::decks::hundred_battle_veteran,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
