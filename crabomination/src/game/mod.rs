@@ -8831,8 +8831,17 @@ impl GameState {
                 .iter()
                 .filter(|c| {
                     c.controller == p
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(sa.effect, crate::effect::StaticEffect::ControllerDrawsDoubled)
+                        && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                            crate::effect::StaticEffect::ControllerDrawsDoubled => true,
+                            crate::effect::StaticEffect::ControllerDrawsDoubledIf { condition } => {
+                                let ctx = crate::game::effects::EffectContext::for_ability(
+                                    c.id,
+                                    c.controller,
+                                    None,
+                                );
+                                self.evaluate_predicate(condition, &ctx)
+                            }
+                            _ => false,
                         })
                 })
                 .count() as u32;
@@ -13778,6 +13787,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantMakeYouSacrifice
             | StaticEffect::OpponentsCantMakeYouDiscard
             | StaticEffect::ControllerDrawsDoubled
+            | StaticEffect::ControllerDrawsDoubledIf { .. }
             // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
             // proliferate resolver / `add_poison` funnel.
             | StaticEffect::ProliferateTwice

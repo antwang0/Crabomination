@@ -6183,6 +6183,8 @@ static DECKS: &[Factory] = &[
     super::decks::riverchurn_monument,
     super::decks::flood_the_engine,
     super::decks::dune_drifter,
+    super::decks::vnwxt_verbose_host,
+    super::decks::zahur_glorys_past,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -56,3 +56,77 @@ fn dune_drifter_x_gate_excludes_larger_card() {
         "MV-2 card stays in graveyard when X=1"
     );
 }
+
+/// Vnwxt doubles draws only at max speed (4).
+#[test]
+fn vnwxt_draw_doubles_at_max_speed() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vnwxt_verbose_host());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let mut events = Vec::new();
+    // Below max: a draw yields exactly one card.
+    g.players[0].speed = 3;
+    let before = g.players[0].hand.len();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), before + 1, "speed 3 → single draw");
+    // Max speed: a draw yields two cards.
+    g.players[0].speed = 4;
+    let before = g.players[0].hand.len();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), before + 2, "speed 4 → doubled draw");
+}
+
+/// Zahur's max-speed death trigger mints a tapped Zombie; below max, nothing.
+#[test]
+fn zahur_max_speed_death_makes_zombie() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zahur_glorys_past());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].speed = 4;
+    g.battlefield_find_mut(victim).unwrap().damage = 99; // lethal → CreatureDied
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.name == "Zombie"
+            && c.tapped),
+        "max speed minted a tapped Zombie on the death"
+    );
+}
+
+/// Zahur's sac ability surveils and is once-per-turn.
+#[test]
+fn zahur_sac_ability_is_once_per_turn() {
+    let mut g = two_player_game();
+    let zahur = g.add_card_to_battlefield(0, catalog::zahur_glorys_past());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zahur,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("sac another creature → surveil");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder was sacrificed");
+    // A second activation this turn is rejected (no creature to sac anyway, but
+    // the once-per-turn gate fires first).
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: zahur,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    });
+    assert!(r.is_err(), "second activation blocked by once-per-turn");
+    assert!(g.battlefield_find(other).is_some(), "no extra creature sacrificed");
+}

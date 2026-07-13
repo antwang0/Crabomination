@@ -553,6 +553,10 @@ pub enum StaticEffect {
     /// `draw_one`; the extra draw is not itself re-doubled by the same
     /// pass (CR 614.5), though stacked doublers each apply once.
     ControllerDrawsDoubled,
+    /// Like `ControllerDrawsDoubled` but only while `condition` holds for the
+    /// source's controller ("Max speed — if you would draw a card, draw two
+    /// cards instead" — Vnwxt, Verbose Host).
+    ControllerDrawsDoubledIf { condition: Predicate },
     /// CR 701.34 / 614 — "If you would proliferate, proliferate twice
     /// instead" (Tekuthal, Inquiry Dominus). Consulted per `Effect::Proliferate`
     /// resolution for the source's controller; n copies → 2^n proliferations.
