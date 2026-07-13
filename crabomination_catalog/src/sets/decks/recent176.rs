@@ -1,11 +1,13 @@
-//! Aetherdrift (DFT) gap batch, continued. Cards unblocked by threading the
-//! cast's X onto ETB *triggered* abilities (`CardInstance.cast_x_value`) and by
-//! the multi-slot up-to-one graveyard return (`Effect::ReturnFilteredSlots`).
-//! Tests in `crabomination/src/tests/recent176.rs`.
+//! Aetherdrift (DFT) gap batch, continued. Dune Drifter is unblocked by
+//! threading the cast's X onto ETB *triggered* abilities
+//! (`CardInstance.cast_x_value`); Vnwxt rides a new condition-gated draw
+//! doubler; Zahur pairs a once-per-turn sac with a max-speed death trigger;
+//! The Last Ride is a life-scaled Vehicle. Tests in
+//! `crabomination/src/tests/recent176.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt,
+    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::etb;
@@ -125,6 +127,32 @@ pub fn zahur_glorys_past() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Last Ride — {B} Legendary 13/13 Artifact — Vehicle. It gets −X/−X where
+/// X is your life total. {2}{B}, Pay 2 life: Draw a card. Crew 2.
+pub fn the_last_ride() -> CardDefinition {
+    CardDefinition {
+        name: "The Last Ride",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 13,
+        toughness: 13,
+        dynamic_pt: Some(DynamicPt::BaseMinusControllerLife { base_p: 13, base_t: 13 }),
+        keywords: vec![Keyword::Crew(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            life_cost: 2,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
         }],
         ..Default::default()
     }

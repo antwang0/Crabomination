@@ -130,3 +130,34 @@ fn zahur_sac_ability_is_once_per_turn() {
     assert!(r.is_err(), "second activation blocked by once-per-turn");
     assert!(g.battlefield_find(other).is_some(), "no extra creature sacrificed");
 }
+
+/// The Last Ride shrinks by your life total and its {2}{B}, pay-2-life ability
+/// draws a card.
+#[test]
+fn the_last_ride_scales_with_life_and_draws() {
+    let mut g = two_player_game();
+    let ride = g.add_card_to_battlefield(0, catalog::the_last_ride());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    // At 7 life the 13/13 base reads as 6/6.
+    g.players[0].life = 7;
+    let cp = g.computed_permanent(ride).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "13/13 − life(7) = 6/6");
+    // Pay {2}{B} + 2 life to draw.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ride,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("pay 2 life + {2}{B}: draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 5, "paid 2 life");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
