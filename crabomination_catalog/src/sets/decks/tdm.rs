@@ -1111,3 +1111,27 @@ pub fn dragonbroods_relic() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM batch 8: becomes-tapped dig ────────────────────────────────────────
+
+/// Traveling Botanist — {1}{G} 2/3 Dog Scout. Whenever it becomes tapped, look
+/// at the top card of your library; if it's a land, put it into your hand,
+/// otherwise you may bin it (both printed "may"s auto-taken).
+pub fn traveling_botanist() -> CardDefinition {
+    CardDefinition {
+        name: "Traveling Botanist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::LookTopLandToHandElseBin { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}

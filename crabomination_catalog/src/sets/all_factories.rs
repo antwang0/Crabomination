@@ -6223,6 +6223,7 @@ static DECKS: &[Factory] = &[
     super::decks::riverwheel_sweep,
     super::decks::flowstone_slide,
     super::decks::dragonbroods_relic,
+    super::decks::traveling_botanist,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -1017,3 +1017,21 @@ fn dragonbroods_relic_makes_reliquary_dragon() {
         "ETB dealt 3 damage somewhere"
     );
 }
+
+/// Traveling Botanist digs the top card on becoming tapped: land to hand, else bin.
+#[test]
+fn traveling_botanist_digs_on_tap() {
+    let mut g = two_player_game();
+    let bot = g.add_card_to_battlefield(0, catalog::traveling_botanist());
+    // Land on top → goes to hand.
+    let land = g.add_card_to_library(0, catalog::forest());
+    g.battlefield_find_mut(bot).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0) }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "land put into hand");
+    // Nonland on top → binned to graveyard.
+    let spell = g.add_card_to_library(0, catalog::bewilder());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0) }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "nonland milled");
+}

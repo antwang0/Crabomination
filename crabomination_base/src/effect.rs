@@ -4376,6 +4376,12 @@ pub enum Effect {
     /// Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
     RevealTopLandToBattlefieldElseHand { who: PlayerRef },
 
+    /// Look at the top card of `who`'s library; if it's a land, put it into
+    /// their hand, otherwise mill it (surveil-flavored dig). Both printed
+    /// "may" choices are auto-taken (the player-favorable line). Traveling
+    /// Botanist's "becomes tapped" trigger.
+    LookTopLandToHandElseBin { who: PlayerRef },
+
     /// Reveal the top card of `who`'s library; if it's a permanent card with
     /// mana value ≤ `max_mv`, put it onto the battlefield; otherwise put it
     /// into their hand. Matter Reshaper's death trigger.

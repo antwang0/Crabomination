@@ -11480,6 +11480,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookTopLandToHandElseBin { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    let (cid, name, is_land) =
+                        (top.id, top.definition.name, top.definition.is_land());
+                    events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                    let dest = if is_land {
+                        ZoneDest::Hand(PlayerRef::Seat(p))
+                    } else {
+                        ZoneDest::Graveyard
+                    };
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::DiscardChosen { from, count, filter } => {
                 // Resolve target player(s) — usually one opponent. For each,
                 // the **caster** picks `count` cards matching `filter`

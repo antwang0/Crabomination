@@ -59,8 +59,6 @@ each needing a new primitive:
 - **Abzan Monument** — sac payoff mints an X/X token where X = greatest
   toughness among your creatures. Needs a `CreateToken` variant taking `Value`
   P/T (`Value::GreatestToughnessYouControl` already exists).
-- **Traveling Botanist** — "becomes tapped → look at top; if a land, may reveal
-  to hand, else may bin it." Needs a small `LookTopLandToHandElseMayBin` effect.
 - **Static Snare** cost rider — "costs {N} less per attacking creature."
 - **Reverberating Summons / the Dragonstorm cycle** — spell-count animate +
   Dragon-enter self-bounce riders (the bounce half ships via `AnotherOfYours`

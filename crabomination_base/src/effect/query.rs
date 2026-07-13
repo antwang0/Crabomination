@@ -668,6 +668,7 @@ impl Effect {
             Effect::RevealTopAndDrawIf { who, .. }
             | Effect::RevealTopCard { who }
             | Effect::RevealTopLandToBattlefieldElseHand { who }
+            | Effect::LookTopLandToHandElseBin { who }
             | Effect::RevealTopPutPermanentMvElseHand { who, .. }
             | Effect::RevealTopNPutMatchingToBattlefield { who, .. }
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
