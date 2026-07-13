@@ -1472,3 +1472,97 @@ pub fn hundred_battle_veteran() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Anafenza, Unyielding Lineage — {2}{W} 2/2 Spirit Soldier, Flash, First
+/// strike. Whenever another nontoken creature you control dies, endure 2.
+pub fn anafenza_unyielding_lineage() -> CardDefinition {
+    CardDefinition {
+        name: "Anafenza, Unyielding Lineage",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken,
+                }),
+            effect: Effect::Endure { target: Selector::This, n: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Felothar, Dawn of the Abzan — {W}{B}{G} 3/3 Human Warrior, trample. Whenever
+/// it enters or attacks, you may sacrifice a nonland permanent; if you do, put a
+/// +1/+1 counter on each creature you control.
+pub fn felothar_dawn_of_the_abzan() -> CardDefinition {
+    let body = || Effect::MaySacrifice {
+        description: "Sacrifice a nonland permanent?".into(),
+        filter: R::Nonland,
+        count: Value::ONE,
+        then: Box::new(Effect::AddCounter {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        }),
+        else_: None,
+    };
+    CardDefinition {
+        name: "Felothar, Dawn of the Abzan",
+        cost: cost(&[w(), b(), g()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            etb(body()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: body(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lotuslight Dancers — {2}{B}{G}{U} 3/6 Zombie Bard, lifelink. ETB: search your
+/// library for a black, a green, and a blue card, put them into your graveyard,
+/// then shuffle.
+pub fn lotuslight_dancers() -> CardDefinition {
+    let search = |c| Effect::Search {
+        who: PlayerRef::You,
+        filter: R::HasColor(c),
+        to: ZoneDest::Graveyard,
+    };
+    CardDefinition {
+        name: "Lotuslight Dancers",
+        cost: cost(&[generic(2), b(), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            search(Color::Black),
+            search(Color::Green),
+            search(Color::Blue),
+        ]))],
+        ..Default::default()
+    }
+}

@@ -1299,3 +1299,90 @@ fn hundred_battle_veteran_casts_from_graveyard_with_finality() {
     let inst = g.battlefield_find(vet).expect("entered battlefield");
     assert_eq!(inst.counter_count(CounterType::Finality), 1, "entered with a finality counter");
 }
+
+/// Anafenza endures 2 when another nontoken creature you control dies.
+#[test]
+fn anafenza_endures_on_ally_death() {
+    let mut g = two_player_game();
+    let ana = g.add_card_to_battlefield(0, catalog::anafenza_unyielding_lineage());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(ally).unwrap().damage = 2; // lethal
+    // SBA collects the death events; dispatch them so the observer trigger fires.
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    // Endure 2 = two +1/+1 counters on Anafenza, or a 2/2 Spirit token.
+    let grew = g.computed_permanent(ana).map(|c| c.power).unwrap_or(0) >= 4;
+    let token = g
+        .battlefield
+        .iter()
+        .any(|c| c.controller == 0 && c.id != ana && c.definition.name == "Spirit");
+    assert!(grew || token, "endured 2 on an ally's death");
+}
+
+/// Felothar's ETB may-sacrifice pumps your team; it never sacrifices itself.
+#[test]
+fn felothar_may_sac_pumps_team() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fel = g.add_card_to_hand(0, catalog::felothar_dawn_of_the_abzan());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Felothar");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "sacrificed the fodder creature");
+    assert_eq!(
+        g.battlefield_find(fel).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "Felothar (never self-sacrificed) got a +1/+1 counter",
+    );
+}
+
+/// Lotuslight Dancers' ETB tutors a black, green, and blue card to the graveyard.
+#[test]
+fn lotuslight_dancers_mills_three_colors() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let blk = g.add_card_to_library(0, catalog::hundred_battle_veteran()); // {3}{B}
+    let grn = g.add_card_to_library(0, catalog::grizzly_bears()); // {1}{G}
+    let blu = g.add_card_to_library(0, catalog::dragonstorm_forecaster()); // {U}
+    let dancers = g.add_card_to_hand(0, catalog::lotuslight_dancers());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(blk)),
+        DecisionAnswer::Search(Some(grn)),
+        DecisionAnswer::Search(Some(blu)),
+    ]));
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dancers,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Lotuslight Dancers");
+    drain_stack(&mut g);
+    for (id, color) in [(blk, "black"), (grn, "green"), (blu, "blue")] {
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "{color} card milled to graveyard");
+    }
+}

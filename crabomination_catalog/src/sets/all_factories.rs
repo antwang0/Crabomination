@@ -6232,6 +6232,9 @@ static DECKS: &[Factory] = &[
     super::decks::breaching_dragonstorm,
     super::decks::dragonstorm_forecaster,
     super::decks::hundred_battle_veteran,
+    super::decks::anafenza_unyielding_lineage,
+    super::decks::felothar_dawn_of_the_abzan,
+    super::decks::lotuslight_dancers,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
