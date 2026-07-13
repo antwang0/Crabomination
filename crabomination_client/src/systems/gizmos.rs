@@ -64,6 +64,53 @@ pub struct LegalTargetGizmos;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct TargetArrowGizmos;
 
+/// Faint tether lines linking each attached Aura / Equipment /
+/// Fortification card to its host permanent, so the physical association
+/// is readable on the board (previously tooltip-only).
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct AttachmentGizmos;
+
+/// Draw a low-alpha tether from every attached permanent to its host. The
+/// tether brightens when either end is hovered, so "what's enchanting
+/// this?" is answerable by pointing at a card. Skipped for co-located
+/// pairs, where the line would collapse to a dot.
+pub fn draw_attachment_tethers(
+    view: Res<CurrentView>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    hovered: Query<&GameCardId, (With<BattlefieldCard>, With<CardHovered>)>,
+    mut gizmos: Gizmos<AttachmentGizmos>,
+) {
+    let Some(cv) = &view.0 else { return };
+
+    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
+    for (transform, gid) in &bf_cards {
+        // Slightly above the table so the line doesn't z-fight card faces.
+        positions.insert(gid.0, transform.translation + Vec3::Y * 0.12);
+    }
+    let hovered: HashSet<CardId> = hovered.iter().map(|g| g.0).collect();
+
+    for p in &cv.battlefield {
+        let Some(host) = p.attached_to else { continue };
+        let (Some(&from), Some(&to)) = (positions.get(&p.id), positions.get(&host)) else {
+            continue;
+        };
+        if from.distance_squared(to) < 0.25 {
+            continue;
+        }
+        let emphasized = hovered.contains(&p.id) || hovered.contains(&host);
+        // Violet — distinct from the yellow/green/orange combat-cue
+        // vocabulary; near-invisible at rest, glowing when hovered.
+        let alpha = if emphasized { 0.9 } else { 0.28 };
+        let intensity = if emphasized { CUE_GLOW } else { 1.0 };
+        let color = glow(Color::srgba(0.72, 0.5, 0.95, alpha), intensity);
+        // Lift the midpoint so the tether reads as a cord draped between
+        // the two cards rather than a targeting arrow.
+        let mid = (from + to) * 0.5 + Vec3::Y * 0.6;
+        gizmos.line(from, mid, color);
+        gizmos.line(mid, to, color);
+    }
+}
+
 /// Project the cursor onto a horizontal plane at `plane_y` through the main
 /// camera, for use as the live endpoint of the target-drag arrow. `None` when
 /// there's no cursor in the window or the ray runs parallel to / away from the

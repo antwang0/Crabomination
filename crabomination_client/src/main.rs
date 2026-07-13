@@ -74,10 +74,10 @@ use systems::game_ui::{
     ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
-    draw_attack_plan_gizmos, draw_attacker_overlays, draw_blocking_gizmos,
-    draw_legal_target_rings, draw_pt_modified_overlays, draw_stack_arrows, draw_target_arrow,
-    AttackPlanGizmos, AttackerGizmos, BlockingGizmos, LegalTargetGizmos, PtModifiedGizmos,
-    StackGizmos, TargetArrowGizmos,
+    draw_attachment_tethers, draw_attack_plan_gizmos, draw_attacker_overlays,
+    draw_blocking_gizmos, draw_legal_target_rings, draw_pt_modified_overlays, draw_stack_arrows,
+    draw_target_arrow, AttachmentGizmos, AttackPlanGizmos, AttackerGizmos, BlockingGizmos,
+    LegalTargetGizmos, PtModifiedGizmos, StackGizmos, TargetArrowGizmos,
 };
 use systems::quality::{
     handle_leave_game_button, handle_quality_buttons, handle_settings_toggle, handle_speed_slider,
@@ -345,6 +345,7 @@ fn main() {
         .init_gizmo_group::<AttackPlanGizmos>()
         .init_gizmo_group::<LegalTargetGizmos>()
         .init_gizmo_group::<TargetArrowGizmos>()
+        .init_gizmo_group::<AttachmentGizmos>()
         .init_gizmo_group::<crate::systems::impact::ImpactGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: cfg_quality.shadow_map_size() })
@@ -707,6 +708,7 @@ fn main() {
                 draw_pt_modified_overlays,
                 draw_legal_target_rings,
                 draw_target_arrow,
+                draw_attachment_tethers,
             )
                 .after(animate_combat_lurch)
                 .run_if(in_state(AppState::InGame)),
