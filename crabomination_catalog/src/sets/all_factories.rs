@@ -2293,7 +2293,6 @@ static DECKS: &[Factory] = &[
     super::decks::steelshapers_gift,
     super::decks::ballyrush_banneret,
     super::decks::anafenza_the_foremost,
-    super::decks::bushwhack,
     super::decks::gnaw_to_the_bone,
     super::decks::hardened_scale_armor,
     super::decks::repel_the_vile,
@@ -5714,7 +5713,6 @@ static DECKS: &[Factory] = &[
     super::decks::territorial_witchstalker,
     super::decks::tanglespan_lookout,
     // recent132 — WOE wave 5: Adventures, Royal Roles, Food/enchantment payoffs
-    super::decks::cheeky_house_mouse,
     super::decks::besotted_knight,
     super::decks::charmed_clothier,
     super::decks::ashioks_reaper,
@@ -6265,6 +6263,10 @@ static DECKS: &[Factory] = &[
     super::decks::vampire_soulcaller,
     super::decks::turn_inside_out,
     super::decks::huskburster_swarm,
+    super::decks::marching_duodrone,
+    super::decks::fiendish_panda,
+    super::decks::quick_draw_katana,
+    super::decks::salvation_swan,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
