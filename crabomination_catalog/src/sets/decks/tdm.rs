@@ -5,18 +5,23 @@
 //! removal (Kin-Tree Severance), counter distribution (Armament Dragon), a
 //! graveyard-return + power-sling (Lie in Wait), a Dragon enter-counter rock
 //! (Dragonstorm Globe), modal spells (Riverwalk Technique, Seize Opportunity,
-//! Rally the Monastery), and an O-Ring (Static Snare). Tests in
-//! `crabomination/src/tests/tdm.rs`.
+//! Rally the Monastery), and an O-Ring (Static Snare). Batch 2 adds sieges /
+//! dragonstorms / equipment: Salt Road Skirmish (destroy + transient Warriors),
+//! Corroding Dragonstorm (drain/surveil + Dragon-enter self-bounce), Essence
+//! Anchor (surveil rock gated on a graveyard departure), Stormbeacon Blade
+//! (equip + mass-attack draw), plus the five gap completions (Krumar Initiate,
+//! Zurgo's Vanguard, War Effort, Dragon's Prey, Ringing Strike Mastery's granted
+//! untap). Tests in `crabomination/src/tests/tdm.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
-    EnchantmentSubtype, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
-    TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    DynamicPt, EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility,
+    StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, mobilize, target_filtered};
+use crate::effect::shortcut::{drain, etb, mobilize, target_filtered};
 use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
-    ManaPayload, PlayerRef, Selector, ZoneDest,
+    ManaPayload, PlayerRef, Predicate, Selector, ZoneDest,
 };
 use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, x, Color};
 
@@ -522,6 +527,144 @@ pub fn rally_the_monastery() -> CardDefinition {
                 what: target_filtered(R::Creature.and(R::PowerAtLeast(4))),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 2: sieges / dragonstorms / equipment (modern_decks) ──────────
+
+fn warrior_haste_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Warrior".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Salt Road Skirmish — {3}{B} Sorcery. Destroy target creature. Create two
+/// 1/1 red Warriors with haste, sacrificed at the beginning of the next end step.
+pub fn salt_road_skirmish() -> CardDefinition {
+    CardDefinition {
+        name: "Salt Road Skirmish",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: warrior_haste_token(),
+            },
+            Effect::SacrificeLastCreatedTokensAtNextEndStep,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Corroding Dragonstorm — {1}{B} Enchantment. ETB: each opponent loses 2 life,
+/// you gain 2, surveil 2. When a Dragon you control enters, return this to hand.
+pub fn corroding_dragonstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Corroding Dragonstorm",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                drain(2),
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Dragon),
+                    }),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Essence Anchor — {2}{U} Artifact. Upkeep: surveil 1. {T}: create a 2/2 black
+/// Zombie Druid — only if a card left your graveyard this turn.
+pub fn essence_anchor() -> CardDefinition {
+    CardDefinition {
+        name: "Essence Anchor",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(1),
+            }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Zombie Druid".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Zombie, CreatureType::Druid],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stormbeacon Blade — {1}{W} Equipment. Equipped creature gets +3/+0 and, when
+/// it attacks, its controller draws a card if they control three or more
+/// attacking creatures. Equip {2}.
+pub fn stormbeacon_blade() -> CardDefinition {
+    CardDefinition {
+        name: "Stormbeacon Blade",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 0,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::AttackedWithCountAtLeast { who: PlayerRef::You, at_least: 3 },
+                    then: Box::new(Effect::Draw {
+                        who: Selector::Player(PlayerRef::You),
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

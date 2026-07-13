@@ -543,3 +543,135 @@ fn dragons_prey_costs_more_vs_dragon() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
 }
+
+/// Salt Road Skirmish destroys a creature and makes two haste Warriors.
+#[test]
+fn salt_road_skirmish_destroys_and_makes_warriors() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::salt_road_skirmish());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Salt Road Skirmish");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "target destroyed");
+    let warriors = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Warrior")
+        .collect::<Vec<_>>();
+    assert_eq!(warriors.len(), 2, "two Warriors");
+    assert!(
+        warriors[0].definition.keywords.contains(&Keyword::Haste),
+        "with haste"
+    );
+}
+
+/// Corroding Dragonstorm drains 2 on ETB and bounces itself when a Dragon enters.
+#[test]
+fn corroding_dragonstorm_drains_and_bounces_on_dragon() {
+    let mut g = two_player_game();
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    let storm = g.add_card_to_hand(0, catalog::corroding_dragonstorm());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: storm,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Corroding Dragonstorm");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2, "opponent lost 2");
+    assert_eq!(g.players[0].life, my_life + 2, "you gained 2");
+    // A Dragon entering under your control returns the enchantment to hand.
+    let dragon = g.add_card_to_battlefield(0, catalog::armament_dragon());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: dragon }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(storm).is_none(), "storm left battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == storm), "returned to hand");
+}
+
+/// Essence Anchor only mints a Zombie Druid after a card left your graveyard.
+#[test]
+fn essence_anchor_gated_on_graveyard_departure() {
+    let mut g = two_player_game();
+    let anchor = g.add_card_to_battlefield(0, catalog::essence_anchor());
+    g.clear_sickness(anchor);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // No card has left the graveyard → activation is rejected.
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: anchor,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+        })
+        .is_err(),
+        "gated off without a graveyard departure"
+    );
+    // Mark a graveyard departure this turn, then it works.
+    g.players[0].cards_left_graveyard_this_turn = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: anchor,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("activate after departure");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Zombie Druid"),
+        "minted a Zombie Druid"
+    );
+}
+
+/// Stormbeacon Blade grants +3/+0 and draws when 3+ creatures attack.
+#[test]
+fn stormbeacon_blade_pumps_and_draws_on_mass_attack() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::stormbeacon_blade());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [a, b, c] {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2); // Equip {2}
+    g.perform_action(GameAction::Equip { equipment: blade, target: a }).expect("equip");
+    assert_eq!(g.computed_permanent(a).unwrap().power, 5, "+3/+0 → 5 power");
+    g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+        Attack { attacker: c, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack with three");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on 3+ attackers");
+}

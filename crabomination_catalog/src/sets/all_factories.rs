@@ -6206,6 +6206,10 @@ static DECKS: &[Factory] = &[
     super::decks::zurgos_vanguard,
     super::decks::war_effort,
     super::decks::dragons_prey,
+    super::decks::salt_road_skirmish,
+    super::decks::corroding_dragonstorm,
+    super::decks::essence_anchor,
+    super::decks::stormbeacon_blade,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
