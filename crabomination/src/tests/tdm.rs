@@ -1649,3 +1649,42 @@ fn great_arashin_city_exiles_for_spirit() {
         "created a Spirit token",
     );
 }
+
+/// Nature's Rhythm cheats a creature with mana value X or less onto the battlefield.
+#[test]
+fn natures_rhythm_puts_creature_into_play() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Grizzly Bears is MV 2; cast with X=2.
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::natures_rhythm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2); // pays X=2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Nature's Rhythm for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "creature entered the battlefield");
+    assert!(catalog::natures_rhythm().keywords.iter().any(|k| matches!(k, Keyword::Harmonize(_))));
+}
+
+/// Smile at Death reanimates a small creature from your graveyard at upkeep.
+#[test]
+fn smile_at_death_reanimates_small_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::smile_at_death());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2/2, power 2
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    advance_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).expect("bear reanimated");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "with a +1/+1 counter");
+}

@@ -6244,6 +6244,8 @@ static DECKS: &[Factory] = &[
     super::decks::herd_heirloom,
     super::decks::yathan_roadwatcher,
     super::decks::great_arashin_city,
+    super::decks::natures_rhythm,
+    super::decks::smile_at_death,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

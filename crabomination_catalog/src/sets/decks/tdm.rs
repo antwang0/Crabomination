@@ -1929,3 +1929,51 @@ pub fn great_arashin_city() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nature's Rhythm — {X}{G}{G} Sorcery. Search your library for a creature card
+/// with mana value X or less, put it onto the battlefield, then shuffle.
+/// Harmonize {X}{G}{G}{G}{G}.
+pub fn natures_rhythm() -> CardDefinition {
+    CardDefinition {
+        name: "Nature's Rhythm",
+        cost: cost(&[x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[x(), g(), g(), g(), g()]))],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: R::Creature.and(R::ManaValueAtMostXFromCost),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Smile at Death — {3}{W}{W} Enchantment. At the beginning of your upkeep,
+/// return up to two target creature cards with power 2 or less from your
+/// graveyard to the battlefield with a +1/+1 counter on each.
+pub fn smile_at_death() -> CardDefinition {
+    CardDefinition {
+        name: "Smile at Death",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: R::Creature.and(R::InYourGraveyard).and(R::PowerAtMost(2)),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
