@@ -213,6 +213,17 @@ fn speed_chip_label(speed: u32, at_max: bool) -> String {
     }
 }
 
+/// Label for the hand-size chip (CR 402.2 / 514.1 cleanup discard). No maximum
+/// (Reliquary Tower, Vnwxt) reads "✋ N ∞"; at or over the cap it reads "✋ N/M"
+/// so the looming cleanup discard is glanceable; otherwise the plain count.
+fn hand_chip_label(hand: usize, max_hand_size: Option<usize>) -> String {
+    match max_hand_size {
+        None => format!("✋ {hand} ∞"),
+        Some(m) if hand >= m => format!("✋ {hand}/{m}"),
+        _ => format!("✋ {hand}"),
+    }
+}
+
 pub(super) fn spawn_stat_chip(
     parent: &mut ChildSpawnerCommands,
     ui_fonts: &UiFonts,
@@ -619,7 +630,7 @@ pub fn update_player_stats_chips(
         for entry in &p.commander_damage_taken {
             spawn_commander_damage_chip(row, &ui_fonts, entry);
         }
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
+        spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, hand_chip_label(p.hand.len(), p.max_hand_size));
         spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
         // CR 401.5 — a revealed (or owner-peekable) library top is public
         // info; show it right next to the deck count.
@@ -1046,7 +1057,7 @@ pub fn update_opponent_stats_rows(
                 for entry in &p.commander_damage_taken {
                     spawn_commander_damage_chip(row, &ui_fonts, entry);
                 }
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, hand_chip_label(p.hand.len(), p.max_hand_size));
                 spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
                 // CR 401.5 — an opponent's revealed library top is public.
                 if let Some(top) = p.library.known_top.first() {
@@ -1240,7 +1251,18 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{commander_damage_style, commander_short_name, deck_chip_kind, poison_chip_style, storm_chip_visible, StatChipKind};
+    use super::{commander_damage_style, commander_short_name, deck_chip_kind, hand_chip_label, poison_chip_style, storm_chip_visible, StatChipKind};
+
+    #[test]
+    fn hand_chip_flags_no_max_and_over_cap() {
+        // No maximum hand size (Reliquary Tower / Vnwxt) → the ∞ marker.
+        assert_eq!(hand_chip_label(9, None), "✋ 9 ∞");
+        // At or over the cap → show the ratio so the cleanup discard is visible.
+        assert_eq!(hand_chip_label(7, Some(7)), "✋ 7/7");
+        assert_eq!(hand_chip_label(9, Some(7)), "✋ 9/7");
+        // Comfortably under the cap → plain count.
+        assert_eq!(hand_chip_label(4, Some(7)), "✋ 4");
+    }
 
     #[test]
     fn poison_chip_reddens_as_it_nears_ten() {

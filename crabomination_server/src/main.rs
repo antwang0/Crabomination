@@ -1184,6 +1184,26 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn win_life_delta_cv_is_scale_free_and_guards_empty() {
+        // No samples / non-positive mean → 0 (ratio undefined).
+        assert_eq!(MatchStats::default().win_life_delta_cv_pct(), 0);
+        // Deltas {1,1,1,40}: mean 10, σ ≈ 16.9 → cv ≈ 169%.
+        let mut s = MatchStats::default();
+        for d in [1, 1, 1, 40] {
+            s.observe_win_life_delta(0, &[d, 0]);
+        }
+        let cv = s.win_life_delta_cv_pct();
+        assert!((160..=180).contains(&cv), "swingy spread → high cv, got {cv}");
+        // A perfectly consistent margin has zero dispersion → cv 0.
+        let mut s = MatchStats::default();
+        for _ in 0..4 {
+            s.observe_win_life_delta(0, &[5, 0]);
+        }
+        assert_eq!(s.win_life_delta_cv_pct(), 0, "identical margins → cv 0");
+        assert!(format_match_stats_with_win(&s).contains("cv="));
+    }
+
+    #[test]
     pub(crate) fn win_life_delta_percentile_clamps_and_handles_empty() {
         let s = MatchStats::default();
         assert_eq!(s.win_life_delta_percentile(0.5), 0, "no samples → 0");

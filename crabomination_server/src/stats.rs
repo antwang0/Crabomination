@@ -526,6 +526,18 @@ impl MatchStats {
         let mean_sq = self.cumulative_win_life_delta_squared as f64 / n;
         (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
+    /// Coefficient of variation of the win-by-life delta (σ / mean, as a
+    /// percent). Scale-free dispersion: unlike raw σ it stays comparable as the
+    /// average margin drifts, so a rising CV flags a swingier win-margin
+    /// distribution even when the mean shifts. Returns 0 with no samples or a
+    /// non-positive mean (the ratio is undefined there).
+    pub(crate) fn win_life_delta_cv_pct(&self) -> u64 {
+        let mean = self.avg_win_life_delta();
+        if self.win_life_samples == 0 || mean <= 0 {
+            return 0;
+        }
+        (self.win_life_delta_stddev() as f64 * 100.0 / mean as f64).round() as u64
+    }
     /// Percent of *resolved* matches (wins + draws) that ended decisively
     /// (i.e. had a winner). Returns 0 when nothing has resolved yet. A
     /// sudden drop signals stalemate regressions (mutual lock, no win
@@ -947,9 +959,10 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         // ended in a race. Push (claude/modern_decks batch 202).
         if s.win_life_samples > 0 {
             out.push_str(&format!(
-                " avg_win_life_lead={} (σ={:.1}, p50={}, p90={})",
+                " avg_win_life_lead={} (σ={:.1}, cv={}%, p50={}, p90={})",
                 s.avg_win_life_delta(),
                 s.win_life_delta_stddev(),
+                s.win_life_delta_cv_pct(),
                 s.win_life_delta_median(),
                 s.win_life_delta_percentile(0.9)
             ));
