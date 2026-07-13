@@ -3,14 +3,11 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-**Discovered (recent167):** ETB *triggered abilities* don't receive the cast's
-X value — only `enters_with_counters` threads `x_value` (via `etb_ctx` in
-`stack.rs`). So a trigger whose target filter is `ManaValueAtMostXFromCost`
-(Dune Drifter's "return an artifact/creature card with MV ≤ X from your
-graveyard") evaluates X as 0 and finds no legal target. To ship it, stamp the
-resolved permanent's cast `x_value` onto the `CardInstance` and pass it into the
-ETB trigger's `EffectContext::for_trigger` (currently hard-coded 0). Dune Drifter
-is deferred until then.
+**Resolved (recent176):** ETB *triggered abilities* now thread the cast's X.
+`CardInstance.cast_x_value` is stamped at resolution and the auto-target picker
+concretizes `{X}`-from-cost filters via `auto_target_for_effect_avoiding_set_x`,
+so a trigger filtered by `ManaValueAtMostXFromCost` (Dune Drifter) picks a legal
+target. Shipped: Dune Drifter.
 
 **DFT gaps (recent168–174 shipped ~40 cards). Remaining, each needing one
 primitive or a heavier build:**
@@ -19,9 +16,6 @@ primitive or a heavier build:**
   "creature-you-controlled-was-destroyed" rider.
 - **Ancient Vendetta** — name-a-card then exile up to four copies from an
   opponent's graveyard *and* hand *and* library (a cross-zone name-exile).
-- **Dune Drifter** — ETB *triggered ability* reading the cast X value (the
-  recent167 gap: ETB triggers hard-code X=0; needs `x_value` threaded to
-  `EffectContext::for_trigger`).
 - **Skyserpent Seeker** — exhaust "reveal until two land cards, put them onto
   the battlefield tapped, rest to the bottom in a random order."
 - **Cursecloth Wrappings / Wickerfolk Indomitable** — grant-embalm-to-a-gy-card

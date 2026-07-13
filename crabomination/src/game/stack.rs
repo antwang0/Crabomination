@@ -917,6 +917,9 @@ impl GameState {
                     // Stamp the cast cost so ETB riders can read it after the
                     // spell leaves the stack (Astelli Reclaimer's MV-≤-X return).
                     card.cast_mana_spent = mana_spent;
+                    // Stamp the cast's X so ETB *triggered* abilities can read
+                    // it (Dune Drifter's MV-≤-X graveyard return).
+                    card.cast_x_value = x_value;
                     // CR 702.150c — a Compleated planeswalker cast with life
                     // enters with two fewer loyalty per pip paid with life.
                     if card.compleated_life_paid > 0 && card.definition.is_planeswalker() {
@@ -1317,10 +1320,11 @@ impl GameState {
                         // under Elesh Norn aims at a fresh creature.
                         let mut avoid = vec![card_id];
                         for _ in 0..etb_multiplier {
-                            let auto_target = self.auto_target_for_effect_avoiding_set(
+                            let auto_target = self.auto_target_for_effect_avoiding_set_x(
                                 &effect,
                                 caster,
                                 &avoid,
+                                x_value,
                             );
                             if let Some(Target::Permanent(tid)) = &auto_target {
                                 avoid.push(*tid);

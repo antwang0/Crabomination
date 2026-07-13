@@ -3551,6 +3551,11 @@ pub struct CardInstance {
     /// (`Value::CastSpellManaSpent`, `ManaValueAtMostCastManaSpent` — Astelli
     /// Reclaimer). Defaults to 0.
     pub cast_mana_spent: u32,
+    /// X paid into the spell that became this permanent, stamped at resolution
+    /// so ETB *triggered abilities* can read the cast's X after the spell left
+    /// the stack (`Value::XFromCost`, `ManaValueAtMostXFromCost` — Dune
+    /// Drifter's "return an artifact/creature card with MV ≤ X"). Defaults to 0.
+    pub cast_x_value: u32,
     /// CR 601 — per-color breakdown of the mana spent paying this spell's
     /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
     /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
@@ -3999,6 +4004,7 @@ impl CardInstance {
             kick_count: 0,
             squad_count: 0,
             cast_mana_spent: 0,
+            cast_x_value: 0,
             cast_mana_spent_by_color: Vec::new(),
             bargained: false,
             pending_etb_counters: Vec::new(),
@@ -4448,6 +4454,9 @@ struct CardInstanceWire {
     /// Mana spent to cast this permanent's spell. `#[serde(default)]`.
     #[serde(default)]
     cast_mana_spent: u32,
+    /// X paid into this permanent's spell. `#[serde(default)]`.
+    #[serde(default)]
+    cast_x_value: u32,
     #[serde(default)]
     cast_mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
@@ -4712,6 +4721,7 @@ impl serde::Serialize for CardInstance {
             kick_count: self.kick_count,
             squad_count: self.squad_count,
             cast_mana_spent: self.cast_mana_spent,
+            cast_x_value: self.cast_x_value,
             cast_mana_spent_by_color: self.cast_mana_spent_by_color.clone(),
             bargained: self.bargained,
             pending_etb_counters: self.pending_etb_counters.clone(),
@@ -4816,6 +4826,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
         c.cast_mana_spent = wire.cast_mana_spent;
+        c.cast_x_value = wire.cast_x_value;
         c.cast_mana_spent_by_color = wire.cast_mana_spent_by_color;
         c.bargained = wire.bargained;
         c.pending_etb_counters = wire.pending_etb_counters.clone();

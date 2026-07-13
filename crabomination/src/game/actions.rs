@@ -1900,6 +1900,15 @@ impl GameState {
         } else {
             etb_mult + ally_trigger_extra_fires(self, controller, card_id)
         };
+        // CR 601.2b — an ETB triggered ability reads the cast's X (stamped on
+        // the permanent at resolution) so filters like `ManaValueAtMostXFromCost`
+        // evaluate against the real X rather than 0 (Dune Drifter).
+        let cast_x = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.cast_x_value)
+            .unwrap_or(0);
         for effect in etb_triggers {
             // Strict Proctor's CR 614 replacement: pay {2} or sacrifice
             // the source. Applied once per fire of the trigger.
@@ -1907,8 +1916,12 @@ impl GameState {
                 // Source was sacrificed; remaining fires are moot.
                 return;
             }
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
+            let auto_target = self.auto_target_for_effect_avoiding_set_x(
+                &effect,
+                controller,
+                &[card_id],
+                cast_x,
+            );
             // CR 115.1c — maximize an "up to N target" self-source ETB trigger
             // (Gavony Silversmith) by filling slots 1.. with distinct picks.
             let additional =
@@ -1921,6 +1934,7 @@ impl GameState {
                         .target(auto_target.clone())
                         .additional_targets(additional.clone())
                         .mode(mode)
+                        .x_value(cast_x)
                         .build(),
                 );
             }

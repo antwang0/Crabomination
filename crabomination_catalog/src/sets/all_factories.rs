@@ -6182,6 +6182,7 @@ static DECKS: &[Factory] = &[
     super::decks::lagorin_soul_of_alacria,
     super::decks::riverchurn_monument,
     super::decks::flood_the_engine,
+    super::decks::dune_drifter,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
