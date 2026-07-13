@@ -157,3 +157,28 @@ pub fn the_last_ride() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Speed Demon — {3}{B}{B} Legendary 5/5 Demon. Flying, trample, Start your
+/// engines! At the beginning of your end step, you draw X cards and lose X life,
+/// where X is your speed.
+pub fn the_speed_demon() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "The Speed Demon",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::StartYourEngines],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::PlayerSpeed(PlayerRef::You) },
+                Effect::LoseLife { who: Selector::You, amount: Value::PlayerSpeed(PlayerRef::You) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

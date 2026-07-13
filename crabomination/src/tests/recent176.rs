@@ -161,3 +161,21 @@ fn the_last_ride_scales_with_life_and_draws() {
     assert_eq!(g.players[0].life, 5, "paid 2 life");
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
+
+/// The Speed Demon's end step draws and loses life equal to your speed.
+#[test]
+fn the_speed_demon_end_step_scales_with_speed() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_speed_demon());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].speed = 3;
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew 3 (speed)");
+    assert_eq!(g.players[0].life, life - 3, "lost 3 (speed)");
+}

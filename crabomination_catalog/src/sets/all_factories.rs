@@ -6186,6 +6186,7 @@ static DECKS: &[Factory] = &[
     super::decks::vnwxt_verbose_host,
     super::decks::zahur_glorys_past,
     super::decks::the_last_ride,
+    super::decks::the_speed_demon,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
