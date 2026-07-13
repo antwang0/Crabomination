@@ -6287,6 +6287,8 @@ static DECKS: &[Factory] = &[
     super::decks::azure_beastbinder,
     super::decks::byrke_long_ear_of_the_law,
     super::decks::dreamdew_entrancer,
+    super::decks::finneas_ace_archer,
+    super::decks::gev_scaled_scorch,
     super::decks::bushwhack,
     super::decks::cheeky_house_mouse,
 ];
