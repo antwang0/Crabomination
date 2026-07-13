@@ -2,7 +2,10 @@
 //! → +1/+1 counters → a once-per-turn draw), Ashroot Animist (on-attack team
 //! trample + power pump), Arahbo, the First Fang (Cat lord + nontoken-Cat ETB
 //! tokens), Bumbleflower's Sharepot (Food + sac-to-destroy), and Celestial
-//! Armor (flash Equipment granting hexproof/indestructible on entry). Tests in
+//! Armor (flash Equipment granting hexproof/indestructible on entry). Second
+//! wave: Strix Lookout (looter), Vanguard Seraph (first-lifegain surveil),
+//! Vampire Soulcaller (gy-return flier), Turn Inside Out (trick + death-manifest),
+//! Huskburster Swarm (graveyard-affinity fatty). Tests in
 //! `crabomination/src/tests/recent177.rs`.
 
 use crate::card::{
@@ -11,8 +14,8 @@ use crate::card::{
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack};
-use crate::effect::{Duration, Effect, PlayerRef, Selector};
-use crate::mana::{cost, g, generic, r, w, Color};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Exemplar of Light — {2}{W}{W} 3/3 Angel with flying. Whenever you gain life,
 /// put a +1/+1 counter on it; whenever one or more +1/+1 counters are put on it,
@@ -201,6 +204,119 @@ pub fn celestial_armor() -> CardDefinition {
             keywords: vec![Keyword::Flying],
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+/// Strix Lookout — {1}{U} 1/2 Bird with flying and vigilance. {1}{U},{T}: draw
+/// a card, then discard a card.
+pub fn strix_lookout() -> CardDefinition {
+    CardDefinition {
+        name: "Strix Lookout",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vanguard Seraph — {3}{W} 3/3 Angel Warrior with flying. Whenever you gain
+/// life for the first time each turn, surveil 1.
+pub fn vanguard_seraph() -> CardDefinition {
+    CardDefinition {
+        name: "Vanguard Seraph",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            // once_per_turn models "for the first time each turn".
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl).once_per_turn(),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vampire Soulcaller — {4}{B} 3/2 Vampire Warlock with flying that can't block.
+/// When it enters, return target creature card from your graveyard to your hand.
+pub fn vampire_soulcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire Soulcaller",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::InYourGraveyard) },
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Turn Inside Out — {R} Instant. Target creature gets +3/+0 until end of turn.
+/// When it dies this turn, manifest dread.
+pub fn turn_inside_out() -> CardDefinition {
+    CardDefinition {
+        name: "Turn Inside Out",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::WhenTargetDiesThisTurn {
+                slot: 0,
+                body: Box::new(Effect::ManifestDread { who: PlayerRef::You }),
+                filter: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Huskburster Swarm — {7}{B} 6/6 Elemental Insect with menace and deathtouch.
+/// Costs {1} less per creature card in your graveyard. (The printed rider also
+/// counts exiled creature cards you own — that half is approximated.)
+pub fn huskburster_swarm() -> CardDefinition {
+    CardDefinition {
+        name: "Huskburster Swarm",
+        cost: cost(&[generic(7), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Menace, Keyword::Deathtouch],
+        affinity_graveyard_filter: Some(R::Creature),
         ..Default::default()
     }
 }

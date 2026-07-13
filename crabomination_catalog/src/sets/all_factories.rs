@@ -6260,6 +6260,11 @@ static DECKS: &[Factory] = &[
     super::decks::arahbo_the_first_fang,
     super::decks::bumbleflowers_sharepot,
     super::decks::celestial_armor,
+    super::decks::strix_lookout,
+    super::decks::vanguard_seraph,
+    super::decks::vampire_soulcaller,
+    super::decks::turn_inside_out,
+    super::decks::huskburster_swarm,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

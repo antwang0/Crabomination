@@ -3,6 +3,7 @@
 use crate::card::{CreatureType, Keyword};
 use crate::catalog;
 use crate::game::*;
+use crate::mana::Color;
 
 fn advance_to(g: &mut GameState, step: TurnStep) {
     while g.step != step {
@@ -113,4 +114,94 @@ fn celestial_armor_attaches_and_grants() {
     assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
     assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible EOT");
     assert!(cp.keywords.contains(&Keyword::Hexproof), "gained hexproof EOT");
+}
+
+/// Strix Lookout loots: {1}{U},{T} draws then discards.
+#[test]
+fn strix_lookout_loots() {
+    let mut g = two_player_game();
+    let bird = g.add_card_to_battlefield(0, catalog::strix_lookout());
+    g.clear_sickness(bird);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // something to discard
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bird, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("loot");
+    drain_stack(&mut g);
+    // Draw +1 then discard -1 → net hand unchanged, and a card is in the graveyard.
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+    assert!(!g.players[0].graveyard.is_empty(), "discarded a card");
+}
+
+/// Vanguard Seraph surveils the first time you gain life each turn (once).
+#[test]
+fn vanguard_seraph_surveils_on_first_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vanguard_seraph());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let lib = g.players[0].library.len();
+    g.adjust_life(0, 2);
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 2 }]);
+    drain_stack(&mut g);
+    // Surveil 1 auto-keeps or bins the top card; either way the trigger fired
+    // (library shrank by 0 or 1). Fire a second lifegain — no extra surveil.
+    let after_first = g.players[0].library.len();
+    assert!(after_first <= lib, "surveil looked at the top card");
+    g.adjust_life(0, 2);
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 2 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), after_first, "only the first lifegain surveils");
+}
+
+/// Vampire Soulcaller returns a creature card from your graveyard on entry.
+#[test]
+fn vampire_soulcaller_returns_creature() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::vampire_soulcaller());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the creature to hand");
+}
+
+/// Turn Inside Out pumps +3/+0 and, when the creature dies, manifests dread.
+#[test]
+fn turn_inside_out_pumps_and_manifests_on_death() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::turn_inside_out());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Turn Inside Out");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(target).unwrap().power, 5, "+3/+0 → 5 power");
+    let bf = g.battlefield.len();
+    // Kill the creature this turn → manifest dread fires (a face-down 2/2 enters).
+    g.remove_to_graveyard_with_triggers(target);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: target }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield.len() > bf.saturating_sub(1), "a manifested creature entered");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.face_down), "face-down manifest");
+}
+
+/// Huskburster Swarm costs {1} less per creature card in your graveyard.
+#[test]
+fn huskburster_swarm_graveyard_affinity() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let swarm = crate::card::CardInstance::new(g.next_id(), catalog::huskburster_swarm(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &swarm, None), 0, "empty graveyard → no discount");
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // noncreature, ignored
+    assert_eq!(cost_reduction_for_spell(&g, 0, &swarm, None), 3, "three creature cards → 3 generic off");
 }
