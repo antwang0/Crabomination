@@ -6255,6 +6255,11 @@ static DECKS: &[Factory] = &[
     super::decks::maelstrom_of_the_spirit_dragon,
     super::decks::neriv_heart_of_the_storm,
     super::decks::the_sibsig_ceremony,
+    super::decks::exemplar_of_light,
+    super::decks::ashroot_animist,
+    super::decks::arahbo_the_first_fang,
+    super::decks::bumbleflowers_sharepot,
+    super::decks::celestial_armor,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
