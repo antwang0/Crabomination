@@ -184,3 +184,34 @@ fn lie_in_wait_returns_and_deals_power() {
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
     assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 2/2");
 }
+
+/// Dragonstorm Globe gives entering Dragons an extra +1/+1 counter and taps for
+/// any color.
+#[test]
+fn dragonstorm_globe_counters_dragons_and_makes_mana() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let globe = g.add_card_to_battlefield(0, catalog::dragonstorm_globe());
+    // The static grants a +1/+1 counter to an entering Dragon (spec computed at
+    // resolution — `add_card_to_battlefield` bypasses the ETB-counter path).
+    let dragon = g.add_card_to_battlefield(0, catalog::armament_dragon());
+    let specs = g.chosen_type_etb_counter_specs(dragon, 0);
+    assert!(
+        specs.contains(&(CounterType::PlusOnePlusOne, 1)),
+        "entering Dragon gets the extra +1/+1 counter"
+    );
+    // {T}: add one mana of any color.
+    g.clear_sickness(globe);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: globe,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("tap for mana");
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+}

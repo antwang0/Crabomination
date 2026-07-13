@@ -6,10 +6,10 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    Keyword, SelectionRequirement as R, Subtypes, Value,
+    Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
 
 /// Alesha's Legacy — {1}{B} Instant. Target creature you control gains
@@ -205,6 +205,32 @@ pub fn lie_in_wait() -> CardDefinition {
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Dragonstorm Globe — {3} Artifact. Each Dragon you control enters with an
+/// additional +1/+1 counter on it. {T}: Add one mana of any color.
+pub fn dragonstorm_globe() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonstorm Globe",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Each Dragon you control enters with an additional +1/+1 counter on it.",
+            effect: StaticEffect::TypeEntersWithCounter {
+                creature_type: CreatureType::Dragon,
+                kind: CounterType::PlusOnePlusOne,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColors(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

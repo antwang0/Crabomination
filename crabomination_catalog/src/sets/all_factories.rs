@@ -6195,6 +6195,7 @@ static DECKS: &[Factory] = &[
     super::decks::armament_dragon,
     super::decks::fresh_start,
     super::decks::lie_in_wait,
+    super::decks::dragonstorm_globe,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
