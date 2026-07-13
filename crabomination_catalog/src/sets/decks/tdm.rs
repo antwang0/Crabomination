@@ -234,3 +234,54 @@ pub fn dragonstorm_globe() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wingspan Stride — {U} Aura. Enchant creature. Enchanted creature gets +1/+1
+/// and has flying. {2}{U}: Return this Aura to its owner's hand.
+pub fn wingspan_stride() -> CardDefinition {
+    CardDefinition {
+        name: "Wingspan Stride",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Riverwalk Technique — {3}{U} Instant. Choose one — the owner of target nonland
+/// permanent puts it on their choice of the top or bottom of their library; or
+/// counter target noncreature spell.
+pub fn riverwalk_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Riverwalk Technique",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Nonland },
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::OwnerChoice,
+                },
+            },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack.and(R::Creature.negate())),
+            },
+        ]),
+        ..Default::default()
+    }
+}

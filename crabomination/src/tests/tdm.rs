@@ -215,3 +215,75 @@ fn dragonstorm_globe_counters_dragons_and_makes_mana() {
     .expect("tap for mana");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
 }
+
+/// Wingspan Stride pumps and grants flying, and can bounce itself.
+#[test]
+fn wingspan_stride_pumps_flying_and_self_bounces() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::wingspan_stride());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(creature)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("enchant");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(creature).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Flying), "granted flying");
+    // {2}{U}: bounce the Aura to hand.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("bounce self");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura returned to hand");
+}
+
+/// Riverwalk Technique's counter mode stops a noncreature spell.
+#[test]
+fn riverwalk_technique_counters_noncreature_spell() {
+    let mut g = two_player_game();
+    // Opponent casts a noncreature spell we can counter.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("opponent casts Bolt");
+    let tech = g.add_card_to_hand(0, catalog::riverwalk_technique());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tech,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: Some(1), // counter mode
+        x_value: None,
+    })
+    .expect("counter the Bolt");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered to graveyard");
+    assert_eq!(g.players[0].life, 20, "Bolt never resolved");
+}
