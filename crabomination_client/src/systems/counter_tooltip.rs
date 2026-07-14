@@ -673,6 +673,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Vanishing(_) => "Enters with that many time counters; remove one each upkeep, and sacrifice it when the last is gone.",
         K::Protection(_) => "Can't be blocked, targeted, dealt damage, enchanted, or equipped by anything of the named quality.",
         K::Bushido(_) => "Whenever it blocks or becomes blocked, it gets +N/+N until end of turn.",
+        K::Melee => "When it attacks, it gets +1/+1 until end of turn for each opponent you attacked.",
         K::Absorb(_) => "If a source would deal damage to this creature, prevent N of that damage.",
         K::Rampage(_) => "Whenever it becomes blocked, it gets +N/+N for each blocker beyond the first.",
         K::Crew(_) => "Tap any number of creatures with total power N or greater to turn this Vehicle into an artifact creature.",
@@ -1004,6 +1005,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Unblockable => "Can't be blocked".into(),
         K::Horsemanship => "Horsemanship".into(),
         K::Flanking => "Flanking".into(),
+        K::Melee => "Melee".into(),
         K::SplitSecond => "Split second".into(),
         K::CanBlockOnlyFlying => "Can block only creatures with flying".into(),
         K::CantBeBlockedIfControllerCastSpells(n) => {

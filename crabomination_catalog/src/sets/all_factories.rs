@@ -6318,6 +6318,11 @@ static DECKS: &[Factory] = &[
     super::decks::rise_of_the_varmints,
     super::decks::overzealous_muscle,
     super::decks::outlaws_fury,
+    super::decks::rodeo_pyromancers,
+    super::decks::scalestorm_summoner,
+    super::decks::marauding_sphinx,
+    super::decks::raucous_entertainer,
+    super::decks::ruthless_lawbringer,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
