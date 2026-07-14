@@ -7120,7 +7120,9 @@ pub fn cruel_celebrant() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            // "this or another creature you control dies" — YourControl fires
+            // for its own death too (CR 603.10a self-death funnel).
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,

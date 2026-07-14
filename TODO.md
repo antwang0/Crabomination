@@ -184,13 +184,15 @@ factory doc comment:
   dying creature's MV, so a self-death event-amount-relative target filter
   (`ManaValueLessThanEventAmount` — Jackdaw Savior's own death) enumerates and
   resolves against the dead MV. Whole suite green.
-- ⏳ **Aristocrats self-death scope audit** — Zulaport Cutthroat uses
-  `AnotherOfYours` (excludes self) but the printed card is "Zulaport *or*
-  another creature you control dies"; its own death is silently dropped. The
-  self-death SBA funnel fires `SelfSource | YourControl | AnyPlayer`, so
-  switching such cards to `YourControl` would make them fire on their own death
-  (Blood Artist's `AnyPlayer` already does). Sweep the catalog for
-  `AnotherOfYours` CreatureDied triggers whose oracle text includes "this".
+- 🟡 **Aristocrats self-death scope audit** — fixed Zulaport Cutthroat, Cruel
+  Celebrant, Vengeful Bloodwitch (`AnotherOfYours`→`YourControl`; their oracle is
+  "this *or* another creature you control dies", so their own death now drains).
+  Remaining: the self-death SBA `die_triggers` funnel does **not** evaluate a
+  trigger's `.with_filter`, so a *filtered* `YourControl`/`AnyPlayer` death
+  trigger (the Innistrad Wolf/Werewolf pack-drain) fires on self-death without
+  the filter check — left as `AnotherOfYours` for safety. Wire filter evaluation
+  into that funnel, then switch the filtered ones too. Also finish sweeping the
+  remaining `AnotherOfYours` CreatureDied cards whose oracle includes "this".
 - ✅ **`recent193`–`recent198` (OTJ/DSK/BLB/FDN, ~27 cards)** — recent193:
   Jackdaw Savior, Clement, Soul-Shackled Zombie (`PermanentEntered`→MV in
   `event_amount_for`; `ExileUpToNFromGraveyards` stamps `last_moved_cards`).

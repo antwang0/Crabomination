@@ -6705,7 +6705,9 @@ pub fn vengeful_bloodwitch() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            // "this or another creature you control dies" — YourControl fires on
+            // its own death too (CR 603.10a self-death funnel).
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,
