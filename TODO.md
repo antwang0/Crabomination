@@ -179,6 +179,13 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- ✅ **Punisher empty-hand discard affordability** — `punisher_option_affordable`
+  now rejects an `Effect::Discard` dodge when the chooser holds fewer cards than
+  the discard count (CR 601.2 — can't choose a cost you can't pay), so a
+  hand-empty opponent takes the penalty instead of "discarding" nothing
+  (Perforating Artist's Raid, and every "loses N unless … or discards a card").
+- ✅ **`Value::DistinctManaValuesAmongControlledNonland`** — count of distinct MVs
+  among nonland permanents you control (Lunar Insight).
 - ✅ **`YourControl` self-death event-amount** — the SBA `die_triggers` push now
   sets `trigger_event_amount_scratch` and threads `.event_amount(mv)` from the
   dying creature's MV, so a self-death event-amount-relative target filter

@@ -757,6 +757,16 @@ impl GameState {
                     _ => true,
                 })
             }
+            // "unless you discard N cards" — only a valid dodge while the
+            // chooser holds at least N cards (CR 601.2 — you can't choose a
+            // cost you can't fully pay; an empty hand must take the penalty).
+            Effect::Discard { who, amount, .. } => {
+                let n = (self.evaluate_value(amount, ctx).max(0) as usize).max(1);
+                self.resolve_selector(who, ctx).into_iter().all(|e| match e {
+                    EntityRef::Player(p) => self.players[p].hand.len() >= n,
+                    _ => true,
+                })
+            }
             Effect::Seq(v) => v.iter().all(|e| self.punisher_option_affordable(e, ctx)),
             _ => true,
         }

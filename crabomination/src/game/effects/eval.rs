@@ -455,6 +455,18 @@ impl GameState {
                 mvs.dedup();
                 mvs.len() as i32
             }
+            Value::DistinctManaValuesAmongControlledNonland => {
+                let p = ctx.controller;
+                let mut mvs: Vec<u32> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && !c.definition.is_land())
+                    .map(|c| c.definition.cost.cmc())
+                    .collect();
+                mvs.sort_unstable();
+                mvs.dedup();
+                mvs.len() as i32
+            }
             Value::PermanentsDestroyedThisResolution => {
                 self.permanents_destroyed_this_resolution as i32
             }

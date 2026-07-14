@@ -6361,6 +6361,13 @@ static DECKS: &[Factory] = &[
     super::decks::entity_tracker,
     super::decks::dragonfire_blade,
     super::decks::duskmourns_domination,
+    super::decks::rite_of_the_dragoncaller,
+    super::decks::koma_world_eater,
+    super::decks::niv_mizzet_visionary,
+    super::decks::perforating_artist,
+    super::decks::kiora_the_rising_tide,
+    super::decks::soulstone_sanctuary,
+    super::decks::lunar_insight,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

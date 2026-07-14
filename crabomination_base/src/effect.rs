@@ -529,6 +529,10 @@ pub enum Value {
     /// in exile that carry one or more `counter` counters. Kianne's Fractal
     /// (`CounterType::Study`).
     DistinctManaValuesInExileWithCounter { counter: crate::card::CounterType },
+    /// Number of *distinct* mana values among nonland permanents the controller
+    /// controls. Lunar Insight ("draw a card for each different mana value among
+    /// nonland permanents you control").
+    DistinctManaValuesAmongControlledNonland,
     /// Mana value (CMC) of the first card the selector resolves to.
     /// Looks the card up across the battlefield, graveyards, exile, and
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
