@@ -1015,7 +1015,22 @@ fn event_phrase(spec: &crabomination::card::EventSpec) -> String {
         K::Attacks if self_src => "Whenever this attacks,".into(),
         K::Attacks => "Whenever a creature attacks,".into(),
         K::Blocks => "Whenever this blocks,".into(),
-        K::DealsCombatDamageToPlayer => "Whenever this deals combat damage to a player,".into(),
+        K::DealsCombatDamageToPlayer if self_src => {
+            "Whenever this deals combat damage to a player,".into()
+        }
+        K::DealsCombatDamageToPlayer => {
+            "Whenever a creature you control deals combat damage to a player,".into()
+        }
+        // Niv-Mizzet, Visionary — the source-and-opponent scope reads as
+        // "a source you control deals noncombat damage to an opponent".
+        K::PlayerDealtNoncombatDamage
+            if matches!(spec.scope, S::YourSourceDamagedOpponent) =>
+        {
+            "Whenever a source you control deals noncombat damage to an opponent,".into()
+        }
+        K::PlayerDealtNoncombatDamage => {
+            "Whenever a player is dealt noncombat damage,".into()
+        }
         K::SpellCast if self_src => "When you cast this spell,".into(),
         K::SpellCast => "Whenever a spell is cast,".into(),
         K::CardDrawn => "Whenever a card is drawn,".into(),

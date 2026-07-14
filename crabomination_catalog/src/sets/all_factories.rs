@@ -6374,6 +6374,13 @@ static DECKS: &[Factory] = &[
     super::decks::violent_urge,
     super::decks::elenda_saint_of_dusk,
     super::decks::quilled_greatwurm,
+    super::decks::saw,
+    super::decks::unable_to_scream,
+    super::decks::sporogenic_infection,
+    super::decks::under_the_skin,
+    super::decks::dont_make_a_sound,
+    super::decks::keys_to_the_house,
+    super::decks::osseous_sticktwister,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

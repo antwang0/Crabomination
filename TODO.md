@@ -179,18 +179,23 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
-- **FDN/DSK gap cards shipped (`decks::recent202`/`recent203`, 13):** Rite of the
+- **FDN/DSK gap cards shipped (`decks::recent202`–`recent205`, 20):** Rite of the
   Dragoncaller, Koma World-Eater, Niv-Mizzet Visionary, Perforating Artist, Kiora
   the Rising Tide, Soulstone Sanctuary, Lunar Insight, Valkyrie's Call, Infernal
   Vessel, Fiery Annihilation, Violent Urge, Elenda Saint of Dusk, Quilled
-  Greatwurm. Approximations left: Fiery Annihilation's exile-attached-Equipment
-  rider, Quilled Greatwurm's graveyard-cast-by-removing-counters, Elenda's
-  hexproof-from-instants (no from-instants hexproof keyword yet). Remaining FDN
-  gaps needing new primitives: Drake Hatcher / Nine-Lives Familiar (incubation /
+  Greatwurm, Saw, Unable to Scream, Sporogenic Infection, Under the Skin, Don't
+  Make a Sound, Keys to the House, Osseous Sticktwister. Approximations left:
+  Fiery Annihilation's exile-attached-Equipment rider, Quilled Greatwurm's
+  graveyard-cast, Elenda's hexproof-from-instants, Sporogenic Infection's
+  "other than enchanted" sacrifice clause, Don't Make a Sound's reflexive
+  surveil-2, Keys to the House's Room lock/unlock mode. Remaining FDN/DSK gaps
+  needing new primitives: Drake Hatcher / Nine-Lives Familiar (incubation /
   revival counter types), Banner of Kinship (choose-type + fellowship-counter
   anthem), Alesha (reanimate MV ≤ source power), Tinybones / Abyssal Harvester
   (stash / gy-exile copy), Kykar (modal cast trigger), Zimone (double each kind
-  of counter on up-to-2 targets).
+  of counter on up-to-2 targets), Miasma Demon / Orphans of the Wheat (discard-
+  any-number / tap-any-number variable counts), Creeping Peeper
+  (enchantment-only spend restriction).
 - ✅ **Punisher empty-hand discard affordability** — `punisher_option_affordable`
   now rejects an `Effect::Discard` dodge when the chooser holds fewer cards than
   the discard count (CR 601.2 — can't choose a cost you can't pay), so a

@@ -158,6 +158,12 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
     m("connections_refused_total", "counter", "Connections refused.", refused.to_string());
+    // Refusal rate — the share of connection attempts turned away. A rising
+    // value is the "we're at capacity / under abuse" signal operators alert on;
+    // derived here so it needn't be recomputed from two counters downstream.
+    let attempts = sl.accepted + refused;
+    let refused_pct = if attempts == 0 { 0 } else { (refused * 100) / attempts };
+    m("connections_refused_pct", "gauge", "Percent of connection attempts refused.", refused_pct.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
     m("peak_per_ip", "gauge", "Highest simultaneous connection count from a single IP.", sl.peak_per_ip.to_string());
     m("catalog_cards", "gauge", "Distinct cards in the deployed catalog.", catalog_card_count().to_string());
@@ -433,6 +439,7 @@ mod tests {
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
         assert!(body.contains("crab_peak_per_ip 0"));
+        assert!(body.contains("crab_connections_refused_pct 0"));
         // Turn-count distribution gauges.
         assert!(body.contains("crab_min_turns 0"));
         assert!(body.contains("crab_max_turns 0"));
