@@ -49,6 +49,34 @@ pub fn creosote_heath() -> CardDefinition {
     desert_painland("Creosote Heath", Color::Green, Color::White)
 }
 
+pub fn eroded_canyon() -> CardDefinition {
+    desert_painland("Eroded Canyon", Color::Blue, Color::Red)
+}
+
+pub fn festering_gulch() -> CardDefinition {
+    desert_painland("Festering Gulch", Color::Black, Color::Green)
+}
+
+pub fn forlorn_flats() -> CardDefinition {
+    desert_painland("Forlorn Flats", Color::White, Color::Black)
+}
+
+pub fn jagged_barrens() -> CardDefinition {
+    desert_painland("Jagged Barrens", Color::Black, Color::Red)
+}
+
+pub fn lonely_arroyo() -> CardDefinition {
+    desert_painland("Lonely Arroyo", Color::White, Color::Blue)
+}
+
+pub fn lush_oasis() -> CardDefinition {
+    desert_painland("Lush Oasis", Color::Green, Color::Blue)
+}
+
+pub fn soured_springs() -> CardDefinition {
+    desert_painland("Soured Springs", Color::Blue, Color::Black)
+}
+
 /// Daring Thunder-Thief — {3}{U} 4/4 Turtle Rogue. Flash; enters tapped.
 pub fn daring_thunder_thief() -> CardDefinition {
     CardDefinition {

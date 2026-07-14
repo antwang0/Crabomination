@@ -20,6 +20,23 @@ fn desert_painland_etb_ping() {
     assert_eq!(g.players[1].life, opp - 1, "opponent pinged for 1");
 }
 
+/// Eroded Canyon (completing the 10-Desert cycle) taps for either of its two
+/// colors.
+#[test]
+fn eroded_canyon_taps_for_two_colors() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::eroded_canyon());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0, // first mana ability → {U}
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+    })
+    .expect("tap for blue");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Blue), 1, "tapped for blue");
+}
+
 /// Daring Thunder-Thief enters tapped.
 #[test]
 fn daring_thunder_thief_enters_tapped() {
