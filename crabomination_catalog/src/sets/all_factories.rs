@@ -6356,6 +6356,7 @@ static DECKS: &[Factory] = &[
     super::decks::seize_the_secrets,
     super::decks::take_for_a_ride,
     super::decks::silver_deputy,
+    super::decks::baseball_bat,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
