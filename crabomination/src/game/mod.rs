@@ -794,6 +794,9 @@ mod tests_recent208;
 #[path = "../tests/recent209.rs"]
 mod tests_recent209;
 #[cfg(test)]
+#[path = "../tests/recent210.rs"]
+mod tests_recent210;
+#[cfg(test)]
 #[path = "../tests/tdm.rs"]
 mod tests_tdm;
 #[cfg(test)]
@@ -6373,6 +6376,35 @@ impl GameState {
                         modification: Modification::ModifyPowerToughness(power, toughness),
                     });
                 }
+            }
+        }
+        // Chosen-color anthem (`StaticEffect::AnthemForChosenColor`) — pumps the
+        // controller's creatures of the color named at the source's ETB
+        // (`CardInstance.chosen_color`). Heraldic Banner.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::AnthemForChosenColor { power, toughness } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let Some(color) = card.chosen_color else { continue };
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::All {
+                        controller: Some(card.controller),
+                        card_types: vec![crate::card::CardType::Creature],
+                        exclude_source: false,
+                        color: Some(color),
+                        token: None,
+                        colorless: false,
+                    },
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(*power, *toughness),
+                });
             }
         }
         // Chosen-type keyword grant (`StaticEffect::GrantKeywordToChosenType`) —
@@ -13815,6 +13847,7 @@ fn static_effect_to_effects(
             // AnthemForChosenType — reads the source's live chosen creature
             // type; resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForChosenType { .. }
+            | StaticEffect::AnthemForChosenColor { .. }
             // AnthemForFilter / SelfHasKeywordIf — need live game state
             // (opponents / predicate eval); resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForFilter { .. }

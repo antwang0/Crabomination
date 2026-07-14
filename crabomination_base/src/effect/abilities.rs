@@ -1019,6 +1019,11 @@ pub enum StaticEffect {
         #[serde(default)]
         per_counter: Option<crate::card::CounterType>,
     },
+    /// "Creatures you control of the chosen color get +P/+T" — the color
+    /// sibling of `AnthemForChosenType`, keyed to `CardInstance.chosen_color`
+    /// (stamped by `Effect::ChooseColorForSelf`). Heraldic Banner. Resolved
+    /// live in `gather_continuous_effects`; no effect while no color is chosen.
+    AnthemForChosenColor { power: i32, toughness: i32 },
     /// "[filter] you control get +P/+T [and have keywords]" — a fixed-filter
     /// team anthem (Balthier and Fran → Vehicles; Ardyn, the Usurper → Demons).
     /// Unlike `AnthemForChosenType` (keyed to a chosen creature type stamped at
