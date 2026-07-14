@@ -743,6 +743,9 @@ mod tests_recent191;
 #[path = "../tests/recent192.rs"]
 mod tests_recent192;
 #[cfg(test)]
+#[path = "../tests/recent193.rs"]
+mod tests_recent193;
+#[cfg(test)]
 #[path = "../tests/tdm.rs"]
 mod tests_tdm;
 #[cfg(test)]
@@ -12935,6 +12938,11 @@ impl GameState {
                 .died_card_snapshots
                 .get(card_id)
                 .or_else(|| self.find_card_anywhere(*card_id))
+                .map(|c| c.definition.cost.cmc())
+                .unwrap_or(0),
+            // "with lesser mana value than the creature that entered" (Clement).
+            GameEvent::PermanentEntered { card_id } => self
+                .find_card_anywhere(*card_id)
                 .map(|c| c.definition.cost.cmc())
                 .unwrap_or(0),
             // "Where X is that spell's mana value" riders (Shark Typhoon).

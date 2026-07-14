@@ -11,13 +11,6 @@ target. Shipped: Dune Drifter.
 
 **Next-up cards noticed this run (recent185–190), each blocked on one
 primitive:**
-- **Jackdaw Savior** (BLB) — flyer-dies reanimate "with lesser mana value than
-  the dying creature." Needs the `CreatureDied` event to carry the dead
-  creature's MV as `event_amount` (currently 0), or a
-  `ManaValueLessThanTriggerSource` target filter reading `died_card_snapshots`.
-- **Soul-Shackled Zombie** (FDN) — `ExileUpToNFromGraveyards` should stamp the
-  exiled cards on `last_moved_cards` so a follow-up can gate on "a creature card
-  was exiled this way."
 - **BLB Gift instants/sorceries** (Sazacap's Brew, Dewdrop Cure, Consumed by
   Greed, Cruelclaw's Heist, …) — mechanic ships (`CardDefinition.gift`), but
   each needs a clean effect: additional-cost-discard + player-target draw,
@@ -139,8 +132,6 @@ Documented per-card approximations: Huskburster's affinity drops the exiled-
 creature half; Quick-Draw Katana's +2/+0 is always-on (only first strike is
 turn-gated); Salvation Swan drops the returned creature's flying counter and
 models "up to one target" as a single target. Skipped, each needing a primitive:
-- **Soul-Shackled Zombie** — "if a creature card was exiled this way" rider on a
-  multi-card graveyard-exile (no "an exiled card was a creature" predicate yet).
 - **Coordinated Clobbering** — tap 1–2 of your creatures, each deals its power to
   one shared opponent's creature (needs a two-independent-slot fight).
 
@@ -164,11 +155,6 @@ Fear of Falling's debuff modeled until-end-of-turn (not "until your next turn");
 Mistbreath Elder drops the "otherwise return this" fallback; Gev omits the
 enters-with-extra-counters static (no primitive yet). Still open, each needing a
 primitive:
-- **Jackdaw Savior / Clement, the Worrywort** — "creature with lesser mana value"
-  than the *trigger source* (dying/entering creature); no MV-less-than-trigger-
-  source filter yet.
-- **Soul-Shackled Zombie** — "if a creature card was exiled this way" rider on a
-  multi-card graveyard-exile (an "a creature was among LastMoved" conditional).
 - **Gev's enters-with-extra-counters** — a static granting your creatures extra
   ETB +1/+1 counters scaled by a `Value` (opponents who lost life this turn).
 
@@ -190,6 +176,17 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+- ⏳ **`YourControl` self-death event-amount** — a `CreatureDied`/`YourControl`
+  trigger on the dying creature itself (Jackdaw Savior's "this creature … dies")
+  fires via the SBA `leave_triggers` path, which pushes with a plain
+  `auto_target` and no `event_amount`, so an event-amount-relative target filter
+  (`ManaValueLessThanEventAmount`) can't see the dead MV. The "another flyer
+  dies" case (unified dispatcher) is faithful; only the self-death case drops.
+- ✅ **`recent193` (BLB/FDN)** — Jackdaw Savior (flyer-dies reanimate lesser-MV),
+  Clement, the Worrywort (creature-enters bounce lesser-MV; Frog-mana static
+  omitted), Soul-Shackled Zombie (single-graveyard exile → creature-exiled
+  drain). Added `PermanentEntered` → entering-card MV in `event_amount_for`, and
+  `ExileUpToNFromGraveyards` now stamps `last_moved_cards`.
 - ✅ **Enters-as-a-choice-of-stats** — `CardDefinition.enters_as_choice`
   (`Vec<EntersChoiceMode>`) is an as-enters replacement (CR 614) applied in
   `apply_enters_as_choice` before the first SBA sweep, so a printed `*/*` body

@@ -16460,6 +16460,10 @@ impl GameState {
         if let DecisionAnswer::Cards(ids) = answer {
             // `single` restricts all picks to one graveyard: the first pick's
             // owner locks the choice, later off-graveyard picks are dropped.
+            // Exiled cards land on `Selector::LastMoved` so a follow-up can
+            // gate on "if a creature card was exiled this way" (Soul-Shackled
+            // Zombie) via `EntityMatchesAny`.
+            self.last_moved_cards.clear();
             let mut lock: Option<usize> = None;
             for cid in ids.into_iter().take(n as usize) {
                 let Some((_, _, owner)) = candidates.iter().find(|(c, _, _)| *c == cid) else {
@@ -16469,6 +16473,7 @@ impl GameState {
                     continue;
                 }
                 self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                self.last_moved_cards.push(cid);
             }
         }
         Ok(())

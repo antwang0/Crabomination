@@ -6330,6 +6330,9 @@ static DECKS: &[Factory] = &[
     super::decks::longhorn_sharpshooter,
     super::decks::pillage_the_bog,
     super::decks::hell_to_pay,
+    super::decks::jackdaw_savior,
+    super::decks::clement_the_worrywort,
+    super::decks::soul_shackled_zombie,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
