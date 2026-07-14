@@ -5,12 +5,6 @@ use crate::game::two_player_game;
 use crate::game::*;
 use crate::mana::Color;
 
-fn advance_to(g: &mut GameState, step: TurnStep) {
-    while g.step != step {
-        g.perform_action(GameAction::PassPriority).expect("pass priority");
-    }
-}
-
 /// Vanish from Sight tucks a nonland permanent into its owner's library and
 /// surveils.
 #[test]

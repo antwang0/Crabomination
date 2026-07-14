@@ -2563,10 +2563,13 @@ impl GameState {
             // is never listed — this stays false there (Static Snare's affinity
             // "for each attacking creature" reads it from the affinity counter).
             R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+            // A battlefield instance carries this flag directly (Rowdy Research's
+            // "{1} less for each creature that attacked this turn" affinity).
+            R::AttackedThisTurn => card.attacked_this_turn,
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_) | R::WithAnyCounter
             | R::IsUnblocked | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::AttackedThisTurn | R::FaceDown | R::HasAbilityOnStack
+            | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted

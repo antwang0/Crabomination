@@ -6323,6 +6323,9 @@ static DECKS: &[Factory] = &[
     super::decks::marauding_sphinx,
     super::decks::raucous_entertainer,
     super::decks::ruthless_lawbringer,
+    super::decks::rowdy_research,
+    super::decks::brave_the_wilds,
+    super::decks::redrock_sentinel,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

@@ -9,6 +9,24 @@ concretizes `{X}`-from-cost filters via `auto_target_for_effect_avoiding_set_x`,
 so a trigger filtered by `ManaValueAtMostXFromCost` (Dune Drifter) picks a legal
 target. Shipped: Dune Drifter.
 
+**Next-up cards noticed this run (recent185–190), each blocked on one
+primitive:**
+- **Jackdaw Savior** (BLB) — flyer-dies reanimate "with lesser mana value than
+  the dying creature." Needs the `CreatureDied` event to carry the dead
+  creature's MV as `event_amount` (currently 0), or a
+  `ManaValueLessThanTriggerSource` target filter reading `died_card_snapshots`.
+- **Soul-Shackled Zombie** (FDN) — `ExileUpToNFromGraveyards` should stamp the
+  exiled cards on `last_moved_cards` so a follow-up can gate on "a creature card
+  was exiled this way."
+- **BLB Gift instants/sorceries** (Sazacap's Brew, Dewdrop Cure, Consumed by
+  Greed, Cruelclaw's Heist, …) — mechanic ships (`CardDefinition.gift`), but
+  each needs a clean effect: additional-cost-discard + player-target draw,
+  per-card-MV-capped multi-reanimate, opponent-greatest-power sacrifice,
+  reveal-hand-choose-exile-then-may-play.
+- **Say Its Name** (DSK) — front half (mill 3 + gy recur) is clean; the
+  activated tutor exiles three same-named gy copies to fetch Altanak — a
+  named-card gy-exile cost.
+
 **DFT gaps (recent168–174 shipped ~40 cards). Remaining, each needing one
 primitive or a heavier build:**
 - **Demonic Junker** — ETB "for each player, destroy up to one target creature
