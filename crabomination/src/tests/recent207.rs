@@ -278,6 +278,38 @@ fn hidetsugus_second_rite_needs_exactly_ten() {
     assert_eq!(g.players[1].life, 0, "exactly 10 → dealt 10");
 }
 
+/// Rise of the Dark Realms reanimates every creature from all graveyards under
+/// your control (CR 608 mass move across all graveyards).
+#[test]
+fn rise_of_the_dark_realms_grabs_all_graveyards() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt()); // not a creature — stays
+    let s = g.add_card_to_hand(0, catalog::rise_of_the_dark_realms());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast_simple(&mut g, s, 7);
+    assert_eq!(g.battlefield_find(mine).map(|c| c.controller), Some(0), "my creature returned under my control");
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0), "opponent's creature stolen under my control");
+}
+
+/// CR 702.16e — protection from everything prevents combat damage: Progenitus
+/// takes no damage from an attacker it blocks.
+#[test]
+fn progenitus_blocks_without_taking_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // 5/6
+    let prog = g.add_card_to_battlefield(0, catalog::progenitus()); // 10/10
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
+    g.block_map.insert(prog, attacker);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 1;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(prog).map(|c| c.damage), Some(0), "protection from everything → no damage marked");
+}
+
 /// Magnigoth Sentry has reach; Raging Redcap has double strike (french vanillas).
 #[test]
 fn vanilla_keyword_bodies() {

@@ -6413,6 +6413,7 @@ static DECKS: &[Factory] = &[
     super::decks::dive_down,
     super::decks::syr_alin_the_lions_claw,
     super::decks::hidetsugus_second_rite,
+    super::decks::rise_of_the_dark_realms,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

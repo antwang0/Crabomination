@@ -9,6 +9,7 @@ use crate::card::{
     Value,
 };
 use crate::card::TriggeredAbility;
+use crate::card::Zone;
 use crate::effect::shortcut::{deal, drain, etb, target_filtered};
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
@@ -347,6 +348,25 @@ pub fn harmless_offering() -> CardDefinition {
             what: target_filtered(R::Permanent.and(R::ControlledByYou)),
             to: Some(PlayerRef::EachOpponent),
             duration: Duration::Permanent,
+        },
+        ..Default::default()
+    }
+}
+
+/// Rise of the Dark Realms — {7}{B}{B} Sorcery. Put all creature cards from all
+/// graveyards onto the battlefield under your control.
+pub fn rise_of_the_dark_realms() -> CardDefinition {
+    CardDefinition {
+        name: "Rise of the Dark Realms",
+        cost: cost(&[generic(7), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::EachPlayer,
+                zone: Zone::Graveyard,
+                filter: R::Creature,
+            },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         },
         ..Default::default()
     }

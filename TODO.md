@@ -32,9 +32,9 @@ Dragon variants, Storm Fleet Spy (Raid draw), Skeleton/Zombie tokens cycle,
 Biogenic Upgrade (distribute + double counters), River's Rebuke (needs a
 mass-bounce scoped to a *target player* — no `PlayerRef::TargetPlayer` yet),
 Demonic Pact (rotating modal upkeep), Dread Summons (mill-X → Zombie-per-
-creature). Hidetsugu's Second Rite needs a "player has exactly N life"
-predicate; Rise of the Dark Realms needs a put-all-graveyard-creatures-onto-
-battlefield mass reanimate.
+creature). (Hidetsugu's Second Rite ✅ via new `Predicate::PlayerLifeExactly`;
+Rise of the Dark Realms ✅ via `CardsInZone{EachPlayer, Graveyard}` → your
+battlefield — both in `recent207`.)
 
 **DFT gaps (recent168–174 shipped ~40 cards). Remaining, each needing one
 primitive or a heavier build:**
