@@ -162,7 +162,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     // value is the "we're at capacity / under abuse" signal operators alert on;
     // derived here so it needn't be recomputed from two counters downstream.
     let attempts = sl.accepted + refused;
-    let refused_pct = if attempts == 0 { 0 } else { (refused * 100) / attempts };
+    let refused_pct = (refused * 100).checked_div(attempts).unwrap_or(0);
     m("connections_refused_pct", "gauge", "Percent of connection attempts refused.", refused_pct.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
     m("peak_per_ip", "gauge", "Highest simultaneous connection count from a single IP.", sl.peak_per_ip.to_string());

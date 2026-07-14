@@ -4,6 +4,10 @@ use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::types::{DelayedKind, DelayedTrigger};
 
+/// A collected death/leaves trigger to fire from a dying permanent:
+/// `(source, effect, controller, intervening/subject filter)`.
+type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
+
 /// How a CR 514 cleanup round ended, telling the caller how to continue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CleanupOutcome {
@@ -3552,7 +3556,7 @@ impl GameState {
             .find(|c| c.id == id)
             .is_some_and(|c| self.graveyard_exiled_for(c) || c.disturb_back_exiles());
         let dies_suppressed = dies_suppressed || exiled_instead;
-        let (leave_triggers, dying_creature_controller): (Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)>, Option<usize>) = self
+        let (leave_triggers, dying_creature_controller): (Vec<DeathTrigger>, Option<usize>) = self
             .battlefield
             .iter()
             .find(|c| c.id == id)
