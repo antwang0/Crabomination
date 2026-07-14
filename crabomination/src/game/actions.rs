@@ -548,6 +548,13 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(amount);
     }
+    // Card-intrinsic crime reduction — "{amount} less if you've committed a
+    // crime this turn" (Seize the Secrets, CR 700.13).
+    if let Some(amount) = card.definition.self_cost_reduction_if_crime
+        && state.players[caster].committed_crime_this_turn
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {1} less for each card you've drawn this turn"
     // (Deem Inferior). Generic-only, clamped by the caller.
     if card.definition.self_cost_reduction_per_cards_drawn {

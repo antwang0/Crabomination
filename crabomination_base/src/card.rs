@@ -2142,6 +2142,11 @@ pub struct CardDefinition {
     /// Roots). Generic-only, clamped by the caller. `None` by default.
     #[serde(default)]
     pub self_cost_reduction_if_delirium: Option<u32>,
+    /// "This spell costs `{amount}` less to cast if you've committed a crime
+    /// this turn" (Seize the Secrets). Generic-only, clamped by the caller.
+    /// Reads `Player.committed_crime_this_turn`. `None` by default.
+    #[serde(default)]
+    pub self_cost_reduction_if_crime: Option<u32>,
     /// "This spell costs {1} less to cast for each card you've drawn this
     /// turn" (Deem Inferior). Generic-only, clamped by the caller. Reads
     /// `Player.cards_drawn_this_turn`. Defaults to `false`.
