@@ -6454,6 +6454,12 @@ static DECKS: &[Factory] = &[
     super::decks::painful_quandary,
     super::decks::lathliss_dragon_queen,
     super::decks::bolt_bend,
+    super::decks::goblin_smuggler,
+    super::decks::joraga_invocation,
+    super::decks::aurelia_the_warleader,
+    super::decks::mindsparker,
+    super::decks::ingenious_leonin,
+    super::decks::crossway_troublemakers,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
