@@ -27,14 +27,20 @@ helper-factory positional names) and lists genuinely-missing cards. Current
 counts: TDM 17 (mostly hard multicolor legends/enchantments — Ugin, Shiko,
 Kotis, Jeskai Revelation, Call the Spirit Dragons…), DFT 34, DSK ~79, BLB ~71,
 FDN ~110 remaining after `recent206`/`recent207`. **Easy FDN leftovers** (all
-existing primitives): Regal Caracal done; still open — Rapacious/Ancestor
-Dragon variants, Storm Fleet Spy (Raid draw), Skeleton/Zombie tokens cycle,
-Biogenic Upgrade (distribute + double counters), River's Rebuke (needs a
-mass-bounce scoped to a *target player* — no `PlayerRef::TargetPlayer` yet),
-Demonic Pact (rotating modal upkeep), Dread Summons (mill-X → Zombie-per-
-creature). (Hidetsugu's Second Rite ✅ via new `Predicate::PlayerLifeExactly`;
-Rise of the Dark Realms ✅ via `CardsInZone{EachPlayer, Graveyard}` → your
-battlefield — both in `recent207`.)
+existing primitives): `recent209`–`recent213` cleared ~46 (River's Rebuke
+`Selector::ControlledBy { who: PlayerRef::Target(0) }` mass-bounce, Ancestor
+Dragon, Fynn deathtouch→poison, Guildgate cycle, Heraldic Banner, Wildwood
+Scourge, Ajani, Aurelia, …). **Still open:** Biogenic Upgrade (distribute +
+double counters at resolution), Demonic Pact (rotating "choose one not chosen"
+modal upkeep — needs per-source chosen-mode exclusion), Dread Summons (mill-X →
+Zombie-per-milled-creature — needs a "token per creature card milled" count),
+Desecration Demon (opponent-may-sac-to-tap — Punisher heuristic over-sacs, so
+deferred), Hoarding Dragon (ETB tutor-to-exile linked to a death-return),
+Steel Hellkite (per-source combat-damage tracking), Painful Quandary (ships,
+but the Punisher heuristic always discards rather than choosing the 5-life
+loss). Test-helper note: `move_card_to_battlefield_for_test` doesn't dispatch
+*other* permanents' ETB triggers (watchers like Lathliss) — cast the entrant to
+exercise those.
 
 **DFT gaps (recent168–174 shipped ~40 cards). Remaining, each needing one
 primitive or a heavier build:**

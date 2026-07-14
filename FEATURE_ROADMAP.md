@@ -16,6 +16,14 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **recent209–213 (FDN reprint gaps):** `StaticEffect::AnthemForChosenColor`
+  (chosen-color anthem resolved live in `gather_continuous_effects` — Heraldic
+  Banner), and the `EventKind::CounterAdded` trigger wired for a +1/+1-counter
+  payoff (Wildwood Scourge). ~46 FDN staples on existing primitives (end-the-turn
+  Time Stop, deathtouch→poison Fynn, Guildgate cycle, target-player mass bounce,
+  Aurelia extra combat, Ajani). Tests in `tests/recent209`–`recent213` + CR 728 /
+  115.7 / 702.2 conformance.
+
 - **recent185–192 (BLB/DSK/FDN/OTJ/WOE/TDM gaps):** `Keyword::Melee`
   (CR 702.121 attack pump), `EventKind::BecomesPlotted` (CR 702.170 self-trigger
   from exile — Aloe Alchemist, Longhorn Sharpshooter),

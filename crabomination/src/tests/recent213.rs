@@ -33,7 +33,7 @@ fn wildwood_scourge_tracks_counters() {
     let mut g = two_player_game();
     let scourge = g.add_card_to_battlefield(0, catalog::wildwood_scourge());
     g.battlefield_find_mut(scourge).unwrap().counters.insert(CounterType::PlusOnePlusOne, 2);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // Put a +1/+1 counter on the (non-Hydra) bear through the real add path so
     // the CounterAdded event fires.
     let ctx = crate::game::effects::EffectContext::for_ability(scourge, 0, None);

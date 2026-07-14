@@ -1,6 +1,6 @@
 //! Functionality tests for `catalog::sets::decks::recent210`.
 
-use crate::card::{CounterType, Keyword};
+use crate::card::CounterType;
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::Target;
