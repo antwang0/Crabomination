@@ -6368,6 +6368,12 @@ static DECKS: &[Factory] = &[
     super::decks::kiora_the_rising_tide,
     super::decks::soulstone_sanctuary,
     super::decks::lunar_insight,
+    super::decks::valkyries_call,
+    super::decks::infernal_vessel,
+    super::decks::fiery_annihilation,
+    super::decks::violent_urge,
+    super::decks::elenda_saint_of_dusk,
+    super::decks::quilled_greatwurm,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
