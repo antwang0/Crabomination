@@ -1382,6 +1382,10 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         .hand
         .iter()
         .filter(|c| !c.definition.is_land())
+        // Spree spells need `CastSpellSpree` with chosen modes — a plain
+        // `CastSpell` resolves them as a no-op. They get their own candidate
+        // block below.
+        .filter(|c| !matches!(c.definition.effect, Effect::Spree { .. }))
         .filter(|c| can_afford_in_state(state, seat, c))
         .flat_map(|c| {
             // For modal effects (ChooseMode), enumerate each mode so the
