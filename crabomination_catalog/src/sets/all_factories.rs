@@ -6414,6 +6414,13 @@ static DECKS: &[Factory] = &[
     super::decks::syr_alin_the_lions_claw,
     super::decks::hidetsugus_second_rite,
     super::decks::rise_of_the_dark_realms,
+    super::decks::highborn_vampire,
+    super::decks::swab_goblin,
+    super::decks::gleaming_barrier,
+    super::decks::storm_fleet_spy,
+    super::decks::battle_rattle_shaman,
+    super::decks::wildheart_invoker,
+    super::decks::devout_decree,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
