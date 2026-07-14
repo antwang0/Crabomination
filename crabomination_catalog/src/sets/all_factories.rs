@@ -6349,6 +6349,10 @@ static DECKS: &[Factory] = &[
     super::decks::reach_for_the_sky,
     super::decks::tomb_trawler,
     super::decks::steer_clear,
+    super::decks::slickshot_vault_buster,
+    super::decks::throw_from_the_saddle,
+    super::decks::shepherd_of_the_clouds,
+    super::decks::sheriff_of_safe_passage,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
