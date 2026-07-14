@@ -6266,13 +6266,15 @@ pub fn zulaport_cutthroat() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Ally],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            // "this creature or another creature you control dies" — YourControl
+            // fires for its own death too (self-death SBA funnel).
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,

@@ -29521,6 +29521,22 @@ fn zulaport_cutthroat_drains_when_your_creature_dies() {
     assert_eq!(g.players[0].life, me + 1, "controller gained 1");
 }
 
+/// CR 603.10a — "this creature or another creature you control dies" fires for
+/// Zulaport's own death (YourControl self-death funnel).
+#[test]
+fn zulaport_cutthroat_drains_on_its_own_death() {
+    let mut g = two_player_game();
+    let zula = g.add_card_to_battlefield(0, catalog::zulaport_cutthroat());
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    g.battlefield_find_mut(zula).unwrap().damage = 1; // lethal on the 1/1
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opponent lost 1 to Zulaport's own death");
+    assert_eq!(g.players[0].life, me + 1, "controller gained 1");
+}
+
 #[test]
 fn doomed_dissenter_leaves_a_zombie_when_it_dies() {
     use crate::card::CreatureType;

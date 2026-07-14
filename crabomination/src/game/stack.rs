@@ -2891,12 +2891,21 @@ impl GameState {
                 });
             }
             // Push Dies triggers to the stack for resolution.
+            // CR 603.10a — a self-death "this or another creature you control
+            // dies" trigger (YourControl scope) reads the dying creature's own
+            // mana value through the event amount, so an event-amount-relative
+            // target filter (`ManaValueLessThanEventAmount` — Jackdaw Savior)
+            // can find a legal target during enumeration and at resolution.
+            let died_ev_amount =
+                self.event_amount_for(&GameEvent::CreatureDied { card_id: id });
+            self.trigger_event_amount_scratch = died_ev_amount;
             for (source, effect, controller) in die_triggers {
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
                 self.stack.push(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
+                        .event_amount(died_ev_amount)
                         .build(),
                 );
             }

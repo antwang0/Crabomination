@@ -176,12 +176,18 @@ factory doc comment:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
-- ⏳ **`YourControl` self-death event-amount** — a `CreatureDied`/`YourControl`
-  trigger on the dying creature itself (Jackdaw Savior's "this creature … dies")
-  fires via the SBA `leave_triggers` path, which pushes with a plain
-  `auto_target` and no `event_amount`, so an event-amount-relative target filter
-  (`ManaValueLessThanEventAmount`) can't see the dead MV. The "another flyer
-  dies" case (unified dispatcher) is faithful; only the self-death case drops.
+- ✅ **`YourControl` self-death event-amount** — the SBA `die_triggers` push now
+  sets `trigger_event_amount_scratch` and threads `.event_amount(mv)` from the
+  dying creature's MV, so a self-death event-amount-relative target filter
+  (`ManaValueLessThanEventAmount` — Jackdaw Savior's own death) enumerates and
+  resolves against the dead MV. Whole suite green.
+- ⏳ **Aristocrats self-death scope audit** — Zulaport Cutthroat uses
+  `AnotherOfYours` (excludes self) but the printed card is "Zulaport *or*
+  another creature you control dies"; its own death is silently dropped. The
+  self-death SBA funnel fires `SelfSource | YourControl | AnyPlayer`, so
+  switching such cards to `YourControl` would make them fire on their own death
+  (Blood Artist's `AnyPlayer` already does). Sweep the catalog for
+  `AnotherOfYours` CreatureDied triggers whose oracle text includes "this".
 - ✅ **`recent193` (BLB/FDN)** — Jackdaw Savior (flyer-dies reanimate lesser-MV),
   Clement, the Worrywort (creature-enters bounce lesser-MV; Frog-mana static
   omitted), Soul-Shackled Zombie (single-graveyard exile → creature-exiled

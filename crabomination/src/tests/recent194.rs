@@ -99,3 +99,4 @@ fn high_noon_sac_burns_for_five() {
     assert_eq!(g.players[1].life, opp - 5, "5 damage to the opponent");
     assert!(g.battlefield_find(noon).is_none(), "High Noon sacrificed");
 }
+

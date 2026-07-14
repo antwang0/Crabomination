@@ -15,9 +15,7 @@ use crate::mana::{b, cost, g, generic, u, w};
 
 /// Jackdaw Savior — {2}{W} 3/1 Bird Cleric, Flying. When this or another flying
 /// creature you control dies, return another target creature card with lesser
-/// mana value from your graveyard to the battlefield. (Jackdaw's own death is
-/// approximated: the reanimation needs the dying creature's MV, which the
-/// SBA self-death path doesn't thread — the "another flyer" case is faithful.)
+/// mana value from your graveyard to the battlefield.
 pub fn jackdaw_savior() -> CardDefinition {
     CardDefinition {
         name: "Jackdaw Savior",

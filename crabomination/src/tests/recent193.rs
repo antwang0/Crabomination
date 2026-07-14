@@ -23,6 +23,21 @@ fn jackdaw_savior_reanimates_lesser_mv() {
     assert!(g.battlefield_find(target).is_some(), "grizzly returned to the battlefield");
 }
 
+/// Jackdaw's own death also triggers: the self-death path now threads the dying
+/// creature's mana value so the lesser-MV reanimation finds a target.
+#[test]
+fn jackdaw_savior_self_death_reanimates() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let jackdaw = g.add_card_to_battlefield(0, catalog::jackdaw_savior()); // MV 3, dies
+    let target = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2 < 3
+    g.battlefield_find_mut(jackdaw).unwrap().damage = 1; // lethal on the 3/1
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_some(), "grizzly returned on Jackdaw's own death");
+}
+
 /// Clement's enter trigger bounces a lesser-mana-value creature you control.
 #[test]
 fn clement_bounces_lesser_mv_on_enter() {
