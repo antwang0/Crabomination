@@ -191,11 +191,21 @@ factory doc comment:
   switching such cards to `YourControl` would make them fire on their own death
   (Blood Artist's `AnyPlayer` already does). Sweep the catalog for
   `AnotherOfYours` CreatureDied triggers whose oracle text includes "this".
-- ✅ **`recent193` (BLB/FDN)** — Jackdaw Savior (flyer-dies reanimate lesser-MV),
-  Clement, the Worrywort (creature-enters bounce lesser-MV; Frog-mana static
-  omitted), Soul-Shackled Zombie (single-graveyard exile → creature-exiled
-  drain). Added `PermanentEntered` → entering-card MV in `event_amount_for`, and
-  `ExileUpToNFromGraveyards` now stamps `last_moved_cards`.
+- ✅ **`recent193`–`recent198` (OTJ/DSK/BLB/FDN, ~27 cards)** — recent193:
+  Jackdaw Savior, Clement, Soul-Shackled Zombie (`PermanentEntered`→MV in
+  `event_amount_for`; `ExileUpToNFromGraveyards` stamps `last_moved_cards`).
+  recent194: Double Down, Mystical Tether, High Noon. recent195: Malcolm,
+  Reach for the Sky, Tomb Trawler, Steer Clear. recent196: Slickshot
+  Vault-Buster, Throw from the Saddle, Shepherd of the Clouds, Sheriff of Safe
+  Passage. recent197: Seize the Secrets (new `self_cost_reduction_if_crime`),
+  Take for a Ride, Silver Deputy. recent198: Baseball Bat. Plus the OTJ Desert
+  painland cycle completion (7 lands) and Spree Final Showdown + Jailbreak
+  Scheme. **Approximations:** Take for a Ride's crime-flash and Mystical
+  Tether's flash-for-more riders dropped (no conditional-flash primitive).
+  **Noticed:** the `AutoDecider` declines every `Decision::SearchLibrary`
+  (`Search(None)`) — search ETBs are no-ops under pure auto-play; the bot has
+  its own picker, but tests must script the pick. Enchant-**player** Auras
+  (Grievous Wound) are unsupported — Auras only attach to permanents.
 - ✅ **Enters-as-a-choice-of-stats** — `CardDefinition.enters_as_choice`
   (`Vec<EntersChoiceMode>`) is an as-enters replacement (CR 614) applied in
   `apply_enters_as_choice` before the first SBA sweep, so a printed `*/*` body
