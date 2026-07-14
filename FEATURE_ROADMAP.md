@@ -16,6 +16,15 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **recent185–192 (BLB/DSK/FDN/OTJ/WOE/TDM gaps):** `Keyword::Melee`
+  (CR 702.121 attack pump), `EventKind::BecomesPlotted` (CR 702.170 self-trigger
+  from exile — Aloe Alchemist, Longhorn Sharpshooter),
+  `Effect::ShuffleGraveyardCardsIntoLibrary` (graveyard-recursion rider —
+  Cathartic Parting), `StaticEffect::ControlledCreatureTypesDealExtraDamage`
+  (typed +1 damage — Valley Flamecaller), and an `AttackedThisTurn`-affinity
+  correctness fix (`evaluate_requirement_on_card` reads the flag — Rowdy
+  Research). Bot values Melee in its attack planner.
+
 - **Harmonize-grant + once-per-game + additive-color primitives
   (recent179–182 — TDM/FDN/DSK/BLB):** `Effect::GrantHarmonizeThisTurn` +
   `CardInstance.granted_harmonize_eot` / `effective_harmonize` (Songcrafter Mage —
