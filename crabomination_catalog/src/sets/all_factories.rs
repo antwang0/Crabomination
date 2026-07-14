@@ -6384,6 +6384,16 @@ static DECKS: &[Factory] = &[
     super::decks::dont_make_a_sound,
     super::decks::keys_to_the_house,
     super::decks::osseous_sticktwister,
+    super::decks::swiftblade_vindicator,
+    super::decks::progenitus,
+    super::decks::rune_scarred_demon,
+    super::decks::micromancer,
+    super::decks::seismic_rupture,
+    super::decks::an_offer_you_cant_refuse,
+    super::decks::involuntary_employment,
+    super::decks::pilfer,
+    super::decks::grow_from_the_ashes,
+    super::decks::doubling_season,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
