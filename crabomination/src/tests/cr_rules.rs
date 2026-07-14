@@ -9131,3 +9131,81 @@ fn cr_603_10a_self_death_trigger_fires() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 1, "Zulaport drained on its own death");
 }
+
+// ── CR 728 — "End the turn" ends "until end of turn" effects ─────────────────
+/// CR 728.2 — Time Stop ends the turn, so a resolved "until end of turn" pump
+/// wears off immediately as the turn is cleaned up.
+#[test]
+fn cr_728_end_the_turn_ends_until_eot_effects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: growth, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Giant Growth");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "pumped +3/+3");
+    let stop = g.add_card_to_hand(0, catalog::time_stop());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: stop, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Time Stop");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "the EOT pump ended with the turn");
+}
+
+// ── CR 115.7 — "you may choose new targets for target spell" ─────────────────
+/// Bolt Bend repoints a single-target spell at a new target of its caster's
+/// choice (CR 115.7 — the redirect mutates the original spell in place).
+#[test]
+fn cr_115_7_bolt_bend_repoints_a_spell() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    // Opponent bolts your bear.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent bolts the bear");
+    // You Bolt Bend it, repointing the bolt at the opponent.
+    let bend = g.add_card_to_hand(0, catalog::bolt_bend());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(crate::game::types::Target::Player(1)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bend, target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt Bend on the bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the bear was spared");
+    assert_eq!(g.players[1].life, 17, "the bolt was redirected to its caster");
+}
+
+// ── CR 702.72 — Deathtouch: any nonzero combat damage is lethal ─────────────
+/// A 1/1 deathtoucher kills a 5/6 blocker with a single point of combat damage
+/// (CR 702.2e — SBA marks it destroyed).
+#[test]
+fn cr_702_2_deathtouch_one_damage_is_lethal() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::typhoid_rats()); // 1/1 deathtouch
+    g.clear_sickness(rat);
+    let djinn = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // 5/6
+    g.attacking = vec![Attack { attacker: rat, target: AttackTarget::Player(1) }];
+    g.block_map.insert(djinn, rat);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(djinn).is_none(), "5/6 destroyed by 1 deathtouch damage");
+}

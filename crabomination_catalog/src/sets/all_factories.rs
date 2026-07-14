@@ -6449,6 +6449,11 @@ static DECKS: &[Factory] = &[
     super::decks::adventuring_gear,
     super::decks::gnarlback_rhino,
     super::decks::mold_adder,
+    super::decks::fynn_the_fangbearer,
+    super::decks::rivers_rebuke,
+    super::decks::painful_quandary,
+    super::decks::lathliss_dragon_queen,
+    super::decks::bolt_bend,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
