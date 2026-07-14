@@ -80,9 +80,17 @@ fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -
         .map(|n| n.to_string())
         .collect::<Vec<_>>()
         .join(",");
+    // Explicit table size so a log reader never has to infer it from arrays
+    // that may be empty (e.g. an aborted 1-seat match with no final snapshot).
+    let players = outcome
+        .final_life_totals
+        .len()
+        .max(outcome.loss_reasons.len())
+        .max(outcome.final_library_sizes.len());
     format!(
         "{{\"ts\":{ts},\"format\":\"{format_label}\",\"duration_ms\":{},\"turns\":{},\
-         \"winner\":{winner},\"life\":[{life}],\"loss_reasons\":[{losses}],\"libraries\":[{libs}]}}\n",
+         \"players\":{players},\"winner\":{winner},\"life\":[{life}],\
+         \"loss_reasons\":[{losses}],\"libraries\":[{libs}]}}\n",
         duration.as_millis(),
         outcome.final_turn,
     )
@@ -126,6 +134,7 @@ mod tests {
         assert!(line.contains("\"format\":\"cube\""), "{line}");
         assert!(line.contains("\"duration_ms\":1500"), "{line}");
         assert!(line.contains("\"turns\":12"), "{line}");
+        assert!(line.contains("\"players\":2"), "{line}");
         assert!(line.contains("\"winner\":1"), "{line}");
         assert!(line.contains("\"life\":[-3,14]"), "{line}");
         assert!(line.contains("\"loss_reasons\":[\"life\",null]"), "{line}");

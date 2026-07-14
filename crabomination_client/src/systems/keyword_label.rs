@@ -60,6 +60,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         HexproofFromColor(_) => "HexC",
         HexproofExceptColors(_) => "HexX",
         HexproofFromAbilities => "HexA",
+        HexproofFromMonocolored => "HexM",
         Shroud => "Shr",
         Unblockable => "Unb",
         Intimidate => "Int",
@@ -439,6 +440,7 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Undying]), "Und");
         assert_eq!(keyword_strip(&[Keyword::Annihilator(2)]), "Ann2");
         assert_eq!(keyword_strip(&[Keyword::Changeling]), "Chg");
+        assert_eq!(keyword_strip(&[Keyword::HexproofFromMonocolored]), "HexM");
         assert_eq!(keyword_strip(&[Keyword::Prowess]), "Prw");
         assert_eq!(keyword_strip(&[Keyword::FirebendingPower]), "FB");
         assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew2");
