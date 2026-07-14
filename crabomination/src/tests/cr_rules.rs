@@ -9066,3 +9066,68 @@ fn cr_401_shuffle_graveyard_cards_into_library() {
     assert_eq!(g.players[0].graveyard.len(), 1, "four of five reshuffled out of the graveyard");
     assert_eq!(g.players[0].library.len(), lib_before + 4, "into the library");
 }
+
+// ── CR 702.172 — Spree (choose one or more modes; costs fold) ─────────────────
+
+/// CR 702.172a — casting a Spree spell pays its base cost plus the costs of each
+/// chosen mode, and applies each chosen mode. Explosive Derailment ({R}; +{2}
+/// deal 4 to a creature, +{2} destroy an artifact) with both modes costs {4}{R}
+/// and resolves both.
+#[test]
+fn cr_702_172_spree_folds_costs_and_applies_all_modes() {
+    let mut g = two_player_game();
+    g.step = crate::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let creature = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let artifact = g.add_card_to_battlefield(1, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::explosive_derailment());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4); // {R} + {2} + {2}
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![0, 1],
+        target: Some(crate::game::types::Target::Permanent(creature)),
+        additional_targets: vec![crate::game::types::Target::Permanent(artifact)],
+        x_value: None,
+    })
+    .expect("both modes affordable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).is_none(), "mode 0 dealt 4 to the 4/4");
+    assert!(g.battlefield_find(artifact).is_none(), "mode 1 destroyed the artifact");
+}
+
+/// CR 702.172c — a Spree spell requires at least one chosen mode; casting with
+/// no modes is illegal.
+#[test]
+fn cr_702_172_spree_requires_at_least_one_mode() {
+    let mut g = two_player_game();
+    g.step = crate::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::explosive_derailment());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let res = g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![],
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    });
+    assert!(res.is_err(), "zero modes is not a legal Spree cast");
+}
+
+// ── CR 603.10a — self-death "this or another" trigger ────────────────────────
+
+/// CR 603.10a — a `YourControl` "whenever this creature or another creature you
+/// control dies" trigger looks back at the dying creature and fires for its own
+/// death. Zulaport Cutthroat drains when it itself dies.
+#[test]
+fn cr_603_10a_self_death_trigger_fires() {
+    let mut g = two_player_game();
+    let zula = g.add_card_to_battlefield(0, catalog::zulaport_cutthroat()); // 1/1
+    let opp = g.players[1].life;
+    g.battlefield_find_mut(zula).unwrap().damage = 1; // lethal
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "Zulaport drained on its own death");
+}
