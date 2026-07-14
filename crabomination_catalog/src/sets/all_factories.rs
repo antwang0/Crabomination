@@ -6340,6 +6340,9 @@ static DECKS: &[Factory] = &[
     super::decks::jackdaw_savior,
     super::decks::clement_the_worrywort,
     super::decks::soul_shackled_zombie,
+    super::decks::double_down,
+    super::decks::mystical_tether,
+    super::decks::high_noon,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

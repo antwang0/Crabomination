@@ -3,7 +3,6 @@
 
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
-use crate::game::types::Target;
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
